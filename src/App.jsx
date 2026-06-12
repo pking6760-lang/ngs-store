@@ -667,17 +667,31 @@ function CartView({ products, cart, setCart, onOrderPlaced, setTab, success, set
 }
 
 function OrdersView({ orders, myPhone }) {
-  const mine = orders.filter(o => myPhone && o.customer?.phone === myPhone);
-  if (!mine.length) return <div className="main empty-box"><div className="big">📋</div><p>No orders yet</p></div>;
+  const mine = orders
+    .filter(o => myPhone && o.customer?.phone === myPhone)
+    .sort((a,b) => b.timestamp - a.timestamp);
+  if (!myPhone) return (
+    <div className="main empty-box">
+      <div className="big">📋</div>
+      <p>Your order history will appear here</p>
+      <p style={{fontSize:13,color:"var(--bark-light)",marginTop:6}}>Place your first order to get started</p>
+    </div>
+  );
+  if (!mine.length) return (
+    <div className="main empty-box">
+      <div className="big">📋</div>
+      <p>No orders yet</p>
+    </div>
+  );
   return (
     <div className="main">
-      <div className="sec-head">My Orders</div>
+      <div className="sec-head">My Orders ({mine.length})</div>
       {mine.map(o => {
         const si = S_ORDER.indexOf(o.status);
         return (
           <div className="ocard" key={o.id}>
             <div className="ocard-top">
-              <div><div className="o-id">#{o.id}</div><div className="o-date">{new Date(o.timestamp).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</div></div>
+              <div><div className="o-id">#{o.id}</div><div className="o-date">{new Date(o.timestamp).toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div>
               <span className={"sbadge s-"+o.status}>{S_LABEL[o.status]}</span>
             </div>
             <div className="progress-track">
@@ -1354,7 +1368,9 @@ function AppInner() {
   const [cart, setCart] = useState({});
   const [cat, setCat] = useState("All");
   const [success, setSuccess] = useState(null);
-  const [myPhone, setMyPhone] = useState("");
+  const [myPhone, setMyPhone] = useState(() => {
+    try { const p = JSON.parse(localStorage.getItem(CUSTOMER_PROFILE_KEY) || "null"); return p?.phone || ""; } catch { return ""; }
+  });
 
   // Admin / security state
   const [mode, setMode] = useState("customer"); // "customer" | "login" | "admin" | "decoy"
