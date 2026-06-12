@@ -365,6 +365,20 @@ html, body { background: var(--cream); font-family: 'DM Sans', sans-serif; color
 .save-edit-btn { flex: 1; padding: 10px; border: none; border-radius: 10px; background: var(--leaf); color: white; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; }
 .save-edit-btn:hover { background: var(--leaf-light); }
 .cancel-edit-btn { padding: 10px 16px; border: 1.5px solid var(--parchment); border-radius: 10px; background: white; color: var(--bark-mid); font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; }
+/* ── HISTORY ── */
+.history-day { background: var(--white); border-radius: var(--radius); margin-bottom: 12px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); overflow: hidden; }
+.history-day-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--cream); }
+.history-date { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 15px; color: var(--bark); }
+.history-day-stats { font-size: 12px; color: var(--bark-light); margin-top: 2px; }
+.history-day-revenue { font-family: 'Playfair Display', serif; font-weight: 800; font-size: 16px; color: var(--leaf); }
+.history-chevron { font-size: 14px; color: var(--bark-light); transition: transform 0.2s; }
+.history-chevron.open { transform: rotate(180deg); }
+.history-orders { padding: 8px 12px 12px; }
+.history-order { background: var(--cream); border-radius: 10px; padding: 12px; margin-top: 8px; }
+.history-order-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.history-order-id { font-weight: 700; font-size: 13px; color: var(--bark); }
+.history-order-items { font-size: 12px; color: var(--bark-light); margin-bottom: 4px; }
+
 /* ── BARCODE ── */
 .barcode-field { display: flex; gap: 8px; align-items: stretch; }
 .barcode-field input { flex: 1; }
@@ -991,10 +1005,70 @@ function ChargesTab({ charges, onAddCharge, onToggleCharge, onDeleteCharge }) {
   );
 }
 
+function HistoryTab({ orders }) {
+  const [openDay, setOpenDay] = useState(null);
+  // Group orders by calendar date
+  const groups = {};
+  [...orders].sort((a,b)=>b.timestamp-a.timestamp).forEach(o => {
+    const d = new Date(o.timestamp);
+    const key = d.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(o);
+  });
+  const dayKeys = Object.keys(groups);
+
+  if (dayKeys.length === 0) return (
+    <div className="empty-box"><div className="big">📅</div><p>No order history yet</p></div>
+  );
+
+  return (
+    <div>
+      {dayKeys.map(day => {
+        const dayOrders = groups[day];
+        const dayRevenue = dayOrders.filter(o=>o.status==="delivered").reduce((s,o)=>s+o.total,0);
+        const isOpen = openDay === day;
+        return (
+          <div className="history-day" key={day}>
+            <div className="history-day-header" onClick={()=>setOpenDay(isOpen?null:day)}>
+              <div>
+                <div className="history-date">{day}</div>
+                <div className="history-day-stats">{dayOrders.length} order{dayOrders.length!==1?"s":""} · {dayOrders.filter(o=>o.status==="delivered").length} delivered</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div className="history-day-revenue">{formatINR(dayRevenue)}</div>
+                <span className={"history-chevron"+(isOpen?" open":"")}>▼</span>
+              </div>
+            </div>
+            {isOpen && (
+              <div className="history-orders">
+                {dayOrders.map(o => (
+                  <div className="history-order" key={o.id}>
+                    <div className="history-order-top">
+                      <span className="history-order-id">#{o.id} · {new Date(o.timestamp).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
+                      <span className={"sbadge s-"+o.status}>{S_LABEL_A[o.status]}</span>
+                    </div>
+                    <div style={{fontSize:12,color:"var(--bark-mid)",marginBottom:4}}>👤 {o.customer?.name} · {o.customer?.phone}</div>
+                    <div className="history-order-items">{(o.items||[]).map(i=>`${i.name} ×${i.qty}`).join(", ")}</div>
+                    <div style={{fontWeight:700,fontSize:14,color:"var(--bark)"}}>{formatINR(o.total)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLogout, storeOpen, setStoreOpen, customers, charges, setCharges }) {
   const [tab, setTab] = useState("orders");
-  const pending = orders.filter(o=>o.status==="pending").length;
-  const revenue = orders.filter(o=>o.status==="delivered").reduce((s,o)=>s+o.total,0);
+  // Today's stats only (resets at midnight, calendar day)
+  const startOfToday = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
+  const todayOrders = orders.filter(o => o.timestamp >= startOfToday);
+  const pending = orders.filter(o=>o.status==="pending").length; // pending stays all-time so you never miss one
+  const todayRevenue = todayOrders.filter(o=>o.status==="delivered").reduce((s,o)=>s+o.total,0);
+  const todayDelivered = todayOrders.filter(o=>o.status==="delivered").length;
 
   // ── NOTIFICATIONS ─────────────────────────────────────────────────────────
   const [notifStatus, setNotifStatus] = useState(
@@ -1276,6 +1350,7 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
         <button className={"atab"+(tab==="orders"?" active":"")} onClick={()=>setTab("orders")}>📦 Orders</button>
         <button className={"atab"+(tab==="products"?" active":"")} onClick={()=>setTab("products")}>🏪 Products</button>
       <button className={"atab"+(tab==="customers"?" active":"")} onClick={()=>setTab("customers")}>👥 Customers</button>
+      <button className={"atab"+(tab==="history"?" active":"")} onClick={()=>setTab("history")}>📅 History</button>
       <button className={"atab"+(tab==="charges"?" active":"")} onClick={()=>setTab("charges")}>🧾 Charges</button>
       </div>
       <div className="acontent">
@@ -1304,12 +1379,12 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
                 <span className="toggle-slider"></span>
               </label>
             </div>
+            <div style={{fontSize:12,color:"var(--bark-light)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>📊 Today's Summary</div>
             <div className="stats-grid">
-              <div className="stat-box"><div className="stat-num spice">{pending}</div><div className="stat-lbl">Pending</div></div>
-              <div className="stat-box"><div className="stat-num">{orders.length}</div><div className="stat-lbl">Total</div></div>
-              <div className="stat-box"><div className="stat-num green">{orders.filter(o=>o.status==="delivered").length}</div><div className="stat-lbl">Delivered</div></div>
-              <div className="stat-box"><div className="stat-num green" style={{fontSize:20}}>{formatINR(revenue)}</div><div className="stat-lbl">Revenue</div></div>
-              <div className="stat-box"><div className="stat-num">{customers.length}</div><div className="stat-lbl">Customers</div></div>
+              <div className="stat-box"><div className="stat-num spice">{pending}</div><div className="stat-lbl">Pending (all)</div></div>
+              <div className="stat-box"><div className="stat-num">{todayOrders.length}</div><div className="stat-lbl">Orders Today</div></div>
+              <div className="stat-box"><div className="stat-num green">{todayDelivered}</div><div className="stat-lbl">Delivered Today</div></div>
+              <div className="stat-box"><div className="stat-num green" style={{fontSize:20}}>{formatINR(todayRevenue)}</div><div className="stat-lbl">Revenue Today</div></div>
             </div>
             {orders.length===0
               ? <div className="empty-box"><div className="big">📭</div><p>No orders yet</p></div>
@@ -1346,6 +1421,7 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
         )}
         {tab==="products" && <ProductsTab products={products} onAdd={onAdd} onDelete={onDelete} onEdit={onEdit} />}
         {tab==="customers" && <CustomersTab customers={customers} />}
+        {tab==="history" && <HistoryTab orders={orders} />}
         {tab==="charges" && <ChargesTab charges={charges} onAddCharge={onAddCharge} onToggleCharge={onToggleCharge} onDeleteCharge={onDeleteCharge} />}
       </div>
     </>
