@@ -174,7 +174,7 @@ const DEFAULT_PRODUCTS = [
   { id: 1, name: "Britannia Gooday", category: "Biscuit", price: 30, unit: "pack", emoji: "🍪", inStock: true },
 ];
 
-function formatINR(n) { return "₹" + Number(n).toLocaleString("en-IN"); }
+function formatINR(n) { return "₹" + (Number(n) || 0).toLocaleString("en-IN"); }
 function genId() { return "NGS" + Math.floor(1000 + Math.random() * 9000); }
 
 const S_ORDER = ["pending", "confirmed", "out_for_delivery", "delivered"];
@@ -691,7 +691,7 @@ function OrdersView({ orders, myPhone }) {
                 </div>
               ))}
             </div>
-            <div className="o-items">{o.items.map(i=>`${i.emoji} ${i.name} ×${i.qty}`).join("  ·  ")}</div>
+            <div className="o-items">{(o.items||[]).map(i=>`${i.emoji} ${i.name} ×${i.qty}`).join("  ·  ")}</div>
             <div className="o-total">{formatINR(o.total)}</div>
           </div>
         );
@@ -1291,7 +1291,7 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
                     <div className="cust-row"><span>📞</span>{o.customer?.phone}</div>
                     <div className="cust-row"><span>📍</span><span>{o.customer?.address}</span></div>
                     {o.customer?.location && (
-                      <a className="map-link" href={`https://www.google.com/maps?q=${o.customer.location.lat},${o.customer.location.lng}`} target="_blank" rel="noopener noreferrer">🗺️ Open in Google Maps</a>
+                      <a className="map-link" href={`https://www.google.com/maps?q=${o.customer?.location?.lat},${o.customer?.location?.lng}`} target="_blank" rel="noopener noreferrer">🗺️ Open in Google Maps</a>
                     )}
                   </div>
                   <div className="o-items">{o.items?.map(i=>`${i.emoji} ${i.name} ×${i.qty}`).join("  ·  ")}</div>
@@ -1576,6 +1576,7 @@ class ErrorBoundary extends Component {
           <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
           <h2 style={{ marginBottom: 8 }}>NGS Store</h2>
           <p style={{ fontSize: 14, color: "#6b4c3b", marginBottom: 16 }}>Something went wrong loading the page. Please refresh.</p>
+          <div style={{ fontSize: 11, color: "#a07858", marginBottom: 16, maxWidth: 320, wordBreak: "break-word", fontFamily: "monospace", background: "#ede7d9", padding: 10, borderRadius: 8 }}>{this.state.msg}</div>
           <button onClick={() => window.location.reload()} style={{ padding: "10px 22px", background: "#3d2b1f", color: "#f5f0e8", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600 }}>Refresh</button>
         </div>
       );
