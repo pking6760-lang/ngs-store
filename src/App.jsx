@@ -1198,17 +1198,25 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
 
       showToast("🖨️ Printing...");
       const data = buildReceipt(o);
-      // Send in 512-byte chunks (BT MTU limit)
-      const CHUNK = 512;
+      // PT-210 has a small buffer — send in SMALL chunks with pauses,
+      // otherwise the middle of the receipt gets dropped.
+      const CHUNK = 20;
       for (let i=0; i<data.length; i+=CHUNK) {
         const chunk = data.slice(i, i+CHUNK);
-        if (characteristic.properties.writeWithoutResponse) {
-          await characteristic.writeValueWithoutResponse(chunk);
-        } else {
-          await characteristic.writeValue(chunk);
+        try {
+          if (characteristic.properties.writeWithoutResponse) {
+            await characteristic.writeValueWithoutResponse(chunk);
+          } else {
+            await characteristic.writeValue(chunk);
+          }
+        } catch (e) {
+          // retry once on failure
+          await new Promise(r => setTimeout(r, 60));
+          try { await characteristic.writeValue(chunk); } catch {}
         }
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 30));
       }
+      await new Promise(r => setTimeout(r, 300)); // let printer finish
       showToast("✅ Printed successfully!");
       device.gatt.disconnect();
     } catch (err) {
