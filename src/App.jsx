@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Component } from "react";
 
 // ── SECURITY LAYER ────────────────────────────────────────────────────────────
 // Password is never stored as plain text anywhere in this file.
@@ -1075,7 +1075,6 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
     txt(LINE);
     txt("Order : #" + o.id);
     txt("Date  : " + date);
-    txt("Status: " + S_LABEL_A[o.status]);
     txt(LINE);
     add(escPos.bold_on);
     txt("CUSTOMER DETAILS");
@@ -1091,12 +1090,22 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
     add(escPos.bold_on);
     txt("ITEMS");
     add(escPos.bold_off);
-    o.items?.forEach(i => {
-      const ep = (!i.slabs||!i.slabs.length) ? i.price : ([...i.slabs].reverse().find(s=>i.qty>=s.qty)||{price:i.price}).price;
-      const lineTotal = ep * i.qty;
-      const name = i.name.length > 18 ? i.name.slice(0,18) : i.name;
-      txt(pad(name + " x" + i.qty, "Rs." + lineTotal));
-    });
+    const items = Array.isArray(o.items) ? o.items : [];
+    if (items.length === 0) {
+      txt("(no items)");
+    } else {
+      items.forEach(i => {
+        const qty = Number(i.qty) || 1;
+        const basePrice = Number(i.price) || 0;
+        const ep = (!i.slabs || !i.slabs.length)
+          ? basePrice
+          : Number(([...i.slabs].reverse().find(s => qty >= s.qty) || {price: basePrice}).price);
+        const lineTotal = ep * qty;
+        const rawName = (i.name || "Item").toString();
+        const name = rawName.length > 18 ? rawName.slice(0, 18) : rawName;
+        txt(pad(name + " x" + qty, "Rs." + lineTotal));
+      });
+    }
     txt(LINE);
     if (o.charges && o.charges.length > 0) {
       txt(pad("Subtotal", "Rs." + (o.subtotal != null ? o.subtotal : o.total)));
@@ -1313,7 +1322,7 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
 // ─────────────────────────────────────────────────────────────────────────────
 // ROOT APP
 // ─────────────────────────────────────────────────────────────────────────────
-export default function App() {
+function AppInner() {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [storeOpen, setStoreOpen] = useState(true);
@@ -1551,5 +1560,34 @@ export default function App() {
         ))}
       </div>
     </>
+  );
+}
+
+
+// ── ERROR BOUNDARY: keeps the screen from going blank if anything errors ──────
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false, msg: "" }; }
+  static getDerivedStateFromError(error) { return { hasError: true, msg: String(error && error.message || error) }; }
+  componentDidCatch(error, info) { console.error("App error:", error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "sans-serif", background: "#f5f0e8", color: "#3d2b1f", textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
+          <h2 style={{ marginBottom: 8 }}>NGS Store</h2>
+          <p style={{ fontSize: 14, color: "#6b4c3b", marginBottom: 16 }}>Something went wrong loading the page. Please refresh.</p>
+          <button onClick={() => window.location.reload()} style={{ padding: "10px 22px", background: "#3d2b1f", color: "#f5f0e8", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600 }}>Refresh</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
   );
 }
