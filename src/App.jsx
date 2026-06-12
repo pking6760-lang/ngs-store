@@ -989,19 +989,30 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
   const prevOrderCount = useRef(orders.length);
 
   const requestNotifPermission = async () => {
-    if (typeof Notification === "undefined") return;
-    const result = await Notification.requestPermission();
-    setNotifStatus(result);
-    if (result === "granted") showToast("🔔 Notifications enabled!");
+    try {
+      if (typeof Notification === "undefined") { showToast("⚠️ Notifications not supported here"); return; }
+      const result = await Notification.requestPermission();
+      setNotifStatus(result);
+      if (result === "granted") showToast("🔔 Notifications enabled!");
+    } catch { showToast("⚠️ Could not enable notifications"); }
   };
 
   const fireNotification = useCallback((order) => {
-    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-    new Notification("🛒 New Order — NGS Store!", {
-      body: `${order.customer?.name} ordered ${order.items?.map(i=>`${i.name} ×${i.qty}`).join(", ")} • ${formatINR(order.total)}`,
-      tag: order.id,
-      renotify: true,
-    });
+    try {
+      if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+      const title = "🛒 New Order — NGS Store!";
+      const body = `${order.customer?.name} ordered ${(order.items||[]).map(i=>`${i.name} ×${i.qty}`).join(", ")} • ${formatINR(order.total)}`;
+      // On mobile (Android Chrome), `new Notification()` throws "Illegal constructor".
+      // Use the service worker registration to show the notification instead.
+      if ("serviceWorker" in navigator && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready
+          .then(reg => reg.showNotification(title, { body, tag: order.id }))
+          .catch(() => {});
+      } else {
+        // Desktop fallback
+        try { new Notification(title, { body, tag: order.id }); } catch {}
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
