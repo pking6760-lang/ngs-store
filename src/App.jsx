@@ -121,6 +121,27 @@ const DK3 = "ngs_d3"; // store open/closed
 const DK4 = "ngs_d4"; // customers
 const DK5 = "ngs_d5"; // extra charges
 
+// ── UPI PAYMENT ────────────────────────────────────────────────────────────
+const UPI_ID = "Q006245410@ybl";
+const UPI_PAYEE_NAME = "NGS Store";
+
+// Builds a standard UPI deep link with the exact order amount, locked (not editable by the customer)
+function buildUpiLink(amount, orderId) {
+  const params = new URLSearchParams({
+    pa: UPI_ID,
+    pn: UPI_PAYEE_NAME,
+    am: amount.toFixed(2),
+    cu: "INR",
+    tn: "NGS Store Order " + orderId,
+  });
+  return "upi://pay?" + params.toString();
+}
+
+// Generates a QR code image URL for the UPI link (uses a free public QR API)
+function buildUpiQrUrl(upiLink) {
+  return "https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=" + encodeURIComponent(upiLink);
+}
+
 // ── SUPABASE DATABASE LAYER ───────────────────────────────────────────────────
 // Connects all phones to one shared database so orders sync everywhere.
 const SUPABASE_URL = "https://lphjuteikmnqbbuxbgoi.supabase.co";
@@ -184,7 +205,13 @@ const mapRowToCustomer = (r) => ({
 const db = {
   async getOrders() {
     const rows = await sbSelect("orders");
-    return rows.sort((a,b) => b.timestamp - a.timestamp);
+    const mapped = rows.map(o => {
+      const payment = o.customer?._payment || null;
+      const customer = o.customer ? { ...o.customer } : o.customer;
+      if (customer && "_payment" in customer) delete customer._payment;
+      return { ...o, customer, payment };
+    });
+    return mapped.sort((a,b) => b.timestamp - a.timestamp);
   },
   async getProducts() {
     const rows = await sbSelect("products");
@@ -206,7 +233,10 @@ const db = {
     await sbUpsert("orders", {
       id: order.id, timestamp: order.timestamp, items: order.items,
       total: order.total, subtotal: order.subtotal ?? order.total,
-      charges: order.charges ?? [], customer: order.customer, status: order.status,
+      charges: order.charges ?? [],
+      // payment info is nested inside customer JSON since the orders table has no dedicated column for it
+      customer: { ...order.customer, _payment: order.payment ?? null },
+      status: order.status,
     });
   },
   async updateOrderStatus(id, status) {
@@ -393,6 +423,30 @@ html, body { background: var(--cream); font-family: 'DM Sans', sans-serif; color
 .loc-preview { margin-top: 8px; padding: 10px 12px; background: var(--leaf-pale); border-radius: 10px; border: 1px solid var(--leaf-light); font-size: 12px; color: var(--leaf); font-weight: 500; display: flex; align-items: flex-start; gap: 6px; }
 .place-btn { width: 100%; padding: 15px; margin-top: 12px; border: none; border-radius: var(--radius); background: var(--bark); color: var(--cream); font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; box-shadow: 0 4px 16px rgba(61,43,31,0.25); }
 .place-btn:hover { background: var(--bark-mid); transform: translateY(-1px); }
+
+/* ── PAYMENT METHOD ── */
+.pay-method-row { display: flex; gap: 8px; }
+.pay-method-btn { flex: 1; padding: 12px 8px; border: 1.5px solid var(--parchment); border-radius: 12px; background: var(--cream); color: var(--bark-mid); font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.18s; }
+.pay-method-btn.active { background: var(--leaf-pale); border-color: var(--leaf); color: var(--leaf); }
+
+/* ── UPI PAYMENT MODAL ── */
+.upi-overlay { position: fixed; inset: 0; background: rgba(61,43,31,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.upi-modal { background: var(--white); border-radius: 24px; padding: 22px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.upi-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.upi-modal-header h3 { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: var(--bark); }
+.upi-close { background: var(--cream); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 14px; color: var(--bark-mid); cursor: pointer; }
+.upi-amount-lock { text-align: center; background: var(--leaf-pale); border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+.upi-amount-lock-label { font-size: 11px; color: var(--bark-light); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.upi-amount-lock-value { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 800; color: var(--leaf); margin: 4px 0; }
+.upi-amount-lock-note { font-size: 11px; color: var(--leaf); font-weight: 600; }
+.upi-qr-img { display: block; width: 220px; height: 220px; margin: 0 auto 14px; border-radius: 12px; border: 1.5px solid var(--parchment); }
+.upi-or-divider { text-align: center; margin: 10px 0; position: relative; }
+.upi-or-divider span { background: var(--white); padding: 0 12px; color: var(--bark-light); font-size: 12px; font-weight: 600; }
+.upi-or-divider::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--parchment); z-index: -1; }
+.upi-tap-btn { display: block; text-align: center; padding: 14px; background: #5f259f; color: white; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px; text-decoration: none; margin-bottom: 14px; }
+.upi-hint { font-size: 12px; color: var(--bark-light); text-align: center; margin-bottom: 16px; line-height: 1.5; }
+.upi-confirm-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; background: var(--leaf); color: white; font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; cursor: pointer; }
+.upi-confirm-btn:disabled { background: var(--leaf-light); cursor: not-allowed; }
 .success-wrap { text-align: center; padding: 52px 20px; }
 .success-wrap .s-ico { font-size: 70px; margin-bottom: 16px; animation: pop 0.5s ease; }
 @keyframes pop { 0%{transform:scale(0.5);opacity:0} 80%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
@@ -701,6 +755,10 @@ function CartView({ products, cart, setCart, onOrderPlaced, setTab, success, set
   const [locLoading, setLocLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [profileSaved, setProfileSaved] = useState(!!profile);
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // "cod" | "upi"
+  const [showPaymentScreen, setShowPaymentScreen] = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState(null);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
   const getEffectivePrice = (p, qty) => {
@@ -733,15 +791,39 @@ function CartView({ products, cart, setCart, onOrderPlaced, setTab, success, set
     }, () => { showToast("❌ Location denied"); setLocLoading(false); });
   };
 
-  const handlePlaceOrder = async () => {
-    if (!name.trim() || !phone.trim() || !address.trim()) { showToast("⚠️ Fill all fields"); return; }
+  const buildOrder = () => {
     const items = Object.entries(cart).map(([id, qty]) => ({ ...products.find(x => x.id === Number(id)), qty }));
-    const order = { id: genId(), timestamp: Date.now(), items, total: grandTotal, subtotal: cartTotal, charges: activeCharges, customer: { name, phone, address, location: location||null }, status: "pending" };
-    // Save profile so next time fields are pre-filled
+    return {
+      id: genId(), timestamp: Date.now(), items, total: grandTotal, subtotal: cartTotal,
+      charges: activeCharges, customer: { name, phone, address, location: location||null },
+      status: "pending",
+      payment: { method: paymentMethod, status: paymentMethod === "cod" ? "cod" : "awaiting_confirmation" },
+    };
+  };
+
+  const finalizeOrder = async (order) => {
     saveProfile({ name, phone, address, location: location||null });
     setProfileSaved(true);
     await onOrderPlaced(order, phone);
     setCart({});
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!name.trim() || !phone.trim() || !address.trim()) { showToast("⚠️ Fill all fields"); return; }
+    const order = buildOrder();
+    if (paymentMethod === "upi") {
+      setPendingOrder(order);
+      setShowPaymentScreen(true);
+      return;
+    }
+    await finalizeOrder(order);
+  };
+
+  const handleConfirmUpiPayment = async () => {
+    if (!pendingOrder) return;
+    const paidOrder = { ...pendingOrder, payment: { ...pendingOrder.payment, status: "customer_confirmed_paid" } };
+    setPaymentConfirmed(true);
+    await finalizeOrder(paidOrder);
   };
 
   const handleClearProfile = () => {
@@ -817,8 +899,29 @@ function CartView({ products, cart, setCart, onOrderPlaced, setTab, success, set
           </button>
           {location && <div className="loc-preview"><span>📌</span><span>GPS: {location.lat?.toFixed(5)}, {location.lng?.toFixed(5)}</span></div>}
         </div>
+        <div className="fgrp">
+          <label>Payment Method</label>
+          <div className="pay-method-row">
+            <button
+              type="button"
+              className={"pay-method-btn" + (paymentMethod === "cod" ? " active" : "")}
+              onClick={() => setPaymentMethod("cod")}
+            >
+              💵 Cash on Delivery
+            </button>
+            <button
+              type="button"
+              className={"pay-method-btn" + (paymentMethod === "upi" ? " active" : "")}
+              onClick={() => setPaymentMethod("upi")}
+            >
+              📲 Pay by UPI
+            </button>
+          </div>
+        </div>
         {storeOpen
-          ? <button className="place-btn" onClick={handlePlaceOrder}>Place Order — {formatINR(grandTotal)}</button>
+          ? <button className="place-btn" onClick={handlePlaceOrder}>
+              {paymentMethod === "upi" ? "Continue to Pay — " : "Place Order — "}{formatINR(grandTotal)}
+            </button>
           : <div className="store-closed-checkout">
               <div className="closed-ico">🔒</div>
               <h3>Store is Closed</h3>
@@ -826,6 +929,38 @@ function CartView({ products, cart, setCart, onOrderPlaced, setTab, success, set
             </div>
         }
       </div>
+
+      {showPaymentScreen && pendingOrder && (
+        <div className="upi-overlay">
+          <div className="upi-modal">
+            <div className="upi-modal-header">
+              <h3>Scan & Pay</h3>
+              <button className="upi-close" onClick={() => { setShowPaymentScreen(false); setPendingOrder(null); }}>✕</button>
+            </div>
+            <div className="upi-amount-lock">
+              <div className="upi-amount-lock-label">Amount to pay</div>
+              <div className="upi-amount-lock-value">{formatINR(grandTotal)}</div>
+              <div className="upi-amount-lock-note">🔒 Fixed amount — cannot be changed</div>
+            </div>
+            <img className="upi-qr-img" src={buildUpiQrUrl(buildUpiLink(grandTotal, pendingOrder.id))} alt="UPI QR Code" />
+            <div className="upi-or-divider"><span>OR</span></div>
+            <a
+              className="upi-tap-btn"
+              href={buildUpiLink(grandTotal, pendingOrder.id)}
+            >
+              📲 Tap to Pay with UPI App
+            </a>
+            <p className="upi-hint">Scan the QR with any UPI app, or tap the button above on your phone to open Google Pay / PhonePe / Paytm directly.</p>
+            <button
+              className="upi-confirm-btn"
+              onClick={handleConfirmUpiPayment}
+              disabled={paymentConfirmed}
+            >
+              {paymentConfirmed ? "✅ Payment Confirmed" : "✅ I've Completed the Payment"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1367,6 +1502,9 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
     add(escPos.normal);
     add(escPos.bold_off);
     txt(LINE);
+    add(escPos.left);
+    txt("Payment: " + (o.payment?.method === "upi" ? "UPI (" + (o.payment.status === "customer_confirmed_paid" ? "Paid" : "Pending") + ")" : "Cash on Delivery"));
+    txt(LINE);
     add(escPos.center);
     txt("");
     txt("Thank you for ordering!");
@@ -1574,6 +1712,16 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
                     </div>
                   )}
                   <div className="o-total">{formatINR(o.total)}</div>
+                  {o.payment && (
+                    <div style={{marginTop:6,marginBottom:6}}>
+                      {o.payment.method === "upi"
+                        ? <span className="sbadge" style={{background: o.payment.status === "customer_confirmed_paid" ? "var(--leaf-pale)" : "#fff3e0", color: o.payment.status === "customer_confirmed_paid" ? "var(--leaf)" : "#bf360c"}}>
+                            📲 UPI: {o.payment.status === "customer_confirmed_paid" ? "Customer says PAID — verify in your bank/UPI app" : "Awaiting payment"}
+                          </span>
+                        : <span className="sbadge" style={{background:"var(--leaf-pale)",color:"var(--leaf)"}}>💵 Cash on Delivery</span>
+                      }
+                    </div>
+                  )}
                   <select className="status-sel" value={o.status} onChange={e=>updateStatus(o.id,e.target.value)}>
                     {S_ORDER.map(s=><option key={s} value={s}>{S_LABEL_A[s]}</option>)}
                   </select>
