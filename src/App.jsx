@@ -11,6 +11,68 @@ async function hashPassword(pw) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// ── FINGERPRINT / FACE UNLOCK (WebAuthn) ──────────────────────────────────────
+// Uses the phone's built-in fingerprint/face sensor via the browser. The
+// credential ID is stored locally; the actual biometric data never leaves
+// the device (this is the same tech banking apps use).
+const BIOMETRIC_KEY = "_bio";
+
+function bufToBase64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function base64ToBuf(b64) {
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+
+async function isBiometricAvailable() {
+  try {
+    if (!window.PublicKeyCredential) return false;
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch { return false; }
+}
+
+function hasBiometricRegistered() {
+  try { return !!localStorage.getItem(BIOMETRIC_KEY); } catch { return false; }
+}
+
+async function registerBiometric() {
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const userId = crypto.getRandomValues(new Uint8Array(16));
+  const cred = await navigator.credentials.create({
+    publicKey: {
+      challenge,
+      rp: { name: "NGS Store Admin" },
+      user: { id: userId, name: "admin", displayName: "Store Admin" },
+      pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+      timeout: 60000,
+    },
+  });
+  if (!cred) throw new Error("No credential created");
+  localStorage.setItem(BIOMETRIC_KEY, bufToBase64(cred.rawId));
+  return true;
+}
+
+async function verifyBiometric() {
+  const storedId = localStorage.getItem(BIOMETRIC_KEY);
+  if (!storedId) throw new Error("No fingerprint registered");
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      allowCredentials: [{ id: base64ToBuf(storedId), type: "public-key" }],
+      userVerification: "required",
+      timeout: 60000,
+    },
+  });
+  return !!assertion;
+}
+
+function clearBiometric() {
+  try { localStorage.removeItem(BIOMETRIC_KEY); } catch {}
+}
+
+
 const SESSION_KEY = "_s";
 const SESSION_DURATION = 365 * 24 * 60 * 60 * 1000; // never expires (1 year)
 const LOCKOUT_KEY = "_lk";
@@ -1061,7 +1123,7 @@ function HistoryTab({ orders }) {
   );
 }
 
-function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLogout, storeOpen, setStoreOpen, customers, charges, setCharges }) {
+function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLogout, storeOpen, setStoreOpen, customers, charges, setCharges, bioAvailable, bioRegistered, onSetupBiometric, onRemoveBiometric, bioBusy }) {
   const [tab, setTab] = useState("orders");
   // Today's stats only (resets at midnight, calendar day)
   const startOfToday = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
@@ -1379,6 +1441,20 @@ function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLog
                 <span className="toggle-slider"></span>
               </label>
             </div>
+            {bioAvailable && (
+              <div className="store-toggle-card" style={{marginBottom:18}}>
+                <div>
+                  <div className="toggle-label" style={{color:"var(--bark)"}}>
+                    👆 {bioRegistered ? "Fingerprint Login: ON" : "Fingerprint Login: OFF"}
+                  </div>
+                  <div className="toggle-sub">{bioRegistered ? "Unlock admin without typing your password" : "Skip typing your password next time"}</div>
+                </div>
+                {bioRegistered
+                  ? <button onClick={onRemoveBiometric} style={{padding:"7px 12px",border:"1.5px solid var(--danger)",borderRadius:10,background:"var(--danger-pale)",color:"var(--danger)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>Turn Off</button>
+                  : <button onClick={onSetupBiometric} disabled={bioBusy} style={{padding:"7px 14px",border:"1.5px solid var(--leaf)",borderRadius:10,background:"var(--leaf-pale)",color:"var(--leaf)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>{bioBusy?"Setting up...":"Set Up"}</button>
+                }
+              </div>
+            )}
             <div style={{fontSize:12,color:"var(--bark-light)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>📊 Today's Summary</div>
             <div className="stats-grid">
               <div className="stat-box"><div className="stat-num spice">{pending}</div><div className="stat-lbl">Pending (all)</div></div>
@@ -1453,6 +1529,9 @@ function AppInner() {
   const [pw, setPw] = useState("");
   const [pwErr, setPwErr] = useState("");
   const [tapCount, setTapCount] = useState(0);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioRegistered, setBioRegistered] = useState(hasBiometricRegistered());
+  const [bioBusy, setBioBusy] = useState(false);
   const tapTimer = useRef(null);
   const lastAttemptTime = useRef(0);
 
@@ -1487,6 +1566,34 @@ function AppInner() {
 
   // Clear any stale lockout from previous wrong hash bug
   useEffect(() => { clearLockout(); }, []);
+
+  // Check if this device supports fingerprint/face unlock
+  useEffect(() => { isBiometricAvailable().then(setBioAvailable); }, []);
+
+  const handleBiometricLogin = async () => {
+    setBioBusy(true);
+    setPwErr("");
+    try {
+      await verifyBiometric();
+      setSession();
+      setMode("admin");
+    } catch (err) {
+      setPwErr("⚠️ Fingerprint not recognized — use password instead");
+    }
+    setBioBusy(false);
+  };
+
+  const handleSetupBiometric = async () => {
+    setBioBusy(true);
+    try {
+      await registerBiometric();
+      setBioRegistered(true);
+      showToast("✅ Fingerprint login enabled!");
+    } catch (err) {
+      showToast("⚠️ Could not set up fingerprint");
+    }
+    setBioBusy(false);
+  };
 
   // Restore admin session on mount
   useEffect(() => {
@@ -1601,7 +1708,18 @@ function AppInner() {
         <div className="login-card">
           <div className="login-icon">🔐</div>
           <h1>NGS Admin</h1>
-          <p>Enter your password to continue</p>
+          <p>{bioRegistered ? "Use your fingerprint or password" : "Enter your password to continue"}</p>
+
+          {bioAvailable && bioRegistered && (
+            <button
+              onClick={handleBiometricLogin}
+              disabled={bioBusy}
+              style={{width:"100%",padding:"14px",marginBottom:14,border:"2px solid var(--leaf)",borderRadius:14,background:"var(--leaf-pale)",color:"var(--leaf)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
+            >
+              👆 {bioBusy ? "Verifying..." : "Unlock with Fingerprint"}
+            </button>
+          )}
+
           <input
             type="password" placeholder="Password" value={pw}
             onChange={e=>setPw(e.target.value)}
@@ -1632,6 +1750,10 @@ function AppInner() {
         storeOpen={storeOpen} setStoreOpen={setStoreOpen}
         customers={customers}
         charges={charges} setCharges={setCharges}
+        bioAvailable={bioAvailable} bioRegistered={bioRegistered}
+        onSetupBiometric={handleSetupBiometric}
+        onRemoveBiometric={() => { clearBiometric(); setBioRegistered(false); showToast("Fingerprint login removed"); }}
+        bioBusy={bioBusy}
       />
     </>
   );
