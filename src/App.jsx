@@ -239,6 +239,57 @@ const DEFAULT_PRODUCTS = [
 function formatINR(n) { return "₹" + (Number(n) || 0).toLocaleString("en-IN"); }
 function genId() { return "NGS" + Math.floor(1000 + Math.random() * 9000); }
 
+// ── SMART SEARCH ───────────────────────────────────────────────────────────
+// Matches even with typos, partial words, or different word order.
+// Scores results so the best matches show first.
+function fuzzyScore(text, query) {
+  text = (text || "").toLowerCase();
+  query = (query || "").trim().toLowerCase();
+  if (!query) return 0;
+  if (text === query) return 100;
+  if (text.startsWith(query)) return 90;
+  if (text.includes(query)) return 70;
+
+  // word-by-word match (handles different word order, e.g. "gooday britannia")
+  const queryWords = query.split(/\s+/).filter(Boolean);
+  const textWords = text.split(/\s+/).filter(Boolean);
+  let wordHits = 0;
+  for (const qw of queryWords) {
+    if (textWords.some(tw => tw.includes(qw) || qw.includes(tw))) wordHits++;
+  }
+  if (wordHits === queryWords.length && queryWords.length > 0) return 60;
+  if (wordHits > 0) return 40 * (wordHits / queryWords.length);
+
+  // typo tolerance: simple character overlap check for short queries
+  if (query.length >= 3) {
+    let matchedChars = 0;
+    let ti = 0;
+    for (const ch of query) {
+      const idx = text.indexOf(ch, ti);
+      if (idx !== -1) { matchedChars++; ti = idx + 1; }
+    }
+    const ratio = matchedChars / query.length;
+    if (ratio > 0.75) return 25 * ratio;
+  }
+  return 0;
+}
+
+function searchProducts(products, query) {
+  if (!query || !query.trim()) return products;
+  const scored = products
+    .map(p => ({
+      product: p,
+      score: Math.max(
+        fuzzyScore(p.name, query),
+        fuzzyScore(p.category, query) * 0.8,
+        fuzzyScore(p.barcode, query) * 0.9
+      ),
+    }))
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return scored.map(x => x.product);
+}
+
 const S_ORDER = ["pending", "confirmed", "out_for_delivery", "delivered"];
 const S_LABEL = { pending: "Pending", confirmed: "Confirmed", out_for_delivery: "On the way", delivered: "Delivered" };
 const S_LABEL_A = { pending: "Pending", confirmed: "Confirmed", out_for_delivery: "Out for Delivery", delivered: "Delivered" };
@@ -273,6 +324,16 @@ html, body { background: var(--cream); font-family: 'DM Sans', sans-serif; color
 .hero-leaf { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: 56px; opacity: 0.15; }
 .cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 18px; scrollbar-width: none; }
 .cats::-webkit-scrollbar { display: none; }
+
+/* ── SEARCH BAR ── */
+.search-box { position: relative; margin-bottom: 16px; }
+.search-input { width: 100%; padding: 13px 16px 13px 42px; border: 1.5px solid var(--parchment); border-radius: 16px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--bark); background: var(--white); outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: var(--shadow); }
+.search-input:focus { border-color: var(--leaf); box-shadow: 0 0 0 3px rgba(74,124,89,0.12); }
+.search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 17px; color: var(--bark-light); pointer-events: none; }
+.search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: var(--parchment); color: var(--bark-mid); border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.search-results-info { font-size: 13px; color: var(--bark-light); margin: -6px 0 14px 4px; }
+.search-no-results { text-align: center; padding: 40px 20px; }
+.search-no-results .big { font-size: 48px; margin-bottom: 10px; }
 .cat-pill { white-space: nowrap; padding: 6px 16px; border-radius: 30px; border: 1.5px solid var(--parchment); background: var(--white); font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 13px; color: var(--bark-mid); cursor: pointer; transition: all 0.18s; }
 .cat-pill.active { background: var(--leaf); color: white; border-color: var(--leaf); }
 .sec-head { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--bark); margin-bottom: 14px; }
@@ -534,8 +595,10 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
 // CUSTOMER COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 function ShopView({ products, cart, cat, setCat, setCart, storeOpen }) {
+  const [search, setSearch] = useState("");
   const cats = ["All", ...Array.from(new Set(products.map(p => p.category)))];
-  const filtered = cat === "All" ? products : products.filter(p => p.category === cat);
+  const categoryFiltered = cat === "All" ? products : products.filter(p => p.category === cat);
+  const filtered = search.trim() ? searchProducts(categoryFiltered, search) : categoryFiltered;
   return (
     <div className="main">
       {!storeOpen && <div className="store-closed-banner">🔒 Store is currently closed — not accepting orders</div>}
@@ -544,10 +607,34 @@ function ShopView({ products, cart, cat, setCat, setCart, storeOpen }) {
         <p>Quality groceries, delivered to your door</p>
         <div className="hero-leaf">🌿</div>
       </div>
+      <div className="search-box">
+        <span className="search-icon">🔍</span>
+        <input
+          className="search-input"
+          placeholder="Search products..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && (
+          <button className="search-clear" onClick={() => setSearch("")}>✕</button>
+        )}
+      </div>
       <div className="cats">
         {cats.map(c => <button key={c} className={"cat-pill" + (cat === c ? " active" : "")} onClick={() => setCat(c)}>{c}</button>)}
       </div>
-      <div className="sec-head">Products</div>
+      {search.trim() && (
+        <div className="search-results-info">
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{search}"
+        </div>
+      )}
+      {!search.trim() && <div className="sec-head">Products</div>}
+      {filtered.length === 0 ? (
+        <div className="search-no-results">
+          <div className="big">🔍</div>
+          <p style={{ color: "var(--bark-light)", fontWeight: 500 }}>No products found</p>
+          <p style={{ fontSize: 13, color: "var(--bark-light)", marginTop: 4 }}>Try a different search term</p>
+        </div>
+      ) : (
       <div className="pgrid">
         {filtered.map(p => {
           const qty = cart[p.id] || 0;
@@ -591,6 +678,7 @@ function ShopView({ products, cart, cat, setCat, setCart, storeOpen }) {
           );
         })}
       </div>
+      )}
     </div>
   );
 }
