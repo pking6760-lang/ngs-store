@@ -10,7 +10,9 @@ Backend for the Immortal Pocket manhwa/anime streaming site.
 - [x] **Step 1 — Core schema** (`migrations/0001_core_schema.sql`)
       Tables: `series`, `episodes`, `chapters`, `profiles`. Plus auto-profile
       trigger and Row Level Security (public read / admin write / own-profile).
-- [ ] Step 2 — User-data tables: `favorites`, `watch_history`, `read_history`.
+- [x] **Step 2 — User-data tables** (`migrations/0002_user_data.sql`)
+      Tables: `favorites` (with `last_seen_count` for the "+N NEW" badge),
+      `watch_history`, `read_history`. RLS: each user touches only their own rows.
 - [ ] Step 3 — Auth wiring (Google + email) and making yourself an admin.
 - [ ] Step 4 — Bunny: secure video upload + signed playback.
 - [ ] Step 5 — Membership / Premium (payment + ad gating).
