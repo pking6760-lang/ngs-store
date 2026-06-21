@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supabase Google Login — Test</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0c1018;color:#eef1f7;
+       display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:20px}
+  .card{background:#121826;border:1px solid rgba(255,255,255,.1);border-radius:16px;
+        padding:28px;max-width:440px;width:100%}
+  h1{font-size:19px;margin:0 0 4px}
+  p.sub{color:#9aa6bd;font-size:13px;margin:0 0 20px}
+  button{font:inherit;font-weight:600;border:none;border-radius:10px;padding:12px 16px;
+         cursor:pointer;width:100%;margin-top:8px}
+  .g{background:#fff;color:#1a1a1a}
+  .out{background:rgba(255,255,255,.1);color:#eef1f7}
+  pre{background:#0c1018;border:1px solid rgba(255,255,255,.1);border-radius:10px;
+      padding:12px;font-size:12px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+  .ok{color:#5fb6a0}.err{color:#ff8a8a}
+  .row{margin-top:16px}
+  label{display:block;font-size:12px;color:#9aa6bd;margin:10px 0 4px}
+  input{width:100%;box-sizing:border-box;background:#1b2435;border:1px solid rgba(255,255,255,.1);
+        border-radius:8px;padding:9px 11px;color:#eef1f7;font:inherit;font-size:13px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Google Login Test</h1>
+  <p class="sub">Verifies Supabase Google OAuth + the auto-profile trigger.</p>
+
+  <!-- Project URL is pre-filled. Paste your anon key (Project Settings -> API). -->
+  <label>Supabase URL</label>
+  <input id="url" value="https://dueyuxdvlyntyeqauydi.supabase.co">
+  <label>Anon public key</label>
+  <input id="key" placeholder="eyJhbGciOi... (anon public key — safe to use in the browser)">
+
+  <div class="row">
+    <button class="g" id="login">Continue with Google</button>
+    <button class="out" id="logout">Sign out</button>
+  </div>
+
+  <div class="row">
+    <strong>Status</strong>
+    <pre id="status">Enter your anon key, then click "Continue with Google".</pre>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+const show = (msg, cls='') => { statusEl.className = cls; statusEl.textContent = msg; };
+
+// Remember the key between the redirect round-trip.
+$('key').value = localStorage.getItem('_testkey') || '';
+
+function client() {
+  const url = $('url').value.trim();
+  const key = $('key').value.trim();
+  if (!key) { show('Paste your anon public key first.', 'err'); return null; }
+  localStorage.setItem('_testkey', key);
+  return createClient(url, key);
+}
+
+$('login').onclick = async () => {
+  const sb = client(); if (!sb) return;
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }   // comes back to this page
+  });
+  if (error) show('OAuth error: ' + error.message, 'err');
+};
+
+$('logout').onclick = async () => {
+  const sb = client(); if (!sb) return;
+  await sb.auth.signOut();
+  show('Signed out.', '');
+};
+
+// On load (and after the Google redirect), report who we are + the profiles row.
+async function refresh() {
+  const sb = client(); if (!sb) return;
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { show('Not signed in yet.', ''); return; }
+
+  // Read the profiles row the Step 1 trigger should have created.
+  const { data: profile, error } = await sb
+    .from('profiles').select('*').eq('id', user.id).single();
+
+  if (error) {
+    show('Signed in as ' + user.email +
+         '\n\n⚠ Could not read profiles row:\n' + error.message +
+         '\n(If this says "no rows", the auto-profile trigger may not have run.)', 'err');
+    return;
+  }
+  show('✅ Signed in as ' + user.email +
+       '\n\nprofiles row found:\n' + JSON.stringify(profile, null, 2), 'ok');
+}
+
+if ($('key').value) refresh();
+</script>
+</body>
+</html>
