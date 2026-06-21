@@ -13,7 +13,8 @@ Backend for the Immortal Pocket manhwa/anime streaming site.
 - [x] **Step 2 — User-data tables** (`migrations/0002_user_data.sql`)
       Tables: `favorites` (with `last_seen_count` for the "+N NEW" badge),
       `watch_history`, `read_history`. RLS: each user touches only their own rows.
-- [ ] Step 3 — Auth wiring (Google + email) and making yourself an admin.
+- [x] **Step 3 — Auth wiring** (Google + email). Promote your account to admin
+      with `snippets/make_admin.sql` after signing up once.
 - [ ] Step 4 — Bunny: secure video upload + signed playback.
 - [ ] Step 5 — Membership / Premium (payment + ad gating).
 
