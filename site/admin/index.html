@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Immortal Pocket — Admin</title>
+<style>
+  :root{
+    --ink:#0c1018;--ink-2:#121826;--ink-3:#1b2435;--mist:#9aa6bd;
+    --paper:#eef1f7;--gold:#e8b24c;--gold-soft:#f3d08a;--jade:#5fb6a0;
+    --line:rgba(255,255,255,0.08);--radius:14px;--danger:#ff8a8a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--ink);color:var(--paper);font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .display{font-family:'Georgia','Times New Roman',serif}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit}
+
+  /* ---------- login gate ---------- */
+  .gate{position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 30%,#16203a,#0c1018 60%);display:flex;align-items:center;justify-content:center;padding:20px}
+  .gate.hidden{display:none}
+  .gate-card{width:100%;max-width:380px;background:var(--ink-2);border:1px solid var(--line);border-radius:20px;padding:36px 30px;text-align:center}
+  .lamp{width:42px;height:42px;border-radius:50% 50% 48% 48%;background:radial-gradient(circle at 50% 38%,var(--gold-soft),var(--gold) 55%,#8a5d12);box-shadow:0 0 22px rgba(232,178,76,.5);margin:0 auto 16px}
+  .gate-card h1{font-size:22px;margin-bottom:4px}
+  .gate-card .sub{color:var(--mist);font-size:13px;margin-bottom:8px}
+  .lock-note{display:inline-flex;align-items:center;gap:6px;color:var(--jade);font-size:11.5px;background:rgba(95,182,160,.1);border:1px solid rgba(95,182,160,.25);padding:4px 10px;border-radius:999px;margin-bottom:22px}
+  .field{text-align:left;margin-bottom:13px}
+  .field label{display:block;font-size:12px;color:var(--mist);margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;background:var(--ink-3);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--paper);font-size:14px;outline:none}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;font-size:14px;font-weight:600;padding:12px 20px;border-radius:11px;transition:transform .12s,filter .12s}
+  .btn-primary{background:var(--gold);color:#241a06}
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-ghost{background:rgba(255,255,255,.07);color:var(--paper);border:1px solid var(--line)}
+  .btn-ghost:hover{background:rgba(255,255,255,.12)}
+  .btn-full{width:100%}
+  .gate-err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:1.2em}
+
+  /* ---------- shell ---------- */
+  .shell{display:none}
+  .shell.show{display:block}
+  header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:14px 22px;background:rgba(12,16,24,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px}
+  .logo .lamp{width:22px;height:22px;margin:0;box-shadow:0 0 12px rgba(232,178,76,.5)}
+  .admin-tag{font-size:10.5px;font-weight:800;letter-spacing:.6px;color:var(--gold);border:1px solid rgba(232,178,76,.35);padding:2px 8px;border-radius:6px}
+  header .spacer{margin-left:auto}
+  .secure-chip{display:inline-flex;align-items:center;gap:6px;color:var(--jade);font-size:12px;margin-right:14px}
+  .logout{background:none;border:1px solid var(--line);color:var(--mist);font-size:13px;padding:8px 14px;border-radius:9px}
+  .logout:hover{color:var(--danger);border-color:rgba(255,138,138,.4)}
+
+  .wrap{max-width:920px;margin:0 auto;padding:22px 22px 60px}
+  .page{display:none}
+  .page.active{display:block}
+  .back{display:inline-flex;align-items:center;gap:7px;color:var(--mist);background:none;border:none;font-size:14px;margin-bottom:16px}
+  .back:hover{color:var(--gold)}
+  .hello{font-size:23px;margin-bottom:4px}
+  .hello small{color:var(--mist);font-size:14px;font-weight:400;display:block;margin-top:4px}
+
+  /* two big buttons */
+  .big-actions{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0 26px}
+  .big-btn{position:relative;border:1px solid var(--line);border-radius:18px;padding:24px 20px;text-align:left;background:var(--ink-2);overflow:hidden;transition:transform .15s,border-color .15s}
+  .big-btn:hover{transform:translateY(-4px)}
+  .big-btn.anime:hover{border-color:rgba(232,178,76,.5)}
+  .big-btn.manhwa:hover{border-color:rgba(95,182,160,.5)}
+  .big-btn .ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:13px}
+  .big-btn.anime .ic{background:rgba(232,178,76,.15);color:var(--gold)}
+  .big-btn.manhwa .ic{background:rgba(95,182,160,.15);color:var(--jade)}
+  .big-btn h2{font-size:18px;margin-bottom:5px}
+  .big-btn p{color:var(--mist);font-size:13px}
+  .big-btn .plus{position:absolute;top:20px;right:20px;font-size:23px;color:var(--mist)}
+  @media(max-width:640px){.big-actions{grid-template-columns:1fr}}
+
+  /* tabs */
+  .tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tab{background:none;border:none;color:var(--mist);font-size:15px;font-weight:600;padding:10px 4px;position:relative}
+  .tab.on{color:var(--paper)}
+  .tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--gold);border-radius:2px}
+  .tab .cnt{font-size:12px;color:var(--mist);margin-left:5px}
+
+  /* library grid */
+  .lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+  .lib-card{cursor:pointer;text-align:left}
+  .lib-card .cov{width:100%;aspect-ratio:2/3;border-radius:12px;border:1px solid var(--line);overflow:hidden;position:relative;transition:border-color .15s}
+  .lib-card:hover .cov{border-color:rgba(232,178,76,.5)}
+  .lib-card .cov .ep{position:absolute;bottom:7px;left:7px;background:linear-gradient(90deg,#e8b24c,#d98a3a);color:#241a06;font-size:11px;font-weight:800;padding:3px 9px;border-radius:7px}
+  .lib-card .t{font-weight:600;font-size:13.5px;margin-top:8px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .lib-card .s{color:var(--mist);font-size:12px;margin-top:2px}
+  .empty{grid-column:1/-1;text-align:center;color:var(--mist);font-size:14px;border:1px dashed var(--line);border-radius:14px;padding:34px}
+
+  /* forms */
+  .form-card{max-width:560px}
+  .form-card h1{font-size:24px;margin-bottom:18px}
+  .drop{border:1.5px dashed rgba(255,255,255,.2);border-radius:12px;padding:22px;text-align:center;color:var(--mist);font-size:13px;cursor:pointer;transition:border-color .15s;position:relative;overflow:hidden}
+  .drop:hover{border-color:var(--gold)}
+  .drop .big{color:var(--paper);font-size:14px;margin-bottom:4px}
+  .drop.has{border-style:solid;border-color:var(--jade);color:var(--jade)}
+  .drop .preview{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.4}
+  .drop .preview-label{position:relative;z-index:2}
+  .hint{color:var(--mist);font-size:11.5px;margin-top:6px}
+  .secure-foot{display:flex;align-items:center;gap:7px;color:var(--jade);font-size:11.5px;margin-top:16px}
+
+  /* series detail (admin) */
+  .sd-top{display:flex;gap:16px;margin-bottom:8px}
+  .sd-cov{flex:0 0 100px;width:100px;height:150px;border-radius:12px;border:1px solid var(--line);overflow:hidden}
+  .sd-info{flex:1;min-width:0}
+  .sd-info .kp{font-size:11px;font-weight:800;letter-spacing:.5px;padding:2px 8px;border-radius:5px;display:inline-block;margin-bottom:8px}
+  .sd-info .kp.a{background:rgba(232,178,76,.15);color:var(--gold)}
+  .sd-info .kp.m{background:rgba(95,182,160,.15);color:var(--jade)}
+  .sd-info h1{font-size:22px;margin-bottom:6px}
+  .sd-info p{color:var(--mist);font-size:13.5px}
+  .ep-head{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px}
+  .ep-head h3{font-size:16px}
+  .ep-row{display:flex;align-items:center;gap:12px;background:var(--ink-2);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin-bottom:8px}
+  .ep-row .num{width:34px;height:34px;border-radius:8px;background:var(--ink-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:Georgia,serif;flex:0 0 auto}
+  .ep-row .et{flex:1;min-width:0}
+  .ep-row .et .t{font-weight:600;font-size:14px}
+  .ep-row .et .s{color:var(--mist);font-size:12px;margin-top:2px}
+  .ep-row .badge-ok{color:var(--jade);font-size:11.5px;border:1px solid rgba(95,182,160,.3);padding:2px 8px;border-radius:999px}
+  .ep-row .del{background:none;border:none;color:var(--mist);font-size:13px}
+  .ep-row .del:hover{color:var(--danger)}
+
+  /* numeric + upload */
+  .num-input{font-size:22px;font-weight:700;font-family:Georgia,serif;text-align:center;letter-spacing:2px}
+  .upload-zone{border:1.5px dashed rgba(232,178,76,.4);border-radius:14px;padding:28px;text-align:center;cursor:pointer;background:rgba(232,178,76,.04);transition:all .15s}
+  .upload-zone:hover{background:rgba(232,178,76,.08);border-color:var(--gold)}
+  .upload-zone .ic{width:50px;height:50px;border-radius:50%;background:rgba(232,178,76,.15);color:var(--gold);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+  .upload-zone .big{color:var(--paper);font-size:15px;font-weight:600;margin-bottom:4px}
+  .upload-zone.has{border-style:solid;border-color:var(--jade);background:rgba(95,182,160,.06)}
+  .upload-zone.has .ic{background:rgba(95,182,160,.15);color:var(--jade)}
+  .progress{height:7px;background:var(--ink-3);border-radius:999px;overflow:hidden;margin-top:14px;display:none}
+  .progress.show{display:block}
+  .progress .bar{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--jade));transition:width .2s}
+  .upload-state{font-size:12.5px;color:var(--mist);margin-top:8px;min-height:1.2em}
+
+  /* small panels on home */
+  .panel{background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:18px}
+  .panel h3{font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:9px}
+  .panel h3 .dot{width:8px;height:8px;border-radius:50%;background:var(--gold)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stat{background:var(--ink-3);border:1px solid var(--line);border-radius:11px;padding:13px}
+  .stat .n{font-size:22px;font-weight:700;font-family:Georgia,serif}
+  .stat .l{color:var(--mist);font-size:11.5px;margin-top:3px}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .dial-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px;flex-wrap:wrap}
+  .dial-row .lbl{font-size:13.5px}
+  .dial-row .lbl small{display:block;color:var(--mist);font-size:11.5px;margin-top:2px}
+  .seg{display:flex;background:var(--ink-3);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+  .seg button{background:none;border:none;color:var(--mist);font-size:12px;padding:8px 11px}
+  .seg button.on{background:var(--gold);color:#241a06;font-weight:700}
+  .toggle{width:46px;height:26px;border-radius:999px;background:var(--ink-3);border:1px solid var(--line);position:relative;flex:0 0 auto}
+  .toggle.on{background:var(--gold)}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--paper);transition:left .15s}
+  .toggle.on::after{left:22px;background:#241a06}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN GATE ============ -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="lamp"></div>
+    <h1 class="display">Immortal Pocket Admin</h1>
+    <div class="sub">Private control panel</div>
+    <div class="lock-note">&#128274; Secure area &middot; authorized access only</div>
+    <div class="field"><label>Admin email</label><input type="email" id="gEmail" placeholder="admin@immortalpocket.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="gPass" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"></div>
+    <div class="field"><label>2-step code (optional in demo)</label><input id="gOtp" placeholder="6-digit code" inputmode="numeric"></div>
+    <button class="btn btn-primary btn-full" onclick="tryLogin()">Unlock panel</button>
+    <div class="gate-err" id="gErr"></div>
+  </div>
+</div>
+
+<!-- ============ SHELL ============ -->
+<div class="shell" id="shell">
+  <header>
+    <div class="logo"><span class="lamp"></span><span class="display">Immortal Pocket</span><span class="admin-tag">ADMIN</span></div>
+    <div class="spacer"></div>
+    <span class="secure-chip">&#128274; Secure session</span>
+    <button class="logout" onclick="logout()">Lock</button>
+  </header>
+
+  <div class="wrap">
+
+    <!-- HOME -->
+    <div class="page active" id="p-home">
+      <div class="hello display">Welcome back<small>Manage everything on Immortal Pocket from here.</small></div>
+      <div class="big-actions">
+        <button class="big-btn anime" onclick="openCreate('anime')">
+          <span class="plus">&#65291;</span>
+          <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg></div>
+          <h2>Add New Anime</h2><p>Create a series, then add episodes</p>
+        </button>
+        <button class="big-btn manhwa" onclick="openCreate('manhwa')">
+          <span class="plus">&#65291;</span>
+          <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 6c-1.5-1-4-1.6-6-1.6V18c2 0 4.5.6 6 1.6 1.5-1 4-1.6 6-1.6V4.4c-2 0-4.5.6-6 1.6z"/><path d="M12 6v13.6"/></svg></div>
+          <h2>Add New Manhwa</h2><p>Create a series, then add chapters</p>
+        </button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab on" id="tabAnime" onclick="switchTab('anime')">Anime <span class="cnt" id="cntA"></span></button>
+        <button class="tab" id="tabManhwa" onclick="switchTab('manhwa')">Manhwa <span class="cnt" id="cntM"></span></button>
+      </div>
+      <div class="lib-grid" id="libGrid"></div>
+
+      <div class="panel">
+        <h3><span class="dot"></span>Overview</h3>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="panel">
+        <h3><span class="dot"></span>Ads Control</h3>
+        <div class="dial-row">
+          <div class="lbl">Banner ads<small>Free users only</small></div>
+          <div class="toggle on" id="tBanner" onclick="toggleAd('banner')"></div>
+        </div>
+        <div class="dial-row">
+          <div class="lbl">Video ads (pre-roll + mid-roll)<small>Before &amp; during episodes</small></div>
+          <div class="toggle on" id="tVideo" onclick="toggleAd('video')"></div>
+        </div>
+        <div class="dial-row">
+          <div class="lbl">Click-to-ad frequency<small>How often a click opens a sponsor page</small></div>
+          <div class="seg" id="adFreq">
+            <button data-f="off">Off</button>
+            <button data-f="session" class="on">Once / session</button>
+            <button data-f="play">Per play</button>
+            <button data-f="click">Every click</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE SERIES -->
+    <div class="page" id="p-create">
+      <button class="back" onclick="go('home')">&larr; Back</button>
+      <div class="form-card">
+        <h1 class="display" id="createTitle">Add New Anime</h1>
+        <div class="field">
+          <label>Thumbnail (poster)</label>
+          <div class="drop" id="createDrop" onclick="pickCover()">
+            <div class="preview" id="createPreview"></div>
+            <div class="preview-label"><div class="big" id="createDropBig">Tap to choose poster from device</div><div>PNG / JPG &middot; tall cover used across the site</div></div>
+          </div>
+          <input type="file" id="coverFile" accept="image/*" hidden onchange="coverChosen(event)">
+        </div>
+        <div class="field"><label>Title</label><input id="createName" placeholder="e.g. Nine Realms of Ascending Cloud"></div>
+        <div class="field"><label>Summary</label><textarea id="createDesc" rows="3" placeholder="Short description shown on the detail page"></textarea></div>
+        <button class="btn btn-primary btn-full" onclick="saveSeries()">Save</button>
+        <div class="secure-foot">&#128274; Saved over an encrypted connection. Image goes to secure storage with signed links.</div>
+      </div>
+    </div>
+
+    <!-- SERIES DETAIL -->
+    <div class="page" id="p-series">
+      <button class="back" onclick="go('home')">&larr; Back to library</button>
+      <div class="sd-top">
+        <div class="sd-cov" id="sdCov"></div>
+        <div class="sd-info">
+          <span class="kp" id="sdKind">ANIME</span>
+          <h1 class="display" id="sdName">Title</h1>
+          <p id="sdDesc">Summary</p>
+        </div>
+      </div>
+      <div class="ep-head">
+        <h3 class="display" id="sdEpTitle">Episodes</h3>
+        <button class="btn btn-primary" id="sdAddBtn" onclick="openAddEp()">+ Add New Episode</button>
+      </div>
+      <div id="epList"></div>
+    </div>
+
+    <!-- ADD EPISODE/CHAPTER -->
+    <div class="page" id="p-addep">
+      <button class="back" onclick="go('series')">&larr; Back</button>
+      <div class="form-card">
+        <h1 class="display" id="addEpTitle">Add New Episode</h1>
+        <div class="field">
+          <label id="numLabel">Episode number</label>
+          <input class="num-input" id="epNum" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+        </div>
+        <div class="field"><label>Title (optional)</label><input id="epTitle" placeholder="e.g. The First Breath"></div>
+        <div class="field">
+          <label>Thumbnail (optional)</label>
+          <div class="drop" id="epThumbDrop" onclick="pickEpThumb()">
+            <div class="preview" id="epThumbPreview"></div>
+            <div class="preview-label"><div class="big" id="epThumbBig">Tap to choose thumbnail</div><div>Optional &middot; shown in the episode list</div></div>
+          </div>
+          <input type="file" id="epThumbFile" accept="image/*" hidden onchange="epThumbChosen(event)">
+        </div>
+        <div class="field">
+          <label id="uploadLabel">Upload episode video</label>
+          <div class="upload-zone" id="uploadZone" onclick="pickEpFile()">
+            <div class="ic" id="uploadIc"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 20h14"/></svg></div>
+            <div class="big" id="uploadBig">Tap to upload from your device</div>
+            <div id="uploadSub">Choose the video file &middot; goes straight to secure delivery</div>
+          </div>
+          <input type="file" id="epFile" accept="video/*" hidden onchange="epFileChosen(event)">
+          <div class="progress" id="upProgress"><div class="bar" id="upBar"></div></div>
+          <div class="upload-state" id="upState"></div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveEp()">Publish to site</button>
+        <div class="secure-foot">&#128274; Uploads direct to secure delivery via a one-time signed ticket. Keys never touch the browser.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =======================================================
+   Admin panel — front-end prototype.
+   Real auth (2FA), uploads, and saving happen on the
+   secure backend in the connection step. No secrets or
+   provider names live here. The file pickers below are
+   REAL device pickers (input type=file).
+   ======================================================= */
+
+/* ---------- login ---------- */
+function tryLogin(){
+  const em=document.getElementById('gEmail').value.trim();
+  const pw=document.getElementById('gPass').value;
+  const otp=document.getElementById('gOtp').value.trim();
+  const err=document.getElementById('gErr');
+  // Demo: only email + password required to get in. (Real 2FA runs on the backend.)
+  if(!em||!pw){err.textContent='Enter any email and password to enter (demo).';return;}
+  if(otp&&otp.length<6){err.textContent='If you enter a 2-step code, it must be 6 digits.';return;}
+  err.textContent='';
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('shell').classList.add('show');
+  renderAll();
+}
+function logout(){
+  document.getElementById('shell').classList.remove('show');
+  document.getElementById('gate').classList.remove('hidden');
+  document.getElementById('gPass').value='';document.getElementById('gOtp').value='';
+}
+
+/* ---------- data (would come from secure backend) ---------- */
+const palettes=[['#1a2740','#3a5a8c'],['#2a1a32','#7c4a6e'],['#152a26','#3f8a76'],['#2e2416','#9a7434'],['#241a2e','#5a4a8c'],['#102028','#2f6a7a']];
+function art(seed){const p=palettes[((seed%palettes.length)+palettes.length)%palettes.length];return 'linear-gradient(135deg,'+p[0]+','+p[1]+')';}
+function fmt(n){return n>=1000?(n/1000).toFixed(1)+'k':n;}
+
+let series=[
+  {id:1,kind:'anime', title:'Nine Realms of Ascending Cloud', desc:'A mortal disciple climbs toward immortality.', seed:0, cover:null, eps:[{n:1,title:'The First Breath'},{n:2,title:''},{n:3,title:''}]},
+  {id:2,kind:'manhwa',title:'Jade Spirit Records', desc:'A scribe who reads spirit-jade rewrites his fate.', seed:3, cover:null, eps:[{n:1,title:''},{n:2,title:''}]},
+];
+let nextId=3;
+let currentTab='anime';
+let currentSeriesId=null;
+
+/* ---------- navigation ---------- */
+function go(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('p-'+p).classList.add('active');window.scrollTo(0,0);}
+
+function renderAll(){renderTabs();renderLibrary();renderStats();}
+
+function renderTabs(){
+  document.getElementById('cntA').textContent='('+series.filter(s=>s.kind==='anime').length+')';
+  document.getElementById('cntM').textContent='('+series.filter(s=>s.kind==='manhwa').length+')';
+}
+function switchTab(k){
+  currentTab=k;
+  document.getElementById('tabAnime').classList.toggle('on',k==='anime');
+  document.getElementById('tabManhwa').classList.toggle('on',k==='manhwa');
+  renderLibrary();
+}
+function renderLibrary(){
+  const grid=document.getElementById('libGrid');grid.innerHTML='';
+  const list=series.filter(s=>s.kind===currentTab);
+  if(!list.length){grid.innerHTML='<div class="empty">No '+currentTab+' yet. Tap &ldquo;Add New '+(currentTab==='anime'?'Anime':'Manhwa')+'&rdquo; to create one.</div>';return;}
+  list.forEach(s=>{
+    const card=document.createElement('div');card.className='lib-card';
+    const coverStyle=s.cover?('background-image:url('+s.cover+');background-size:cover;background-position:center'):('background:'+art(s.seed));
+    card.innerHTML='<div class="cov" style="'+coverStyle+'"><span class="ep">'+s.eps.length+' '+(s.kind==='anime'?'ep':'ch')+'</span></div>'+
+      '<div class="t">'+s.title+'</div><div class="s">'+s.eps.length+' '+(s.kind==='anime'?'episodes':'chapters')+'</div>';
+    card.onclick=()=>openSeries(s.id);
+    grid.appendChild(card);
+  });
+}
+function renderStats(){
+  const a=series.filter(s=>s.kind==='anime').length;
+  const m=series.filter(s=>s.kind==='manhwa').length;
+  const tot=series.reduce((x,s)=>x+s.eps.length,0);
+  document.getElementById('stats').innerHTML=
+    '<div class="stat"><div class="n">'+a+'</div><div class="l">Anime series</div></div>'+
+    '<div class="stat"><div class="n">'+m+'</div><div class="l">Manhwa series</div></div>'+
+    '<div class="stat"><div class="n">'+tot+'</div><div class="l">Episodes + chapters</div></div>'+
+    '<div class="stat"><div class="n">'+series.length+'</div><div class="l">Total titles</div></div>';
+}
+
+/* ---------- create series ---------- */
+let createKind='anime';let createCoverData=null;
+function openCreate(kind){
+  createKind=kind;createCoverData=null;
+  document.getElementById('createTitle').textContent=kind==='anime'?'Add New Anime':'Add New Manhwa';
+  document.getElementById('createName').value='';
+  document.getElementById('createDesc').value='';
+  document.getElementById('createPreview').style.backgroundImage='';
+  document.getElementById('createDrop').classList.remove('has');
+  document.getElementById('createDropBig').textContent='Tap to choose poster from device';
+  go('create');
+}
+function pickCover(){document.getElementById('coverFile').click();}   // opens REAL device picker
+function coverChosen(e){
+  const f=e.target.files[0];if(!f)return;
+  const url=URL.createObjectURL(f);
+  createCoverData=url;
+  document.getElementById('createPreview').style.backgroundImage='url('+url+')';
+  document.getElementById('createDrop').classList.add('has');
+  document.getElementById('createDropBig').textContent='Selected: '+f.name;
+}
+function saveSeries(){
+  const name=document.getElementById('createName').value.trim();
+  if(!name){alert('Please enter a title.');return;}
+  series.unshift({id:nextId++,kind:createKind,title:name,desc:document.getElementById('createDesc').value.trim(),seed:Math.floor(Math.random()*6),cover:createCoverData,eps:[]});
+  currentTab=createKind;
+  renderAll();switchTab(createKind);go('home');
+}
+
+/* ---------- series detail ---------- */
+function openSeries(id){
+  currentSeriesId=id;
+  const s=series.find(x=>x.id===id);if(!s)return;
+  const isA=s.kind==='anime';
+  document.getElementById('sdCov').style.cssText=s.cover?('background-image:url('+s.cover+');background-size:cover;background-position:center'):('background:'+art(s.seed));
+  const kp=document.getElementById('sdKind');kp.textContent=isA?'ANIME':'MANHWA';kp.className='kp '+(isA?'a':'m');
+  document.getElementById('sdName').textContent=s.title;
+  document.getElementById('sdDesc').textContent=s.desc||'No summary yet.';
+  document.getElementById('sdEpTitle').textContent=isA?'Episodes':'Chapters';
+  document.getElementById('sdAddBtn').textContent=isA?'+ Add New Episode':'+ Add New Chapter';
+  renderEps();go('series');
+}
+function renderEps(){
+  const s=series.find(x=>x.id===currentSeriesId);if(!s)return;
+  const isA=s.kind==='anime';
+  const list=document.getElementById('epList');list.innerHTML='';
+  if(!s.eps.length){list.innerHTML='<div class="empty">No '+(isA?'episodes':'chapters')+' yet. Tap &ldquo;Add New '+(isA?'Episode':'Chapter')+'&rdquo;.</div>';return;}
+  [...s.eps].sort((a,b)=>b.n-a.n).forEach(ep=>{
+    const row=document.createElement('div');row.className='ep-row';
+    row.innerHTML='<div class="num">'+ep.n+'</div>'+
+      '<div class="et"><div class="t">'+(isA?'Episode':'Chapter')+' '+ep.n+(ep.title?(' &middot; '+ep.title):'')+'</div><div class="s">Published</div></div>'+
+      '<span class="badge-ok">&#10003; live</span>'+
+      '<button class="del" onclick="delEp('+ep.n+')">remove</button>';
+    list.appendChild(row);
+  });
+}
+function delEp(n){
+  const s=series.find(x=>x.id===currentSeriesId);if(!s)return;
+  s.eps=s.eps.filter(e=>e.n!==n);renderEps();renderAll();
+}
+
+/* ---------- add episode/chapter ---------- */
+let epThumbData=null;let epVideoFile=null;
+function openAddEp(){
+  const s=series.find(x=>x.id===currentSeriesId);if(!s)return;
+  const isA=s.kind==='anime';
+  epThumbData=null;epVideoFile=null;
+  document.getElementById('addEpTitle').textContent=isA?'Add New Episode':'Add New Chapter';
+  document.getElementById('numLabel').textContent=isA?'Episode number':'Chapter number';
+  document.getElementById('uploadLabel').textContent=isA?'Upload episode video':'Upload chapter images';
+  document.getElementById('uploadBig').textContent='Tap to upload from your device';
+  document.getElementById('uploadSub').textContent=isA?'Choose the video file · goes straight to secure delivery':'Choose the chapter images · go straight to secure storage';
+  document.getElementById('epFile').setAttribute('accept',isA?'video/*':'image/*');
+  if(!isA)document.getElementById('epFile').setAttribute('multiple','multiple');else document.getElementById('epFile').removeAttribute('multiple');
+  // suggest next number
+  const nextNum=(s.eps.reduce((m,e)=>Math.max(m,e.n),0))+1;
+  document.getElementById('epNum').value=nextNum;
+  document.getElementById('epTitle').value='';
+  document.getElementById('epThumbPreview').style.backgroundImage='';
+  document.getElementById('epThumbDrop').classList.remove('has');
+  document.getElementById('epThumbBig').textContent='Tap to choose thumbnail';
+  document.getElementById('uploadZone').classList.remove('has');
+  document.getElementById('uploadIc').innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 20h14"/></svg>';
+  document.getElementById('upProgress').classList.remove('show');
+  document.getElementById('upBar').style.width='0';
+  document.getElementById('upState').textContent='';
+  go('addep');
+}
+function pickEpThumb(){document.getElementById('epThumbFile').click();}
+function epThumbChosen(e){
+  const f=e.target.files[0];if(!f)return;
+  const url=URL.createObjectURL(f);epThumbData=url;
+  document.getElementById('epThumbPreview').style.backgroundImage='url('+url+')';
+  document.getElementById('epThumbDrop').classList.add('has');
+  document.getElementById('epThumbBig').textContent='Selected: '+f.name;
+}
+function pickEpFile(){document.getElementById('epFile').click();}     // opens REAL device picker
+function epFileChosen(e){
+  const files=e.target.files;if(!files.length)return;
+  epVideoFile=files;
+  const s=series.find(x=>x.id===currentSeriesId);
+  const isA=s.kind==='anime';
+  const label = isA ? files[0].name : (files.length+' images selected');
+  document.getElementById('uploadZone').classList.add('has');
+  document.getElementById('uploadIc').innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>';
+  document.getElementById('uploadBig').textContent='Ready: '+label;
+  document.getElementById('uploadSub').textContent='Tap Publish to send it securely';
+  // simulate the secure upload progress (real upload streams to the platform)
+  simulateUpload();
+}
+function simulateUpload(){
+  const prog=document.getElementById('upProgress');const bar=document.getElementById('upBar');const st=document.getElementById('upState');
+  prog.classList.add('show');let p=0;st.textContent='Uploading securely…';
+  const iv=setInterval(()=>{
+    p+=Math.random()*22;if(p>=100){p=100;clearInterval(iv);st.textContent='✓ Uploaded to secure delivery';}
+    bar.style.width=p+'%';
+  },220);
+}
+function saveEp(){
+  const s=series.find(x=>x.id===currentSeriesId);if(!s)return;
+  const isA=s.kind==='anime';
+  const num=parseInt(document.getElementById('epNum').value,10);
+  if(!num){alert('Enter a '+(isA?'episode':'chapter')+' number.');return;}
+  if(!epVideoFile){alert('Choose a file to upload from your device first.');return;}
+  if(s.eps.some(e=>e.n===num)){alert((isA?'Episode':'Chapter')+' '+num+' already exists.');return;}
+  s.eps.push({n:num,title:document.getElementById('epTitle').value.trim()});
+  renderAll();openSeries(s.id);
+  alert((isA?'Episode ':'Chapter ')+num+' published. (Live site uploads to secure delivery and updates the home page.)');
+}
+
+/* ---------- ads ---------- */
+const adState={banner:true,video:true,freq:'session'};
+function toggleAd(which){adState[which]=!adState[which];document.getElementById(which==='banner'?'tBanner':'tVideo').classList.toggle('on',adState[which]);}
+document.getElementById('adFreq').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...document.querySelectorAll('#adFreq button')].forEach(x=>x.classList.remove('on'));b.classList.add('on');adState.freq=b.dataset.f;});
+</script>
+</body>
+</html>
