@@ -1,0 +1,16 @@
+{
+  "appId": "com.ngsstore.app",
+  "appName": "NGS Store",
+  "webDir": "dist",
+  "backgroundColor": "#f5f0e8",
+  "android": {
+    "backgroundColor": "#f5f0e8"
+  },
+  "ios": {
+    "backgroundColor": "#f5f0e8",
+    "contentInset": "always"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
