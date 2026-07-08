@@ -10,7 +10,14 @@
     "sync": "npm run build && cap sync",
     "android": "npm run build && cap sync android && cap open android",
     "ios": "npm run build && cap sync ios && cap open ios",
-    "build:apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug"
+    "build:apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug",
+
+    "dev:admin": "vite admin",
+    "build:admin": "vite build admin",
+    "sync:admin": "npm run build:admin && cd admin && cap sync",
+    "android:admin": "npm run build:admin && cd admin && cap sync android && cap open android",
+    "ios:admin": "npm run build:admin && cd admin && cap sync ios && cap open ios",
+    "build:apk:admin": "npm run build:admin && cd admin && cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",

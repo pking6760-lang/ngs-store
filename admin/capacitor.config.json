@@ -1,0 +1,16 @@
+{
+  "appId": "com.ngsstore.admin",
+  "appName": "NGS Store Admin",
+  "webDir": "dist",
+  "backgroundColor": "#f5f0e8",
+  "android": {
+    "backgroundColor": "#f5f0e8"
+  },
+  "ios": {
+    "backgroundColor": "#f5f0e8",
+    "contentInset": "always"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

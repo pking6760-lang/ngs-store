@@ -1,0 +1,16 @@
+{
+  "name": "NGS Store Admin",
+  "short_name": "NGS Admin",
+  "description": "NGS Store manager dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#3d2b1f",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%233d2b1f'/%3E%3Ctext x='96' y='118' font-size='70' text-anchor='middle' fill='%23c49a3c' font-family='serif' font-weight='bold'%3ENGS%3C/text%3E%3Ctext x='96' y='158' font-size='30' text-anchor='middle' fill='%23f5f0e8' font-family='sans-serif'%3EADMIN%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
