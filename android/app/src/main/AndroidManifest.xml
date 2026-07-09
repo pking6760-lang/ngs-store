@@ -38,4 +38,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Buzz the phone on the incoming-order alarm screen -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>
