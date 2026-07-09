@@ -247,7 +247,7 @@ body {
   overflow-x: auto; /* let the products table scroll sideways on narrow screens */
 }
 .data-table {
-  min-width: 560px;
+  min-width: 440px;
 }
 .panel-head {
   display: flex;
@@ -651,6 +651,36 @@ body {
   gap: 10px;
   padding: 16px 20px;
   border-top: 1px solid var(--line);
+}
+/* Delete sits on the far left of the edit-product footer. */
+.delete-btn {
+  margin-right: auto;
+  border: 1px solid #f4c9c9;
+  background: #fff;
+  color: #c0392b;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.delete-btn:hover {
+  background: #fdecec;
+}
+
+/* Tappable product rows (replaces the old per-row Edit/Delete buttons). */
+.products-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.row-clickable {
+  cursor: pointer;
+}
+.row-clickable:hover {
+  background: #f6faf7;
+}
+.row-clickable:active {
+  background: #eef5ef;
 }
 
 /* ─── Login ──────────────────────────────────────────────── */

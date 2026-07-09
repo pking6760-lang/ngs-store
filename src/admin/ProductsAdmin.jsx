@@ -58,6 +58,8 @@ export default function ProductsAdmin() {
         </button>
       </div>
 
+      <p className="products-hint">Tap a product to edit it.</p>
+
       <section className="panel no-pad">
         <table className="data-table">
           <thead>
@@ -67,12 +69,15 @@ export default function ProductsAdmin() {
               <th>Unit</th>
               <th>Price</th>
               <th>MRP</th>
-              <th className="ta-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((p) => (
-              <tr key={p.id}>
+              <tr
+                key={p.id}
+                className="row-clickable"
+                onClick={() => setEditing(p)}
+              >
                 <td>
                   <div className="cell-product">
                     <span className="cell-emoji">{p.icon}</span>
@@ -83,24 +88,11 @@ export default function ProductsAdmin() {
                 <td>{p.unit}</td>
                 <td className="mono">₹{p.price}</td>
                 <td className="mono muted">₹{p.mrp}</td>
-                <td className="ta-right">
-                  <button className="icon-btn" onClick={() => setEditing(p)}>
-                    ✏️ Edit
-                  </button>
-                  <button
-                    className="icon-btn danger"
-                    onClick={() => {
-                      if (confirm(`Delete "${p.name}"?`)) deleteProduct(p.id);
-                    }}
-                  >
-                    🗑️ Delete
-                  </button>
-                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="empty-cell">
+                <td colSpan={5} className="empty-cell">
                   No products match your filters.
                 </td>
               </tr>
@@ -117,13 +109,17 @@ export default function ProductsAdmin() {
             upsertProduct(prod);
             setEditing(null);
           }}
+          onDelete={(id) => {
+            deleteProduct(id);
+            setEditing(null);
+          }}
         />
       )}
     </>
   );
 }
 
-function ProductModal({ product, onClose, onSave }) {
+function ProductModal({ product, onClose, onSave, onDelete }) {
   const isNew = !product.id;
   const [form, setForm] = useState(product);
 
@@ -226,6 +222,17 @@ function ProductModal({ product, onClose, onSave }) {
         </div>
 
         <div className="modal-foot">
+          {!isNew && (
+            <button
+              type="button"
+              className="delete-btn"
+              onClick={() => {
+                if (confirm(`Delete "${form.name}"?`)) onDelete(product.id);
+              }}
+            >
+              🗑️ Delete
+            </button>
+          )}
           <button type="button" className="ghost-btn" onClick={onClose}>
             Cancel
           </button>
