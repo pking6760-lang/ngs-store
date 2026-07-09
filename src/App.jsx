@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import Header from "./components/Header.jsx";
 import ProductCard from "./components/ProductCard.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
+import AccountDrawer from "./components/AccountDrawer.jsx";
+import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
+import { useAuth } from "./context/AuthContext.jsx";
 import { useProducts } from "./lib/hooks.js";
 import { categories } from "./data/products.js";
 
@@ -16,8 +19,16 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const { totalCount, items } = useCart();
+  const { isLoggedIn } = useAuth();
   const products = useProducts();
+
+  function handleAccountClick() {
+    if (isLoggedIn) setAccountOpen(true);
+    else setAuthOpen(true);
+  }
 
   const searching = query.trim().length > 0;
   const searchResults = useMemo(() => {
@@ -45,6 +56,7 @@ export default function App() {
         onQueryChange={setQuery}
         onCartClick={() => setCartOpen(true)}
         onLogoClick={goHome}
+        onAccountClick={handleAccountClick}
       />
 
       <main className="main">
@@ -90,7 +102,22 @@ export default function App() {
         </button>
       )}
 
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onRequireLogin={() => setAuthOpen(true)}
+      />
+
+      <AccountDrawer open={accountOpen} onClose={() => setAccountOpen(false)} />
+
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={() => setAuthOpen(false)}
+        reason={
+          cartOpen ? "Log in to place your order and track it." : undefined
+        }
+      />
 
       <footer className="footer">
         <p>NGS Store — groceries delivered in minutes.</p>

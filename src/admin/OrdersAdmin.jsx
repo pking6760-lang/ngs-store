@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES, updateOrderStatus } from "../lib/store.js";
+import { googleMapsLink } from "../lib/location.js";
 import { StatusPill } from "./Dashboard.jsx";
 
 export default function OrdersAdmin() {
@@ -41,7 +42,34 @@ export default function OrdersAdmin() {
                 <StatusPill status={o.status} />
               </div>
 
-              <div className="order-customer">👤 {o.customer}</div>
+              <div className="order-customer">
+                👤 {o.customer}
+                {o.userPhone ? ` · 📞 +91 ${o.userPhone}` : ""}
+              </div>
+
+              {o.address && <div className="order-address">🏠 {o.address}</div>}
+
+              <div className="order-meta">
+                <span className="order-pay-tag">
+                  {o.payment === "upi"
+                    ? "🟣 UPI"
+                    : o.payment === "cod"
+                    ? "💵 Cash on delivery"
+                    : "💳 —"}
+                </span>
+                {o.location ? (
+                  <a
+                    className="order-track-link"
+                    href={googleMapsLink(o.location)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    📍 Track on Google Maps
+                  </a>
+                ) : (
+                  <span className="order-noloc">📍 No location shared</span>
+                )}
+              </div>
 
               <div className="order-items">
                 {o.items.map((it) => (
