@@ -1,9 +1,17 @@
 /* Admin dashboard styling. Reuses the color variables from styles.css. */
 
+/* Never allow the admin UI to scroll sideways — clips any stray overflow so
+   the layout can't shift off the left edge on a phone. */
+html,
+body {
+  overflow-x: hidden;
+}
+
 .admin {
   display: flex;
   min-height: 100vh;
   background: #f4f6f5;
+  max-width: 100%;
 }
 
 /* ─── Sidebar ────────────────────────────────────────────── */
@@ -108,6 +116,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 12px;
 }
 .admin-title {
   font-size: 20px;
@@ -728,10 +738,28 @@
     padding: 16px 14px 84px; /* leave room for the bottom nav */
   }
   .admin-topbar {
-    padding: 14px 16px;
+    padding: 12px 14px;
     position: sticky;
     top: 0;
     z-index: 20;
+  }
+  /* Title + user on the first row; the store toggles wrap to their own row. */
+  .admin-title {
+    order: 1;
+    font-size: 18px;
+  }
+  .admin-user {
+    order: 2;
+  }
+  .store-controls {
+    order: 3;
+    width: 100%;
+    margin: 0;
+  }
+  .store-toggle,
+  .surge-toggle {
+    font-size: 11px;
+    padding: 7px 11px;
   }
   .stat-row {
     grid-template-columns: 1fr 1fr;
