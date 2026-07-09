@@ -1,13 +1,18 @@
 import { useMemo, useState } from "react";
-import { useProducts } from "../lib/hooks.js";
-import { categories, upsertProduct, deleteProduct } from "../lib/store.js";
+import { useProducts, useCategories } from "../lib/hooks.js";
+import {
+  upsertProduct,
+  deleteProduct,
+  addCategory,
+  deleteCategory,
+} from "../lib/store.js";
 import { fileToResizedDataUrl } from "../lib/image.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 
 const EMPTY = {
   id: "",
   name: "",
-  category: categories[0].id,
+  category: "",
   unit: "",
   price: "",
   mrp: "",
@@ -16,9 +21,11 @@ const EMPTY = {
 
 export default function ProductsAdmin() {
   const products = useProducts();
+  const categories = useCategories();
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [editing, setEditing] = useState(null); // product object or null
+  const [managingCats, setManagingCats] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -52,9 +59,14 @@ export default function ProductsAdmin() {
             </option>
           ))}
         </select>
+        <button className="ghost-btn" onClick={() => setManagingCats(true)}>
+          🏷️ Categories
+        </button>
         <button
           className="primary-btn"
-          onClick={() => setEditing({ ...EMPTY })}
+          onClick={() =>
+            setEditing({ ...EMPTY, category: categories[0]?.id || "" })
+          }
         >
           + Add product
         </button>
@@ -112,6 +124,7 @@ export default function ProductsAdmin() {
       {editing && (
         <ProductModal
           product={editing}
+          categories={categories}
           onClose={() => setEditing(null)}
           onSave={(prod) => {
             upsertProduct(prod);
@@ -123,11 +136,114 @@ export default function ProductsAdmin() {
           }}
         />
       )}
+
+      {managingCats && (
+        <CategoryManager
+          categories={categories}
+          products={products}
+          onClose={() => setManagingCats(false)}
+        />
+      )}
     </>
   );
 }
 
-function ProductModal({ product, onClose, onSave, onDelete }) {
+function CategoryManager({ categories, products, onClose }) {
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("🏷️");
+  const [error, setError] = useState("");
+
+  function add(e) {
+    e.preventDefault();
+    const res = addCategory({ name, icon });
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setName("");
+    setIcon("🏷️");
+    setError("");
+  }
+
+  function remove(cat) {
+    const count = products.filter((p) => p.category === cat.id).length;
+    const msg =
+      count > 0
+        ? `Delete "${cat.name}"? Its ${count} product${
+            count > 1 ? "s" : ""
+          } will move to another category.`
+        : `Delete "${cat.name}"?`;
+    if (!confirm(msg)) return;
+    const res = deleteCategory(cat.id);
+    if (!res.ok) setError(res.error);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3>Categories</h3>
+          <button type="button" className="modal-close" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+
+        <div className="cat-manager">
+          <form className="cat-add" onSubmit={add}>
+            <input
+              className="cat-icon-input"
+              value={icon}
+              onChange={(e) => setIcon(e.target.value.slice(0, 2))}
+              aria-label="Category icon"
+              maxLength={2}
+            />
+            <input
+              className="cat-name-input"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setError("");
+              }}
+              placeholder="New category name"
+            />
+            <button type="submit" className="primary-btn">
+              Add
+            </button>
+          </form>
+          {error && <div className="auth-error">{error}</div>}
+
+          <ul className="cat-list">
+            {categories.map((c) => {
+              const count = products.filter((p) => p.category === c.id).length;
+              return (
+                <li className="cat-list-item" key={c.id}>
+                  <span
+                    className="cat-list-swatch"
+                    style={{ background: c.color }}
+                  >
+                    {c.icon}
+                  </span>
+                  <span className="cat-list-name">{c.name}</span>
+                  <span className="cat-list-count">{count} items</span>
+                  <button
+                    type="button"
+                    className="cat-list-del"
+                    onClick={() => remove(c)}
+                    aria-label={`Delete ${c.name}`}
+                  >
+                    🗑️
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   const isNew = !product.id;
   const [form, setForm] = useState(product);
   const [imgBusy, setImgBusy] = useState(false);

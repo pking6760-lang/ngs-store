@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
-import { getProducts, getOrders, getSettings, subscribe } from "./store.js";
+import {
+  getProducts,
+  getCategories,
+  getOrders,
+  getSettings,
+  subscribe,
+} from "./store.js";
 
 // Re-renders whenever products change (in this tab or another).
 export function useProducts() {
   const [products, setProducts] = useState(getProducts);
   useEffect(() => subscribe(() => setProducts(getProducts())), []);
   return products;
+}
+
+// Re-renders whenever categories change (add / remove).
+export function useCategories() {
+  const [categories, setCategories] = useState(getCategories);
+  useEffect(() => subscribe(() => setCategories(getCategories())), []);
+  return categories;
 }
 
 // Re-renders whenever orders change.

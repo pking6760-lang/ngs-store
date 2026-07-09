@@ -4,12 +4,19 @@
 // a real backend + database will work later — the only difference is that this
 // version is per-browser instead of shared across all devices.
 
-import { products as seedProducts, categories } from "../data/products.js";
+import { products as seedProducts, categories as seedCategories } from "../data/products.js";
 
 const PRODUCTS_KEY = "ngs-products-v1";
+const CATEGORIES_KEY = "ngs-categories-v1";
 const ORDERS_KEY = "ngs-orders-v1";
 const SETTINGS_KEY = "ngs-settings-v1";
 const CHANGE_EVENT = "ngs-store-change";
+
+// Soft background colours cycled through for new categories.
+const CATEGORY_COLORS = [
+  "#e7f7e9", "#fdf4e3", "#fce8ec", "#e6f0fb",
+  "#f3ecfb", "#fdeae6", "#e7f6f6", "#eef2e6",
+];
 
 function read(key, fallback) {
   try {
@@ -59,6 +66,53 @@ export function upsertProduct(product) {
 
 export function deleteProduct(id) {
   saveProducts(getProducts().filter((p) => p.id !== id));
+}
+
+/* ─── Categories ────────────────────────────────────────── */
+export function getCategories() {
+  const existing = read(CATEGORIES_KEY, null);
+  if (!existing) {
+    write(CATEGORIES_KEY, seedCategories);
+    return seedCategories;
+  }
+  return existing;
+}
+
+export function saveCategories(list) {
+  write(CATEGORIES_KEY, list);
+}
+
+// Add a category. Returns { ok, category } or { ok:false, error }.
+export function addCategory({ name, icon }) {
+  const clean = (name || "").trim();
+  if (!clean) return { ok: false, error: "Please enter a category name." };
+  const list = getCategories();
+  if (list.some((c) => c.name.toLowerCase() === clean.toLowerCase()))
+    return { ok: false, error: "That category already exists." };
+  const base = clean.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const category = {
+    id: (base || "cat") + "-" + Math.random().toString(36).slice(2, 6),
+    name: clean,
+    icon: (icon || "").trim() || "🏷️",
+    color: CATEGORY_COLORS[list.length % CATEGORY_COLORS.length],
+  };
+  saveCategories([...list, category]);
+  return { ok: true, category };
+}
+
+// Remove a category. Any products in it move to another category so nothing is
+// orphaned. You can't delete the last remaining category.
+export function deleteCategory(id) {
+  const list = getCategories();
+  if (list.length <= 1)
+    return { ok: false, error: "Keep at least one category." };
+  const fallback = list.find((c) => c.id !== id);
+  const moved = getProducts().map((p) =>
+    p.category === id ? { ...p, category: fallback.id } : p
+  );
+  saveProducts(moved);
+  saveCategories(list.filter((c) => c.id !== id));
+  return { ok: true, movedTo: fallback };
 }
 
 /* ─── Store settings ────────────────────────────────────── */
@@ -177,6 +231,7 @@ export function subscribe(callback) {
   const onStorage = (e) => {
     if (
       e.key === PRODUCTS_KEY ||
+      e.key === CATEGORIES_KEY ||
       e.key === ORDERS_KEY ||
       e.key === SETTINGS_KEY
     )
@@ -190,4 +245,3 @@ export function subscribe(callback) {
   };
 }
 
-export { categories };

@@ -6,8 +6,7 @@ import AccountDrawer from "./components/AccountDrawer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
-import { useProducts, useSettings } from "./lib/hooks.js";
-import { categories } from "./data/products.js";
+import { useProducts, useSettings, useCategories } from "./lib/hooks.js";
 
 const banners = [
   { id: "b1", title: "Fresh fruits & veggies", subtitle: "Farm-fresh, every day", emoji: "🥦", bg: "#e7f7e9" },
@@ -25,6 +24,7 @@ export default function App() {
   const { isLoggedIn } = useAuth();
   const products = useProducts();
   const settings = useSettings();
+  const categories = useCategories();
 
   function handleAccountClick() {
     if (isLoggedIn) setAccountOpen(true);
@@ -92,7 +92,11 @@ export default function App() {
             onBack={() => setActiveCategory(null)}
           />
         ) : (
-          <HomeView products={products} onCategoryClick={setActiveCategory} />
+          <HomeView
+            products={products}
+            categories={categories}
+            onCategoryClick={setActiveCategory}
+          />
         )}
       </main>
 
@@ -134,7 +138,7 @@ export default function App() {
   );
 }
 
-function HomeView({ products, onCategoryClick }) {
+function HomeView({ products, categories, onCategoryClick }) {
   const byCategory = (id) => products.filter((p) => p.category === id);
   return (
     <>

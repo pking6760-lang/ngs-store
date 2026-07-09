@@ -1,4 +1,4 @@
-import { categories } from "../data/products.js";
+import { getCategories } from "../lib/store.js";
 
 // Shows a product's photo. When there's no photo yet, shows a clean placeholder
 // (the product's first letter on a soft colour) instead of an emoji.
@@ -11,7 +11,8 @@ function colorFor(name = "") {
 }
 
 function catColor(id) {
-  return categories.find((c) => c.id === id)?.color || null;
+  if (!id) return null;
+  return getCategories().find((c) => c.id === id)?.color || null;
 }
 
 export default function ProductThumb({

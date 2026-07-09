@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import { useProducts, useOrders } from "../lib/hooks.js";
-import { categories } from "../lib/store.js";
+import { useProducts, useOrders, useCategories } from "../lib/hooks.js";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
   const orders = useOrders();
+  const categories = useCategories();
 
   const stats = useMemo(() => {
     // "Today's" figures — computed from each order's date, so they reset to
@@ -32,7 +32,7 @@ export default function Dashboard({ onNavigate }) {
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 4);
-  }, [products]);
+  }, [products, categories]);
 
   const recent = orders.slice(0, 5);
 
