@@ -232,6 +232,15 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
+  min-width: 0; /* let the panel shrink inside the grid instead of overflowing */
+}
+/* Wide tables scroll inside their card rather than pushing the page sideways. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll .mini-table {
+  min-width: 440px;
 }
 .panel.no-pad {
   padding: 0;

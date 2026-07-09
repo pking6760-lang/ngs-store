@@ -49,6 +49,7 @@ export default function Dashboard({ onNavigate }) {
           {recent.length === 0 ? (
             <p className="panel-empty">No orders yet.</p>
           ) : (
+            <div className="table-scroll">
             <table className="mini-table">
               <thead>
                 <tr>
@@ -73,6 +74,7 @@ export default function Dashboard({ onNavigate }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </section>
 
