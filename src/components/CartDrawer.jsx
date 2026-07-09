@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
-import { products } from "../data/products.js";
+import { useProducts } from "../lib/hooks.js";
+import { saveOrder } from "../lib/store.js";
 
 const DELIVERY_FEE = 25;
 const FREE_DELIVERY_ABOVE = 199;
@@ -8,6 +9,7 @@ const HANDLING_FEE = 5;
 
 export default function CartDrawer({ open, onClose }) {
   const { items, add, remove, deleteItem, clear } = useCart();
+  const products = useProducts();
   const [placed, setPlaced] = useState(null); // holds order summary once placed
 
   const lines = Object.entries(items)
@@ -27,11 +29,27 @@ export default function CartDrawer({ open, onClose }) {
   const grandTotal = itemTotal + deliveryFee + handling;
 
   function placeOrder() {
-    setPlaced({
+    const count = lines.reduce((a, l) => a + l.qty, 0);
+    const order = {
+      id: "NGS" + Math.floor(1000 + Math.random() * 9000),
+      createdAt: new Date().toISOString(),
+      customer: "You",
+      status: "Placed",
+      items: lines.map(({ product, qty }) => ({
+        id: product.id,
+        name: product.name,
+        icon: product.icon,
+        qty,
+        price: product.price,
+      })),
+      itemTotal,
+      deliveryFee,
+      handling,
       total: grandTotal,
-      count: lines.reduce((a, l) => a + l.qty, 0),
-      eta: 12,
-    });
+      count,
+    };
+    saveOrder(order); // shows up on the admin site
+    setPlaced({ total: grandTotal, count, eta: 12 });
     clear();
   }
 

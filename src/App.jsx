@@ -3,12 +3,8 @@ import Header from "./components/Header.jsx";
 import ProductCard from "./components/ProductCard.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
 import { useCart } from "./context/CartContext.jsx";
-import {
-  categories,
-  products,
-  getProductsByCategory,
-  searchProducts,
-} from "./data/products.js";
+import { useProducts } from "./lib/hooks.js";
+import { categories } from "./data/products.js";
 
 const banners = [
   { id: "b1", title: "Fresh fruits & veggies", subtitle: "Farm-fresh, every day", emoji: "🥦", bg: "#e7f7e9" },
@@ -21,16 +17,21 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const { totalCount, items } = useCart();
+  const products = useProducts();
 
   const searching = query.trim().length > 0;
-  const searchResults = useMemo(() => searchProducts(query), [query]);
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return products.filter((p) => p.name.toLowerCase().includes(q));
+  }, [query, products]);
 
   const cartValue = useMemo(() => {
     return Object.entries(items).reduce((sum, [id, qty]) => {
       const p = products.find((x) => x.id === id);
       return sum + (p ? p.price * qty : 0);
     }, 0);
-  }, [items]);
+  }, [items, products]);
 
   function goHome() {
     setActiveCategory(null);
@@ -68,10 +69,11 @@ export default function App() {
         ) : activeCategory ? (
           <CategoryView
             category={activeCategory}
+            products={products}
             onBack={() => setActiveCategory(null)}
           />
         ) : (
-          <HomeView onCategoryClick={setActiveCategory} />
+          <HomeView products={products} onCategoryClick={setActiveCategory} />
         )}
       </main>
 
@@ -98,7 +100,8 @@ export default function App() {
   );
 }
 
-function HomeView({ onCategoryClick }) {
+function HomeView({ products, onCategoryClick }) {
+  const byCategory = (id) => products.filter((p) => p.category === id);
   return (
     <>
       <div className="banner-row">
@@ -130,29 +133,31 @@ function HomeView({ onCategoryClick }) {
         </div>
       </section>
 
-      {categories.map((c) => (
-        <section className="section" key={c.id}>
-          <div className="section-head">
-            <h2 className="section-title">{c.name}</h2>
-            <button className="see-all" onClick={() => onCategoryClick(c)}>
-              see all →
-            </button>
-          </div>
-          <div className="product-row">
-            {getProductsByCategory(c.id)
-              .slice(0, 6)
-              .map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-          </div>
-        </section>
-      ))}
+      {categories
+        .filter((c) => byCategory(c.id).length > 0)
+        .map((c) => (
+          <section className="section" key={c.id}>
+            <div className="section-head">
+              <h2 className="section-title">{c.name}</h2>
+              <button className="see-all" onClick={() => onCategoryClick(c)}>
+                see all →
+              </button>
+            </div>
+            <div className="product-row">
+              {byCategory(c.id)
+                .slice(0, 6)
+                .map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+            </div>
+          </section>
+        ))}
     </>
   );
 }
 
-function CategoryView({ category, onBack }) {
-  const list = getProductsByCategory(category.id);
+function CategoryView({ category, products, onBack }) {
+  const list = products.filter((p) => p.category === category.id);
   return (
     <section className="section">
       <div className="category-header">
