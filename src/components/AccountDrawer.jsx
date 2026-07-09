@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useOrders } from "../lib/hooks.js";
 import { googleMapsLink } from "../lib/location.js";
+import { MEMBERSHIP, POINTS, redeemableRupees } from "../lib/rewards.js";
 
-// Slide-in account panel with two sections: My Orders and Personal Information.
-// Built to be easy to extend — add another entry to TABS and a matching panel.
+// Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
   { id: "orders", label: "My Orders", icon: "📦" },
-  { id: "profile", label: "Personal Information", icon: "👤" },
+  { id: "rewards", label: "Rewards", icon: "🎁" },
+  { id: "membership", label: "Membership", icon: "👑" },
+  { id: "profile", label: "Profile", icon: "👤" },
 ];
 
 export default function AccountDrawer({ open, onClose }) {
@@ -21,10 +23,7 @@ export default function AccountDrawer({ open, onClose }) {
 
   return (
     <>
-      <div
-        className={`drawer-overlay ${open ? "show" : ""}`}
-        onClick={onClose}
-      />
+      <div className={`drawer-overlay ${open ? "show" : ""}`} onClick={onClose} />
       <aside className={`account-drawer ${open ? "open" : ""}`}>
         <div className="drawer-head">
           <h2>My Account</h2>
@@ -38,9 +37,16 @@ export default function AccountDrawer({ open, onClose }) {
             <div className="account-avatar">
               {user.name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <div className="account-name">{user.name}</div>
+            <div className="account-hello-info">
+              <div className="account-name">
+                {user.name}
+                {user.member && <span className="member-chip">👑 Prime</span>}
+              </div>
               <div className="account-phone">+91 {user.phone}</div>
+            </div>
+            <div className="account-points">
+              <div className="account-points-val">{user.points || 0}</div>
+              <div className="account-points-lbl">points</div>
             </div>
           </div>
         )}
@@ -59,7 +65,10 @@ export default function AccountDrawer({ open, onClose }) {
         </div>
 
         <div className="account-body">
-          {tab === "orders" ? <MyOrders user={user} /> : <Profile />}
+          {tab === "orders" && <MyOrders user={user} />}
+          {tab === "rewards" && <Rewards user={user} />}
+          {tab === "membership" && <Membership />}
+          {tab === "profile" && <Profile />}
         </div>
 
         {isLoggedIn && (
@@ -113,6 +122,15 @@ function MyOrders({ user }) {
             ))}
           </div>
 
+          {(o.pointsEarned > 0 || o.pointsUsed > 0) && (
+            <div className="my-order-points">
+              {o.pointsEarned > 0 && <span>+{o.pointsEarned} pts earned</span>}
+              {o.pointsUsed > 0 && (
+                <span className="used">−{o.pointsUsed} pts used</span>
+              )}
+            </div>
+          )}
+
           <div className="my-order-foot">
             <span className="my-order-pay">
               {o.payment === "upi" ? "UPI" : "Cash on delivery"}
@@ -132,6 +150,86 @@ function MyOrders({ user }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function Rewards({ user }) {
+  const points = user?.points || 0;
+  const worth = redeemableRupees(points);
+  return (
+    <div className="rewards-panel">
+      <div className="rewards-hero">
+        <div className="rewards-hero-val">{points}</div>
+        <div className="rewards-hero-lbl">reward points</div>
+        <div className="rewards-hero-worth">worth ₹{worth} off your next order</div>
+      </div>
+
+      <div className="rewards-how">
+        <h4>How it works</h4>
+        <ul>
+          <li>🛍️ Earn <strong>~50 points</strong> for every ₹99 you spend.</li>
+          <li>💸 <strong>{POINTS.perRupee} points = ₹1</strong> off — redeem at checkout.</li>
+          <li>♻️ Points update automatically after every delivered order.</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function Membership() {
+  const { user, joinMembership } = useAuth();
+  const isMember = user?.member;
+
+  if (isMember) {
+    return (
+      <div className="membership-panel">
+        <div className="member-card active">
+          <div className="member-card-top">
+            <span className="member-crown">👑</span>
+            <span className="member-title">{MEMBERSHIP.name}</span>
+            <span className="member-active-tag">ACTIVE</span>
+          </div>
+          <ul className="member-benefits">
+            {MEMBERSHIP.benefits.map((b) => (
+              <li key={b}>✅ {b}</li>
+            ))}
+          </ul>
+          <p className="member-since">
+            Member since {formatDate(user.memberSince)}
+          </p>
+        </div>
+        <p className="member-note">
+          Free delivery applies on normal days. During surge (rain / peak),
+          standard delivery charges apply.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="membership-panel">
+      <div className="member-card">
+        <div className="member-card-top">
+          <span className="member-crown">👑</span>
+          <span className="member-title">{MEMBERSHIP.name}</span>
+        </div>
+        <div className="member-price">
+          ₹{MEMBERSHIP.price}
+          <small>one-time (demo)</small>
+        </div>
+        <ul className="member-benefits">
+          {MEMBERSHIP.benefits.map((b) => (
+            <li key={b}>✅ {b}</li>
+          ))}
+        </ul>
+        <button className="checkout-btn" onClick={joinMembership}>
+          Join {MEMBERSHIP.name}
+        </button>
+      </div>
+      <p className="member-note">
+        Demo: joining is instant. A real setup collects ₹{MEMBERSHIP.price} via UPI.
+      </p>
     </div>
   );
 }
@@ -214,5 +312,17 @@ function formatTime(iso) {
     });
   } catch {
     return "";
+  }
+}
+
+function formatDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
   }
 }

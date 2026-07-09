@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useProducts } from "../lib/hooks.js";
+import { useProducts, useSettings } from "../lib/hooks.js";
 import { saveOrder } from "../lib/store.js";
 import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
+import {
+  POINTS,
+  pointsForSpend,
+  redeemableRupees,
+} from "../lib/rewards.js";
 
 const DELIVERY_FEE = 25;
 const FREE_DELIVERY_ABOVE = 199;
@@ -12,19 +17,18 @@ const HANDLING_FEE = 5;
 
 export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const { items, add, remove, deleteItem, clear } = useCart();
-  const { user, isLoggedIn, updateProfile } = useAuth();
+  const { user, isLoggedIn, updateProfile, applyRewards } = useAuth();
   const products = useProducts();
+  const settings = useSettings();
 
-  // step: "cart" | "checkout" | "pay" | "done"
-  const [step, setStep] = useState("cart");
+  const [step, setStep] = useState("cart"); // cart | checkout | pay | done
   const [placed, setPlaced] = useState(null);
-
-  // checkout details
   const [address, setAddress] = useState("");
-  const [location, setLocation] = useState(null); // { lat, lng, accuracy }
+  const [location, setLocation] = useState(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
-  const [payment, setPayment] = useState("upi"); // "upi" | "cod"
+  const [payment, setPayment] = useState("upi"); // upi | cod
+  const [usePoints, setUsePoints] = useState(false);
 
   const lines = Object.entries(items)
     .map(([id, qty]) => {
@@ -38,12 +42,30 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     (sum, l) => sum + (l.product.mrp - l.product.price) * l.qty,
     0
   );
-  const deliveryFee =
-    itemTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
-  const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
-  const grandTotal = itemTotal + deliveryFee + handling;
 
-  // Prefill the address from the saved profile when the checkout opens.
+  // ── Reward redemption ──────────────────────────────────
+  const isMember = !!user?.member;
+  const isSurge = settings.deliveryMode === "surge";
+  const availablePoints = user?.points || 0;
+  // You can't redeem more than the item total.
+  const maxRedeemRupees = Math.min(redeemableRupees(availablePoints), itemTotal);
+  const discount = usePoints && isLoggedIn ? maxRedeemRupees : 0;
+  const pointsUsed = discount * POINTS.perRupee;
+  const netItems = itemTotal - discount;
+
+  // ── Delivery fee (with membership + surge rules) ───────
+  let deliveryFee =
+    itemTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
+  let freeReason = deliveryFee === 0 && itemTotal > 0 ? "order" : null;
+  if (isMember && !isSurge && itemTotal > 0) {
+    deliveryFee = 0;
+    freeReason = "member";
+  }
+
+  const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
+  const grandTotal = netItems + deliveryFee + handling;
+  const pointsEarned = pointsForSpend(netItems);
+
   useEffect(() => {
     if (step === "checkout" && user?.address && !address) {
       setAddress(user.address);
@@ -51,6 +73,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   }, [step, user, address]);
 
   function goToCheckout() {
+    if (!settings.storeOpen) return;
     if (!isLoggedIn) {
       onRequireLogin();
       return;
@@ -62,8 +85,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     setLocating(true);
     setLocError("");
     try {
-      const loc = await getCurrentLocation();
-      setLocation(loc);
+      setLocation(await getCurrentLocation());
     } catch (err) {
       setLocError(err.message);
     } finally {
@@ -76,15 +98,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       setLocError("Please enter a delivery address.");
       return;
     }
-    // Remember the address on the profile for next time.
-    if (address.trim() && address.trim() !== user?.address) {
+    if (address.trim() !== user?.address) {
       updateProfile({ address: address.trim() });
     }
-    if (payment === "upi") {
-      setStep("pay");
-    } else {
-      placeOrder();
-    }
+    if (payment === "upi") setStep("pay");
+    else placeOrder();
   }
 
   function placeOrder() {
@@ -96,8 +114,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       customer: user?.name || "You",
       userPhone: user?.phone || "",
       address: address.trim(),
-      location, // { lat, lng } or null — powers admin location tracking
-      payment, // "upi" | "cod"
+      location,
+      payment,
+      member: isMember,
+      priority: isMember, // members get first priority
+      accepted: false, // waits for admin to accept on the incoming screen
       status: "Placed",
       items: lines.map(({ product, qty }) => ({
         id: product.id,
@@ -107,14 +128,20 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         price: product.price,
       })),
       itemTotal,
+      discount,
+      pointsUsed,
+      pointsEarned,
       deliveryFee,
       handling,
       total: grandTotal,
       count,
     };
-    saveOrder(order); // shows up on the admin app
-    setPlaced({ total: grandTotal, count, eta: 12, payment });
+    saveOrder(order);
+    // Update the customer's points: earn on what they paid, spend what they used.
+    applyRewards({ earned: pointsEarned, used: pointsUsed });
+    setPlaced({ total: grandTotal, count, eta: 12, payment, pointsEarned });
     clear();
+    setUsePoints(false);
     setStep("done");
   }
 
@@ -125,17 +152,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     onClose();
   }
 
-  const upiLink = buildUpiLink({
-    amount: grandTotal,
-    note: `NGS Store order`,
-  });
+  const upiLink = buildUpiLink({ amount: grandTotal, note: "NGS Store order" });
+  const storeClosed = !settings.storeOpen;
 
   return (
     <>
-      <div
-        className={`drawer-overlay ${open ? "show" : ""}`}
-        onClick={handleClose}
-      />
+      <div className={`drawer-overlay ${open ? "show" : ""}`} onClick={handleClose} />
       <aside className={`cart-drawer ${open ? "open" : ""}`}>
         <div className="drawer-head">
           {step !== "cart" && step !== "done" && (
@@ -161,7 +183,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           </button>
         </div>
 
-        {/* ── DONE ─────────────────────────────────────────── */}
         {step === "done" && placed ? (
           <div className="order-success">
             <div className="success-badge">✅</div>
@@ -170,10 +191,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {placed.count} item{placed.count > 1 ? "s" : ""} • ₹{placed.total}
             </p>
             <p className="success-pay">
-              {placed.payment === "upi"
-                ? "Paid via UPI"
-                : "Cash on delivery"}
+              {placed.payment === "upi" ? "Paid via UPI" : "Cash on delivery"}
             </p>
+            {placed.pointsEarned > 0 && (
+              <p className="success-points">
+                🎁 You earned <strong>{placed.pointsEarned} points</strong>
+              </p>
+            )}
             <p className="success-eta">
               Arriving in <strong>{placed.eta} minutes</strong> 🛵
             </p>
@@ -181,29 +205,24 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               Continue shopping
             </button>
           </div>
-        ) : /* ── PAY (UPI) ──────────────────────────────────── */
-        step === "pay" ? (
+        ) : step === "pay" ? (
           <div className="pay-step">
             <div className="pay-amount">
               Amount to pay <strong>₹{grandTotal}</strong>
             </div>
-
             <div className="upi-qr-wrap">
               <img className="upi-qr" src={qrDataUri(upiLink)} alt="UPI QR code" />
               <p className="upi-hint">
                 Scan with any UPI app (GPay, PhonePe, Paytm, BHIM)
               </p>
             </div>
-
             <a className="upi-app-btn" href={upiLink}>
               📱 Open UPI app to pay ₹{grandTotal}
             </a>
-
             <div className="upi-id-row">
               <span>Or pay to UPI ID</span>
               <code>{SHOP_UPI_ID}</code>
             </div>
-
             <button className="checkout-btn place" onClick={placeOrder}>
               I've paid • Place order
             </button>
@@ -212,8 +231,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               confirms automatically once UPI payment succeeds.
             </p>
           </div>
-        ) : /* ── CHECKOUT ───────────────────────────────────── */
-        step === "checkout" ? (
+        ) : step === "checkout" ? (
           <div className="checkout-step">
             <div className="checkout-section">
               <h4>Delivery address</h4>
@@ -224,15 +242,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="House / flat no, street, area, city, PIN"
               />
-
-              <button
-                className="location-btn"
-                onClick={useMyLocation}
-                disabled={locating}
-              >
+              <button className="location-btn" onClick={useMyLocation} disabled={locating}>
                 {locating ? "📍 Getting location…" : "📍 Use my current location"}
               </button>
-
               {location && (
                 <div className="location-captured">
                   <span>
@@ -258,12 +270,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             <div className="checkout-section">
               <h4>Payment method</h4>
               <label className={`pay-option ${payment === "upi" ? "sel" : ""}`}>
-                <input
-                  type="radio"
-                  name="pay"
-                  checked={payment === "upi"}
-                  onChange={() => setPayment("upi")}
-                />
+                <input type="radio" name="pay" checked={payment === "upi"} onChange={() => setPayment("upi")} />
                 <span className="pay-option-icon">🟣</span>
                 <span className="pay-option-text">
                   <strong>UPI</strong>
@@ -271,12 +278,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </span>
               </label>
               <label className={`pay-option ${payment === "cod" ? "sel" : ""}`}>
-                <input
-                  type="radio"
-                  name="pay"
-                  checked={payment === "cod"}
-                  onChange={() => setPayment("cod")}
-                />
+                <input type="radio" name="pay" checked={payment === "cod"} onChange={() => setPayment("cod")} />
                 <span className="pay-option-icon">💵</span>
                 <span className="pay-option-text">
                   <strong>Cash on delivery</strong>
@@ -286,6 +288,24 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </div>
 
             <div className="bill compact">
+              {discount > 0 && (
+                <div className="bill-row">
+                  <span>Points discount</span>
+                  <span className="free">−₹{discount}</span>
+                </div>
+              )}
+              <div className="bill-row">
+                <span>Delivery fee</span>
+                <span>
+                  {deliveryFee === 0 ? (
+                    <span className="free">
+                      FREE{freeReason === "member" ? " · Prime" : ""}
+                    </span>
+                  ) : (
+                    `₹${deliveryFee}`
+                  )}
+                </span>
+              </div>
               <div className="bill-row total">
                 <span>To pay</span>
                 <span>₹{grandTotal}</span>
@@ -298,8 +318,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 : `Place order • ₹${grandTotal}`}
             </button>
           </div>
-        ) : /* ── CART ───────────────────────────────────────── */
-        lines.length === 0 ? (
+        ) : lines.length === 0 ? (
           <div className="cart-empty">
             <div className="empty-emoji">🛒</div>
             <p>Your cart is empty</p>
@@ -310,9 +329,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           </div>
         ) : (
           <>
-            <div className="delivery-note">
-              ⚡ Delivery in <strong>12 minutes</strong>
-            </div>
+            {storeClosed ? (
+              <div className="store-closed-note">
+                🔴 The store is currently <strong>closed</strong>. You can build
+                your cart, but ordering resumes when we reopen.
+              </div>
+            ) : (
+              <div className="delivery-note">
+                ⚡ Delivery in <strong>12 minutes</strong>
+                {isSurge && (
+                  <span className="surge-tag"> · 🌧️ Surge charges apply</span>
+                )}
+              </div>
+            )}
 
             <div className="cart-lines">
               {lines.map(({ product, qty }) => (
@@ -341,17 +370,40 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               ))}
             </div>
 
+            {isLoggedIn && availablePoints > 0 && maxRedeemRupees > 0 && (
+              <label className="use-points">
+                <input
+                  type="checkbox"
+                  checked={usePoints}
+                  onChange={(e) => setUsePoints(e.target.checked)}
+                />
+                <span>
+                  🎁 Use {maxRedeemRupees * POINTS.perRupee} points for{" "}
+                  <strong>₹{maxRedeemRupees} off</strong>
+                  <small>You have {availablePoints} points</small>
+                </span>
+              </label>
+            )}
+
             <div className="bill">
               <h4>Bill details</h4>
               <div className="bill-row">
                 <span>Item total</span>
                 <span>₹{itemTotal}</span>
               </div>
+              {discount > 0 && (
+                <div className="bill-row">
+                  <span>Points discount</span>
+                  <span className="free">−₹{discount}</span>
+                </div>
+              )}
               <div className="bill-row">
                 <span>Delivery fee</span>
                 <span>
                   {deliveryFee === 0 ? (
-                    <span className="free">FREE</span>
+                    <span className="free">
+                      FREE{freeReason === "member" ? " · Prime" : ""}
+                    </span>
                   ) : (
                     `₹${deliveryFee}`
                   )}
@@ -366,19 +418,28 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <span>₹{grandTotal}</span>
               </div>
               {savings > 0 && (
-                <div className="savings-pill">
-                  You save ₹{savings} on this order 🎉
-                </div>
+                <div className="savings-pill">You save ₹{savings} on this order 🎉</div>
               )}
-              {deliveryFee > 0 && (
+              {!isMember && deliveryFee > 0 && (
                 <div className="free-hint">
                   Add ₹{FREE_DELIVERY_ABOVE - itemTotal} more for FREE delivery
                 </div>
               )}
+              {itemTotal > 0 && (
+                <div className="earn-hint">
+                  You'll earn <strong>{pointsEarned} points</strong> on this order
+                </div>
+              )}
             </div>
 
-            <button className="checkout-btn place" onClick={goToCheckout}>
-              Proceed to checkout • ₹{grandTotal}
+            <button
+              className="checkout-btn place"
+              onClick={goToCheckout}
+              disabled={storeClosed}
+            >
+              {storeClosed
+                ? "Store closed"
+                : `Proceed to checkout • ₹${grandTotal}`}
             </button>
           </>
         )}

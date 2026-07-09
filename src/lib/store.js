@@ -8,6 +8,7 @@ import { products as seedProducts, categories } from "../data/products.js";
 
 const PRODUCTS_KEY = "ngs-products-v1";
 const ORDERS_KEY = "ngs-orders-v1";
+const SETTINGS_KEY = "ngs-settings-v1";
 const CHANGE_EVENT = "ngs-store-change";
 
 function read(key, fallback) {
@@ -60,6 +61,25 @@ export function deleteProduct(id) {
   saveProducts(getProducts().filter((p) => p.id !== id));
 }
 
+/* ─── Store settings ────────────────────────────────────── */
+// storeOpen: customers can only order when the store is open.
+// deliveryMode: "normal" → members get free delivery; "surge" → everyone pays
+// (used for rain / bad weather / peak, as decided by the store).
+const DEFAULT_SETTINGS = { storeOpen: true, deliveryMode: "normal" };
+
+export function getSettings() {
+  const existing = read(SETTINGS_KEY, null);
+  if (!existing) {
+    write(SETTINGS_KEY, DEFAULT_SETTINGS);
+    return DEFAULT_SETTINGS;
+  }
+  return { ...DEFAULT_SETTINGS, ...existing };
+}
+
+export function updateSettings(patch) {
+  write(SETTINGS_KEY, { ...getSettings(), ...patch });
+}
+
 /* ─── Orders ────────────────────────────────────────────── */
 export const ORDER_STATUSES = [
   "Placed",
@@ -89,6 +109,24 @@ export function updateOrderStatus(id, status) {
   );
 }
 
+// Admin accepts a freshly-placed order (from the incoming-order screen).
+export function acceptOrder(id) {
+  write(
+    ORDERS_KEY,
+    getOrders().map((o) => (o.id === id ? { ...o, accepted: true } : o))
+  );
+}
+
+// Admin rejects a freshly-placed order — it's marked cancelled.
+export function rejectOrder(id) {
+  write(
+    ORDERS_KEY,
+    getOrders().map((o) =>
+      o.id === id ? { ...o, accepted: false, status: "Cancelled" } : o
+    )
+  );
+}
+
 // A couple of sample orders so the admin dashboard isn't empty on first open.
 function seedOrders() {
   const now = Date.now();
@@ -97,6 +135,9 @@ function seedOrders() {
       id: "NGS1042",
       createdAt: new Date(now - 18 * 60 * 1000).toISOString(),
       customer: "Aisha Khan",
+      accepted: true,
+      member: true,
+      priority: true,
       status: "Out for delivery",
       items: [
         { id: "p9", name: "Amul Toned Milk", icon: "🥛", qty: 2, price: 27 },
@@ -113,6 +154,9 @@ function seedOrders() {
       id: "NGS1041",
       createdAt: new Date(now - 55 * 60 * 1000).toISOString(),
       customer: "Rahul Verma",
+      accepted: true,
+      member: false,
+      priority: false,
       status: "Delivered",
       items: [
         { id: "p21", name: "Coca-Cola", icon: "🥤", qty: 2, price: 40 },
@@ -131,7 +175,12 @@ function seedOrders() {
 export function subscribe(callback) {
   const onLocal = () => callback();
   const onStorage = (e) => {
-    if (e.key === PRODUCTS_KEY || e.key === ORDERS_KEY) callback();
+    if (
+      e.key === PRODUCTS_KEY ||
+      e.key === ORDERS_KEY ||
+      e.key === SETTINGS_KEY
+    )
+      callback();
   };
   window.addEventListener(CHANGE_EVENT, onLocal);
   window.addEventListener("storage", onStorage);

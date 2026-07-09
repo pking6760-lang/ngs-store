@@ -45,6 +45,10 @@ export default function OrdersAdmin() {
               <div className="order-customer">
                 👤 {o.customer}
                 {o.userPhone ? ` · 📞 +91 ${o.userPhone}` : ""}
+                {o.member && <span className="member-chip">👑 Prime</span>}
+                {o.accepted === false && o.status !== "Cancelled" && (
+                  <span className="await-chip">⏳ Awaiting accept</span>
+                )}
               </div>
 
               {o.address && <div className="order-address">🏠 {o.address}</div>}
@@ -82,23 +86,37 @@ export default function OrdersAdmin() {
                 ))}
               </div>
 
+              {(o.pointsEarned > 0 || o.pointsUsed > 0 || o.discount > 0) && (
+                <div className="order-points-row">
+                  {o.discount > 0 && <span>₹{o.discount} points discount</span>}
+                  {o.pointsUsed > 0 && <span>−{o.pointsUsed} pts used</span>}
+                  {o.pointsEarned > 0 && <span>+{o.pointsEarned} pts earned</span>}
+                </div>
+              )}
+
               <div className="order-card-foot">
                 <div className="order-total">
                   Total <strong>₹{o.total}</strong>
                 </div>
-                <label className="order-status-select">
-                  <span>Update status</span>
-                  <select
-                    value={o.status}
-                    onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                  >
-                    {ORDER_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {o.status === "Delivered" ? (
+                  <span className="order-done-tag">✅ Delivered</span>
+                ) : o.status === "Cancelled" ? (
+                  <span className="order-cancel-tag">✖ Cancelled</span>
+                ) : (
+                  <label className="order-status-select">
+                    <span>Update status</span>
+                    <select
+                      value={o.status}
+                      onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                    >
+                      {ORDER_STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
             </div>
           ))}

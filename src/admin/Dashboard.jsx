@@ -126,6 +126,7 @@ export function StatusPill({ status }) {
       Packed: "s-packed",
       "Out for delivery": "s-out",
       Delivered: "s-delivered",
+      Cancelled: "s-cancelled",
     }[status] || "s-placed";
   return <span className={`status-pill ${cls}`}>{status}</span>;
 }

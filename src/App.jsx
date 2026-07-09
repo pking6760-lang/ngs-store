@@ -6,7 +6,7 @@ import AccountDrawer from "./components/AccountDrawer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
-import { useProducts } from "./lib/hooks.js";
+import { useProducts, useSettings } from "./lib/hooks.js";
 import { categories } from "./data/products.js";
 
 const banners = [
@@ -24,6 +24,7 @@ export default function App() {
   const { totalCount, items } = useCart();
   const { isLoggedIn } = useAuth();
   const products = useProducts();
+  const settings = useSettings();
 
   function handleAccountClick() {
     if (isLoggedIn) setAccountOpen(true);
@@ -58,6 +59,12 @@ export default function App() {
         onLogoClick={goHome}
         onAccountClick={handleAccountClick}
       />
+
+      {!settings.storeOpen && (
+        <div className="store-closed-banner">
+          🔴 Store is currently closed — you can browse, but ordering is paused.
+        </div>
+      )}
 
       <main className="main">
         {searching ? (

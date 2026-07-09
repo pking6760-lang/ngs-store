@@ -1161,3 +1161,269 @@ button {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ─── Store closed / surge ───────────────────────────────── */
+.store-closed-banner {
+  background: #fdecec;
+  color: #c0392b;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+}
+.store-closed-note {
+  background: #fdecec;
+  color: #c0392b;
+  font-size: 13px;
+  padding: 12px 18px;
+  line-height: 1.5;
+}
+.surge-tag {
+  color: #b26a00;
+  font-weight: 700;
+}
+
+/* ─── OTP / phone login ──────────────────────────────────── */
+.phone-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding-left: 12px;
+  background: #fff;
+}
+.phone-input:focus-within {
+  border-color: var(--green);
+}
+.phone-cc {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.phone-input input {
+  border: none !important;
+  flex: 1;
+}
+.phone-input input:focus {
+  outline: none;
+}
+.otp-input {
+  letter-spacing: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
+.otp-demo-note {
+  background: #eef3ff;
+  color: #2b57c0;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.otp-demo-note strong {
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+.wa-note {
+  color: #1c8a3b;
+  font-size: 13px;
+}
+
+/* ─── Member chip + account points ───────────────────────── */
+.member-chip {
+  display: inline-block;
+  background: #fff4d6;
+  color: #9a6b00;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+.account-hello-info {
+  flex: 1;
+}
+.account-points {
+  text-align: center;
+  background: #eaf6ec;
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+.account-points-val {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--green-dark);
+}
+.account-points-lbl {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* Rewards panel */
+.rewards-hero {
+  background: linear-gradient(135deg, #0c831f, #0a6b19);
+  color: #fff;
+  border-radius: 14px;
+  padding: 22px;
+  text-align: center;
+}
+.rewards-hero-val {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+}
+.rewards-hero-lbl {
+  font-size: 13px;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+.rewards-hero-worth {
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 6px 12px;
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.rewards-how {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 14px;
+}
+.rewards-how h4 {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+.rewards-how ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rewards-how li {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.4;
+}
+
+/* Membership panel */
+.member-card {
+  background: linear-gradient(135deg, #2b2b3a, #1c1c28);
+  color: #fff;
+  border-radius: 14px;
+  padding: 20px;
+}
+.member-card.active {
+  background: linear-gradient(135deg, #b8860b, #8a5a00);
+}
+.member-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.member-crown {
+  font-size: 22px;
+}
+.member-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+.member-active-tag {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.member-price {
+  font-size: 30px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+.member-price small {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-left: 6px;
+}
+.member-benefits {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.member-benefits li {
+  font-size: 13px;
+}
+.member-card .checkout-btn {
+  background: #fff;
+  color: #1c1c28;
+}
+.member-since {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.member-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* ─── Points at checkout ─────────────────────────────────── */
+.use-points {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eaf6ec;
+  margin: 4px 14px;
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+}
+.use-points input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+.use-points span {
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+}
+.use-points small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.earn-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--green-dark);
+  font-weight: 700;
+}
+.success-points {
+  font-size: 14px;
+  color: var(--green-dark);
+  font-weight: 700;
+}
+.my-order-points {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 10px;
+}
+.my-order-points .used {
+  color: #b26a00;
+}
