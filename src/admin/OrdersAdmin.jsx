@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES, updateOrderStatus } from "../lib/store.js";
 import { googleMapsLink } from "../lib/location.js";
+import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
 
 export default function OrdersAdmin() {
@@ -78,7 +79,15 @@ export default function OrdersAdmin() {
               <div className="order-items">
                 {o.items.map((it) => (
                   <div className="order-item" key={it.id}>
-                    <span className="order-item-icon">{it.icon}</span>
+                    <span className="order-item-icon">
+                      <ProductThumb
+                        image={it.image}
+                        name={it.name}
+                        category={it.category}
+                        size={28}
+                        radius={6}
+                      />
+                    </span>
                     <span className="order-item-name">{it.name}</span>
                     <span className="order-item-qty">× {it.qty}</span>
                     <span className="order-item-price">₹{it.price * it.qty}</span>

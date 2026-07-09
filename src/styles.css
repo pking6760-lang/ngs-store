@@ -267,6 +267,21 @@ button {
 .product-emoji {
   font-size: 56px;
 }
+
+/* ─── Product thumbnails (photo or clean placeholder) ────── */
+.thumb-img {
+  display: block;
+  object-fit: cover;
+}
+.thumb-ph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+  overflow: hidden;
+}
 .product-delivery {
   font-size: 10px;
   font-weight: 800;

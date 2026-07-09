@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useOrders } from "../lib/hooks.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, POINTS, redeemableRupees } from "../lib/rewards.js";
+import ProductThumb from "./ProductThumb.jsx";
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
@@ -117,7 +118,14 @@ function MyOrders({ user }) {
           <div className="my-order-items">
             {o.items.map((it) => (
               <span className="my-order-chip" key={it.id}>
-                {it.icon} {it.name} × {it.qty}
+                <ProductThumb
+                  image={it.image}
+                  name={it.name}
+                  category={it.category}
+                  size={20}
+                  radius={5}
+                />
+                {it.name} × {it.qty}
               </span>
             ))}
           </div>

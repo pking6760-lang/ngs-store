@@ -1232,3 +1232,39 @@ body {
 .emp-action.deliver {
   background: #1a56db;
 }
+
+/* ─── Product image uploader (edit page) ─────────────────── */
+.image-uploader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.image-uploader-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.upload-btn {
+  display: inline-block;
+  border: 1px solid var(--green);
+  background: #eaf6ec;
+  color: var(--green-dark, #0a6b19);
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+.upload-btn:hover {
+  background: #dff0e2;
+}
+.image-remove {
+  border: none;
+  background: none;
+  color: #c0392b;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  padding: 0;
+}

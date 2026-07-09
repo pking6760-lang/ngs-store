@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useProducts } from "../lib/hooks.js";
 import { categories, upsertProduct, deleteProduct } from "../lib/store.js";
+import { fileToResizedDataUrl } from "../lib/image.js";
+import ProductThumb from "../components/ProductThumb.jsx";
 
 const EMPTY = {
   id: "",
@@ -9,7 +11,7 @@ const EMPTY = {
   unit: "",
   price: "",
   mrp: "",
-  icon: "📦",
+  image: "",
 };
 
 export default function ProductsAdmin() {
@@ -80,7 +82,13 @@ export default function ProductsAdmin() {
               >
                 <td>
                   <div className="cell-product">
-                    <span className="cell-emoji">{p.icon}</span>
+                    <ProductThumb
+                      image={p.image}
+                      name={p.name}
+                      category={p.category}
+                      size={40}
+                      radius={8}
+                    />
                     <span className="cell-name">{p.name}</span>
                   </div>
                 </td>
@@ -122,9 +130,27 @@ export default function ProductsAdmin() {
 function ProductModal({ product, onClose, onSave, onDelete }) {
   const isNew = !product.id;
   const [form, setForm] = useState(product);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState("");
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function pickImage(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    setImgBusy(true);
+    setImgError("");
+    try {
+      const dataUrl = await fileToResizedDataUrl(file);
+      update("image", dataUrl);
+    } catch (err) {
+      setImgError(err.message);
+    } finally {
+      setImgBusy(false);
+    }
   }
 
   function submit(e) {
@@ -136,7 +162,7 @@ function ProductModal({ product, onClose, onSave, onDelete }) {
       id: form.id || "p" + Date.now(),
       price,
       mrp: Math.max(mrp, price),
-      icon: form.icon || "📦",
+      image: form.image || "",
     });
   }
 
@@ -210,14 +236,42 @@ function ProductModal({ product, onClose, onSave, onDelete }) {
             />
           </label>
 
-          <label className="field">
-            <span>Icon (emoji)</span>
-            <input
-              value={form.icon}
-              onChange={(e) => update("icon", e.target.value)}
-              placeholder="🍎"
-              maxLength={4}
-            />
+          <label className="field wide">
+            <span>Product image</span>
+            <div className="image-uploader">
+              <ProductThumb
+                image={form.image}
+                name={form.name}
+                category={form.category}
+                size={64}
+                radius={10}
+              />
+              <div className="image-uploader-actions">
+                <label className="upload-btn">
+                  {imgBusy
+                    ? "Processing…"
+                    : form.image
+                    ? "Change photo"
+                    : "📷 Upload photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={pickImage}
+                    hidden
+                  />
+                </label>
+                {form.image && (
+                  <button
+                    type="button"
+                    className="image-remove"
+                    onClick={() => update("image", "")}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            {imgError && <div className="auth-error">{imgError}</div>}
           </label>
         </div>
 

@@ -3,6 +3,7 @@ import { useOrders } from "../lib/hooks.js";
 import { acceptOrder, rejectOrder } from "../lib/store.js";
 import { googleMapsLink } from "../lib/location.js";
 import { startAlarm, stopAlarm } from "../lib/sound.js";
+import ProductThumb from "../components/ProductThumb.jsx";
 
 // Full-screen takeover shown to the admin the moment a new (unaccepted) order
 // arrives, with a looping alarm and a slide-to-accept control. In the demo it
@@ -90,8 +91,15 @@ export default function IncomingOrder() {
         <div className="incoming-items">
           {order.items.map((it) => (
             <div className="incoming-item" key={it.id}>
-              <span>
-                {it.icon} {it.name}
+              <span className="incoming-item-name">
+                <ProductThumb
+                  image={it.image}
+                  name={it.name}
+                  category={it.category}
+                  size={24}
+                  radius={5}
+                />
+                {it.name}
               </span>
               <span>× {it.qty}</span>
             </div>

@@ -5,6 +5,7 @@ import { useProducts, useSettings } from "../lib/hooks.js";
 import { saveOrder } from "../lib/store.js";
 import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
+import ProductThumb from "./ProductThumb.jsx";
 import {
   POINTS,
   pointsForSpend,
@@ -123,7 +124,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       items: lines.map(({ product, qty }) => ({
         id: product.id,
         name: product.name,
-        icon: product.icon,
+        image: product.image,
+        category: product.category,
         qty,
         price: product.price,
       })),
@@ -346,7 +348,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             <div className="cart-lines">
               {lines.map(({ product, qty }) => (
                 <div className="cart-line" key={product.id}>
-                  <div className="cart-line-icon">{product.icon}</div>
+                  <div className="cart-line-icon">
+                    <ProductThumb
+                      image={product.image}
+                      name={product.name}
+                      category={product.category}
+                      size={44}
+                    />
+                  </div>
                   <div className="cart-line-info">
                     <div className="cart-line-name">{product.name}</div>
                     <div className="cart-line-unit">{product.unit}</div>

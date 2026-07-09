@@ -1,6 +1,7 @@
 import { useOrders } from "../lib/hooks.js";
 import { updateOrderStatus } from "../lib/store.js";
 import { googleMapsLink } from "../lib/location.js";
+import ProductThumb from "../components/ProductThumb.jsx";
 
 // A focused, task-only screen for staff. Two roles:
 //  • picker   — packs newly accepted orders (Placed → Packed)
@@ -76,8 +77,15 @@ export default function EmployeeApp({ role, name, onLogout }) {
               <div className="emp-items">
                 {o.items.map((it) => (
                   <div className="emp-item" key={it.id}>
-                    <span>
-                      {it.icon} {it.name}
+                    <span className="emp-item-name">
+                      <ProductThumb
+                        image={it.image}
+                        name={it.name}
+                        category={it.category}
+                        size={26}
+                        radius={6}
+                      />
+                      {it.name}
                     </span>
                     <span className="emp-item-qty">× {it.qty}</span>
                   </div>
