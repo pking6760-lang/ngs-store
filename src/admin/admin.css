@@ -1350,3 +1350,43 @@ body {
 .cat-list-del:hover {
   background: #fdecec;
 }
+
+/* ─── Fingerprint login ──────────────────────────────────── */
+.login-or {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 14px 0 10px;
+  position: relative;
+}
+.login-or::before,
+.login-or::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 38%;
+  height: 1px;
+  background: var(--line);
+}
+.login-or::before { left: 0; }
+.login-or::after { right: 0; }
+.fingerprint-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px solid var(--green);
+  background: #eaf6ec;
+  color: var(--green-dark, #0a6b19);
+  border-radius: 12px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.fingerprint-btn:hover {
+  background: #dff0e2;
+}
+.fingerprint-icon {
+  font-size: 18px;
+}

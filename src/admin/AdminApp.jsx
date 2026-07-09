@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Dashboard from "./Dashboard.jsx";
 import ProductsAdmin from "./ProductsAdmin.jsx";
 import OrdersAdmin from "./OrdersAdmin.jsx";
@@ -7,6 +7,7 @@ import IncomingOrder from "./IncomingOrder.jsx";
 import { useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/store.js";
 import { unlockAudio } from "../lib/sound.js";
+import { isBiometricAvailable, authenticateBiometric } from "../lib/biometric.js";
 
 // Demo-only logins. A real backend will replace these with proper accounts.
 const ADMIN_PASSWORD = "admin123";
@@ -145,6 +146,24 @@ function Login({ onSignIn }) {
   const [staffName, setStaffName] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [error, setError] = useState("");
+  const [bioOk, setBioOk] = useState(false);
+
+  // Show the fingerprint button only if the phone actually supports it.
+  useEffect(() => {
+    let active = true;
+    isBiometricAvailable().then((ok) => active && setBioOk(ok));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function fingerprintLogin() {
+    unlockAudio();
+    setError("");
+    const ok = await authenticateBiometric();
+    if (ok) onSignIn("admin", "Store Manager");
+    else setError("Fingerprint not recognised. Use your password.");
+  }
 
   function submitAdmin(e) {
     e.preventDefault();
@@ -212,9 +231,19 @@ function Login({ onSignIn }) {
             <button className="login-btn" type="submit">
               Sign in as admin
             </button>
-            <div className="login-hint">
-              Demo password: <code>admin123</code>
-            </div>
+            {bioOk && (
+              <>
+                <div className="login-or">or</div>
+                <button
+                  type="button"
+                  className="fingerprint-btn"
+                  onClick={fingerprintLogin}
+                >
+                  <span className="fingerprint-icon">🔒</span>
+                  Login with fingerprint
+                </button>
+              </>
+            )}
           </form>
         ) : (
           <form onSubmit={submitStaff}>
@@ -256,9 +285,6 @@ function Login({ onSignIn }) {
             <button className="login-btn" type="submit">
               Sign in as {staffRole}
             </button>
-            <div className="login-hint">
-              Demo passcode: <code>staff123</code>
-            </div>
           </form>
         )}
       </div>
