@@ -1,0 +1,8 @@
+{
+  "appId": "com.ngsstore.admin",
+  "appName": "NGS Store Admin",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  }
+}

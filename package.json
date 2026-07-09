@@ -7,13 +7,18 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:app": "vite build --config vite.config.mobile.js && node scripts/prepare-www.mjs",
+    "sync:android": "npm run build:app && cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.1"
   }

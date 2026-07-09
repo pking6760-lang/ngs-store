@@ -23,8 +23,14 @@ export default function AdminApp() {
     return <Login onSuccess={() => setAuthed(true)} />;
   }
 
+  function logout() {
+    sessionStorage.removeItem(AUTH_KEY);
+    setAuthed(false);
+  }
+
   return (
     <div className="admin">
+      {/* Sidebar — shown on tablet/desktop widths */}
       <aside className="admin-sidebar">
         <div className="admin-brand">
           <span className="admin-logo">NGS</span>
@@ -38,21 +44,12 @@ export default function AdminApp() {
               onClick={() => setView(n.id)}
             >
               <span className="admin-nav-icon">{n.icon}</span>
-              {n.label}
+              <span className="admin-nav-label">{n.label}</span>
             </button>
           ))}
         </nav>
         <div className="admin-sidebar-foot">
-          <a className="admin-view-store" href="/" target="_blank" rel="noreferrer">
-            ↗ View storefront
-          </a>
-          <button
-            className="admin-logout"
-            onClick={() => {
-              sessionStorage.removeItem(AUTH_KEY);
-              setAuthed(false);
-            }}
-          >
+          <button className="admin-logout" onClick={logout}>
             Log out
           </button>
         </div>
@@ -65,7 +62,10 @@ export default function AdminApp() {
           </h1>
           <div className="admin-user">
             <span className="admin-avatar">🧑‍💼</span>
-            <span>Store Manager</span>
+            <span className="admin-user-name">Store Manager</span>
+            <button className="admin-logout-icon" onClick={logout} title="Log out">
+              ⎋
+            </button>
           </div>
         </header>
 
@@ -75,6 +75,20 @@ export default function AdminApp() {
           {view === "orders" && <OrdersAdmin />}
         </div>
       </main>
+
+      {/* Bottom tab bar — shown on phone widths (Android app navigation) */}
+      <nav className="admin-bottom-nav">
+        {NAV.map((n) => (
+          <button
+            key={n.id}
+            className={`bottom-nav-item ${view === n.id ? "active" : ""}`}
+            onClick={() => setView(n.id)}
+          >
+            <span className="bottom-nav-icon">{n.icon}</span>
+            <span className="bottom-nav-label">{n.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
