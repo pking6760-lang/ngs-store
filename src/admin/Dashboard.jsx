@@ -7,15 +7,22 @@ export default function Dashboard({ onNavigate }) {
   const orders = useOrders();
 
   const stats = useMemo(() => {
-    const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const pending = orders.filter((o) => o.status !== "Delivered").length;
+    // "Today's" figures — computed from each order's date, so they reset to
+    // zero automatically at the start of a new day.
+    const todaysOrders = orders.filter(
+      (o) => isToday(o.createdAt) && o.status !== "Cancelled"
+    );
+    const revenue = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    // Pending = anything not yet delivered (still needs action), any day.
+    const pending = orders.filter(
+      (o) => o.status !== "Delivered" && o.status !== "Cancelled"
+    ).length;
     return {
-      products: products.length,
-      orders: orders.length,
+      orders: todaysOrders.length,
       revenue,
       pending,
     };
-  }, [products, orders]);
+  }, [orders]);
 
   const topCategories = useMemo(() => {
     return categories
@@ -32,9 +39,8 @@ export default function Dashboard({ onNavigate }) {
   return (
     <>
       <div className="stat-row">
-        <StatCard label="Total products" value={stats.products} icon="📦" tone="green" />
-        <StatCard label="Total orders" value={stats.orders} icon="🧾" tone="blue" />
-        <StatCard label="Revenue" value={`₹${stats.revenue}`} icon="💰" tone="amber" />
+        <StatCard label="Today's orders" value={stats.orders} icon="🧾" tone="blue" />
+        <StatCard label="Today's revenue" value={`₹${stats.revenue}`} icon="💰" tone="amber" />
         <StatCard label="Pending orders" value={stats.pending} icon="⏳" tone="pink" />
       </div>
 
@@ -119,6 +125,20 @@ function StatCard({ label, value, icon, tone }) {
       </div>
     </div>
   );
+}
+
+function isToday(iso) {
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function StatusPill({ status }) {
