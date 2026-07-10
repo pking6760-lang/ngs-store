@@ -92,13 +92,15 @@ export async function sendEmailCode(email, name) {
 
 // Verify the code the customer typed → establishes a logged-in session.
 export async function verifyEmailCode(email, token) {
-  const { data, error } = await must().auth.verifyOtp({
-    email: email.trim(),
-    token: token.trim(),
-    type: "email",
-  });
-  if (error) throw error;
-  return data.session;
+  const e = email.trim();
+  const t = token.trim();
+  // A code can be a sign-in OTP ("email") or a new-account confirmation
+  // ("signup"). Try the common case first, fall back to the other.
+  const first = await must().auth.verifyOtp({ email: e, token: t, type: "email" });
+  if (!first.error) return first.data.session;
+  const second = await must().auth.verifyOtp({ email: e, token: t, type: "signup" });
+  if (second.error) throw second.error;
+  return second.data.session;
 }
 
 export async function signInWithPassword(email, password) {
