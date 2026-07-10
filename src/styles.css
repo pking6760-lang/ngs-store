@@ -1785,6 +1785,11 @@ input:focus-visible {
   outline: 2.5px solid color-mix(in srgb, var(--green) 55%, transparent);
   outline-offset: 2px;
 }
+/* The search bar already indicates focus with its rounded green wrapper border,
+   so skip the extra outline box (which looked like a hard green rectangle). */
+.search-input:focus-visible {
+  outline: none;
+}
 
 /* ─── Header ─── */
 .cart-button {
