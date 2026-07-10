@@ -2406,3 +2406,10 @@ body {
 .inbox-item {
   border-color: #e0e8db;
 }
+
+/* Magic-link "check your email" screen */
+.auth-sent-icon {
+  font-size: 44px;
+  text-align: center;
+  margin: 4px 0 2px;
+}

@@ -61,28 +61,21 @@ function BackendAuth({ children }) {
     pendingContact: pendingEmail,
     awaitingOtp: !!pendingEmail,
 
-    // Step 1 — email the customer a 6-digit code.
+    // Email the customer a magic sign-in link. When they tap it, the site
+    // reopens already signed in (handled by onAuthChange above).
     async requestOtp(email, name) {
       const clean = (email || "").trim();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean))
         return { ok: false, error: "Enter a valid email address." };
       try {
-        await api.sendEmailCode(clean, name);
+        await api.sendMagicLink(clean, name);
         setPendingEmail(clean);
-        return { ok: true };
-      } catch (e) { return { ok: false, error: e.message || "Couldn't send the code." }; }
+        return { ok: true, magicLink: true };
+      } catch (e) { return { ok: false, error: e.message || "Couldn't send the link." }; }
     },
 
-    // Step 2 — verify the code → establishes the session.
-    async verifyOtp(code) {
-      if (!pendingEmail) return { ok: false, error: "Request a code first." };
-      try {
-        await api.verifyEmailCode(pendingEmail, code);
-        await refresh();
-        setPendingEmail(null);
-        return { ok: true };
-      } catch { return { ok: false, error: "Incorrect or expired code." }; }
-    },
+    // No code step for magic links — kept for interface compatibility.
+    async verifyOtp() { return { ok: false, error: "Please tap the link in your email." }; },
 
     cancelOtp() { setPendingEmail(null); },
 

@@ -17,6 +17,13 @@ export const isBackendConfigured = Boolean(url && anonKey);
 
 export const supabase = isBackendConfigured
   ? createClient(url, anonKey, {
-      auth: { persistSession: true, autoRefreshToken: true },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        // Implicit flow so a magic link works even when the email app opens it
+        // in a different browser than the one that requested it.
+        flowType: "implicit",
+      },
     })
   : null;
