@@ -1989,3 +1989,148 @@ input:focus-visible {
   }
   .banner-text h3 { font-size: 19px; }
 }
+
+/* ════════════════════════════════════════════════════════════
+   Corner discount ribbon — emerges from behind the card's curve
+   ════════════════════════════════════════════════════════════ */
+.product-badge {
+  position: absolute;
+  top: 15px;
+  left: -34px;
+  width: 128px;
+  transform: rotate(-45deg);
+  z-index: 4;
+  background: linear-gradient(135deg, #fbc24a 0%, #ed9a2b 52%, #c1731a 100%);
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 0;
+  clip-path: none;
+  box-shadow: 0 5px 13px rgba(150, 85, 10, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.product-badge::before,
+.product-badge::after { display: none; }
+.product-badge-inner {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 1px rgba(120, 60, 0, 0.35);
+}
+.product-badge-inner b { font-weight: 850; }
+
+/* ════════════════════════════════════════════════════════════
+   Consistent premium standard across ALL customer screens
+   (cart · checkout · account · orders · membership · login)
+   ════════════════════════════════════════════════════════════ */
+
+/* Primary action button everywhere */
+.checkout-btn {
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 15px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  width: 100%;
+  box-shadow: 0 8px 20px rgba(11, 138, 76, 0.26);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+}
+.checkout-btn:hover { box-shadow: 0 12px 26px rgba(11, 138, 76, 0.32); filter: brightness(1.03); }
+.checkout-btn:active { transform: scale(0.985); }
+
+/* Drawers */
+.cart-drawer, .account-drawer { background: var(--bg-soft); }
+.drawer-head {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(16, 40, 20, 0.02);
+}
+.drawer-head h2 { font-size: 18px; font-weight: 850; letter-spacing: -0.01em; }
+
+/* Account header */
+.account-hello { background: #fff; box-shadow: 0 1px 0 var(--line); }
+.account-avatar {
+  background: linear-gradient(140deg, var(--green), var(--green-dark));
+  box-shadow: 0 5px 14px rgba(11, 138, 76, 0.3);
+}
+.account-points {
+  background: var(--green-tint);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 14%, transparent);
+}
+.member-chip {
+  background: linear-gradient(135deg, var(--gold-tint), #ffe9c2);
+  color: #9a6607;
+}
+
+/* Cards: orders, inbox, checkout sections, bill, pay options */
+.my-order-card, .inbox-item {
+  border-radius: 16px;
+  border: 1px solid rgba(16, 40, 20, 0.05);
+  box-shadow: var(--shadow);
+}
+.checkout-section, .bill, .pay-step .upi-qr-wrap, .upi-id-row {
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(16, 40, 20, 0.05);
+  background: #fff;
+}
+.pay-option {
+  border-radius: 13px;
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+}
+.pay-option.sel { box-shadow: 0 4px 12px rgba(11, 138, 76, 0.14); }
+.cart-line {
+  border-radius: 14px;
+  border: 1px solid rgba(16, 40, 20, 0.05);
+  box-shadow: var(--shadow);
+}
+.cart-line-icon { border-radius: 11px; overflow: hidden; }
+
+/* Bill emphasis */
+.bill { padding: 16px; }
+.bill h4 { font-weight: 800; letter-spacing: -0.01em; }
+.bill-row.total { font-weight: 850; padding-top: 10px; margin-top: 4px; border-top: 1px dashed var(--line); }
+.bill-row.total span:last-child { font-size: 17px; color: var(--green-dark); }
+.free { color: var(--green-dark); font-weight: 800; }
+.delivery-note { background: var(--green-tint); color: var(--green-dark); font-weight: 700; }
+.savings-pill { background: linear-gradient(100deg, var(--gold-tint), #fff6e6); color: #9a6607; font-weight: 800; }
+
+/* Status badges */
+.status-badge { font-weight: 800; letter-spacing: 0.01em; }
+
+/* Rewards + membership heroes */
+.rewards-hero { box-shadow: 0 14px 30px rgba(9, 70, 40, 0.28); }
+.rewards-how { border-radius: 16px; box-shadow: var(--shadow); }
+.member-card { box-shadow: var(--shadow-md); }
+
+/* Forms + inputs (login, profile, checkout) */
+.field input, .field textarea, .checkout-address, .coupon-input,
+.phone-input, .otp-input {
+  border-radius: 12px;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.field input:focus, .field textarea:focus, .checkout-address:focus,
+.phone-input:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-tint);
+}
+
+/* Auth modal */
+.auth-modal { border-radius: 22px; box-shadow: var(--shadow-lg); }
+.auth-tab.active { box-shadow: var(--shadow); }
+
+/* Success screen */
+.order-success .success-badge {
+  filter: drop-shadow(0 8px 16px rgba(11, 138, 76, 0.3));
+}
+
+/* Small quantity stepper (cart lines) matches the card steppers */
+.qty-stepper.small {
+  background: linear-gradient(140deg, var(--green), var(--green-dark));
+  border-radius: 10px;
+  transform: none;
+}
+.qty-stepper.small button, .qty-stepper.small span { color: #fff; }

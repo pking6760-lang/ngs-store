@@ -10,11 +10,6 @@ export default function ProductCard({ product }) {
 
   return (
     <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
-      {discount > 0 && !outOfStock && (
-        <span className="product-badge">
-          <b>{discount}%</b> OFF
-        </span>
-      )}
       <div className="product-image">
         <ProductThumb
           image={product.image}
@@ -23,6 +18,13 @@ export default function ProductCard({ product }) {
           fill
           radius={14}
         />
+        {discount > 0 && !outOfStock && (
+          <span className="product-badge">
+            <span className="product-badge-inner">
+              <b>{discount}%</b> OFF
+            </span>
+          </span>
+        )}
         <span className="product-delivery">⚡ 12 min</span>
         {outOfStock && <span className="sold-out-tag">Out of stock</span>}
       </div>
