@@ -26,8 +26,21 @@ function useBackend(fetcher, tables, initial) {
     let alive = true;
     const load = () => fetcher().then((d) => alive && setData(d)).catch(() => {});
     load();
+    // Live updates: same-device bus + cross-device Realtime.
     const unsubs = tables.map((t) => api.subscribeTable(t, load));
-    return () => { alive = false; unsubs.forEach((u) => u && u()); };
+    // Safety net so data never gets stuck stale even if Realtime is off:
+    // refetch when the tab is refocused/made visible, and on a light timer.
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", load);
+    const poll = setInterval(load, 30000);
+    return () => {
+      alive = false;
+      unsubs.forEach((u) => u && u());
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", load);
+      clearInterval(poll);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return data;
 }
