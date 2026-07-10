@@ -5,12 +5,15 @@ export default function ProductCard({ product }) {
   const { items, add, remove } = useCart();
   const qty = items[product.id] || 0;
   const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
+  const savings = product.mrp - product.price;
   const outOfStock = product.inStock === false;
 
   return (
     <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
       {discount > 0 && !outOfStock && (
-        <span className="product-badge">{discount}% OFF</span>
+        <span className="product-badge">
+          <b>{discount}%</b> OFF
+        </span>
       )}
       <div className="product-image">
         <ProductThumb
@@ -18,18 +21,23 @@ export default function ProductCard({ product }) {
           name={product.name}
           category={product.category}
           fill
-          radius={12}
+          radius={14}
         />
+        <span className="product-delivery">⚡ 12 min</span>
         {outOfStock && <span className="sold-out-tag">Out of stock</span>}
       </div>
-      <div className="product-delivery">⚡ 12 MINS</div>
       <div className="product-name">{product.name}</div>
       <div className="product-unit">{product.unit}</div>
       <div className="product-footer">
         <div className="product-price">
-          <span className="price-now">₹{product.price}</span>
-          {product.mrp > product.price && (
-            <span className="price-mrp">₹{product.mrp}</span>
+          <div className="price-line">
+            <span className="price-now">₹{product.price}</span>
+            {product.mrp > product.price && (
+              <span className="price-mrp">₹{product.mrp}</span>
+            )}
+          </div>
+          {savings > 0 && !outOfStock && (
+            <span className="save-pill">Save ₹{savings}</span>
           )}
         </div>
         {outOfStock ? (
