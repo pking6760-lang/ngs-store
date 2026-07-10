@@ -707,6 +707,10 @@ body {
   text-align: center;
   margin-top: 8px;
 }
+.login-card form {
+  display: flex;
+  flex-direction: column;
+}
 .login-sub {
   text-align: center;
   color: var(--muted);
@@ -728,14 +732,17 @@ body {
   font-size: 13px;
 }
 .login-btn {
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
   background: var(--green);
   color: #fff;
   border: none;
-  border-radius: 10px;
-  padding: 13px;
+  border-radius: 12px;
+  padding: 14px;
   font-size: 15px;
-  font-weight: 700;
-  margin-top: 4px;
+  font-weight: 800;
+  margin-top: 10px;
 }
 .login-hint {
   text-align: center;
