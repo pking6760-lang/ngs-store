@@ -1495,3 +1495,78 @@ body {
   padding: 10px 12px;
   margin: 4px 0 14px;
 }
+
+/* ─── Customers (admin) ──────────────────────────────────── */
+.customer-list { display: flex; flex-direction: column; gap: 8px; }
+.customer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  width: 100%;
+}
+.customer-row:hover { border-color: color-mix(in srgb, var(--green) 40%, var(--line)); }
+.customer-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--green, #0a9155); color: #fff;
+  font-weight: 800; font-size: 18px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.customer-avatar.big { width: 56px; height: 56px; font-size: 24px; }
+.customer-row-main { flex: 1; min-width: 0; }
+.customer-row-name { font-weight: 800; font-size: 14.5px; display: flex; align-items: center; gap: 6px; }
+.customer-row-sub { font-size: 12.5px; color: var(--muted); }
+.customer-row-spend { font-weight: 800; font-size: 15px; white-space: nowrap; }
+.customer-row-arrow { color: var(--muted); font-size: 20px; }
+.nonmember-chip {
+  margin-left: 8px; font-size: 11px; font-weight: 700;
+  background: #f2f2f4; color: var(--muted); padding: 2px 8px; border-radius: 999px;
+}
+
+.customer-modal { max-width: 520px; }
+.customer-detail { padding: 4px 20px 20px; }
+.customer-hero { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.customer-hero-name { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.customer-hero-phone { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.customer-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.cstat {
+  background: var(--bg-soft, #f4f6f9); border-radius: 12px; padding: 14px 10px; text-align: center;
+}
+.cstat strong { display: block; font-size: 20px; font-weight: 800; color: var(--green-dark, #0a6b19); }
+.cstat span { font-size: 12px; color: var(--muted); }
+.customer-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.cfield { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.cfield span { color: var(--muted); }
+.cfield b { text-align: right; }
+.customer-sec { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 18px 0 10px; }
+.customer-orders { display: flex; flex-direction: column; gap: 8px; }
+.customer-order {
+  display: flex; align-items: center; justify-content: space-between;
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px;
+}
+.customer-order .order-time { margin-left: 8px; color: var(--muted); font-size: 12px; }
+.customer-order-right { display: flex; align-items: center; gap: 10px; }
+.notify-form { display: flex; flex-direction: column; gap: 8px; }
+.notify-form input, .notify-form textarea {
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  font-size: 14px; font-family: inherit; width: 100%;
+}
+.notify-form input:focus, .notify-form textarea:focus { outline: none; border-color: var(--green); }
+.notify-actions { display: flex; align-items: center; gap: 12px; }
+.notify-sent { color: var(--green, #0a9155); font-weight: 700; font-size: 13px; }
+.notify-history { display: flex; flex-direction: column; gap: 8px; }
+.notify-item { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.notify-item-title { font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
+.notify-unread { font-size: 10px; font-weight: 800; background: #e7f0ff; color: #1a56db; padding: 2px 7px; border-radius: 999px; }
+.notify-item-body { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.notify-item-time { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+/* Five bottom-nav tabs fit a little tighter on phones */
+@media (max-width: 760px) {
+  .bottom-nav-item { font-size: 10px; }
+  .bottom-nav-icon { font-size: 18px; }
+}

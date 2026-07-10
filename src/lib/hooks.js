@@ -5,6 +5,8 @@ import {
   getOrders,
   getSettings,
   getCoupons,
+  getUsers,
+  getUserNotifications,
   subscribe,
 } from "./store.js";
 
@@ -41,4 +43,21 @@ export function useCoupons() {
   const [coupons, setCoupons] = useState(getCoupons);
   useEffect(() => subscribe(() => setCoupons(getCoupons())), []);
   return coupons;
+}
+
+// Re-renders whenever the customer list changes (admin side).
+export function useCustomers() {
+  const [users, setUsers] = useState(getUsers);
+  useEffect(() => subscribe(() => setUsers(getUsers())), []);
+  return users;
+}
+
+// Re-renders whenever a given customer's notifications change.
+export function useUserNotifications(userId) {
+  const [notes, setNotes] = useState(() => getUserNotifications(userId));
+  useEffect(
+    () => subscribe(() => setNotes(getUserNotifications(userId))),
+    [userId]
+  );
+  return notes;
 }

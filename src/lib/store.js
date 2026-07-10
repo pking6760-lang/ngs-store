@@ -12,6 +12,9 @@ const CATEGORIES_KEY = "ngs-categories-v3";
 const ORDERS_KEY = "ngs-orders-v1";
 const SETTINGS_KEY = "ngs-settings-v1";
 const COUPONS_KEY = "ngs-coupons-v1";
+// Shared with the customer app's AuthContext (same localStorage key).
+const USERS_KEY = "ngs-users-v1";
+const NOTIFICATIONS_KEY = "ngs-notifications-v1";
 const CHANGE_EVENT = "ngs-store-change";
 
 // Soft background colours cycled through for new categories.
@@ -209,6 +212,83 @@ export function applyCoupon(code, ctx) {
   };
 }
 
+/* ─── Customers ─────────────────────────────────────────── */
+// A couple of demo customers so the admin Customers tab isn't empty before a
+// real shopper signs up. (Shares the key the customer app writes to.)
+function seedUsers() {
+  const now = Date.now();
+  return [
+    {
+      id: "u9990000001",
+      name: "Aisha Khan",
+      phone: "9990000001",
+      email: "aisha@example.com",
+      address: "B-12, Sultanpur, New Delhi 110030",
+      points: 120,
+      member: true,
+      memberSince: new Date(now - 30 * 864e5).toISOString(),
+      createdAt: new Date(now - 40 * 864e5).toISOString(),
+    },
+    {
+      id: "u9990000002",
+      name: "Rahul Verma",
+      phone: "9990000002",
+      email: "",
+      address: "House 5, Sultanpur, New Delhi 110030",
+      points: 40,
+      member: false,
+      memberSince: null,
+      createdAt: new Date(now - 12 * 864e5).toISOString(),
+    },
+  ];
+}
+
+// Returns customers (without passwords). Seeds demo customers once if empty.
+export function getUsers() {
+  const existing = read(USERS_KEY, null);
+  if (!existing) {
+    const seeded = seedUsers();
+    write(USERS_KEY, seeded);
+    return seeded;
+  }
+  return existing.map(({ password, ...u }) => u);
+}
+
+/* ─── Notifications (admin → customer) ──────────────────── */
+export function getNotifications() {
+  return read(NOTIFICATIONS_KEY, []) || [];
+}
+
+export function getUserNotifications(userId) {
+  if (!userId) return [];
+  return getNotifications().filter((n) => n.userId === userId);
+}
+
+export function sendNotification({ userId, title, body }) {
+  if (!userId || !title?.trim()) return { ok: false, error: "Missing details." };
+  const note = {
+    id: "n" + Math.random().toString(36).slice(2, 9),
+    userId,
+    title: title.trim(),
+    body: (body || "").trim(),
+    createdAt: new Date().toISOString(),
+    read: false,
+  };
+  write(NOTIFICATIONS_KEY, [note, ...getNotifications()]);
+  return { ok: true };
+}
+
+// Mark a customer's notifications as read (called when they open their inbox).
+export function markUserNotificationsRead(userId) {
+  if (!userId) return;
+  const all = getNotifications();
+  if (!all.some((n) => n.userId === userId && !n.read)) return;
+  write(
+    NOTIFICATIONS_KEY,
+    all.map((n) => (n.userId === userId ? { ...n, read: true } : n))
+  );
+}
+
 /* ─── Store settings ────────────────────────────────────── */
 // storeOpen: customers can only order when the store is open.
 // deliveryMode: "normal" → members get free delivery; "surge" → everyone pays
@@ -290,6 +370,8 @@ function seedOrders() {
       id: "NGS1042",
       createdAt: new Date(now - 18 * 60 * 1000).toISOString(),
       customer: "Aisha Khan",
+      userId: "u9990000001",
+      userPhone: "9990000001",
       accepted: true,
       member: true,
       priority: true,
@@ -309,6 +391,8 @@ function seedOrders() {
       id: "NGS1041",
       createdAt: new Date(now - 55 * 60 * 1000).toISOString(),
       customer: "Rahul Verma",
+      userId: "u9990000002",
+      userPhone: "9990000002",
       accepted: true,
       member: false,
       priority: false,
@@ -335,7 +419,9 @@ export function subscribe(callback) {
       e.key === CATEGORIES_KEY ||
       e.key === ORDERS_KEY ||
       e.key === SETTINGS_KEY ||
-      e.key === COUPONS_KEY
+      e.key === COUPONS_KEY ||
+      e.key === USERS_KEY ||
+      e.key === NOTIFICATIONS_KEY
     )
       callback();
   };

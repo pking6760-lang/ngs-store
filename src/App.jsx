@@ -41,6 +41,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [accountTab, setAccountTab] = useState("orders");
   const [authOpen, setAuthOpen] = useState(false);
   const { totalCount, items } = useCart();
   const { isLoggedIn } = useAuth();
@@ -49,8 +50,15 @@ export default function App() {
   const categories = useCategories();
 
   function handleAccountClick() {
-    if (isLoggedIn) setAccountOpen(true);
-    else setAuthOpen(true);
+    if (isLoggedIn) {
+      setAccountTab("orders");
+      setAccountOpen(true);
+    } else setAuthOpen(true);
+  }
+
+  function handleBellClick() {
+    setAccountTab("inbox");
+    setAccountOpen(true);
   }
 
   const searching = query.trim().length > 0;
@@ -80,6 +88,7 @@ export default function App() {
         onCartClick={() => setCartOpen(true)}
         onLogoClick={goHome}
         onAccountClick={handleAccountClick}
+        onBellClick={handleBellClick}
       />
 
       {!settings.storeOpen && (
@@ -142,7 +151,11 @@ export default function App() {
         onRequireLogin={() => setAuthOpen(true)}
       />
 
-      <AccountDrawer open={accountOpen} onClose={() => setAccountOpen(false)} />
+      <AccountDrawer
+        open={accountOpen}
+        initialTab={accountTab}
+        onClose={() => setAccountOpen(false)}
+      />
 
       <AuthModal
         open={authOpen}

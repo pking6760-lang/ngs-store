@@ -1,5 +1,6 @@
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useUserNotifications } from "../lib/hooks.js";
 import { shop } from "../data/shop.js";
 import Logo from "./Logo.jsx";
 
@@ -9,9 +10,12 @@ export default function Header({
   onCartClick,
   onLogoClick,
   onAccountClick,
+  onBellClick,
 }) {
   const { totalCount } = useCart();
   const { user, isLoggedIn } = useAuth();
+  const notes = useUserNotifications(user?.id);
+  const unread = notes.filter((n) => !n.read).length;
 
   const firstName = isLoggedIn ? user.name.split(" ")[0] : null;
 
@@ -38,6 +42,17 @@ export default function Header({
             placeholder='Search "milk", "bread", "atta"...'
           />
         </div>
+
+        {isLoggedIn && (
+          <button
+            className="bell-button"
+            onClick={onBellClick}
+            aria-label="Notifications"
+          >
+            🔔
+            {unread > 0 && <span className="bell-badge">{unread}</span>}
+          </button>
+        )}
 
         <button
           className="account-button"

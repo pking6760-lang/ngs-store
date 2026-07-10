@@ -1,22 +1,30 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useOrders } from "../lib/hooks.js";
+import { useOrders, useSettings, useUserNotifications } from "../lib/hooks.js";
+import { markUserNotificationsRead } from "../lib/store.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
-import { useSettings } from "../lib/hooks.js";
 import ProductThumb from "./ProductThumb.jsx";
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
   { id: "orders", label: "My Orders", icon: "📦" },
+  { id: "inbox", label: "Inbox", icon: "🔔" },
   { id: "rewards", label: "Rewards", icon: "🎁" },
   { id: "membership", label: "Membership", icon: "👑" },
   { id: "profile", label: "Profile", icon: "👤" },
 ];
 
-export default function AccountDrawer({ open, onClose }) {
+export default function AccountDrawer({ open, onClose, initialTab }) {
   const { user, isLoggedIn, logout } = useAuth();
   const [tab, setTab] = useState("orders");
+  const notes = useUserNotifications(user?.id);
+  const unread = notes.filter((n) => !n.read).length;
+
+  // Jump to the requested tab whenever the drawer is opened.
+  useEffect(() => {
+    if (open) setTab(initialTab || "orders");
+  }, [open, initialTab]);
 
   function handleLogout() {
     logout();
@@ -62,12 +70,16 @@ export default function AccountDrawer({ open, onClose }) {
             >
               <span className="account-tab-icon">{t.icon}</span>
               {t.label}
+              {t.id === "inbox" && unread > 0 && (
+                <span className="tab-badge">{unread}</span>
+              )}
             </button>
           ))}
         </div>
 
         <div className="account-body">
           {tab === "orders" && <MyOrders user={user} />}
+          {tab === "inbox" && <Inbox notes={notes} userId={user?.id} />}
           {tab === "rewards" && <Rewards user={user} />}
           {tab === "membership" && <Membership />}
           {tab === "profile" && <Profile />}
@@ -157,6 +169,35 @@ function MyOrders({ user }) {
               📍 Delivery location on map
             </a>
           )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Inbox({ notes, userId }) {
+  // Mark everything read once the inbox is opened.
+  useEffect(() => {
+    markUserNotificationsRead(userId);
+  }, [userId]);
+
+  if (!notes || notes.length === 0) {
+    return (
+      <div className="account-empty">
+        <div className="empty-emoji">🔔</div>
+        <p>No messages yet</p>
+        <span>Offers and updates from the store will appear here.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inbox-list">
+      {notes.map((n) => (
+        <div className={`inbox-item ${n.read ? "" : "unread"}`} key={n.id}>
+          <div className="inbox-item-title">🔔 {n.title}</div>
+          {n.body && <div className="inbox-item-body">{n.body}</div>}
+          <div className="inbox-item-time">{formatTime(n.createdAt)}</div>
         </div>
       ))}
     </div>

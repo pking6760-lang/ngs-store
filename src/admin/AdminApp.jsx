@@ -3,6 +3,7 @@ import Dashboard from "./Dashboard.jsx";
 import ProductsAdmin from "./ProductsAdmin.jsx";
 import OrdersAdmin from "./OrdersAdmin.jsx";
 import CouponsAdmin from "./CouponsAdmin.jsx";
+import CustomersAdmin from "./CustomersAdmin.jsx";
 import EmployeeApp from "./EmployeeApp.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useSettings } from "../lib/hooks.js";
@@ -18,8 +19,9 @@ const NAME_KEY = "ngs-admin-name";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "📊" },
-  { id: "products", label: "Products", icon: "📦" },
   { id: "orders", label: "Orders", icon: "🧾" },
+  { id: "products", label: "Products", icon: "📦" },
+  { id: "customers", label: "Customers", icon: "👥" },
   { id: "offers", label: "Offers", icon: "🎟️" },
 ];
 
@@ -92,6 +94,7 @@ export default function AdminApp() {
           {view === "dashboard" && <Dashboard onNavigate={setView} />}
           {view === "products" && <ProductsAdmin />}
           {view === "orders" && <OrdersAdmin />}
+          {view === "customers" && <CustomersAdmin />}
           {view === "offers" && <CouponsAdmin />}
         </div>
       </main>

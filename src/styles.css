@@ -1666,3 +1666,63 @@ button {
   color: var(--muted);
   cursor: not-allowed;
 }
+
+/* ─── Notification bell + inbox ──────────────────────────── */
+.bell-button {
+  position: relative;
+  border: none;
+  background: var(--bg-soft);
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.bell-button:hover { background: var(--green-tint); }
+.bell-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e53935;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tab-badge {
+  margin-left: 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e53935;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.inbox-list { display: flex; flex-direction: column; gap: 10px; }
+.inbox-item {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.inbox-item.unread {
+  border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+  background: var(--green-tint);
+}
+.inbox-item-title { font-weight: 800; font-size: 14px; }
+.inbox-item-body { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+.inbox-item-time { font-size: 11px; color: var(--muted); margin-top: 8px; }
