@@ -1623,3 +1623,33 @@ body {
 .lowstock-tag { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
 .lowstock-tag.out { background: #fdecec; color: #c0392b; }
 .lowstock-tag.low { background: #fff4e0; color: #b26a00; }
+
+/* ─── Multiple shop locations ────────────────────────────── */
+.shop-loc-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.shop-loc-row {
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px;
+  background: #fff;
+}
+.shop-loc-pin { font-size: 18px; flex: none; }
+.shop-loc-info { flex: 1; min-width: 0; }
+.shop-loc-name { font-weight: 800; font-size: 14px; }
+.shop-loc-coords { font-size: 12px; color: var(--muted); text-decoration: none; }
+.shop-loc-coords:hover { color: var(--green, #0a9155); }
+.shop-loc-del {
+  border: 1px solid #f4c9c9; background: #fff; border-radius: 8px;
+  padding: 6px 10px; font-size: 14px; flex: none;
+}
+.shop-loc-del:hover { background: #fdecec; }
+.shop-loc-add {
+  display: flex; flex-direction: column; gap: 10px;
+  border-top: 1px dashed var(--line); padding-top: 14px;
+}
+.shop-loc-label {
+  border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px;
+  font-size: 14px; font-family: inherit; width: 100%;
+}
+.shop-loc-label:focus { outline: none; border-color: var(--green); }
+.shop-loc-coord-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.shop-loc-coord-row .location-btn { flex: 1; }
+.shop-loc-picked { font-size: 12.5px; font-weight: 700; color: #0a6b19; white-space: nowrap; }

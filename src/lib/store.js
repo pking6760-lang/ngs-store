@@ -320,10 +320,29 @@ const DEFAULT_SETTINGS = {
   deliveryFee: 25,
   freeDeliveryAbove: 199,
   handlingFee: 5,
-  maxDistanceKm: 5, // won't deliver beyond this from the shop (0 = no limit)
-  shopLocation: null, // { lat, lng } — set with "use current location" at the shop
+  maxDistanceKm: 5, // won't deliver beyond this from any shop (0 = no limit)
+  // One or more shop locations: [{ id, label, lat, lng }]. A customer is in the
+  // delivery area if within the radius of ANY of them.
+  shopLocations: [],
+  shopLocation: null, // legacy single pin (migrated below)
   lowStockThreshold: 5, // admin low-stock alert threshold
 };
+
+// Returns the list of shop locations, migrating any old single pin.
+export function getShopLocations(settings) {
+  const arr = Array.isArray(settings?.shopLocations) ? settings.shopLocations : [];
+  if (arr.length) return arr;
+  if (settings?.shopLocation)
+    return [
+      {
+        id: "legacy",
+        label: "Main shop",
+        lat: settings.shopLocation.lat,
+        lng: settings.shopLocation.lng,
+      },
+    ];
+  return [];
+}
 
 export function getSettings() {
   const existing = read(SETTINGS_KEY, null);

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
-import { saveOrder, applyCoupon, decrementStock } from "../lib/store.js";
+import { saveOrder, applyCoupon, decrementStock, getShopLocations } from "../lib/store.js";
 import { getCurrentLocation, googleMapsLink, distanceKm } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
@@ -96,12 +96,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const grandTotal = netItems + deliveryFee + handling;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
-  // ── Delivery area (distance from the shop) ─────────────
+  // ── Delivery area (distance to the nearest shop) ───────
   const maxKm = settings.maxDistanceKm || 0;
-  const shopLoc = settings.shopLocation;
-  const areaEnforced = !!shopLoc && maxKm > 0;
+  const shops = getShopLocations(settings);
+  const areaEnforced = shops.length > 0 && maxKm > 0;
   const dist =
-    location && shopLoc ? Math.round(distanceKm(location, shopLoc) * 10) / 10 : null;
+    location && shops.length
+      ? Math.round(Math.min(...shops.map((s) => distanceKm(location, s))) * 10) / 10
+      : null;
   const outOfArea = areaEnforced && dist != null && dist > maxKm;
   const needsLocation = areaEnforced && !location;
 
