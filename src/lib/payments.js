@@ -1,18 +1,20 @@
 import qrcode from "qrcode-generator";
 
-// The shop's UPI ID (VPA) that receives payments. For the demo this is a
-// placeholder — replace it with the store's real UPI ID (e.g. from GPay /
-// PhonePe / Paytm / a bank) and money will actually land in that account.
-export const SHOP_UPI_ID = "ngsstore@upi";
+// The shop's real UPI ID (VPA) that receives payments. This is a Paytm
+// merchant QR handle (@ptys), so UPI apps treat payments as merchant
+// collections and generally lock the pre-filled amount.
+export const SHOP_UPI_ID = "paytmqr72t0sv@ptys";
 export const SHOP_UPI_NAME = "NGS Store";
 
 // Build a standard UPI deep link. On a phone, opening this URL launches the
-// user's UPI app (GPay / PhonePe / Paytm / BHIM) pre-filled with the amount.
+// user's UPI app (GPay / PhonePe / Paytm / BHIM) with the amount pre-filled.
+// The amount is sent as a fixed value (two decimals) so apps show it as the
+// exact amount to pay rather than an editable field.
 export function buildUpiLink({ amount, note, txnRef }) {
   const params = new URLSearchParams({
     pa: SHOP_UPI_ID,
     pn: SHOP_UPI_NAME,
-    am: String(amount),
+    am: Number(amount).toFixed(2),
     cu: "INR",
   });
   if (note) params.set("tn", note);

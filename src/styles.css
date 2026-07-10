@@ -1442,3 +1442,11 @@ button {
 .my-order-points .used {
   color: #b26a00;
 }
+
+.pay-fixed {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 6px;
+}

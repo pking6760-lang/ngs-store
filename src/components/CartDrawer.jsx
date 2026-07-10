@@ -211,6 +211,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           <div className="pay-step">
             <div className="pay-amount">
               Amount to pay <strong>₹{grandTotal}</strong>
+              <span className="pay-fixed">🔒 Fixed amount — pre-filled for you</span>
             </div>
             <div className="upi-qr-wrap">
               <img className="upi-qr" src={qrDataUri(upiLink)} alt="UPI QR code" />
