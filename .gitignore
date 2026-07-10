@@ -36,3 +36,6 @@ preview/
 !.env.example
 !.env.production
 !.env.development
+
+# Firebase CLI deploy cache
+.firebase/
