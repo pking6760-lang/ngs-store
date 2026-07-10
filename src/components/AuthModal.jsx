@@ -45,7 +45,9 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
     else setError(res.error);
   }
 
-  const codeLen = email ? 6 : 4;
+  // Demo phone code is 4 digits; email OTP length is set on Supabase (6–10),
+  // so allow up to 10 and don't hard-cap at 6.
+  const codeLen = email ? 10 : 4;
 
   return (
     <div className="modal-overlay" onClick={close}>
@@ -151,7 +153,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
                     setCode(e.target.value.replace(/\D/g, "").slice(0, codeLen));
                     setError("");
                   }}
-                  placeholder={`${codeLen}-digit code`} autoFocus
+                  placeholder={email ? "Enter the code" : `${codeLen}-digit code`} autoFocus
                 />
               </label>
               {error && <div className="auth-error">{error}</div>}
