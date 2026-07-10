@@ -712,13 +712,26 @@ button {
   .header-inner {
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: space-between;
   }
+  .logo { margin-right: auto; }
   .search-wrap {
     order: 3;
     flex-basis: 100%;
   }
   .cart-label {
     display: none;
+  }
+  /* Compact icon buttons so logo + bell + account + cart stay on one row */
+  .account-label {
+    display: none;
+  }
+  .account-button {
+    padding: 9px 11px;
+  }
+  .bell-button {
+    width: 40px;
+    height: 40px;
   }
   .category-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -729,6 +742,12 @@ button {
   .section-title {
     font-size: 17px;
   }
+}
+/* Extra-narrow: shrink the logo wordmark a touch so nothing wraps */
+@media (max-width: 400px) {
+  .logo-mark { font-size: 18px; }
+  .logo-sub { font-size: 9.5px; }
+  .header-inner { gap: 8px; }
 }
 
 /* ─── Account button (header) ────────────────────────────── */
