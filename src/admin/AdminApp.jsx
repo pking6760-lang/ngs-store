@@ -142,25 +142,47 @@ export default function AdminApp() {
 // Store open/close + delivery-mode (normal / surge) toggles.
 export function StoreControls() {
   const settings = useSettings();
+  const [busy, setBusy] = useState(false);
+  // Optimistic override so the button flips the instant it's tapped, before the
+  // save round-trips. Cleared once the saved settings come back.
+  const [pending, setPending] = useState(null);
+
+  const storeOpen = pending?.storeOpen ?? settings.storeOpen;
+  const surge = (pending?.deliveryMode ?? settings.deliveryMode) === "surge";
+
+  async function change(patch) {
+    if (busy) return;
+    setBusy(true);
+    setPending((p) => ({ ...p, ...patch }));
+    try {
+      await updateSettings(patch);
+    } catch (e) {
+      setPending(null); // revert the optimistic flip
+      alert(e.message || "Couldn't save. Check your connection / admin login.");
+    } finally {
+      setBusy(false);
+      // Let the fetched value take over on the next render tick.
+      setTimeout(() => setPending(null), 400);
+    }
+  }
+
   return (
     <div className="store-controls">
       <button
-        className={`store-toggle ${settings.storeOpen ? "open" : "closed"}`}
-        onClick={() => updateSettings({ storeOpen: !settings.storeOpen })}
+        className={`store-toggle ${storeOpen ? "open" : "closed"}`}
+        disabled={busy}
+        onClick={() => change({ storeOpen: !storeOpen })}
       >
         <span className="store-dot" />
-        {settings.storeOpen ? "Store OPEN" : "Store CLOSED"}
+        {storeOpen ? "Store OPEN" : "Store CLOSED"}
       </button>
       <button
-        className={`surge-toggle ${settings.deliveryMode === "surge" ? "on" : ""}`}
-        onClick={() =>
-          updateSettings({
-            deliveryMode: settings.deliveryMode === "surge" ? "normal" : "surge",
-          })
-        }
+        className={`surge-toggle ${surge ? "on" : ""}`}
+        disabled={busy}
+        onClick={() => change({ deliveryMode: surge ? "normal" : "surge" })}
         title="Turn on during rain / bad weather / peak — members pay delivery too"
       >
-        {settings.deliveryMode === "surge" ? "🌧️ Surge ON" : "☀️ Normal day"}
+        {surge ? "🌧️ Surge ON" : "☀️ Normal day"}
       </button>
     </div>
   );

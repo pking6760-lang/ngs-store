@@ -151,6 +151,7 @@ export async function updateMyProfile(patch) {
   }
   const { error } = await supabase.from("profiles").update(allowed).eq("id", u.user.id);
   if (error) throw error;
+  pingLocal("profiles");
   return { ok: true };
 }
 
@@ -197,6 +198,8 @@ export async function placeOrder({ items, coupon, location, payment }) {
     p_payment: payment || "upi",
   });
   if (error) throw error;
+  pingLocal("orders");
+  pingLocal("products"); // stock changed
   return mapOrder(data);
 }
 
@@ -214,12 +217,14 @@ export async function rateOrder(orderId, rating, feedback) {
     p_order: orderId, p_rating: rating, p_feedback: feedback || "",
   });
   if (error) throw error;
+  pingLocal("orders");
   return { ok: true };
 }
 
 export async function redeemPoints(points) {
   const { data, error } = await must().rpc("redeem_points", { p_points: points });
   if (error) throw error;
+  pingLocal("profiles");
   return data; // new balance
 }
 
@@ -237,6 +242,7 @@ export async function markNotificationsRead() {
   if (!u?.user) return;
   await supabase.from("notifications").update({ read: true })
     .eq("user_id", u.user.id).eq("read", false);
+  pingLocal("notifications");
 }
 
 /* ─── Admin: catalog ────────────────────────────────────────────────────── */
@@ -244,42 +250,54 @@ export async function markNotificationsRead() {
 export async function upsertProduct(product) {
   const { error } = await must().from("products").upsert(product);
   if (error) throw error;
+  pingLocal("products");
   return { ok: true };
 }
 
 export async function deleteProduct(id) {
   const { error } = await must().from("products").delete().eq("id", id);
   if (error) throw error;
+  pingLocal("products");
   return { ok: true };
 }
 
 export async function addCategory(cat) {
   const { error } = await must().from("categories").insert(cat);
   if (error) throw error;
+  pingLocal("categories");
   return { ok: true };
 }
 
 export async function deleteCategory(id) {
   const { error } = await must().from("categories").delete().eq("id", id);
   if (error) throw error;
+  pingLocal("categories");
   return { ok: true };
 }
 
 export async function upsertCoupon(coupon) {
   const { error } = await must().from("coupons").upsert(couponToDb(coupon));
   if (error) throw error;
+  pingLocal("coupons");
   return { ok: true };
 }
 
 export async function deleteCoupon(code) {
   const { error } = await must().from("coupons").delete().eq("code", code);
   if (error) throw error;
+  pingLocal("coupons");
   return { ok: true };
 }
 
 export async function updateSettings(patch) {
-  const { error } = await must().from("settings").update(settingsToDb(patch)).eq("id", 1);
+  // .select() returns the changed rows; if RLS blocked the write (caller isn't
+  // an admin) it succeeds with 0 rows — surface that as a clear error.
+  const { data, error } = await must()
+    .from("settings").update(settingsToDb(patch)).eq("id", 1).select();
   if (error) throw error;
+  if (!data || data.length === 0)
+    throw new Error("Not saved — you must be signed in as an admin.");
+  pingLocal("settings");
   return { ok: true };
 }
 
@@ -296,6 +314,7 @@ export async function fetchAllOrders() {
 export async function updateOrderById(dbId, patch) {
   const { error } = await must().from("orders").update(patch).eq("id", dbId);
   if (error) throw error;
+  pingLocal("orders");
   return { ok: true };
 }
 
@@ -304,12 +323,14 @@ export async function updateOrderById(dbId, patch) {
 export async function updateOrderStatus(dbId, status) {
   const { error } = await must().from("orders").update({ status }).eq("id", dbId);
   if (error) throw error;
+  pingLocal("orders");
   return { ok: true };
 }
 
 export async function acceptOrder(dbId) {
   const { error } = await must().from("orders").update({ accepted: true }).eq("id", dbId);
   if (error) throw error;
+  pingLocal("orders");
   return { ok: true };
 }
 
@@ -317,6 +338,7 @@ export async function rejectOrder(dbId) {
   const { error } = await must()
     .from("orders").update({ accepted: false, status: "Cancelled" }).eq("id", dbId);
   if (error) throw error;
+  pingLocal("orders");
   return { ok: true };
 }
 
@@ -334,6 +356,7 @@ export async function setMembership(userId, isMember) {
   const patch = { is_member: isMember, member_since: isMember ? new Date().toISOString() : null };
   const { error } = await must().from("profiles").update(patch).eq("id", userId);
   if (error) throw error;
+  pingLocal("profiles");
   return { ok: true };
 }
 
@@ -341,21 +364,38 @@ export async function sendNotification({ userId, title, body }) {
   const { error } = await must().from("notifications")
     .insert({ user_id: userId, title, body: body || "" });
   if (error) throw error;
+  pingLocal("notifications");
   return { ok: true };
 }
 
-/* ─── Realtime ──────────────────────────────────────────────────────────── */
+/* ─── Change notifications ──────────────────────────────────────────────────
+   Two ways a screen learns data changed:
+   1. LOCAL bus — a write on THIS device immediately tells every hook here to
+      refetch, so the UI updates instantly even if Supabase Realtime isn't
+      enabled on the tables. This is what makes the admin toggles feel live.
+   2. Supabase Realtime — pushes changes made on OTHER devices (needs the tables
+      added to the realtime publication; see the setup SQL). */
+const LOCAL_CHANGE = "ngs-backend-change";
 
-// Re-run `cb` whenever a row in `table` changes anywhere (any device). Each
-// call gets its OWN uniquely-named channel — Supabase rejects adding listeners
-// to a channel name that's already subscribed, and several hooks watch the same
-// table.
+// Call after a successful write so same-device screens refetch right away.
+export function pingLocal(table) {
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new CustomEvent(LOCAL_CHANGE, { detail: { table } }));
+}
+
 let channelSeq = 0;
 export function subscribeTable(table, cb) {
   if (!supabase) return () => {};
+  // Local (same-device) updates.
+  const onLocal = (e) => { if (!e?.detail || e.detail.table === table) cb(); };
+  if (typeof window !== "undefined") window.addEventListener(LOCAL_CHANGE, onLocal);
+  // Cross-device updates via Realtime. Unique channel name per subscription.
   const ch = supabase
     .channel(`rt-${table}-${++channelSeq}`)
     .on("postgres_changes", { event: "*", schema: "public", table }, cb)
     .subscribe();
-  return () => supabase.removeChannel(ch);
+  return () => {
+    if (typeof window !== "undefined") window.removeEventListener(LOCAL_CHANGE, onLocal);
+    supabase.removeChannel(ch);
+  };
 }
