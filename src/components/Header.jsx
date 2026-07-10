@@ -1,5 +1,7 @@
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { shop } from "../data/shop.js";
+import Logo from "./Logo.jsx";
 
 export default function Header({
   query,
@@ -16,17 +18,12 @@ export default function Header({
   return (
     <header className="header">
       <div className="header-inner">
-        <button className="logo" onClick={onLogoClick} aria-label="Home">
-          <span className="logo-mark">NGS</span>
-          <span className="logo-sub">store</span>
-        </button>
+        <Logo onClick={onLogoClick} />
 
         <div className="location">
           <div className="location-time">Delivery in 12 minutes</div>
           <div className="location-addr">
-            {isLoggedIn && user.address
-              ? user.address
-              : "Home — Sector 21, New Delhi"}{" "}
+            {isLoggedIn && user.address ? user.address : shop.area}{" "}
             <span className="chevron">▾</span>
           </div>
         </div>
@@ -38,7 +35,7 @@ export default function Header({
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder='Search "milk", "bread", "chips"...'
+            placeholder='Search "milk", "bread", "atta"...'
           />
         </div>
 

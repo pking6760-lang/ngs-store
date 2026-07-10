@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Dashboard from "./Dashboard.jsx";
 import ProductsAdmin from "./ProductsAdmin.jsx";
 import OrdersAdmin from "./OrdersAdmin.jsx";
+import CouponsAdmin from "./CouponsAdmin.jsx";
 import EmployeeApp from "./EmployeeApp.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useSettings } from "../lib/hooks.js";
@@ -19,6 +20,7 @@ const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "📊" },
   { id: "products", label: "Products", icon: "📦" },
   { id: "orders", label: "Orders", icon: "🧾" },
+  { id: "offers", label: "Offers", icon: "🎟️" },
 ];
 
 export default function AdminApp() {
@@ -90,6 +92,7 @@ export default function AdminApp() {
           {view === "dashboard" && <Dashboard onNavigate={setView} />}
           {view === "products" && <ProductsAdmin />}
           {view === "orders" && <OrdersAdmin />}
+          {view === "offers" && <CouponsAdmin />}
         </div>
       </main>
 

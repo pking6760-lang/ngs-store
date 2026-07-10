@@ -17,6 +17,7 @@ const EMPTY = {
   price: "",
   mrp: "",
   image: "",
+  inStock: true,
 };
 
 export default function ProductsAdmin() {
@@ -101,7 +102,12 @@ export default function ProductsAdmin() {
                       size={40}
                       radius={8}
                     />
-                    <span className="cell-name">{p.name}</span>
+                    <span className="cell-name">
+                      {p.name}
+                      {p.inStock === false && (
+                        <span className="stock-tag out">Out of stock</span>
+                      )}
+                    </span>
                   </div>
                 </td>
                 <td>{catName(p.category)}</td>
@@ -388,6 +394,20 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
               </div>
             </div>
             {imgError && <div className="auth-error">{imgError}</div>}
+          </label>
+
+          <label className="field wide stock-field">
+            <span>Availability</span>
+            <button
+              type="button"
+              className={`stock-toggle ${form.inStock === false ? "off" : "on"}`}
+              onClick={() => update("inStock", form.inStock === false)}
+            >
+              <span className="stock-knob" />
+              <span className="stock-label">
+                {form.inStock === false ? "Out of stock" : "In stock"}
+              </span>
+            </button>
           </label>
         </div>
 

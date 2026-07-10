@@ -5,10 +5,13 @@ export default function ProductCard({ product }) {
   const { items, add, remove } = useCart();
   const qty = items[product.id] || 0;
   const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
+  const outOfStock = product.inStock === false;
 
   return (
-    <div className="product-card">
-      {discount > 0 && <span className="product-badge">{discount}% OFF</span>}
+    <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
+      {discount > 0 && !outOfStock && (
+        <span className="product-badge">{discount}% OFF</span>
+      )}
       <div className="product-image">
         <ProductThumb
           image={product.image}
@@ -17,6 +20,7 @@ export default function ProductCard({ product }) {
           fill
           radius={12}
         />
+        {outOfStock && <span className="sold-out-tag">Out of stock</span>}
       </div>
       <div className="product-delivery">⚡ 12 MINS</div>
       <div className="product-name">{product.name}</div>
@@ -28,7 +32,11 @@ export default function ProductCard({ product }) {
             <span className="price-mrp">₹{product.mrp}</span>
           )}
         </div>
-        {qty === 0 ? (
+        {outOfStock ? (
+          <button className="add-btn out" disabled>
+            Sold out
+          </button>
+        ) : qty === 0 ? (
           <button className="add-btn" onClick={() => add(product.id)}>
             ADD
           </button>

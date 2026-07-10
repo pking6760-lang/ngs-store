@@ -7,11 +7,33 @@ import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories } from "./lib/hooks.js";
+import { shop } from "./data/shop.js";
 
 const banners = [
-  { id: "b1", title: "Fresh fruits & veggies", subtitle: "Farm-fresh, every day", emoji: "🥦", bg: "#e7f7e9" },
-  { id: "b2", title: "Up to 40% off snacks", subtitle: "Munchies for movie night", emoji: "🍿", bg: "#fce8ec" },
-  { id: "b3", title: "Cold drinks & juices", subtitle: "Chilled and ready", emoji: "🥤", bg: "#e6f0fb" },
+  {
+    id: "b1",
+    title: "Free delivery over ₹199",
+    subtitle: "On daily essentials, every order",
+    emoji: "🚴",
+    grad: "linear-gradient(135deg, #0a9155, #056b3c)",
+    fg: "#ffffff",
+  },
+  {
+    id: "b2",
+    title: "Up to 40% off snacks",
+    subtitle: "Stock up for the week",
+    emoji: "🍿",
+    grad: "linear-gradient(135deg, #f6c445, #e39a00)",
+    fg: "#3a2a00",
+  },
+  {
+    id: "b3",
+    title: "Groceries in 12 minutes",
+    subtitle: "Fresh stock, delivered fast",
+    emoji: "🛍️",
+    grad: "linear-gradient(135deg, #2f6fb0, #16406e)",
+    fg: "#ffffff",
+  },
 ];
 
 export default function App() {
@@ -95,6 +117,7 @@ export default function App() {
           <HomeView
             products={products}
             categories={categories}
+            offer={settings.offerBanner}
             onCategoryClick={setActiveCategory}
           />
         )}
@@ -131,20 +154,29 @@ export default function App() {
       />
 
       <footer className="footer">
-        <p>NGS Store — groceries delivered in minutes.</p>
-        <p className="footer-note">Demo app. Prices are illustrative.</p>
+        <p className="footer-name">{shop.name}</p>
+        <p className="footer-note">📍 {shop.address}</p>
+        <p className="footer-note">Groceries &amp; daily essentials, delivered fast.</p>
       </footer>
     </div>
   );
 }
 
-function HomeView({ products, categories, onCategoryClick }) {
+function HomeView({ products, categories, offer, onCategoryClick }) {
   const byCategory = (id) => products.filter((p) => p.category === id);
   return (
     <>
+      {offer && offer.trim() && (
+        <div className="offer-strip">{offer}</div>
+      )}
+
       <div className="banner-row">
         {banners.map((b) => (
-          <div className="banner" key={b.id} style={{ background: b.bg }}>
+          <div
+            className="banner"
+            key={b.id}
+            style={{ background: b.grad, color: b.fg }}
+          >
             <div className="banner-text">
               <h3>{b.title}</h3>
               <p>{b.subtitle}</p>

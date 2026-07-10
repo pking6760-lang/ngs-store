@@ -95,8 +95,11 @@ export default function OrdersAdmin() {
                 ))}
               </div>
 
-              {(o.pointsEarned > 0 || o.pointsUsed > 0 || o.discount > 0) && (
+              {(o.pointsEarned > 0 || o.pointsUsed > 0 || o.discount > 0 || o.couponDiscount > 0) && (
                 <div className="order-points-row">
+                  {o.couponDiscount > 0 && (
+                    <span>🎟️ {o.couponCode} −₹{o.couponDiscount}</span>
+                  )}
                   {o.discount > 0 && <span>₹{o.discount} points discount</span>}
                   {o.pointsUsed > 0 && <span>−{o.pointsUsed} pts used</span>}
                   {o.pointsEarned > 0 && <span>+{o.pointsEarned} pts earned</span>}

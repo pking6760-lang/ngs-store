@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProducts, useSettings } from "../lib/hooks.js";
-import { saveOrder } from "../lib/store.js";
+import { saveOrder, applyCoupon } from "../lib/store.js";
 import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
@@ -30,6 +30,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [locError, setLocError] = useState("");
   const [payment, setPayment] = useState("upi"); // upi | cod
   const [usePoints, setUsePoints] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState(null);
+  const [couponError, setCouponError] = useState("");
 
   const lines = Object.entries(items)
     .map(([id, qty]) => {
@@ -52,7 +55,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const maxRedeemRupees = Math.min(redeemableRupees(availablePoints), itemTotal);
   const discount = usePoints && isLoggedIn ? maxRedeemRupees : 0;
   const pointsUsed = discount * POINTS.perRupee;
-  const netItems = itemTotal - discount;
+
+  // Coupon — re-validated against the current cart each render so it stays
+  // correct if items are added/removed.
+  const couponResult = appliedCode ? applyCoupon(appliedCode, itemTotal) : null;
+  const couponDiscount = couponResult?.ok
+    ? Math.min(couponResult.discount, itemTotal - discount)
+    : 0;
+  const couponInvalid = appliedCode && couponResult && !couponResult.ok;
+
+  const netItems = Math.max(0, itemTotal - discount - couponDiscount);
 
   // ── Delivery fee (with membership + surge rules) ───────
   let deliveryFee =
@@ -94,6 +106,22 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     }
   }
 
+  function applyCouponCode() {
+    const res = applyCoupon(couponInput, itemTotal);
+    if (res.ok) {
+      setAppliedCode(res.code);
+      setCouponInput("");
+      setCouponError("");
+    } else {
+      setCouponError(res.error);
+    }
+  }
+
+  function removeCoupon() {
+    setAppliedCode(null);
+    setCouponError("");
+  }
+
   function proceedFromCheckout() {
     if (!address.trim()) {
       setLocError("Please enter a delivery address.");
@@ -131,6 +159,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       })),
       itemTotal,
       discount,
+      couponCode: couponDiscount > 0 ? appliedCode : null,
+      couponDiscount,
       pointsUsed,
       pointsEarned,
       deliveryFee,
@@ -144,6 +174,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     setPlaced({ total: grandTotal, count, eta: 12, payment, pointsEarned });
     clear();
     setUsePoints(false);
+    setAppliedCode(null);
     setStep("done");
   }
 
@@ -297,6 +328,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <span className="free">−₹{discount}</span>
                 </div>
               )}
+              {couponDiscount > 0 && (
+                <div className="bill-row">
+                  <span>Coupon ({appliedCode})</span>
+                  <span className="free">−₹{couponDiscount}</span>
+                </div>
+              )}
               <div className="bill-row">
                 <span>Delivery fee</span>
                 <span>
@@ -395,6 +432,42 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </label>
             )}
 
+            {/* Coupon */}
+            <div className="coupon-box">
+              {appliedCode && couponDiscount > 0 ? (
+                <div className="coupon-applied">
+                  <span>
+                    🎟️ <strong>{appliedCode}</strong> applied — ₹{couponDiscount} off
+                  </span>
+                  <button className="coupon-remove" onClick={removeCoupon}>
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="coupon-input-row">
+                    <input
+                      className="coupon-input"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase());
+                        setCouponError("");
+                      }}
+                      placeholder="Coupon code"
+                    />
+                    <button className="coupon-apply" onClick={applyCouponCode}>
+                      Apply
+                    </button>
+                  </div>
+                  {(couponError || couponInvalid) && (
+                    <div className="coupon-error">
+                      {couponError || couponResult.error}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             <div className="bill">
               <h4>Bill details</h4>
               <div className="bill-row">
@@ -405,6 +478,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="bill-row">
                   <span>Points discount</span>
                   <span className="free">−₹{discount}</span>
+                </div>
+              )}
+              {couponDiscount > 0 && (
+                <div className="bill-row">
+                  <span>Coupon ({appliedCode})</span>
+                  <span className="free">−₹{couponDiscount}</span>
                 </div>
               )}
               <div className="bill-row">

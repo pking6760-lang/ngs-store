@@ -3,7 +3,7 @@
 // works offline with no external asset requests. Prices are in ₹ (INR).
 
 export const categories = [
-  { id: "fruits-veg", name: "Fruits & Vegetables", icon: "🥬", color: "#e7f7e9" },
+  { id: "fruits-veg", name: "Fresh Fruits", icon: "🍎", color: "#e7f7e9" },
   { id: "dairy-bread", name: "Dairy, Bread & Eggs", icon: "🥛", color: "#fdf4e3" },
   { id: "snacks", name: "Snacks & Munchies", icon: "🍿", color: "#fce8ec" },
   { id: "beverages", name: "Cold Drinks & Juices", icon: "🥤", color: "#e6f0fb" },
@@ -14,14 +14,9 @@ export const categories = [
 ];
 
 export const products = [
-  // Fruits & Vegetables
+  // Fresh Fruits
   { id: "p1", name: "Fresh Banana", unit: "6 pcs", price: 40, mrp: 55, icon: "🍌", category: "fruits-veg" },
   { id: "p2", name: "Red Apple (Shimla)", unit: "4 pcs", price: 120, mrp: 160, icon: "🍎", category: "fruits-veg" },
-  { id: "p3", name: "Tomato", unit: "500 g", price: 25, mrp: 35, icon: "🍅", category: "fruits-veg" },
-  { id: "p4", name: "Onion", unit: "1 kg", price: 38, mrp: 50, icon: "🧅", category: "fruits-veg" },
-  { id: "p5", name: "Potato", unit: "1 kg", price: 32, mrp: 45, icon: "🥔", category: "fruits-veg" },
-  { id: "p6", name: "Fresh Spinach", unit: "250 g", price: 20, mrp: 30, icon: "🥬", category: "fruits-veg" },
-  { id: "p7", name: "Carrot", unit: "500 g", price: 34, mrp: 45, icon: "🥕", category: "fruits-veg" },
   { id: "p8", name: "Green Grapes", unit: "500 g", price: 70, mrp: 90, icon: "🍇", category: "fruits-veg" },
 
   // Dairy, Bread & Eggs

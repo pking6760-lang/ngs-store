@@ -6,10 +6,12 @@
 
 import { products as seedProducts, categories as seedCategories } from "../data/products.js";
 
-const PRODUCTS_KEY = "ngs-products-v1";
-const CATEGORIES_KEY = "ngs-categories-v1";
+// v2 catalog: refreshed product list (vegetables removed) + renamed category.
+const PRODUCTS_KEY = "ngs-products-v2";
+const CATEGORIES_KEY = "ngs-categories-v2";
 const ORDERS_KEY = "ngs-orders-v1";
 const SETTINGS_KEY = "ngs-settings-v1";
+const COUPONS_KEY = "ngs-coupons-v1";
 const CHANGE_EVENT = "ngs-store-change";
 
 // Soft background colours cycled through for new categories.
@@ -115,11 +117,80 @@ export function deleteCategory(id) {
   return { ok: true, movedTo: fallback };
 }
 
+/* ─── Coupons / offers ──────────────────────────────────── */
+// A coupon: { code, type: "percent"|"flat", value, minOrder, active }
+function seedCoupons() {
+  return [
+    { code: "NISHA10", type: "percent", value: 10, minOrder: 199, active: true },
+    { code: "FLAT30", type: "flat", value: 30, minOrder: 149, active: true },
+  ];
+}
+
+export function getCoupons() {
+  const existing = read(COUPONS_KEY, null);
+  if (!existing) {
+    const seeded = seedCoupons();
+    write(COUPONS_KEY, seeded);
+    return seeded;
+  }
+  return existing;
+}
+
+export function saveCoupons(list) {
+  write(COUPONS_KEY, list);
+}
+
+export function upsertCoupon(coupon) {
+  const code = coupon.code.trim().toUpperCase();
+  if (!code) return { ok: false, error: "Enter a coupon code." };
+  const value = Number(coupon.value) || 0;
+  if (value <= 0) return { ok: false, error: "Enter a discount value." };
+  const next = {
+    code,
+    type: coupon.type === "flat" ? "flat" : "percent",
+    value,
+    minOrder: Number(coupon.minOrder) || 0,
+    active: coupon.active !== false,
+  };
+  const list = getCoupons().filter((c) => c.code !== code);
+  saveCoupons([next, ...list]);
+  return { ok: true };
+}
+
+export function deleteCoupon(code) {
+  saveCoupons(getCoupons().filter((c) => c.code !== code));
+}
+
+// Validate a code against the cart's item total. Returns { ok, discount } or
+// { ok:false, error }.
+export function applyCoupon(code, itemTotal) {
+  const clean = (code || "").trim().toUpperCase();
+  if (!clean) return { ok: false, error: "Enter a coupon code." };
+  const coupon = getCoupons().find((c) => c.code === clean);
+  if (!coupon || !coupon.active)
+    return { ok: false, error: "This coupon isn't valid." };
+  if (itemTotal < coupon.minOrder)
+    return {
+      ok: false,
+      error: `Add ₹${coupon.minOrder - itemTotal} more to use ${clean}.`,
+    };
+  const discount =
+    coupon.type === "percent"
+      ? Math.floor((itemTotal * coupon.value) / 100)
+      : coupon.value;
+  return { ok: true, code: clean, discount: Math.min(discount, itemTotal) };
+}
+
 /* ─── Store settings ────────────────────────────────────── */
 // storeOpen: customers can only order when the store is open.
 // deliveryMode: "normal" → members get free delivery; "surge" → everyone pays
 // (used for rain / bad weather / peak, as decided by the store).
-const DEFAULT_SETTINGS = { storeOpen: true, deliveryMode: "normal" };
+const DEFAULT_SETTINGS = {
+  storeOpen: true,
+  deliveryMode: "normal",
+  // A promotional line shown across the top of the customer home page.
+  offerBanner: "🎉 Welcome to NGS Nisha General Store — daily essentials delivered fast!",
+};
 
 export function getSettings() {
   const existing = read(SETTINGS_KEY, null);
@@ -233,7 +304,8 @@ export function subscribe(callback) {
       e.key === PRODUCTS_KEY ||
       e.key === CATEGORIES_KEY ||
       e.key === ORDERS_KEY ||
-      e.key === SETTINGS_KEY
+      e.key === SETTINGS_KEY ||
+      e.key === COUPONS_KEY
     )
       callback();
   };

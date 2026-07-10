@@ -4,6 +4,7 @@ import {
   getCategories,
   getOrders,
   getSettings,
+  getCoupons,
   subscribe,
 } from "./store.js";
 
@@ -33,4 +34,11 @@ export function useSettings() {
   const [settings, setSettings] = useState(getSettings);
   useEffect(() => subscribe(() => setSettings(getSettings())), []);
   return settings;
+}
+
+// Re-renders whenever coupons change.
+export function useCoupons() {
+  const [coupons, setCoupons] = useState(getCoupons);
+  useEffect(() => subscribe(() => setCoupons(getCoupons())), []);
+  return coupons;
 }
