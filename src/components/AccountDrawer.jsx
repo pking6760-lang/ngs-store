@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
 import { useOrders, useSettings, useUserNotifications } from "../lib/hooks.js";
-import { markUserNotificationsRead } from "../lib/store.js";
+import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../lib/store.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
 import ProductThumb from "./ProductThumb.jsx";
@@ -15,7 +16,7 @@ const TABS = [
   { id: "profile", label: "Profile", icon: "👤" },
 ];
 
-export default function AccountDrawer({ open, onClose, initialTab }) {
+export default function AccountDrawer({ open, onClose, initialTab, onOpenCart }) {
   const { user, isLoggedIn, logout } = useAuth();
   const [tab, setTab] = useState("orders");
   const notes = useUserNotifications(user?.id);
@@ -78,7 +79,15 @@ export default function AccountDrawer({ open, onClose, initialTab }) {
         </div>
 
         <div className="account-body">
-          {tab === "orders" && <MyOrders user={user} />}
+          {tab === "orders" && (
+            <MyOrders
+              user={user}
+              onReorder={() => {
+                onClose();
+                onOpenCart && onOpenCart();
+              }}
+            />
+          )}
           {tab === "inbox" && <Inbox notes={notes} userId={user?.id} />}
           {tab === "rewards" && <Rewards user={user} />}
           {tab === "membership" && <Membership />}
@@ -97,12 +106,14 @@ export default function AccountDrawer({ open, onClose, initialTab }) {
   );
 }
 
-function MyOrders({ user }) {
+function MyOrders({ user, onReorder }) {
   const allOrders = useOrders();
+  const [openId, setOpenId] = useState(null);
   const myOrders = useMemo(
     () => allOrders.filter((o) => o.userId === user?.id),
     [allOrders, user]
   );
+  const openOrder = myOrders.find((o) => o.id === openId) || null;
 
   if (myOrders.length === 0) {
     return (
@@ -117,7 +128,11 @@ function MyOrders({ user }) {
   return (
     <div className="my-orders">
       {myOrders.map((o) => (
-        <div className="my-order-card" key={o.id}>
+        <button
+          className="my-order-card tappable"
+          key={o.id}
+          onClick={() => setOpenId(o.id)}
+        >
           <div className="my-order-head">
             <div>
               <span className="order-id">#{o.id}</span>
@@ -143,34 +158,160 @@ function MyOrders({ user }) {
             ))}
           </div>
 
-          {(o.pointsEarned > 0 || o.pointsUsed > 0) && (
-            <div className="my-order-points">
-              {o.pointsEarned > 0 && <span>+{o.pointsEarned} pts earned</span>}
-              {o.pointsUsed > 0 && (
-                <span className="used">−{o.pointsUsed} pts used</span>
-              )}
-            </div>
-          )}
-
           <div className="my-order-foot">
             <span className="my-order-pay">
-              {o.payment === "upi" ? "UPI" : "Cash on delivery"}
+              {o.rating ? "★".repeat(o.rating) : o.payment === "upi" ? "UPI" : "Cash on delivery"}
             </span>
-            <span className="my-order-total">₹{o.total}</span>
+            <span className="my-order-total">
+              ₹{o.total} <span className="my-order-arrow">›</span>
+            </span>
+          </div>
+        </button>
+      ))}
+
+      {openOrder && (
+        <OrderDetail
+          order={openOrder}
+          onClose={() => setOpenId(null)}
+          onReorder={onReorder}
+        />
+      )}
+    </div>
+  );
+}
+
+function OrderDetail({ order, onClose, onReorder }) {
+  const { add } = useCart();
+  const cancelled = order.status === "Cancelled";
+  const currentStep = ORDER_STATUSES.indexOf(order.status);
+
+  function reorder() {
+    order.items.forEach((it) => {
+      for (let i = 0; i < it.qty; i++) add(it.id);
+    });
+    onReorder && onReorder();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="order-detail" onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-head">
+          <button className="back-btn small" onClick={onClose} aria-label="Back">←</button>
+          <h2>Order #{order.id}</h2>
+          <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="order-detail-body">
+          <div className="order-detail-time">{formatTime(order.createdAt)}</div>
+
+          {cancelled ? (
+            <div className="order-cancelled-note">✖ This order was cancelled.</div>
+          ) : (
+            <ol className="status-steps">
+              {ORDER_STATUSES.map((s, i) => (
+                <li
+                  key={s}
+                  className={`step ${i < currentStep ? "done" : ""} ${
+                    i === currentStep ? "current" : ""
+                  }`}
+                >
+                  <span className="step-dot" />
+                  <span className="step-label">{s}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          <div className="order-detail-items">
+            {order.items.map((it) => (
+              <div className="order-detail-item" key={it.id}>
+                <ProductThumb image={it.image} name={it.name} category={it.category} size={38} radius={9} />
+                <span className="odi-name">{it.name}</span>
+                <span className="odi-qty">× {it.qty}</span>
+                <span className="odi-price">₹{it.price * it.qty}</span>
+              </div>
+            ))}
           </div>
 
-          {o.location && (
-            <a
-              className="my-order-map"
-              href={googleMapsLink(o.location)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              📍 Delivery location on map
-            </a>
+          <div className="order-detail-bill">
+            <Row k="Item total" v={`₹${order.itemTotal}`} />
+            {order.discount > 0 && <Row k="Points discount" v={`−₹${order.discount}`} good />}
+            {order.couponDiscount > 0 && <Row k={`Coupon ${order.couponCode}`} v={`−₹${order.couponDiscount}`} good />}
+            <Row k="Delivery fee" v={order.deliveryFee ? `₹${order.deliveryFee}` : "FREE"} />
+            <Row k="Handling" v={`₹${order.handling}`} />
+            <Row k="Total paid" v={`₹${order.total}`} bold />
+            <div className="odb-pay">{order.payment === "upi" ? "Paid via UPI" : "Cash on delivery"}</div>
+          </div>
+
+          {order.status === "Delivered" && (
+            <RatingBox order={order} />
           )}
+
+          <button className="checkout-btn reorder" onClick={reorder}>
+            🔁 Reorder these items
+          </button>
         </div>
-      ))}
+      </div>
+    </div>
+  );
+}
+
+function RatingBox({ order }) {
+  const [stars, setStars] = useState(order.rating || 0);
+  const [hover, setHover] = useState(0);
+  const [feedback, setFeedback] = useState(order.feedback || "");
+  const [done, setDone] = useState(!!order.rating);
+
+  function submit() {
+    if (!stars) return;
+    setOrderRating(order.id, stars, feedback);
+    setDone(true);
+  }
+
+  return (
+    <div className="rating-box">
+      <h4>{done ? "Your rating" : "Rate this order"}</h4>
+      <div className="stars">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            className={`star ${n <= (hover || stars) ? "on" : ""}`}
+            onMouseEnter={() => !done && setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => !done && setStars(n)}
+            disabled={done}
+            aria-label={`${n} star`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+      {!done && (
+        <>
+          <textarea
+            className="rating-feedback"
+            rows={2}
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Tell us how it went (optional)"
+          />
+          <button className="rating-submit" onClick={submit} disabled={!stars}>
+            Submit rating
+          </button>
+        </>
+      )}
+      {done && order.feedback && <p className="rating-fb">“{order.feedback}”</p>}
+      {done && <p className="rating-thanks">Thanks for your feedback! 💚</p>}
+    </div>
+  );
+}
+
+function Row({ k, v, good, bold }) {
+  return (
+    <div className={`odb-row ${bold ? "bold" : ""}`}>
+      <span>{k}</span>
+      <span className={good ? "free" : ""}>{v}</span>
     </div>
   );
 }

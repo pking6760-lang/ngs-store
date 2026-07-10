@@ -38,6 +38,7 @@ const banners = [
 
 export default function App() {
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("relevance");
   const [activeCategory, setActiveCategory] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -65,8 +66,14 @@ export default function App() {
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return products.filter((p) => p.name.toLowerCase().includes(q));
-  }, [query, products]);
+    const cat = categories.find((c) => c.name.toLowerCase().includes(q));
+    const matched = products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (cat && p.category === cat.id)
+    );
+    return sortProducts(matched, sort);
+  }, [query, products, categories, sort]);
 
   const cartValue = useMemo(() => {
     return Object.entries(items).reduce((sum, [id, qty]) => {
@@ -110,6 +117,9 @@ export default function App() {
                 Try searching for milk, bread, chips, or eggs.
               </p>
             )}
+            {searchResults.length > 1 && (
+              <SortBar sort={sort} onChange={setSort} />
+            )}
             <div className="product-grid">
               {searchResults.map((p) => (
                 <ProductCard key={p.id} product={p} />
@@ -120,6 +130,8 @@ export default function App() {
           <CategoryView
             category={activeCategory}
             products={products}
+            sort={sort}
+            onSortChange={setSort}
             onBack={() => setActiveCategory(null)}
           />
         ) : (
@@ -155,6 +167,7 @@ export default function App() {
         open={accountOpen}
         initialTab={accountTab}
         onClose={() => setAccountOpen(false)}
+        onOpenCart={() => setCartOpen(true)}
       />
 
       <AuthModal
@@ -239,8 +252,11 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
   );
 }
 
-function CategoryView({ category, products, onBack }) {
-  const list = products.filter((p) => p.category === category.id);
+function CategoryView({ category, products, sort, onSortChange, onBack }) {
+  const list = sortProducts(
+    products.filter((p) => p.category === category.id),
+    sort
+  );
   return (
     <section className="section">
       <div className="category-header">
@@ -252,6 +268,7 @@ function CategoryView({ category, products, onBack }) {
         </h2>
         <span className="count-pill">{list.length} items</span>
       </div>
+      {list.length > 1 && <SortBar sort={sort} onChange={onSortChange} />}
       <div className="product-grid">
         {list.map((p) => (
           <ProductCard key={p.id} product={p} />
@@ -259,4 +276,43 @@ function CategoryView({ category, products, onBack }) {
       </div>
     </section>
   );
+}
+
+const SORTS = [
+  { id: "relevance", label: "Popular" },
+  { id: "price-asc", label: "Price ↑" },
+  { id: "price-desc", label: "Price ↓" },
+  { id: "discount", label: "Discount" },
+];
+
+function SortBar({ sort, onChange }) {
+  return (
+    <div className="sort-bar">
+      <span className="sort-label">Sort</span>
+      {SORTS.map((s) => (
+        <button
+          key={s.id}
+          className={`sort-chip ${sort === s.id ? "active" : ""}`}
+          onClick={() => onChange(s.id)}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Sort a product list. In-stock items always come before sold-out ones.
+function sortProducts(list, sort) {
+  const disc = (p) => (p.mrp > p.price ? (p.mrp - p.price) / p.mrp : 0);
+  const arr = [...list];
+  const cmp = {
+    "price-asc": (a, b) => a.price - b.price,
+    "price-desc": (a, b) => b.price - a.price,
+    discount: (a, b) => disc(b) - disc(a),
+  }[sort];
+  if (cmp) arr.sort(cmp);
+  // Keep out-of-stock items at the end regardless of sort.
+  arr.sort((a, b) => (a.inStock === false ? 1 : 0) - (b.inStock === false ? 1 : 0));
+  return arr;
 }

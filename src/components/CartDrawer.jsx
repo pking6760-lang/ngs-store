@@ -2,18 +2,14 @@ import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
-import { saveOrder, applyCoupon } from "../lib/store.js";
-import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
+import { saveOrder, applyCoupon, decrementStock } from "../lib/store.js";
+import { getCurrentLocation, googleMapsLink, distanceKm } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import {
   pointsForSpend,
   redeemableRupees,
 } from "../lib/rewards.js";
-
-const DELIVERY_FEE = 25;
-const FREE_DELIVERY_ABOVE = 199;
-const HANDLING_FEE = 5;
 
 export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const { items, add, remove, deleteItem, clear } = useCart();
@@ -84,7 +80,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   const netItems = Math.max(0, itemTotal - discount - couponDiscount);
 
-  // ── Delivery fee (with membership + surge rules) ───────
+  // ── Delivery fee (admin-controlled, with membership + surge rules) ──
+  const DELIVERY_FEE = settings.deliveryFee ?? 25;
+  const FREE_DELIVERY_ABOVE = settings.freeDeliveryAbove ?? 199;
+  const HANDLING_FEE = settings.handlingFee ?? 5;
   let deliveryFee =
     itemTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
   let freeReason = deliveryFee === 0 && itemTotal > 0 ? "order" : null;
@@ -96,6 +95,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
   const grandTotal = netItems + deliveryFee + handling;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
+
+  // ── Delivery area (distance from the shop) ─────────────
+  const maxKm = settings.maxDistanceKm || 0;
+  const shopLoc = settings.shopLocation;
+  const areaEnforced = !!shopLoc && maxKm > 0;
+  const dist =
+    location && shopLoc ? Math.round(distanceKm(location, shopLoc) * 10) / 10 : null;
+  const outOfArea = areaEnforced && dist != null && dist > maxKm;
+  const needsLocation = areaEnforced && !location;
 
   useEffect(() => {
     if (step === "checkout" && user?.address && !address) {
@@ -146,6 +154,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       setLocError("Please enter a delivery address.");
       return;
     }
+    if (needsLocation) {
+      setLocError("Please share your location so we can check delivery.");
+      return;
+    }
+    if (outOfArea) return; // button is disabled, but guard anyway
     if (address.trim() !== user?.address) {
       updateProfile({ address: address.trim() });
     }
@@ -163,6 +176,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       userPhone: user?.phone || "",
       address: address.trim(),
       location,
+      distanceKm: dist,
       payment,
       member: isMember,
       priority: isMember, // members get first priority
@@ -188,6 +202,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       count,
     };
     saveOrder(order);
+    decrementStock(order.items); // keep inventory / low-stock alerts in sync
     // Update the customer's points: earn on what they paid, spend what they used.
     applyRewards({ earned: pointsEarned, used: pointsUsed });
     setPlaced({ total: grandTotal, count, eta: 12, payment, pointsEarned });
@@ -298,13 +313,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               <button className="location-btn" onClick={useMyLocation} disabled={locating}>
                 {locating ? "📍 Getting location…" : "📍 Use my current location"}
               </button>
+              {needsLocation && (
+                <div className="area-hint">
+                  📍 Share your location so we can check if we deliver to you.
+                </div>
+              )}
               {location && (
-                <div className="location-captured">
+                <div className={`location-captured ${outOfArea ? "bad" : ""}`}>
                   <span>
                     ✅ Location captured
                     <br />
                     <small>
-                      {location.lat}, {location.lng} (±{location.accuracy}m)
+                      {location.lat}, {location.lng}
+                      {dist != null ? ` · ${dist} km from shop` : ""}
                     </small>
                   </span>
                   <a
@@ -316,6 +337,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     View on Google Maps →
                   </a>
                 </div>
+              )}
+              {outOfArea && (
+                <div className="area-blocked">
+                  🚧 Sorry, you're about <strong>{dist} km</strong> away — we
+                  currently deliver within <strong>{maxKm} km</strong>.
+                  <br />
+                  We're coming to your area soon! 💚
+                </div>
+              )}
+              {dist != null && !outOfArea && (
+                <div className="area-ok">✅ Great news — we deliver to your area!</div>
               )}
               {locError && <div className="auth-error">{locError}</div>}
             </div>
@@ -371,8 +403,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
             </div>
 
-            <button className="checkout-btn place" onClick={proceedFromCheckout}>
-              {payment === "upi"
+            <button
+              className="checkout-btn place"
+              onClick={proceedFromCheckout}
+              disabled={outOfArea}
+            >
+              {outOfArea
+                ? "Outside delivery area"
+                : payment === "upi"
                 ? `Pay ₹${grandTotal} with UPI`
                 : `Place order • ₹${grandTotal}`}
             </button>

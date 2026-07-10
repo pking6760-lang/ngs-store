@@ -1570,3 +1570,56 @@ body {
   .bottom-nav-item { font-size: 10px; }
   .bottom-nav-icon { font-size: 18px; }
 }
+
+/* ─── Delivery settings (admin) ──────────────────────────── */
+.delivery-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.dfield { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.dfield span { font-size: 12px; font-weight: 700; color: var(--muted); }
+.dfield input {
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  font-size: 15px; font-weight: 700; font-family: inherit;
+  width: 100%; min-width: 0;
+}
+.dfield input:focus { outline: none; border-color: var(--green); }
+.delivery-hint { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+.delivery-save { display: flex; align-items: center; gap: 12px; }
+.shop-loc-set {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #eaf6ec; border-radius: 10px; padding: 11px 13px; margin-bottom: 12px;
+  font-size: 13px; color: #0a6b19; font-weight: 700;
+}
+.shop-loc-set small { color: var(--muted); font-weight: 500; }
+.shop-loc-unset {
+  background: #fff4e0; color: #b26a00; border-radius: 10px;
+  padding: 11px 13px; margin-bottom: 12px; font-size: 13px; font-weight: 700;
+}
+
+/* ─── Low-stock alert (dashboard) ────────────────────────── */
+.lowstock-panel { margin-bottom: 24px; }
+.lowstock-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px; margin-left: 6px;
+  background: #e53935; color: #fff; border-radius: 999px;
+  font-size: 12px; font-weight: 800; vertical-align: middle;
+}
+.lowstock-thresh { font-size: 12.5px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.lowstock-thresh input {
+  width: 56px; border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 8px; font-size: 13px; font-weight: 700; text-align: center;
+}
+.lowstock-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.lowstock-item {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line); background: #fff; border-radius: 999px;
+  padding: 7px 12px; font-size: 13px;
+}
+.lowstock-item:hover { border-color: #f0c000; }
+.lowstock-name { font-weight: 700; }
+.lowstock-tag { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.lowstock-tag.out { background: #fdecec; color: #c0392b; }
+.lowstock-tag.low { background: #fff4e0; color: #b26a00; }

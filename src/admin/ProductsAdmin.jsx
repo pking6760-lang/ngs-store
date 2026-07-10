@@ -18,6 +18,7 @@ const EMPTY = {
   mrp: "",
   image: "",
   inStock: true,
+  stock: "",
 };
 
 export default function ProductsAdmin() {
@@ -285,6 +286,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
       price,
       mrp: Math.max(mrp, price),
       image: form.image || "",
+      stock: form.stock === "" || form.stock == null ? undefined : Math.max(0, Number(form.stock) || 0),
     });
   }
 
@@ -408,6 +410,17 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
                 {form.inStock === false ? "Out of stock" : "In stock"}
               </span>
             </button>
+          </label>
+
+          <label className="field">
+            <span>Stock quantity (optional)</span>
+            <input
+              type="number"
+              min="0"
+              value={form.stock ?? ""}
+              onChange={(e) => update("stock", e.target.value)}
+              placeholder="e.g. 20 — for low-stock alerts"
+            />
           </label>
         </div>
 

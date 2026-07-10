@@ -73,6 +73,22 @@ export function deleteProduct(id) {
   saveProducts(getProducts().filter((p) => p.id !== id));
 }
 
+// Reduce inventory counts when an order is placed (only for products that have
+// a numeric stock set). Keeps the admin low-stock alert meaningful.
+export function decrementStock(lines) {
+  const byId = {};
+  for (const l of lines) byId[l.id] = (byId[l.id] || 0) + l.qty;
+  let changed = false;
+  const next = getProducts().map((p) => {
+    if (byId[p.id] != null && typeof p.stock === "number") {
+      changed = true;
+      return { ...p, stock: Math.max(0, p.stock - byId[p.id]) };
+    }
+    return p;
+  });
+  if (changed) saveProducts(next);
+}
+
 /* ─── Categories ────────────────────────────────────────── */
 export function getCategories() {
   const existing = read(CATEGORIES_KEY, null);
@@ -300,6 +316,13 @@ const DEFAULT_SETTINGS = {
   offerBanner: "🎉 Welcome to Nisha General Store — daily essentials delivered fast!",
   // Reward points rule (editable from admin → Offers → Reward points).
   rewards: { earnPoints: 50, earnPer: 399, redeemPer: 10 },
+  // Delivery rules (editable from admin → Delivery).
+  deliveryFee: 25,
+  freeDeliveryAbove: 199,
+  handlingFee: 5,
+  maxDistanceKm: 5, // won't deliver beyond this from the shop (0 = no limit)
+  shopLocation: null, // { lat, lng } — set with "use current location" at the shop
+  lowStockThreshold: 5, // admin low-stock alert threshold
 };
 
 export function getSettings() {
@@ -349,6 +372,16 @@ export function acceptOrder(id) {
   write(
     ORDERS_KEY,
     getOrders().map((o) => (o.id === id ? { ...o, accepted: true } : o))
+  );
+}
+
+// Customer rates a delivered order.
+export function setOrderRating(id, rating, feedback) {
+  write(
+    ORDERS_KEY,
+    getOrders().map((o) =>
+      o.id === id ? { ...o, rating, feedback: (feedback || "").trim() } : o
+    )
   );
 }
 

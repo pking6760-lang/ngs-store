@@ -1,10 +1,25 @@
 import { useMemo } from "react";
-import { useProducts, useOrders, useCategories } from "../lib/hooks.js";
+import { useProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
+import { updateSettings } from "../lib/store.js";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
   const orders = useOrders();
   const categories = useCategories();
+  const settings = useSettings();
+  const threshold = settings.lowStockThreshold ?? 5;
+
+  // Items that need restocking: marked out of stock, or a stock count at/below
+  // the alert threshold.
+  const lowStock = useMemo(() => {
+    return products
+      .filter(
+        (p) =>
+          p.inStock === false ||
+          (typeof p.stock === "number" && p.stock <= threshold)
+      )
+      .sort((a, b) => (a.stock ?? -1) - (b.stock ?? -1));
+  }, [products, threshold]);
 
   const stats = useMemo(() => {
     // "Today's" figures — computed from each order's date, so they reset to
@@ -43,6 +58,43 @@ export default function Dashboard({ onNavigate }) {
         <StatCard label="Today's revenue" value={`₹${stats.revenue}`} icon="💰" tone="amber" />
         <StatCard label="Pending orders" value={stats.pending} icon="⏳" tone="pink" />
       </div>
+
+      <section className="panel lowstock-panel">
+        <div className="panel-head">
+          <h3>⚠️ Low stock {lowStock.length > 0 && <span className="lowstock-count">{lowStock.length}</span>}</h3>
+          <label className="lowstock-thresh">
+            Alert at ≤
+            <input
+              type="number"
+              min="0"
+              value={threshold}
+              onChange={(e) =>
+                updateSettings({ lowStockThreshold: Math.max(0, Number(e.target.value) || 0) })
+              }
+            />
+          </label>
+        </div>
+        {lowStock.length === 0 ? (
+          <p className="panel-empty">Everything's well stocked. 👍</p>
+        ) : (
+          <div className="lowstock-list">
+            {lowStock.map((p) => (
+              <button
+                key={p.id}
+                className="lowstock-item"
+                onClick={() => onNavigate("products")}
+              >
+                <span className="lowstock-name">{p.name}</span>
+                {p.inStock === false ? (
+                  <span className="lowstock-tag out">Out of stock</span>
+                ) : (
+                  <span className="lowstock-tag low">{p.stock} left</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="dash-grid">
         <section className="panel">
