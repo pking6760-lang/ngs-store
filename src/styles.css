@@ -2352,3 +2352,57 @@ input:focus-visible {
 .rating-fb { font-size: 13px; color: var(--muted); font-style: italic; }
 .rating-thanks { font-size: 13px; color: var(--green-dark); font-weight: 700; margin-top: 6px; }
 .checkout-btn.reorder { margin-bottom: 6px; }
+
+/* ════════════════════════════════════════════════════════════
+   Palette refinement — a grounded sage canvas (less stark white)
+   with crisp white cards lifting off it. Simple, modern, warmer.
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --bg-soft: #e7eee1;   /* soft sage canvas */
+  --bg: #ffffff;
+  --ink: #16211a;
+  --muted: #5f6d5b;
+  --line: #d7e1d1;
+  --green-tint: #e2f0e2;
+}
+body {
+  background:
+    radial-gradient(1100px 460px at 82% -12%, #eef6ea 0%, rgba(238, 246, 234, 0) 60%),
+    var(--bg-soft);
+}
+/* Brand-tinted, frosted header instead of plain white */
+.header {
+  background: rgba(233, 243, 227, 0.82);
+  border-bottom: 1px solid #cfdbca;
+}
+/* Search + icon chips go white so they lift off the tinted header */
+.search-wrap,
+.search-wrap:focus-within { background: #ffffff; }
+.bell-button { background: rgba(255, 255, 255, 0.72); }
+.bell-button:hover { background: #ffffff; }
+.account-button { background: rgba(255, 255, 255, 0.72); }
+
+/* Drawers / sheets sit on the same sage ground */
+.cart-drawer, .account-drawer, .order-detail { background: var(--bg-soft); }
+
+/* Product-image placeholders: soft sage, a touch deeper than cards */
+.product-image {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 44%),
+    #eef3e9;
+}
+
+/* A hairline ring on white cards so they read as lifted on the sage ground */
+.product-card,
+.panel,
+.my-order-card,
+.checkout-section,
+.bill,
+.status-steps,
+.order-detail-items,
+.order-detail-bill,
+.rating-box,
+.cart-line,
+.inbox-item {
+  border-color: #e0e8db;
+}
