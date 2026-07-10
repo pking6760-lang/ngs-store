@@ -218,6 +218,8 @@ const DEFAULT_SETTINGS = {
   deliveryMode: "normal",
   // A promotional line shown across the top of the customer home page.
   offerBanner: "🎉 Welcome to NGS Nisha General Store — daily essentials delivered fast!",
+  // Reward points rule (editable from admin → Offers → Reward points).
+  rewards: { earnPoints: 50, earnPer: 399, redeemPer: 10 },
 };
 
 export function getSettings() {

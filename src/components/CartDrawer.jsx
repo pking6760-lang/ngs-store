@@ -7,7 +7,6 @@ import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import {
-  POINTS,
   pointsForSpend,
   redeemableRupees,
 } from "../lib/rewards.js";
@@ -53,11 +52,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // ── Reward redemption ──────────────────────────────────
   const isMember = !!user?.member;
   const isSurge = settings.deliveryMode === "surge";
+  const rewardsCfg = settings.rewards;
+  const redeemPer = rewardsCfg?.redeemPer || 10;
   const availablePoints = user?.points || 0;
   // You can't redeem more than the item total.
-  const maxRedeemRupees = Math.min(redeemableRupees(availablePoints), itemTotal);
+  const maxRedeemRupees = Math.min(
+    redeemableRupees(availablePoints, rewardsCfg),
+    itemTotal
+  );
   const discount = usePoints && isLoggedIn ? maxRedeemRupees : 0;
-  const pointsUsed = discount * POINTS.perRupee;
+  const pointsUsed = discount * redeemPer;
 
   // Per-category subtotals + a name lookup, so coupons can require a certain
   // product type or a minimum amount.
@@ -91,7 +95,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
   const grandTotal = netItems + deliveryFee + handling;
-  const pointsEarned = pointsForSpend(netItems);
+  const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
   useEffect(() => {
     if (step === "checkout" && user?.address && !address) {
@@ -440,7 +444,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   onChange={(e) => setUsePoints(e.target.checked)}
                 />
                 <span>
-                  🎁 Use {maxRedeemRupees * POINTS.perRupee} points for{" "}
+                  🎁 Use {maxRedeemRupees * redeemPer} points for{" "}
                   <strong>₹{maxRedeemRupees} off</strong>
                   <small>You have {availablePoints} points</small>
                 </span>

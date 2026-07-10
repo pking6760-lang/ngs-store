@@ -1465,3 +1465,33 @@ body {
   border: 1px solid #f4c9c9; background: #fff; border-radius: 8px;
   padding: 6px 10px; font-size: 14px;
 }
+
+/* ─── Reward points editor ───────────────────────────────── */
+.rewards-rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.rewards-rule input {
+  width: 78px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+.rewards-rule input:focus { outline: none; border-color: var(--green); }
+.rewards-preview {
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--bg-soft, #f4f6f9);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 4px 0 14px;
+}

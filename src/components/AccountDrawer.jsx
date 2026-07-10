@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useOrders } from "../lib/hooks.js";
 import { googleMapsLink } from "../lib/location.js";
-import { MEMBERSHIP, POINTS, redeemableRupees } from "../lib/rewards.js";
+import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
+import { useSettings } from "../lib/hooks.js";
 import ProductThumb from "./ProductThumb.jsx";
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
@@ -163,8 +164,10 @@ function MyOrders({ user }) {
 }
 
 function Rewards({ user }) {
+  const settings = useSettings();
+  const cfg = settings.rewards || { earnPoints: 50, earnPer: 399, redeemPer: 10 };
   const points = user?.points || 0;
-  const worth = redeemableRupees(points);
+  const worth = redeemableRupees(points, cfg);
   return (
     <div className="rewards-panel">
       <div className="rewards-hero">
@@ -176,8 +179,13 @@ function Rewards({ user }) {
       <div className="rewards-how">
         <h4>How it works</h4>
         <ul>
-          <li>🛍️ Earn <strong>~50 points</strong> for every ₹99 you spend.</li>
-          <li>💸 <strong>{POINTS.perRupee} points = ₹1</strong> off — redeem at checkout.</li>
+          <li>
+            🛍️ Earn <strong>{cfg.earnPoints} points</strong> for every ₹
+            {cfg.earnPer} you spend.
+          </li>
+          <li>
+            💸 <strong>{cfg.redeemPer} points = ₹1</strong> off — redeem at checkout.
+          </li>
           <li>♻️ Points update automatically after every delivered order.</li>
         </ul>
       </div>
