@@ -33,7 +33,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
     if (!res.ok) { setError(res.error); return; }
     setIsNew(res.isNewUser || false);
     if (res.code) setDemoCode(res.code); // demo only
-    setStage(res.magicLink ? "sent" : "otp");
+    setStage("otp");
   }
 
   async function verify(e) {
@@ -57,30 +57,13 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
           <span className="logo-sub">store</span>
         </div>
 
-        {stage === "sent" ? (
-          <>
-            <div className="auth-sent-icon">📧</div>
-            <h2 className="auth-title">Check your email</h2>
-            <p className="auth-reason">
-              We've sent a sign-in link to <strong>{contact}</strong>. Open your
-              email on this phone and tap the link — you'll come straight back
-              here, signed in.
-            </p>
-            <button className="checkout-btn" onClick={close}>Got it</button>
-            <p className="auth-switch">
-              <button
-                className="link-btn"
-                onClick={() => { setStage("contact"); cancelOtp(); }}
-              >Use a different email</button>
-            </p>
-          </>
-        ) : stage === "contact" ? (
+        {stage === "contact" ? (
           <>
             <h2 className="auth-title">Log in or sign up</h2>
             <p className="auth-reason">
               {reason ||
                 (email
-                  ? "We'll email you a one-tap sign-in link — no password needed."
+                  ? "We'll email you a 6-digit code — no password needed."
                   : "We'll send a one-time code to your WhatsApp.")}
             </p>
             <form className="auth-form" onSubmit={sendCode}>
@@ -121,13 +104,13 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
               )}
               {error && <div className="auth-error">{error}</div>}
               <button className="checkout-btn" type="submit" disabled={busy}>
-                {busy ? "Sending…" : email ? "Email me a sign-in link" : "Send code on WhatsApp"}
+                {busy ? "Sending…" : email ? "Email me a code" : "Send code on WhatsApp"}
               </button>
             </form>
             <p className="auth-switch">
               <span className="wa-note">
                 {email
-                  ? "📧 A one-tap sign-in link arrives in your inbox — no password needed."
+                  ? "📧 A 6-digit code arrives in your inbox — no password needed."
                   : "💬 The code arrives on WhatsApp — no password needed."}
               </span>
             </p>

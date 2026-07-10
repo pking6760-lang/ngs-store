@@ -78,17 +78,13 @@ function mapProfile(r) {
 
 /* ─── Auth (email OTP) ──────────────────────────────────────────────────── */
 
-// Email a magic sign-in link. Creates the account on first use. Works with
-// Supabase's default email template (no custom SMTP needed). The link brings
-// the customer back to this site already signed in.
-export async function sendMagicLink(email, name) {
-  const redirect =
-    typeof window !== "undefined"
-      ? window.location.origin + window.location.pathname
-      : undefined;
+// Email a 6-digit one-time code. Creates the account on first use. Requires the
+// project's email template to include the code token ({{ .Token }}), which
+// needs custom SMTP configured on Supabase (see EMAIL_OTP_SETUP.md).
+export async function sendEmailCode(email, name) {
   const { error } = await must().auth.signInWithOtp({
     email: email.trim(),
-    options: { emailRedirectTo: redirect, data: name ? { name } : undefined },
+    options: { shouldCreateUser: true, data: name ? { name } : undefined },
   });
   if (error) throw error;
   return { ok: true };
