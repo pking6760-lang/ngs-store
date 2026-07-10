@@ -192,6 +192,13 @@ export function deleteCoupon(code) {
 // subtotal and catName(id) returns a readable name. Returns { ok, discount } or
 // { ok:false, error }.
 export function applyCoupon(code, ctx) {
+  return applyCouponFrom(getCoupons(), code, ctx);
+}
+
+// Same validation but against a supplied coupon list — used in backend mode so
+// the checkout preview validates against the coupons fetched from the server,
+// not the local demo ones.
+export function applyCouponFrom(coupons, code, ctx) {
   const itemTotal = typeof ctx === "number" ? ctx : ctx?.itemTotal || 0;
   const catTotals = (typeof ctx === "object" && ctx?.catTotals) || {};
   const catName =
@@ -199,7 +206,7 @@ export function applyCoupon(code, ctx) {
 
   const clean = (code || "").trim().toUpperCase();
   if (!clean) return { ok: false, error: "Enter a coupon code." };
-  const coupon = getCoupons().find((c) => c.code === clean);
+  const coupon = (coupons || []).find((c) => c.code === clean);
   if (!coupon || !coupon.active)
     return { ok: false, error: "This coupon isn't valid." };
 

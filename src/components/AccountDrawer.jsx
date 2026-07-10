@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useOrders, useSettings, useUserNotifications } from "../lib/hooks.js";
 import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../lib/store.js";
+import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
 import ProductThumb from "./ProductThumb.jsx";
@@ -264,7 +265,8 @@ function RatingBox({ order }) {
 
   function submit() {
     if (!stars) return;
-    setOrderRating(order.id, stars, feedback);
+    if (api.isBackendConfigured) api.rateOrder(order.dbId, stars, feedback).catch(() => {});
+    else setOrderRating(order.id, stars, feedback);
     setDone(true);
   }
 
@@ -319,7 +321,8 @@ function Row({ k, v, good, bold }) {
 function Inbox({ notes, userId }) {
   // Mark everything read once the inbox is opened.
   useEffect(() => {
-    markUserNotificationsRead(userId);
+    if (api.isBackendConfigured) api.markNotificationsRead().catch(() => {});
+    else markUserNotificationsRead(userId);
   }, [userId]);
 
   if (!notes || notes.length === 0) {

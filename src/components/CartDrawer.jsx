@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
-import { saveOrder, applyCoupon, decrementStock, getShopLocations } from "../lib/store.js";
+import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
+import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
@@ -19,8 +20,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const categories = useCategories();
   const allCoupons = useCoupons();
 
+  const BACKEND = api.isBackendConfigured;
   const [step, setStep] = useState("cart"); // cart | checkout | pay | done
   const [placed, setPlaced] = useState(null);
+  const [placing, setPlacing] = useState(false);
+  const [placeError, setPlaceError] = useState("");
   const [address, setAddress] = useState("");
   const [location, setLocation] = useState(null);
   const [locating, setLocating] = useState(false);
@@ -56,7 +60,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     redeemableRupees(availablePoints, rewardsCfg),
     itemTotal
   );
-  const discount = usePoints && isLoggedIn ? maxRedeemRupees : 0;
+  // Points redemption at checkout is a demo-only feature for now; on the real
+  // backend, points still EARN on every order (server-side), and spending them
+  // will be added as a server-checked step.
+  const canRedeem = !BACKEND;
+  const discount = usePoints && isLoggedIn && canRedeem ? maxRedeemRupees : 0;
   const pointsUsed = discount * redeemPer;
 
   // Per-category subtotals + a name lookup, so coupons can require a certain
@@ -72,7 +80,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   // Coupon — re-validated against the current cart each render so it stays
   // correct if items are added/removed.
-  const couponResult = appliedCode ? applyCoupon(appliedCode, couponCtx) : null;
+  const couponResult = appliedCode ? applyCouponFrom(allCoupons, appliedCode, couponCtx) : null;
   const couponDiscount = couponResult?.ok
     ? Math.min(couponResult.discount, itemTotal - discount)
     : 0;
@@ -135,7 +143,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   }
 
   function applyCouponCode(code) {
-    const res = applyCoupon(code ?? couponInput, couponCtx);
+    const res = applyCouponFrom(allCoupons, code ?? couponInput, couponCtx);
     if (res.ok) {
       setAppliedCode(res.code);
       setCouponInput("");
@@ -168,7 +176,36 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     else placeOrder();
   }
 
+  // Backend checkout: the SERVER recomputes prices, coupon, delivery, total and
+  // points via place_order(). The phone only sends product ids + quantities.
+  async function placeOrderBackend() {
+    setPlacing(true);
+    setPlaceError("");
+    try {
+      const order = await api.placeOrder({
+        items: lines.map(({ product, qty }) => ({ id: product.id, qty })),
+        coupon: appliedCode || null,
+        location: location ? { ...location, distanceKm: dist } : null,
+        payment,
+      });
+      setPlaced({
+        total: order.total, count: order.count, eta: 12, payment,
+        pointsEarned: order.pointsEarned, code: order.id,
+      });
+      clear();
+      setUsePoints(false);
+      setAppliedCode(null);
+      setStep("done");
+    } catch (e) {
+      setPlaceError(e.message || "Couldn't place the order. Please try again.");
+      setStep("checkout");
+    } finally {
+      setPlacing(false);
+    }
+  }
+
   function placeOrder() {
+    if (BACKEND) return placeOrderBackend();
     const count = lines.reduce((a, l) => a + l.qty, 0);
     const order = {
       id: "NGS" + Math.floor(1000 + Math.random() * 9000),
@@ -293,8 +330,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               <span>Or pay to UPI ID</span>
               <code>{SHOP_UPI_ID}</code>
             </div>
-            <button className="checkout-btn place" onClick={placeOrder}>
-              I've paid • Place order
+            {placeError && <div className="auth-error">{placeError}</div>}
+            <button className="checkout-btn place" onClick={placeOrder} disabled={placing}>
+              {placing ? "Placing…" : "I've paid • Place order"}
             </button>
             <p className="upi-note">
               Demo: payment isn't actually verified. On a real setup the order
@@ -405,12 +443,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
             </div>
 
+            {placeError && <div className="auth-error">{placeError}</div>}
             <button
               className="checkout-btn place"
               onClick={proceedFromCheckout}
-              disabled={outOfArea}
+              disabled={outOfArea || placing}
             >
-              {outOfArea
+              {placing
+                ? "Placing…"
+                : outOfArea
                 ? "Outside delivery area"
                 : payment === "upi"
                 ? `Pay ₹${grandTotal} with UPI`
@@ -476,7 +517,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               ))}
             </div>
 
-            {isLoggedIn && availablePoints > 0 && maxRedeemRupees > 0 && (
+            {canRedeem && isLoggedIn && availablePoints > 0 && maxRedeemRupees > 0 && (
               <label className="use-points">
                 <input
                   type="checkbox"
