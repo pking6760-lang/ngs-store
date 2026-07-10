@@ -10,23 +10,31 @@ export default function DeliveryAdmin() {
     deliveryFee: settings.deliveryFee,
     freeDeliveryAbove: settings.freeDeliveryAbove,
     handlingFee: settings.handlingFee,
+    surgeFee: settings.surgeFee ?? 20,
     maxDistanceKm: settings.maxDistanceKm ?? 5,
   });
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
     setSaved(false);
+    setError("");
   }
 
-  function save() {
-    updateSettings({
-      deliveryFee: Math.max(0, Number(form.deliveryFee) || 0),
-      freeDeliveryAbove: Math.max(0, Number(form.freeDeliveryAbove) || 0),
-      handlingFee: Math.max(0, Number(form.handlingFee) || 0),
-      maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
-    });
-    setSaved(true);
+  async function save() {
+    try {
+      await updateSettings({
+        deliveryFee: Math.max(0, Number(form.deliveryFee) || 0),
+        freeDeliveryAbove: Math.max(0, Number(form.freeDeliveryAbove) || 0),
+        handlingFee: Math.max(0, Number(form.handlingFee) || 0),
+        surgeFee: Math.max(0, Number(form.surgeFee) || 0),
+        maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
+      });
+      setSaved(true);
+    } catch (e) {
+      setError(e.message || "Couldn't save.");
+    }
   }
 
   return (
@@ -51,11 +59,21 @@ export default function DeliveryAdmin() {
               onChange={(e) => set("handlingFee", e.target.value)} />
           </label>
           <label className="dfield">
+            <span>Surge charge (₹)</span>
+            <input type="number" min="0" value={form.surgeFee}
+              onChange={(e) => set("surgeFee", e.target.value)} />
+          </label>
+          <label className="dfield">
             <span>Delivery radius (km)</span>
             <input type="number" min="0" value={form.maxDistanceKm}
               onChange={(e) => set("maxDistanceKm", e.target.value)} />
           </label>
         </div>
+        <p className="delivery-hint">
+          The <strong>surge charge</strong> is added to every order only while
+          you turn on <strong>🌧️ Surge</strong> (top bar) — for rain, peak hours
+          or bad weather.
+        </p>
         <p className="delivery-hint">
           Customers beyond <strong>{form.maxDistanceKm || 0} km</strong> of your
           nearest shop see a “coming to your area soon” message. Set radius to 0 to
@@ -64,6 +82,7 @@ export default function DeliveryAdmin() {
         <div className="delivery-save">
           <button className="primary-btn" onClick={save}>Save</button>
           {saved && <span className="notify-sent">✅ Saved</span>}
+          {error && <span className="auth-error">{error}</span>}
         </div>
       </section>
 

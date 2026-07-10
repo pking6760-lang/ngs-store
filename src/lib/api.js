@@ -43,15 +43,15 @@ function mapSettings(r) {
   return { storeOpen: r.store_open, deliveryMode: r.delivery_mode,
     offerBanner: r.offer_banner, rewards: r.rewards, deliveryFee: num(r.delivery_fee),
     freeDeliveryAbove: num(r.free_delivery_above), handlingFee: num(r.handling_fee),
-    maxDistanceKm: num(r.max_distance_km), shopLocations: r.shop_locations || [],
-    lowStockThreshold: r.low_stock_threshold };
+    surgeFee: num(r.surge_fee), maxDistanceKm: num(r.max_distance_km),
+    shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold };
 }
 function settingsToDb(p) {
   const map = { storeOpen: "store_open", deliveryMode: "delivery_mode",
     offerBanner: "offer_banner", rewards: "rewards", deliveryFee: "delivery_fee",
     freeDeliveryAbove: "free_delivery_above", handlingFee: "handling_fee",
-    maxDistanceKm: "max_distance_km", shopLocations: "shop_locations",
-    lowStockThreshold: "low_stock_threshold" };
+    surgeFee: "surge_fee", maxDistanceKm: "max_distance_km",
+    shopLocations: "shop_locations", lowStockThreshold: "low_stock_threshold" };
   const out = {};
   for (const k in p) if (map[k]) out[map[k]] = p[k];
   return out;
@@ -63,7 +63,7 @@ function mapOrder(r) {
     items: (r.order_items || []).map((i) => ({ id: i.product_id, name: i.name,
       icon: i.icon, qty: i.qty, price: num(i.price) })),
     itemTotal: num(r.item_total), discount: num(r.discount), couponCode: r.coupon_code,
-    deliveryFee: num(r.delivery_fee), handling: num(r.handling),
+    deliveryFee: num(r.delivery_fee), handling: num(r.handling), surgeFee: num(r.surge_fee),
     pointsEarned: r.points_earned, total: num(r.total), paymentStatus: r.payment_status,
     distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback,

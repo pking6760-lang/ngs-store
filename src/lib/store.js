@@ -327,6 +327,8 @@ const DEFAULT_SETTINGS = {
   deliveryFee: 25,
   freeDeliveryAbove: 199,
   handlingFee: 5,
+  surgeFee: 20, // extra charge added on a surge / bad-weather day
+
   maxDistanceKm: 5, // won't deliver beyond this from any shop (0 = no limit)
   // One or more shop locations: [{ id, label, lat, lng }]. A customer is in the
   // delivery area if within the radius of ANY of them.

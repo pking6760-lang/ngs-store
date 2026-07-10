@@ -92,16 +92,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const DELIVERY_FEE = settings.deliveryFee ?? 25;
   const FREE_DELIVERY_ABOVE = settings.freeDeliveryAbove ?? 199;
   const HANDLING_FEE = settings.handlingFee ?? 5;
+  const SURGE_FEE = settings.surgeFee ?? 0;
   let deliveryFee =
     itemTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
   let freeReason = deliveryFee === 0 && itemTotal > 0 ? "order" : null;
-  if (isMember && !isSurge && itemTotal > 0) {
+  if (isMember && itemTotal > 0 && deliveryFee > 0) {
     deliveryFee = 0;
     freeReason = "member";
   }
 
   const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
-  const grandTotal = netItems + deliveryFee + handling;
+  // Surge / bad-weather premium — applies to everyone while surge mode is on.
+  const surgeFee = isSurge && itemTotal > 0 ? SURGE_FEE : 0;
+  const grandTotal = netItems + deliveryFee + handling + surgeFee;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
   // ── Delivery area (distance to the nearest shop) ───────
@@ -237,6 +240,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       pointsEarned,
       deliveryFee,
       handling,
+      surgeFee,
       total: grandTotal,
       count,
     };
@@ -437,6 +441,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   )}
                 </span>
               </div>
+              {surgeFee > 0 && (
+                <div className="bill-row">
+                  <span>🌧️ Surge charge</span>
+                  <span>₹{surgeFee}</span>
+                </div>
+              )}
               <div className="bill-row total">
                 <span>To pay</span>
                 <span>₹{grandTotal}</span>
@@ -655,6 +665,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <span>Handling charge</span>
                 <span>₹{handling}</span>
               </div>
+              {surgeFee > 0 && (
+                <div className="bill-row">
+                  <span>🌧️ Surge charge <small>(bad weather / peak)</small></span>
+                  <span>₹{surgeFee}</span>
+                </div>
+              )}
               <div className="bill-row total">
                 <span>To pay</span>
                 <span>₹{grandTotal}</span>

@@ -88,6 +88,7 @@ create table if not exists public.settings (
   delivery_fee        numeric(10,2) not null default 25,
   free_delivery_above numeric(10,2) not null default 199,
   handling_fee        numeric(10,2) not null default 5,
+  surge_fee           numeric(10,2) not null default 20,
   max_distance_km     numeric(6,2) not null default 5,
   shop_locations      jsonb not null default '[]',
   low_stock_threshold integer not null default 5
@@ -108,6 +109,7 @@ create table if not exists public.orders (
   coupon_code    text,
   delivery_fee   numeric(10,2) not null default 0,
   handling       numeric(10,2) not null default 0,
+  surge_fee      numeric(10,2) not null default 0,
   points_earned  integer not null default 0,
   total          numeric(10,2) not null,
   payment_method text default 'upi',
@@ -323,6 +325,7 @@ declare
   v_eligible   numeric;
   v_delivery   numeric := 0;
   v_handling   numeric := 0;
+  v_surge      numeric := 0;
   v_total      numeric;
   v_points     integer := 0;
   v_rewards    jsonb;
@@ -391,18 +394,22 @@ begin
     end if;
   end if;
 
-  -- 3) Delivery + handling from settings (members deliver free on a normal day).
+  -- 3) Delivery + handling + surge from settings. Members get free delivery;
+  --    the surge charge applies to everyone while surge mode is on.
   v_handling := v_settings.handling_fee;
   if v_item_total >= v_settings.free_delivery_above then
     v_delivery := 0;
-  elsif v_settings.delivery_mode = 'normal' and v_profile.is_member then
+  elsif v_profile.is_member then
     v_delivery := 0;
   else
     v_delivery := v_settings.delivery_fee;
   end if;
+  if v_settings.delivery_mode = 'surge' and v_item_total > 0 then
+    v_surge := coalesce(v_settings.surge_fee, 0);
+  end if;
 
   -- 4) Total and reward points, both from server values.
-  v_total := v_item_total - v_discount + v_delivery + v_handling;
+  v_total := v_item_total - v_discount + v_delivery + v_handling + v_surge;
   v_rewards := v_settings.rewards;
   if coalesce((v_rewards->>'earnPer')::numeric, 0) > 0 then
     v_points := floor((v_item_total - v_discount) / (v_rewards->>'earnPer')::numeric)
@@ -413,11 +420,11 @@ begin
   v_code := 'NGS' || nextval('public.order_code_seq');
   insert into public.orders (
     human_code, user_id, customer_name, user_phone, status, accepted, member,
-    item_total, discount, coupon_code, delivery_fee, handling, points_earned,
+    item_total, discount, coupon_code, delivery_fee, handling, surge_fee, points_earned,
     total, payment_method, payment_status, distance_km, location
   ) values (
     v_code, v_uid, v_profile.name, v_profile.phone, 'Placed', null, v_profile.is_member,
-    v_item_total, v_discount, v_coupon.code, v_delivery, v_handling, v_points,
+    v_item_total, v_discount, v_coupon.code, v_delivery, v_handling, v_surge, v_points,
     v_total, p_payment, 'pending',
     case when p_location is null then null
          else round((p_location->>'distanceKm')::numeric, 2) end,
