@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useOrders } from "../lib/hooks.js";
-import { ORDER_STATUSES, updateOrderStatus } from "../lib/store.js";
+import { ORDER_STATUSES } from "../lib/store.js";
+import { updateOrderStatus } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
@@ -119,7 +120,7 @@ export default function OrdersAdmin() {
                     <span>Update status</span>
                     <select
                       value={o.status}
-                      onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                      onChange={(e) => updateOrderStatus(o, e.target.value)}
                     >
                       {ORDER_STATUSES.map((s) => (
                         <option key={s} value={s}>

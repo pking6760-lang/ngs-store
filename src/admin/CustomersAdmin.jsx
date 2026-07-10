@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useCustomers, useOrders, useUserNotifications } from "../lib/hooks.js";
-import { sendNotification } from "../lib/store.js";
+import { sendNotification } from "../lib/actions.js";
 
 export default function CustomersAdmin() {
   const customers = useCustomers();

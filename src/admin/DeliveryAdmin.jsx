@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSettings } from "../lib/hooks.js";
-import { updateSettings, getShopLocations } from "../lib/store.js";
+import { getShopLocations } from "../lib/store.js";
+import { updateSettings } from "../lib/actions.js";
 import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
 
 export default function DeliveryAdmin() {

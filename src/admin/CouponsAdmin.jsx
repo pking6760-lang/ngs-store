@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCoupons, useSettings, useCategories } from "../lib/hooks.js";
-import { upsertCoupon, deleteCoupon, updateSettings } from "../lib/store.js";
+import { upsertCoupon, deleteCoupon, updateSettings } from "../lib/actions.js";
 
 export default function CouponsAdmin() {
   const coupons = useCoupons();
@@ -144,9 +144,9 @@ function CouponManager({ coupons, categories }) {
     setError("");
   }
 
-  function add(e) {
+  async function add(e) {
     e.preventDefault();
-    const res = upsertCoupon(form);
+    const res = await upsertCoupon(form);
     if (!res.ok) {
       setError(res.error);
       return;

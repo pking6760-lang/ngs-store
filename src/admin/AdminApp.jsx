@@ -8,11 +8,14 @@ import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import EmployeeApp from "./EmployeeApp.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useSettings } from "../lib/hooks.js";
-import { updateSettings } from "../lib/store.js";
+import { updateSettings } from "../lib/actions.js";
+import * as api from "../lib/api.js";
 import { unlockAudio } from "../lib/sound.js";
 import { isBiometricAvailable, authenticateBiometric } from "../lib/biometric.js";
 
-// Demo-only logins. A real backend will replace these with proper accounts.
+const BACKEND = api.isBackendConfigured;
+// Demo-only logins (used when no backend is configured). With a backend, the
+// admin signs in with the real email + password of their admin account.
 const ADMIN_PASSWORD = "admin123";
 const STAFF_PASSCODE = "staff123";
 const ROLE_KEY = "ngs-admin-role"; // "admin" | "picker" | "delivery"
@@ -32,6 +35,20 @@ export default function AdminApp() {
   const [name, setName] = useState(() => sessionStorage.getItem(NAME_KEY) || "");
   const [view, setView] = useState("dashboard");
 
+  // In backend mode, restore an existing admin session on load so a signed-in
+  // admin isn't asked to log in again.
+  useEffect(() => {
+    if (!BACKEND || role) return;
+    let alive = true;
+    (async () => {
+      const session = await api.getSession();
+      if (!session || !alive) return;
+      const profile = await api.getMyProfile();
+      if (alive && profile?.role === "admin") signIn("admin", profile.name || "Store Manager");
+    })();
+    return () => { alive = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   function signIn(nextRole, displayName) {
     sessionStorage.setItem(ROLE_KEY, nextRole);
     sessionStorage.setItem(NAME_KEY, displayName);
@@ -39,7 +56,8 @@ export default function AdminApp() {
     setName(displayName);
   }
 
-  function logout() {
+  async function logout() {
+    if (BACKEND) await api.signOut();
     sessionStorage.removeItem(ROLE_KEY);
     sessionStorage.removeItem(NAME_KEY);
     setRole(null);
@@ -150,7 +168,9 @@ export function StoreControls() {
 
 function Login({ onSignIn }) {
   const [tab, setTab] = useState("admin"); // "admin" | "staff"
+  const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
   const [staffRole, setStaffRole] = useState("picker");
   const [staffName, setStaffName] = useState("");
   const [staffCode, setStaffCode] = useState("");
@@ -180,9 +200,21 @@ function Login({ onSignIn }) {
     }
   }
 
-  function submitAdmin(e) {
+  async function submitAdmin(e) {
     e.preventDefault();
     unlockAudio(); // prime the alarm sound on this click
+    if (BACKEND) {
+      setBusy(true); setError("");
+      try {
+        await api.signInWithPassword(email, pw);
+        const profile = await api.getMyProfile();
+        if (profile?.role === "admin") onSignIn("admin", profile.name || "Store Manager");
+        else { await api.signOut(); setError("This account is not an admin."); }
+      } catch {
+        setError("Wrong email or password.");
+      } finally { setBusy(false); }
+      return;
+    }
     if (pw === ADMIN_PASSWORD) onSignIn("admin", "Store Manager");
     else setError("Incorrect password. Try again.");
   }
@@ -231,6 +263,16 @@ function Login({ onSignIn }) {
         {tab === "admin" ? (
           <form onSubmit={submitAdmin}>
             <p className="login-sub">Manage products, orders and the store</p>
+            {BACKEND && (
+              <input
+                className="login-input"
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                placeholder="Admin email"
+                autoFocus
+              />
+            )}
             <input
               className="login-input"
               type="password"
@@ -239,14 +281,13 @@ function Login({ onSignIn }) {
                 setPw(e.target.value);
                 setError("");
               }}
-              placeholder="Admin password"
-              autoFocus
+              placeholder="Password"
             />
             {error && <div className="login-error">{error}</div>}
-            <button className="login-btn" type="submit">
-              Sign in as admin
+            <button className="login-btn" type="submit" disabled={busy}>
+              {busy ? "Signing in…" : "Sign in as admin"}
             </button>
-            {bioOk && (
+            {!BACKEND && bioOk && (
               <>
                 <div className="login-or">or</div>
                 <button

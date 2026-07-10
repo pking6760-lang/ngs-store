@@ -5,7 +5,7 @@ import {
   deleteProduct,
   addCategory,
   deleteCategory,
-} from "../lib/store.js";
+} from "../lib/actions.js";
 import { fileToResizedDataUrl } from "../lib/image.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 
@@ -160,9 +160,9 @@ function CategoryManager({ categories, products, onClose }) {
   const [icon, setIcon] = useState("🏷️");
   const [error, setError] = useState("");
 
-  function add(e) {
+  async function add(e) {
     e.preventDefault();
-    const res = addCategory({ name, icon });
+    const res = await addCategory({ name, icon }, categories);
     if (!res.ok) {
       setError(res.error);
       return;
@@ -172,7 +172,7 @@ function CategoryManager({ categories, products, onClose }) {
     setError("");
   }
 
-  function remove(cat) {
+  async function remove(cat) {
     const count = products.filter((p) => p.category === cat.id).length;
     const msg =
       count > 0
@@ -181,7 +181,7 @@ function CategoryManager({ categories, products, onClose }) {
           } will move to another category.`
         : `Delete "${cat.name}"?`;
     if (!confirm(msg)) return;
-    const res = deleteCategory(cat.id);
+    const res = await deleteCategory(cat.id, categories);
     if (!res.ok) setError(res.error);
   }
 

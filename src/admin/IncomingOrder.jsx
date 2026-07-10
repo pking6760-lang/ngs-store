@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useOrders } from "../lib/hooks.js";
-import { acceptOrder, rejectOrder } from "../lib/store.js";
+import { acceptOrder, rejectOrder } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import { startAlarm, stopAlarm } from "../lib/sound.js";
 import ProductThumb from "../components/ProductThumb.jsx";
@@ -39,7 +39,7 @@ export default function IncomingOrder() {
   function release() {
     if (slide >= 90) {
       stopAlarm();
-      acceptOrder(order.id);
+      acceptOrder(order);
     } else {
       setSlide(0);
     }
@@ -47,7 +47,7 @@ export default function IncomingOrder() {
 
   function reject() {
     stopAlarm();
-    rejectOrder(order.id);
+    rejectOrder(order);
   }
 
   return (

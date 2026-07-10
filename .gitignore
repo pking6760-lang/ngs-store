@@ -29,3 +29,8 @@ preview/
 
 # Built Android APKs (build artifacts — delivered directly, not versioned)
 *.apk
+
+# Backend secrets (all env files except the example)
+.env
+.env.*
+!.env.example

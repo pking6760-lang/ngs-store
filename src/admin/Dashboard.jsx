@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
-import { updateSettings } from "../lib/store.js";
+import { updateSettings } from "../lib/actions.js";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
