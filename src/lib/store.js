@@ -6,9 +6,9 @@
 
 import { products as seedProducts, categories as seedCategories } from "../data/products.js";
 
-// v2 catalog: refreshed product list (vegetables removed) + renamed category.
-const PRODUCTS_KEY = "ngs-products-v2";
-const CATEGORIES_KEY = "ngs-categories-v2";
+// v3 catalog: fruits removed too.
+const PRODUCTS_KEY = "ngs-products-v3";
+const CATEGORIES_KEY = "ngs-categories-v3";
 const ORDERS_KEY = "ngs-orders-v1";
 const SETTINGS_KEY = "ngs-settings-v1";
 const COUPONS_KEY = "ngs-coupons-v1";
@@ -118,11 +118,17 @@ export function deleteCategory(id) {
 }
 
 /* ─── Coupons / offers ──────────────────────────────────── */
-// A coupon: { code, type: "percent"|"flat", value, minOrder, active }
+// A coupon:
+//   { code, type: "percent"|"flat", value, minOrder,
+//     category: ""|<categoryId>, active }
+// `category` optional — when set, the coupon only counts items from that
+// category (a "this type of product" condition); `minOrder` is the "amount has
+// to be this" condition.
 function seedCoupons() {
   return [
-    { code: "NISHA10", type: "percent", value: 10, minOrder: 199, active: true },
-    { code: "FLAT30", type: "flat", value: 30, minOrder: 149, active: true },
+    { code: "NISHA10", type: "percent", value: 10, minOrder: 199, category: "", active: true },
+    { code: "FLAT30", type: "flat", value: 30, minOrder: 149, category: "", active: true },
+    { code: "SNACK15", type: "percent", value: 15, minOrder: 99, category: "snacks", active: true },
   ];
 }
 
@@ -150,6 +156,7 @@ export function upsertCoupon(coupon) {
     type: coupon.type === "flat" ? "flat" : "percent",
     value,
     minOrder: Number(coupon.minOrder) || 0,
+    category: (coupon.category || "").trim(),
     active: coupon.active !== false,
   };
   const list = getCoupons().filter((c) => c.code !== code);
@@ -161,24 +168,45 @@ export function deleteCoupon(code) {
   saveCoupons(getCoupons().filter((c) => c.code !== code));
 }
 
-// Validate a code against the cart's item total. Returns { ok, discount } or
+// Validate a code against the cart. `ctx` can be a plain number (item total)
+// or { itemTotal, catTotals, catName } where catTotals maps categoryId ->
+// subtotal and catName(id) returns a readable name. Returns { ok, discount } or
 // { ok:false, error }.
-export function applyCoupon(code, itemTotal) {
+export function applyCoupon(code, ctx) {
+  const itemTotal = typeof ctx === "number" ? ctx : ctx?.itemTotal || 0;
+  const catTotals = (typeof ctx === "object" && ctx?.catTotals) || {};
+  const catName =
+    (typeof ctx === "object" && ctx?.catName) || ((id) => id);
+
   const clean = (code || "").trim().toUpperCase();
   if (!clean) return { ok: false, error: "Enter a coupon code." };
   const coupon = getCoupons().find((c) => c.code === clean);
   if (!coupon || !coupon.active)
     return { ok: false, error: "This coupon isn't valid." };
-  if (itemTotal < coupon.minOrder)
+
+  const scoped = !!coupon.category;
+  const eligible = scoped ? catTotals[coupon.category] || 0 : itemTotal;
+
+  if (scoped && eligible <= 0)
+    return { ok: false, error: `Add ${catName(coupon.category)} items to use ${clean}.` };
+  if (eligible < (coupon.minOrder || 0))
     return {
       ok: false,
-      error: `Add ₹${coupon.minOrder - itemTotal} more to use ${clean}.`,
+      error: `Add ₹${coupon.minOrder - eligible} more${
+        scoped ? ` in ${catName(coupon.category)}` : ""
+      } to use ${clean}.`,
     };
-  const discount =
+
+  const raw =
     coupon.type === "percent"
-      ? Math.floor((itemTotal * coupon.value) / 100)
+      ? Math.floor((eligible * coupon.value) / 100)
       : coupon.value;
-  return { ok: true, code: clean, discount: Math.min(discount, itemTotal) };
+  return {
+    ok: true,
+    code: clean,
+    discount: Math.min(raw, itemTotal),
+    category: coupon.category || null,
+  };
 }
 
 /* ─── Store settings ────────────────────────────────────── */

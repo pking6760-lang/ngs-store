@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { useCoupons, useSettings } from "../lib/hooks.js";
+import { useCoupons, useSettings, useCategories } from "../lib/hooks.js";
 import { upsertCoupon, deleteCoupon, updateSettings } from "../lib/store.js";
 
 export default function CouponsAdmin() {
   const coupons = useCoupons();
   const settings = useSettings();
+  const categories = useCategories();
 
   return (
     <div className="offers-wrap">
       <OfferBanner settings={settings} />
-      <CouponManager coupons={coupons} />
+      <CouponManager coupons={coupons} categories={categories} />
     </div>
   );
 }
@@ -47,9 +48,17 @@ function OfferBanner({ settings }) {
   );
 }
 
-function CouponManager({ coupons }) {
-  const [form, setForm] = useState({ code: "", type: "percent", value: "", minOrder: "" });
+function CouponManager({ coupons, categories }) {
+  const [form, setForm] = useState({
+    code: "",
+    type: "percent",
+    value: "",
+    minOrder: "",
+    category: "",
+  });
   const [error, setError] = useState("");
+
+  const catName = (id) => categories.find((c) => c.id === id)?.name || id;
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -63,7 +72,7 @@ function CouponManager({ coupons }) {
       setError(res.error);
       return;
     }
-    setForm({ code: "", type: "percent", value: "", minOrder: "" });
+    setForm({ code: "", type: "percent", value: "", minOrder: "", category: "" });
   }
 
   function toggleActive(c) {
@@ -94,13 +103,23 @@ function CouponManager({ coupons }) {
           placeholder={form.type === "percent" ? "Percent, e.g. 10" : "Amount, e.g. 30"}
         />
         <input
-          className="full"
           type="number"
           min="0"
           value={form.minOrder}
           onChange={(e) => set("minOrder", e.target.value)}
-          placeholder="Minimum order ₹ (optional)"
+          placeholder="Min order ₹ (optional)"
         />
+        <select
+          value={form.category}
+          onChange={(e) => set("category", e.target.value)}
+        >
+          <option value="">Any product</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              Only {c.name}
+            </option>
+          ))}
+        </select>
         {error && <div className="auth-error full">{error}</div>}
         <button className="primary-btn full" type="submit">
           Add coupon
@@ -117,6 +136,7 @@ function CouponManager({ coupons }) {
                 <div className="coupon-code">🎟️ {c.code}</div>
                 <div className="coupon-desc">
                   {c.type === "percent" ? `${c.value}% off` : `₹${c.value} off`}
+                  {c.category ? ` · only ${catName(c.category)}` : ""}
                   {c.minOrder > 0 ? ` · min ₹${c.minOrder}` : ""}
                 </div>
               </div>

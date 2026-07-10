@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useProducts, useSettings } from "../lib/hooks.js";
+import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
 import { saveOrder, applyCoupon } from "../lib/store.js";
 import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
@@ -21,6 +21,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const { user, isLoggedIn, updateProfile, applyRewards } = useAuth();
   const products = useProducts();
   const settings = useSettings();
+  const categories = useCategories();
+  const allCoupons = useCoupons();
 
   const [step, setStep] = useState("cart"); // cart | checkout | pay | done
   const [placed, setPlaced] = useState(null);
@@ -33,6 +35,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [couponInput, setCouponInput] = useState("");
   const [appliedCode, setAppliedCode] = useState(null);
   const [couponError, setCouponError] = useState("");
+  const [showCoupons, setShowCoupons] = useState(false);
 
   const lines = Object.entries(items)
     .map(([id, qty]) => {
@@ -56,9 +59,20 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const discount = usePoints && isLoggedIn ? maxRedeemRupees : 0;
   const pointsUsed = discount * POINTS.perRupee;
 
+  // Per-category subtotals + a name lookup, so coupons can require a certain
+  // product type or a minimum amount.
+  const catTotals = {};
+  for (const { product, qty } of lines) {
+    catTotals[product.category] =
+      (catTotals[product.category] || 0) + product.price * qty;
+  }
+  const catName = (id) => categories.find((c) => c.id === id)?.name || id;
+  const couponCtx = { itemTotal, catTotals, catName };
+  const activeCoupons = allCoupons.filter((c) => c.active);
+
   // Coupon — re-validated against the current cart each render so it stays
   // correct if items are added/removed.
-  const couponResult = appliedCode ? applyCoupon(appliedCode, itemTotal) : null;
+  const couponResult = appliedCode ? applyCoupon(appliedCode, couponCtx) : null;
   const couponDiscount = couponResult?.ok
     ? Math.min(couponResult.discount, itemTotal - discount)
     : 0;
@@ -106,12 +120,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     }
   }
 
-  function applyCouponCode() {
-    const res = applyCoupon(couponInput, itemTotal);
+  function applyCouponCode(code) {
+    const res = applyCoupon(code ?? couponInput, couponCtx);
     if (res.ok) {
       setAppliedCode(res.code);
       setCouponInput("");
       setCouponError("");
+      setShowCoupons(false);
     } else {
       setCouponError(res.error);
     }
@@ -455,13 +470,66 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       }}
                       placeholder="Coupon code"
                     />
-                    <button className="coupon-apply" onClick={applyCouponCode}>
+                    <button
+                      className="coupon-apply"
+                      onClick={() => applyCouponCode()}
+                    >
                       Apply
                     </button>
                   </div>
                   {(couponError || couponInvalid) && (
                     <div className="coupon-error">
                       {couponError || couponResult.error}
+                    </div>
+                  )}
+
+                  {activeCoupons.length > 0 && (
+                    <button
+                      className="coupon-browse-toggle"
+                      onClick={() => setShowCoupons((s) => !s)}
+                    >
+                      🎟️ {showCoupons ? "Hide coupons" : "View available coupons"}
+                    </button>
+                  )}
+
+                  {showCoupons && (
+                    <div className="coupon-list">
+                      {activeCoupons.map((c) => {
+                        const ev = applyCoupon(c.code, couponCtx);
+                        const off =
+                          c.type === "percent"
+                            ? `${c.value}% OFF`
+                            : `₹${c.value} OFF`;
+                        const cond = [
+                          c.category ? `on ${catName(c.category)}` : null,
+                          c.minOrder > 0 ? `min ₹${c.minOrder}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ");
+                        return (
+                          <div className="coupon-card" key={c.code}>
+                            <div className="coupon-card-left">
+                              <div className="coupon-card-code">
+                                🎟️ {c.code}
+                                <span className="coupon-card-off">{off}</span>
+                              </div>
+                              {cond && (
+                                <div className="coupon-card-cond">{cond}</div>
+                              )}
+                              {!ev.ok && (
+                                <div className="coupon-card-reason">{ev.error}</div>
+                              )}
+                            </div>
+                            <button
+                              className="coupon-card-apply"
+                              disabled={!ev.ok}
+                              onClick={() => applyCouponCode(c.code)}
+                            >
+                              {ev.ok ? "Apply" : "—"}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </>

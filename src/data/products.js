@@ -3,7 +3,6 @@
 // works offline with no external asset requests. Prices are in ₹ (INR).
 
 export const categories = [
-  { id: "fruits-veg", name: "Fresh Fruits", icon: "🍎", color: "#e7f7e9" },
   { id: "dairy-bread", name: "Dairy, Bread & Eggs", icon: "🥛", color: "#fdf4e3" },
   { id: "snacks", name: "Snacks & Munchies", icon: "🍿", color: "#fce8ec" },
   { id: "beverages", name: "Cold Drinks & Juices", icon: "🥤", color: "#e6f0fb" },
@@ -14,11 +13,6 @@ export const categories = [
 ];
 
 export const products = [
-  // Fresh Fruits
-  { id: "p1", name: "Fresh Banana", unit: "6 pcs", price: 40, mrp: 55, icon: "🍌", category: "fruits-veg" },
-  { id: "p2", name: "Red Apple (Shimla)", unit: "4 pcs", price: 120, mrp: 160, icon: "🍎", category: "fruits-veg" },
-  { id: "p8", name: "Green Grapes", unit: "500 g", price: 70, mrp: 90, icon: "🍇", category: "fruits-veg" },
-
   // Dairy, Bread & Eggs
   { id: "p9", name: "Amul Toned Milk", unit: "500 ml", price: 27, mrp: 30, icon: "🥛", category: "dairy-bread" },
   { id: "p10", name: "Brown Bread", unit: "400 g", price: 45, mrp: 50, icon: "🍞", category: "dairy-bread" },
