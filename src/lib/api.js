@@ -1,0 +1,357 @@
+// ============================================================================
+// api.js — the app's single connection to the secure Supabase backend.
+// ============================================================================
+// Every screen reads/writes through here. The important, money-touching calls
+// (placing an order, earning/spending points, rating) go through server-side
+// database FUNCTIONS (rpc) that recompute everything — the app cannot set a
+// price, a total, or a points balance. Reads are protected by Row-Level
+// Security, so a customer only ever sees their own orders/points/profile.
+import { supabase, isBackendConfigured } from "./supabase.js";
+
+export { isBackendConfigured };
+
+function must() {
+  if (!supabase) throw new Error("Backend is not configured.");
+  return supabase;
+}
+
+/* ─── Shape mappers: DB (snake_case) ↔ app (camelCase) ──────────────────────
+   The screens were built against the localStorage shapes, so we translate
+   database rows into those same shapes and vice-versa. This keeps the UI code
+   unchanged. */
+const num = (v) => (v == null ? v : Number(v));
+
+function mapProduct(r) {
+  return { id: r.id, name: r.name, unit: r.unit, price: num(r.price),
+    mrp: num(r.mrp), icon: r.icon, image: r.image_url, category: r.category,
+    stock: r.stock, active: r.active };
+}
+function mapCategory(r) {
+  return { id: r.id, name: r.name, icon: r.icon, color: r.color };
+}
+function mapCoupon(r) {
+  return { code: r.code, type: r.type, value: num(r.value),
+    minOrder: num(r.min_order), category: r.category || "", active: r.active };
+}
+function couponToDb(c) {
+  return { code: (c.code || "").trim().toUpperCase(), type: c.type === "flat" ? "flat" : "percent",
+    value: Number(c.value) || 0, min_order: Number(c.minOrder) || 0,
+    category: (c.category || "").trim(), active: c.active !== false };
+}
+function mapSettings(r) {
+  if (!r) return null;
+  return { storeOpen: r.store_open, deliveryMode: r.delivery_mode,
+    offerBanner: r.offer_banner, rewards: r.rewards, deliveryFee: num(r.delivery_fee),
+    freeDeliveryAbove: num(r.free_delivery_above), handlingFee: num(r.handling_fee),
+    maxDistanceKm: num(r.max_distance_km), shopLocations: r.shop_locations || [],
+    lowStockThreshold: r.low_stock_threshold };
+}
+function settingsToDb(p) {
+  const map = { storeOpen: "store_open", deliveryMode: "delivery_mode",
+    offerBanner: "offer_banner", rewards: "rewards", deliveryFee: "delivery_fee",
+    freeDeliveryAbove: "free_delivery_above", handlingFee: "handling_fee",
+    maxDistanceKm: "max_distance_km", shopLocations: "shop_locations",
+    lowStockThreshold: "low_stock_threshold" };
+  const out = {};
+  for (const k in p) if (map[k]) out[map[k]] = p[k];
+  return out;
+}
+function mapOrder(r) {
+  return { id: r.human_code || r.id, dbId: r.id, createdAt: r.created_at,
+    customer: r.customer_name, userId: r.user_id, userPhone: r.user_phone,
+    accepted: r.accepted, member: r.member, status: r.status,
+    items: (r.order_items || []).map((i) => ({ id: i.product_id, name: i.name,
+      icon: i.icon, qty: i.qty, price: num(i.price) })),
+    itemTotal: num(r.item_total), discount: num(r.discount), couponCode: r.coupon_code,
+    deliveryFee: num(r.delivery_fee), handling: num(r.handling),
+    pointsEarned: r.points_earned, total: num(r.total), paymentStatus: r.payment_status,
+    distanceKm: num(r.distance_km), location: r.location,
+    rating: r.rating, feedback: r.feedback,
+    count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
+}
+function mapProfile(r) {
+  if (!r) return null;
+  return { id: r.id, name: r.name, phone: r.phone, email: r.email,
+    address: r.address, points: r.points, member: r.is_member,
+    memberSince: r.member_since, role: r.role, createdAt: r.created_at };
+}
+
+/* ─── Auth (email OTP) ──────────────────────────────────────────────────── */
+
+// Send a 6-digit login code to an email. Creates the account on first use.
+export async function sendEmailCode(email, name) {
+  const { error } = await must().auth.signInWithOtp({
+    email: email.trim(),
+    options: { data: name ? { name } : undefined },
+  });
+  if (error) throw error;
+  return { ok: true };
+}
+
+// Verify the code the customer typed → establishes a logged-in session.
+export async function verifyEmailCode(email, token) {
+  const { data, error } = await must().auth.verifyOtp({
+    email: email.trim(),
+    token: token.trim(),
+    type: "email",
+  });
+  if (error) throw error;
+  return data.session;
+}
+
+export async function signInWithPassword(email, password) {
+  const { data, error } = await must().auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+  if (error) throw error;
+  return data.session;
+}
+
+export async function signOut() {
+  await must().auth.signOut();
+}
+
+export async function getSession() {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session;
+}
+
+// Fire `cb` whenever the login state changes (sign in / out / token refresh).
+export function onAuthChange(cb) {
+  if (!supabase) return () => {};
+  const { data } = supabase.auth.onAuthStateChange((_e, session) => cb(session));
+  return () => data.subscription.unsubscribe();
+}
+
+/* ─── Profile ───────────────────────────────────────────────────────────── */
+
+export async function getMyProfile() {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) return null;
+  const { data, error } = await supabase
+    .from("profiles").select("*").eq("id", u.user.id).maybeSingle();
+  if (error) throw error;
+  return mapProfile(data);
+}
+
+// Customer edits their own name/phone/address (points/role/membership are
+// server-protected and silently ignored if tampered with).
+export async function updateMyProfile(patch) {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) throw new Error("Not signed in.");
+  const allowed = {};
+  for (const k of ["name", "phone", "address", "email"]) {
+    if (patch[k] !== undefined) allowed[k] = patch[k];
+  }
+  const { error } = await supabase.from("profiles").update(allowed).eq("id", u.user.id);
+  if (error) throw error;
+  return { ok: true };
+}
+
+/* ─── Catalog / settings (public read) ──────────────────────────────────── */
+
+export async function fetchProducts() {
+  const { data, error } = await must()
+    .from("products").select("*").order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapProduct);
+}
+
+export async function fetchCategories() {
+  const { data, error } = await must()
+    .from("categories").select("*").order("sort", { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapCategory);
+}
+
+export async function fetchCoupons() {
+  const { data, error } = await must().from("coupons").select("*");
+  if (error) throw error;
+  return (data || []).map(mapCoupon);
+}
+
+export async function fetchSettings() {
+  const { data, error } = await must()
+    .from("settings").select("*").eq("id", 1).maybeSingle();
+  if (error) throw error;
+  return mapSettings(data);
+}
+
+/* ─── Orders (customer) ─────────────────────────────────────────────────── */
+
+// Place an order. The phone sends only product ids + quantities (+ optional
+// coupon and location); the SERVER computes prices, discount, delivery, total
+// and points. Returns the created order row.
+export async function placeOrder({ items, coupon, location, payment }) {
+  const p_items = items.map((i) => ({ id: i.id, qty: i.qty }));
+  const { data, error } = await must().rpc("place_order", {
+    p_items,
+    p_coupon: coupon || null,
+    p_location: location || null,
+    p_payment: payment || "upi",
+  });
+  if (error) throw error;
+  return mapOrder(data);
+}
+
+export async function fetchMyOrders() {
+  const { data, error } = await must()
+    .from("orders")
+    .select("*, order_items(*)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapOrder);
+}
+
+export async function rateOrder(orderId, rating, feedback) {
+  const { error } = await must().rpc("rate_order", {
+    p_order: orderId, p_rating: rating, p_feedback: feedback || "",
+  });
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function redeemPoints(points) {
+  const { data, error } = await must().rpc("redeem_points", { p_points: points });
+  if (error) throw error;
+  return data; // new balance
+}
+
+/* ─── Notifications (customer) ──────────────────────────────────────────── */
+
+export async function fetchMyNotifications() {
+  const { data, error } = await must()
+    .from("notifications").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function markNotificationsRead() {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) return;
+  await supabase.from("notifications").update({ read: true })
+    .eq("user_id", u.user.id).eq("read", false);
+}
+
+/* ─── Admin: catalog ────────────────────────────────────────────────────── */
+
+export async function upsertProduct(product) {
+  const { error } = await must().from("products").upsert(product);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function deleteProduct(id) {
+  const { error } = await must().from("products").delete().eq("id", id);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function addCategory(cat) {
+  const { error } = await must().from("categories").insert(cat);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function deleteCategory(id) {
+  const { error } = await must().from("categories").delete().eq("id", id);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function upsertCoupon(coupon) {
+  const { error } = await must().from("coupons").upsert(couponToDb(coupon));
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function deleteCoupon(code) {
+  const { error } = await must().from("coupons").delete().eq("code", code);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function updateSettings(patch) {
+  const { error } = await must().from("settings").update(settingsToDb(patch)).eq("id", 1);
+  if (error) throw error;
+  return { ok: true };
+}
+
+/* ─── Admin: orders ─────────────────────────────────────────────────────── */
+
+export async function fetchAllOrders() {
+  const { data, error } = await must()
+    .from("orders").select("*, order_items(*)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapOrder);
+}
+
+export async function updateOrderById(dbId, patch) {
+  const { error } = await must().from("orders").update(patch).eq("id", dbId);
+  if (error) throw error;
+  return { ok: true };
+}
+
+// These take the order's database id (order.dbId from mapOrder), not the
+// human_code shown in the UI.
+export async function updateOrderStatus(dbId, status) {
+  const { error } = await must().from("orders").update({ status }).eq("id", dbId);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function acceptOrder(dbId) {
+  const { error } = await must().from("orders").update({ accepted: true }).eq("id", dbId);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function rejectOrder(dbId) {
+  const { error } = await must()
+    .from("orders").update({ accepted: false, status: "Cancelled" }).eq("id", dbId);
+  if (error) throw error;
+  return { ok: true };
+}
+
+/* ─── Admin: customers ──────────────────────────────────────────────────── */
+
+export async function fetchCustomers() {
+  const { data, error } = await must()
+    .from("profiles").select("*").eq("role", "customer")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapProfile);
+}
+
+export async function setMembership(userId, isMember) {
+  const patch = { is_member: isMember, member_since: isMember ? new Date().toISOString() : null };
+  const { error } = await must().from("profiles").update(patch).eq("id", userId);
+  if (error) throw error;
+  return { ok: true };
+}
+
+export async function sendNotification({ userId, title, body }) {
+  const { error } = await must().from("notifications")
+    .insert({ user_id: userId, title, body: body || "" });
+  if (error) throw error;
+  return { ok: true };
+}
+
+/* ─── Realtime ──────────────────────────────────────────────────────────── */
+
+// Re-run `cb` whenever a row in `table` changes anywhere (any device). Each
+// call gets its OWN uniquely-named channel — Supabase rejects adding listeners
+// to a channel name that's already subscribed, and several hooks watch the same
+// table.
+let channelSeq = 0;
+export function subscribeTable(table, cb) {
+  if (!supabase) return () => {};
+  const ch = supabase
+    .channel(`rt-${table}-${++channelSeq}`)
+    .on("postgres_changes", { event: "*", schema: "public", table }, cb)
+    .subscribe();
+  return () => supabase.removeChannel(ch);
+}
