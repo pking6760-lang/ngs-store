@@ -6,7 +6,21 @@
 // Note: we resolve to a plain { plugin } wrapper (never the Capacitor plugin
 // proxy directly) — returning the proxy from an async function makes JS try to
 // "unwrap" it as a thenable, which errors on web.
+import { Capacitor } from "@capacitor/core";
+
 let pluginPromise;
+
+// True inside the installed Android app (false in a plain web browser). We show
+// the fingerprint button whenever we're in the app, then handle "no fingerprint
+// set up" when the user taps it — rather than hiding the button on a strict
+// availability check that some phones report inconsistently.
+export function isNativeApp() {
+  try {
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
 
 function loadPlugin() {
   if (!pluginPromise) {

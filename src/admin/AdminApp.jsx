@@ -146,9 +146,10 @@ function Login({ onSignIn }) {
   const [staffName, setStaffName] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [error, setError] = useState("");
+  const [bioBusy, setBioBusy] = useState(false);
+  // Show the fingerprint button only once the phone reports biometrics ready.
   const [bioOk, setBioOk] = useState(false);
 
-  // Show the fingerprint button only if the phone actually supports it.
   useEffect(() => {
     let active = true;
     isBiometricAvailable().then((ok) => active && setBioOk(ok));
@@ -160,9 +161,14 @@ function Login({ onSignIn }) {
   async function fingerprintLogin() {
     unlockAudio();
     setError("");
-    const ok = await authenticateBiometric();
-    if (ok) onSignIn("admin", "Store Manager");
-    else setError("Fingerprint not recognised. Use your password.");
+    setBioBusy(true);
+    try {
+      const ok = await authenticateBiometric();
+      if (ok) onSignIn("admin", "Store Manager");
+      else setError("Fingerprint not recognised. Try again or use your password.");
+    } finally {
+      setBioBusy(false);
+    }
   }
 
   function submitAdmin(e) {
@@ -238,9 +244,10 @@ function Login({ onSignIn }) {
                   type="button"
                   className="fingerprint-btn"
                   onClick={fingerprintLogin}
+                  disabled={bioBusy}
                 >
-                  <span className="fingerprint-icon">🔒</span>
-                  Login with fingerprint
+                  <span className="fingerprint-icon">☝️</span>
+                  {bioBusy ? "Waiting for fingerprint…" : "Login with fingerprint"}
                 </button>
               </>
             )}
