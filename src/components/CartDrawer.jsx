@@ -5,7 +5,7 @@ import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hook
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED } from "../lib/payments.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import {
@@ -285,22 +285,57 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         payment: "razorpay",
         address: address.trim(),
       });
-      // Verified native UPI QR (scan with any app → pays directly → auto-confirms)
-      // plus a payment link for a "pay on this phone" button. Use whichever comes
-      // back; both are verified server-side by the webhook.
-      const [qrRes, linkRes] = await Promise.allSettled([
-        api.createOrderQr(order.dbId),
-        api.createCollectionLink(order.dbId),
-      ]);
-      const imageUrl = qrRes.status === "fulfilled" ? qrRes.value.imageUrl : "";
-      const url = linkRes.status === "fulfilled" ? linkRes.value.shortUrl : "";
-      if (!imageUrl && !url) throw new Error("Couldn't start the payment. Please try again.");
-      setPayLink({ imageUrl, url, order, count: lines.reduce((a, l) => a + l.qty, 0) });
+      // Verified native UPI QR shown ON our page (scan with any app → pays
+      // directly → auto-confirms via webhook). No redirect to any gateway page.
+      const { imageUrl } = await api.createOrderQr(order.dbId);
+      setPayLink({ imageUrl, order, count: lines.reduce((a, l) => a + l.qty, 0) });
       setStep("payqr");
     } catch (e) {
       setPlaceError(e.message || "Couldn't start the payment. Please try again.");
     } finally {
       setPlacing(false);
+    }
+  }
+
+  // "Pay on this phone" — opens Razorpay's IN-PAGE checkout overlay (stays on
+  // ngsstore.in, branded as the store; no redirect to the gateway's own page).
+  // The webhook + the polling effect confirm the order either way.
+  async function payOnThisPhone() {
+    if (!payLink?.order) return;
+    setPlaceError("");
+    try {
+      const order = payLink.order;
+      const rp = await api.createRazorpayOrder(order.dbId);
+      const Razorpay = await loadRazorpay();
+      const rzp = new Razorpay({
+        key: rp.keyId,
+        order_id: rp.orderId,
+        amount: rp.amount,
+        currency: rp.currency || "INR",
+        name: "NGS Nisha General Store",
+        description: `Order ${order.id}`,
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: cleanPhone || user?.phone || "",
+        },
+        theme: { color: "#0a9155" },
+        handler: async (resp) => {
+          try {
+            await api.verifyRazorpayPayment({
+              orderId: order.dbId,
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+            });
+          } catch { /* the polling effect / webhook will still confirm it */ }
+        },
+      });
+      rzp.on("payment.failed", (r) =>
+        setPlaceError(r?.error?.description || "Payment failed. Please try again."));
+      rzp.open();
+    } catch (e) {
+      setPlaceError(e.message || "Couldn't open payment. Please try again.");
     }
   }
 
@@ -466,11 +501,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </p>
               </div>
             )}
-            {payLink.url && (
-              <a className="upi-app-btn" href={payLink.url} target="_blank" rel="noopener noreferrer">
-                📱 Or pay on this phone →
-              </a>
-            )}
+            <button className="upi-app-btn" onClick={payOnThisPhone}>
+              📱 Or pay on this phone
+            </button>
             <p className="upi-note">
               ⏳ Waiting for payment… this screen updates automatically the moment
               your payment goes through. You don't need to do anything after paying.
