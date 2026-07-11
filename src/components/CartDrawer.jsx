@@ -637,7 +637,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   {showCoupons && (
                     <div className="coupon-list">
                       {activeCoupons.map((c) => {
-                        const ev = applyCoupon(c.code, couponCtx);
+                        const ev = applyCouponFrom(allCoupons, c.code, couponCtx);
                         const off =
                           c.type === "percent"
                             ? `${c.value}% OFF`
