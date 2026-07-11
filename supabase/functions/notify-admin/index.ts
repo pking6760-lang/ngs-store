@@ -102,7 +102,14 @@ Deno.serve(async (req) => {
 
     const accessToken = await getAccessToken();
     const title = `🛒 New order ${order.human_code ?? ""}`.trim();
-    const body = `${order.customer_name ?? "A customer"} · ₹${order.total ?? ""}`;
+    const method = order.payment_method ?? "";
+    const online = method === "razorpay" || method === "online" || method === "card";
+    const payLabel = online
+      ? "✅ PAID online"
+      : method === "cod"
+      ? `💵 COLLECT ₹${order.total ?? ""} cash`
+      : `₹${order.total ?? ""}`;
+    const body = `${order.customer_name ?? "A customer"} · ₹${order.total ?? ""} · ${payLabel}`;
     const results = await Promise.all(tokens.map((t) => sendFcm(accessToken, t, title, body)));
 
     const dead = results.filter((r) => r.status === 404 || r.status === 400).map((r) => r.token);
