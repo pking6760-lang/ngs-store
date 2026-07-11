@@ -71,8 +71,14 @@ async function sendFcm(accessToken: string, token: string, title: string, body: 
   return { token, status: res.status, body: await res.text() };
 }
 
+const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET") ?? "";
+
 Deno.serve(async (req) => {
   try {
+    // Only our database trigger (which knows the secret) may call this.
+    if (WEBHOOK_SECRET && req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
+      return new Response("forbidden", { status: 401 });
+    }
     const payload = await req.json();
     const order = payload.record ?? payload;
     if (!order || payload.type === "DELETE") return new Response("skip", { status: 200 });
