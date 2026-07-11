@@ -204,14 +204,29 @@ export async function placeOrder({ items, coupon, location, payment, address }) 
   return mapOrder(data);
 }
 
+// When an Edge Function returns a non-2xx status, supabase-js gives a generic
+// "non-2xx status code" error and stashes the real Response on error.context.
+// Pull the actual server message out so the customer (and we) see what failed.
+async function edgeError(error, data, fallback) {
+  if (data?.error) return new Error(data.error);
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return new Error(body.error);
+  } catch { /* not JSON */ }
+  try {
+    const txt = await error?.context?.text?.();
+    if (txt) return new Error(txt.slice(0, 200));
+  } catch { /* ignore */ }
+  return new Error(error?.message || fallback);
+}
+
 // Ask the server to create a Razorpay order for an already-placed (held) order.
 // The server reads the real total from the DB — the phone never sends an amount.
 export async function createRazorpayOrder(orderDbId) {
   const { data, error } = await must().functions.invoke("razorpay-create-order", {
     body: { orderId: orderDbId },
   });
-  if (error) throw new Error(data?.error || error.message || "Couldn't start payment.");
-  if (data?.error) throw new Error(data.error);
+  if (error || data?.error) throw await edgeError(error, data, "Couldn't start payment.");
   return data; // { keyId, orderId, amount, currency, humanCode }
 }
 
@@ -219,8 +234,7 @@ export async function createRazorpayOrder(orderDbId) {
 // confirms the order. Returns { ok: true } only if the payment is genuine.
 export async function verifyRazorpayPayment(payload) {
   const { data, error } = await must().functions.invoke("razorpay-verify", { body: payload });
-  if (error) throw new Error(data?.error || error.message || "Couldn't verify payment.");
-  if (data?.error) throw new Error(data.error);
+  if (error || data?.error) throw await edgeError(error, data, "Couldn't verify payment.");
   pingLocal("orders");
   pingLocal("products");
   return data;

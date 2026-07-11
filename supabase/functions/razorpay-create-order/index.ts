@@ -10,7 +10,6 @@ const KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") ?? "";
 const KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -22,17 +21,17 @@ const json = (body: unknown, status = 200) =>
 
 const sbHeaders = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` };
 
-// Identify the signed-in caller from the JWT they sent, so we only let a
-// customer pay for their OWN order.
-async function callerId(authHeader: string | null): Promise<string | null> {
+// Identify the signed-in caller from the JWT they sent (the "sub" claim is the
+// user id), so we only let a customer pay for their OWN order. supabase-js sends
+// the session access token in the Authorization header.
+function callerId(authHeader: string | null): string | null {
   if (!authHeader) return null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { apikey: ANON, Authorization: authHeader },
-    });
-    if (!res.ok) return null;
-    const u = await res.json();
-    return u?.id ?? null;
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return json?.sub ?? null;
   } catch { return null; }
 }
 
@@ -44,7 +43,7 @@ Deno.serve(async (req) => {
     const { orderId } = await req.json().catch(() => ({}));
     if (!orderId) return json({ error: "Missing order." }, 400);
 
-    const uid = await callerId(req.headers.get("Authorization"));
+    const uid = callerId(req.headers.get("Authorization"));
     if (!uid) return json({ error: "Please sign in again." }, 401);
 
     // Read the order (service role) — this total is the trusted amount.
