@@ -11,6 +11,7 @@ import { useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
 import * as api from "../lib/api.js";
 import { unlockAudio } from "../lib/sound.js";
+import { initAdminPush } from "../lib/push.js";
 import { isBiometricAvailable, authenticateBiometric } from "../lib/biometric.js";
 
 const BACKEND = api.isBackendConfigured;
@@ -48,6 +49,11 @@ export default function AdminApp() {
     })();
     return () => { alive = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Register for order push notifications once an admin is signed in.
+  useEffect(() => {
+    if (role === "admin") initAdminPush();
+  }, [role]);
 
   function signIn(nextRole, displayName) {
     sessionStorage.setItem(ROLE_KEY, nextRole);

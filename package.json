@@ -15,6 +15,7 @@
     "@capacitor/android": "^6.2.1",
     "@capacitor/core": "^6.2.1",
     "@capacitor/geolocation": "^6.1.1",
+    "@capacitor/push-notifications": "^6.0.5",
     "@supabase/supabase-js": "^2.110.2",
     "capacitor-native-biometric": "^4.2.2",
     "qrcode-generator": "^2.0.4",
