@@ -196,10 +196,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       setLocError("Please enter a valid 10-digit phone number so we can call about your delivery.");
       return;
     }
-    if (needsLocation) {
-      setLocError("Please share your location so we can check delivery.");
-      return;
-    }
+    // Location is optional — a customer who can't/won't share it can still
+    // order using their typed address. The out-of-area block only applies to
+    // customers who DID share location and are beyond the delivery radius.
     if (outOfArea) return; // button is disabled, but guard anyway
     setLocError("");
     // Save address + phone to the profile. Await it so the server has the phone
@@ -406,7 +405,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </button>
               {needsLocation && (
                 <div className="area-hint">
-                  📍 Share your location so we can check if we deliver to you.
+                  📍 Optional — share your location for a faster, accurate
+                  delivery. You can still order without it.
                 </div>
               )}
               {location && (
