@@ -73,6 +73,30 @@ export function googleMapsLink({ lat, lng }) {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
+// Turn GPS coordinates into a human-readable street address (free, no API key,
+// via OpenStreetMap Nominatim). Returns a formatted address string, or "" if it
+// can't be resolved. The customer can still edit the result (e.g. add flat no).
+export async function reverseGeocode(lat, lng) {
+  const url =
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2` +
+    `&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error("Couldn't look up your address.");
+  const data = await res.json();
+  const a = data.address || {};
+  const street = [a.house_number, a.road].filter(Boolean).join(" ");
+  const parts = [
+    street,
+    a.neighbourhood || a.suburb || a.residential || a.hamlet,
+    a.city || a.town || a.village || a.municipality || a.county,
+    a.state,
+    a.postcode,
+  ].filter(Boolean);
+  // De-duplicate consecutive repeats (Nominatim sometimes repeats a name).
+  const clean = parts.filter((v, i) => v !== parts[i - 1]);
+  return clean.join(", ") || data.display_name || "";
+}
+
 // Straight-line distance between two {lat, lng} points, in kilometres.
 export function distanceKm(a, b) {
   if (!a || !b) return null;

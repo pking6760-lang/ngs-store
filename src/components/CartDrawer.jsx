@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
-import { getCurrentLocation, googleMapsLink, distanceKm } from "../lib/location.js";
+import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import {
@@ -35,7 +35,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [placeError, setPlaceError] = useState("");
   const [address, setAddress] = useState(() => loadDraft().address || "");
   const [phone, setPhone] = useState(() => loadDraft().phone || "");
-  const [location, setLocation] = useState(null);
+  const [location, setLocation] = useState(() => loadDraft().location || null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
   const [payment, setPayment] = useState("upi"); // upi | cod
@@ -134,11 +134,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     if (user?.phone && !phone) setPhone(user.phone);
   }, [step, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Remember what they typed across refreshes.
+  // Remember the address, phone AND captured GPS location across refreshes, so
+  // the customer never has to re-enter them or re-share their location.
   useEffect(() => {
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ address, phone })); }
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ address, phone, location })); }
     catch { /* ignore */ }
-  }, [address, phone]);
+  }, [address, phone, location]);
 
   function goToCheckout() {
     if (!settings.storeOpen) return;
@@ -153,7 +154,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     setLocating(true);
     setLocError("");
     try {
-      setLocation(await getCurrentLocation());
+      const loc = await getCurrentLocation();
+      setLocation(loc);
+      // Auto-fill the address box with the customer's current street address.
+      try {
+        const addr = await reverseGeocode(loc.lat, loc.lng);
+        if (addr) setAddress(addr);
+      } catch { /* keep the captured coords even if the lookup fails */ }
     } catch (err) {
       setLocError(err.message);
     } finally {
