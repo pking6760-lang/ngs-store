@@ -3,6 +3,7 @@ import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { updateOrderStatus } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import { createOrderQr } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
@@ -10,19 +11,24 @@ import { StatusPill } from "./Dashboard.jsx";
 export default function OrdersAdmin() {
   const orders = useOrders();
   const [filter, setFilter] = useState("all");
-  // Doorstep collection: which order's QR is open + its (verified) QR image.
+  // Doorstep collection: which order's QR is open + its QR image + whether it's
+  // the gateway QR (auto-confirms) or the plain UPI fallback (confirm manually).
   const [qrFor, setQrFor] = useState(null);
-  const [qrState, setQrState] = useState({ loading: false, url: "", error: "" });
+  const [qrState, setQrState] = useState({ loading: false, url: "", verified: false });
 
   async function openQr(order) {
     if (qrFor === order.id) { setQrFor(null); return; }
     setQrFor(order.id);
-    setQrState({ loading: true, url: "", error: "" });
+    setQrState({ loading: true, url: "", verified: false });
     try {
+      // Gateway QR (auto-verifies) — works once "QR Codes" is enabled on the account.
       const { imageUrl } = await createOrderQr(order.dbId);
-      setQrState({ loading: false, url: imageUrl, error: "" });
-    } catch (e) {
-      setQrState({ loading: false, url: "", error: e.message || "Couldn't create QR." });
+      setQrState({ loading: false, url: imageUrl, verified: true });
+    } catch {
+      // Fallback: a plain UPI QR straight to the shop. Works everywhere; the
+      // rider confirms by tapping Delivered after the money lands.
+      const upi = qrDataUri(buildUpiLink({ amount: order.total, note: `NGS ${order.id}` }));
+      setQrState({ loading: false, url: upi, verified: false });
     }
   }
 
@@ -82,7 +88,6 @@ export default function OrdersAdmin() {
                   {qrFor === o.id && (
                     <div className="collect-qr">
                       {qrState.loading && <p>Creating UPI QR…</p>}
-                      {qrState.error && <p className="collect-err">⚠️ {qrState.error}</p>}
                       {qrState.url && (
                         <>
                           <img src={qrState.url} alt="UPI payment QR code" />
@@ -90,9 +95,13 @@ export default function OrdersAdmin() {
                             Scan with <strong>any UPI app</strong> (GPay, PhonePe, Paytm) to pay{" "}
                             <strong>₹{o.total}</strong>
                             <br />
-                            <span>Pays directly · confirms automatically</span>
+                            <span>Pays directly to the shop</span>
                           </p>
-                          <p className="collect-wait">⏳ Waiting for payment… turns green here once paid.</p>
+                          {qrState.verified ? (
+                            <p className="collect-wait">⏳ Waiting for payment… turns green here once paid.</p>
+                          ) : (
+                            <p className="collect-wait">After the money is received, tap <strong>Delivered</strong>.</p>
+                          )}
                         </>
                       )}
                     </div>
