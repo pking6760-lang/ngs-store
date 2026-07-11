@@ -64,7 +64,8 @@ function mapOrder(r) {
       icon: i.icon, qty: i.qty, price: num(i.price) })),
     itemTotal: num(r.item_total), discount: num(r.discount), couponCode: r.coupon_code,
     deliveryFee: num(r.delivery_fee), handling: num(r.handling), surgeFee: num(r.surge_fee),
-    pointsEarned: r.points_earned, total: num(r.total), paymentStatus: r.payment_status,
+    pointsEarned: r.points_earned, total: num(r.total),
+    payment: r.payment_method, paymentMethod: r.payment_method, paymentStatus: r.payment_status,
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
@@ -228,6 +229,17 @@ export async function createRazorpayOrder(orderDbId) {
   });
   if (error || data?.error) throw await edgeError(error, data, "Couldn't start payment.");
   return data; // { keyId, orderId, amount, currency, humanCode }
+}
+
+// Admin/delivery: create a gateway payment link for a not-yet-paid order, so
+// the customer can pay online at the door (QR). When they pay, the webhook
+// confirms it and the order flips to paid. Returns { shortUrl, linkId, amount }.
+export async function createCollectionLink(orderDbId) {
+  const { data, error } = await must().functions.invoke("razorpay-collect-link", {
+    body: { orderId: orderDbId },
+  });
+  if (error || data?.error) throw await edgeError(error, data, "Couldn't create payment link.");
+  return data;
 }
 
 // Read the live payment/status of one of the customer's own orders. Used to

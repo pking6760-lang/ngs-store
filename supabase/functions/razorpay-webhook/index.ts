@@ -54,24 +54,35 @@ Deno.serve(async (req) => {
 
     const event = JSON.parse(raw);
     const type = event?.event ?? "";
-    // We care about a captured payment / a paid order.
+    const paymentId = event?.payload?.payment?.entity?.id ?? null;
+
+    // Two ways an order gets paid:
+    //  • Online checkout  → payment.captured / order.paid  (match by razorpay_order_id)
+    //  • Doorstep link    → payment_link.paid              (match by notes.order_id)
     const rzpOrderId =
       event?.payload?.payment?.entity?.order_id ??
       event?.payload?.order?.entity?.id ??
       null;
-    const paymentId = event?.payload?.payment?.entity?.id ?? null;
+    const linkOrderId = event?.payload?.payment_link?.entity?.notes?.order_id ?? null;
 
-    if (!rzpOrderId || !(type === "payment.captured" || type === "order.paid")) {
+    let order: Record<string, unknown> | null = null;
+    if (type === "payment_link.paid" && linkOrderId) {
+      const oRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/orders?id=eq.${linkOrderId}&select=*`,
+        { headers: sbHeaders },
+      );
+      const rows = await oRes.json();
+      order = Array.isArray(rows) ? rows[0] : null;
+    } else if ((type === "payment.captured" || type === "order.paid") && rzpOrderId) {
+      const oRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/orders?razorpay_order_id=eq.${rzpOrderId}&select=*`,
+        { headers: sbHeaders },
+      );
+      const rows = await oRes.json();
+      order = Array.isArray(rows) ? rows[0] : null;
+    } else {
       return new Response("ignored", { status: 200 });
     }
-
-    // Find our order by the Razorpay order id.
-    const oRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/orders?razorpay_order_id=eq.${rzpOrderId}&select=*`,
-      { headers: sbHeaders },
-    );
-    const rows = await oRes.json();
-    const order = Array.isArray(rows) ? rows[0] : null;
     if (!order) return new Response("no matching order", { status: 200 });
 
     const wasPaid = order.payment_status === "paid";

@@ -3,12 +3,29 @@ import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { updateOrderStatus } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
+import { qrDataUri } from "../lib/payments.js";
+import { createCollectionLink } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
 
 export default function OrdersAdmin() {
   const orders = useOrders();
   const [filter, setFilter] = useState("all");
+  // Doorstep collection: which order's QR is open, and its gateway link state.
+  const [qrFor, setQrFor] = useState(null);
+  const [linkState, setLinkState] = useState({ loading: false, url: "", error: "" });
+
+  async function openCollect(order) {
+    if (qrFor === order.id) { setQrFor(null); return; }
+    setQrFor(order.id);
+    setLinkState({ loading: true, url: "", error: "" });
+    try {
+      const { shortUrl } = await createCollectionLink(order.dbId);
+      setLinkState({ loading: false, url: shortUrl, error: "" });
+    } catch (e) {
+      setLinkState({ loading: false, url: "", error: e.message || "Couldn't create link." });
+    }
+  }
 
   const shown =
     filter === "all" ? orders : orders.filter((o) => o.status === filter);
@@ -55,14 +72,40 @@ export default function OrdersAdmin() {
 
               {o.address && <div className="order-address">🏠 {o.address}</div>}
 
+              {/* Doorstep collection: for any order NOT already paid, the rider
+                  can show a gateway-verified QR. When the customer scans & pays,
+                  the webhook confirms it and this order flips to PAID live. */}
+              {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
+                <div className="order-collect">
+                  <button className="collect-btn" onClick={() => openCollect(o)}>
+                    {qrFor === o.id ? "▲ Hide payment QR" : `📲 Collect ₹${o.total} online (QR)`}
+                  </button>
+                  {qrFor === o.id && (
+                    <div className="collect-qr">
+                      {linkState.loading && <p>Creating secure payment QR…</p>}
+                      {linkState.error && <p className="collect-err">⚠️ {linkState.error}</p>}
+                      {linkState.url && (
+                        <>
+                          <img src={qrDataUri(linkState.url)} alt="Payment QR code" />
+                          <p>
+                            Ask the customer to scan with their <strong>phone camera</strong> and
+                            pay <strong>₹{o.total}</strong>
+                            <br />
+                            <span>UPI, cards &amp; wallets · verified by Razorpay</span>
+                          </p>
+                          <a className="collect-link" href={linkState.url} target="_blank" rel="noopener noreferrer">
+                            Or open payment page →
+                          </a>
+                          <p className="collect-wait">⏳ Waiting for payment… this will turn green automatically once paid.</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="order-meta">
-                <span className="order-pay-tag">
-                  {o.payment === "upi"
-                    ? "🟣 UPI"
-                    : o.payment === "cod"
-                    ? "💵 Cash on delivery"
-                    : "💳 —"}
-                </span>
+                <PaymentTag order={o} />
                 {o.location ? (
                   <a
                     className="order-track-link"
@@ -141,6 +184,27 @@ export default function OrdersAdmin() {
       )}
     </>
   );
+}
+
+// A clear, at-a-glance payment badge: is this order already PAID, or does the
+// rider need to COLLECT cash on delivery?
+function PaymentTag({ order }) {
+  const method = order.paymentMethod || order.payment;
+  const online = method === "razorpay" || method === "online" || method === "card";
+  if (online) {
+    return order.paymentStatus === "paid" ? (
+      <span className="order-pay-tag paid">✅ PAID online · ₹{order.total}</span>
+    ) : (
+      <span className="order-pay-tag unpaid">⏳ Online — payment pending</span>
+    );
+  }
+  if (method === "cod") {
+    return <span className="order-pay-tag cod">💵 COLLECT ₹{order.total} cash on delivery</span>;
+  }
+  if (method === "upi") {
+    return <span className="order-pay-tag">🟣 UPI · ₹{order.total}</span>;
+  }
+  return <span className="order-pay-tag">💳 ₹{order.total}</span>;
 }
 
 function Chip({ active, onClick, children }) {
