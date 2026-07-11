@@ -285,8 +285,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         payment: "razorpay",
         address: address.trim(),
       });
-      const { shortUrl } = await api.createCollectionLink(order.dbId);
-      setPayLink({ url: shortUrl, order, count: lines.reduce((a, l) => a + l.qty, 0) });
+      // Verified native UPI QR (scan with any app → pays directly → auto-confirms)
+      // plus a payment link for a "pay on this phone" button. Use whichever comes
+      // back; both are verified server-side by the webhook.
+      const [qrRes, linkRes] = await Promise.allSettled([
+        api.createOrderQr(order.dbId),
+        api.createCollectionLink(order.dbId),
+      ]);
+      const imageUrl = qrRes.status === "fulfilled" ? qrRes.value.imageUrl : "";
+      const url = linkRes.status === "fulfilled" ? linkRes.value.shortUrl : "";
+      if (!imageUrl && !url) throw new Error("Couldn't start the payment. Please try again.");
+      setPayLink({ imageUrl, url, order, count: lines.reduce((a, l) => a + l.qty, 0) });
       setStep("payqr");
     } catch (e) {
       setPlaceError(e.message || "Couldn't start the payment. Please try again.");
@@ -449,15 +458,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               Amount to pay <strong>₹{payLink.order.total}</strong>
               <span className="pay-fixed">🔒 Secured by Razorpay</span>
             </div>
-            <div className="upi-qr-wrap">
-              <img className="upi-qr" src={qrDataUri(payLink.url)} alt="Payment QR code" />
-              <p className="upi-hint">
-                Scan with any UPI app (GPay, PhonePe, Paytm, BHIM)
-              </p>
-            </div>
-            <a className="upi-app-btn" href={payLink.url} target="_blank" rel="noopener noreferrer">
-              📱 Pay ₹{payLink.order.total} now →
-            </a>
+            {payLink.imageUrl && (
+              <div className="upi-qr-wrap">
+                <img className="upi-qr" src={payLink.imageUrl} alt="UPI payment QR code" />
+                <p className="upi-hint">
+                  Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly
+                </p>
+              </div>
+            )}
+            {payLink.url && (
+              <a className="upi-app-btn" href={payLink.url} target="_blank" rel="noopener noreferrer">
+                📱 Or pay on this phone →
+              </a>
+            )}
             <p className="upi-note">
               ⏳ Waiting for payment… this screen updates automatically the moment
               your payment goes through. You don't need to do anything after paying.
