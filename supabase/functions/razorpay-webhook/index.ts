@@ -64,9 +64,21 @@ Deno.serve(async (req) => {
       event?.payload?.order?.entity?.id ??
       null;
     const linkOrderId = event?.payload?.payment_link?.entity?.notes?.order_id ?? null;
+    // A doorstep UPI QR being paid.
+    const qrOrderId =
+      event?.payload?.qr_code?.entity?.notes?.order_id ??
+      event?.payload?.payment?.entity?.notes?.order_id ??
+      null;
 
     let order: Record<string, unknown> | null = null;
-    if (type === "payment_link.paid" && linkOrderId) {
+    if (type === "qr_code.credited" && qrOrderId) {
+      const oRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/orders?id=eq.${qrOrderId}&select=*`,
+        { headers: sbHeaders },
+      );
+      const rows = await oRes.json();
+      order = Array.isArray(rows) ? rows[0] : null;
+    } else if (type === "payment_link.paid" && linkOrderId) {
       const oRes = await fetch(
         `${SUPABASE_URL}/rest/v1/orders?id=eq.${linkOrderId}&select=*`,
         { headers: sbHeaders },

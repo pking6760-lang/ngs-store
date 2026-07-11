@@ -3,14 +3,28 @@ import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { updateOrderStatus } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
+import { createOrderQr } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
 
 export default function OrdersAdmin() {
   const orders = useOrders();
   const [filter, setFilter] = useState("all");
-  const [qrFor, setQrFor] = useState(null); // order id whose UPI QR is open
+  // Doorstep collection: which order's QR is open + its (verified) QR image.
+  const [qrFor, setQrFor] = useState(null);
+  const [qrState, setQrState] = useState({ loading: false, url: "", error: "" });
+
+  async function openQr(order) {
+    if (qrFor === order.id) { setQrFor(null); return; }
+    setQrFor(order.id);
+    setQrState({ loading: true, url: "", error: "" });
+    try {
+      const { imageUrl } = await createOrderQr(order.dbId);
+      setQrState({ loading: false, url: imageUrl, error: "" });
+    } catch (e) {
+      setQrState({ loading: false, url: "", error: e.message || "Couldn't create QR." });
+    }
+  }
 
   const shown =
     filter === "all" ? orders : orders.filter((o) => o.status === filter);
@@ -58,30 +72,29 @@ export default function OrdersAdmin() {
               {o.address && <div className="order-address">🏠 {o.address}</div>}
 
               {/* Doorstep collection: for any order NOT already paid, show a
-                  plain UPI QR (amount pre-filled) that ANY UPI app scans and
-                  pays straight to the shop. Generated on the phone — no network. */}
+                  Razorpay UPI QR. The customer scans it with ANY UPI app and pays
+                  directly; the webhook then flips this order to PAID (green) live. */}
               {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
                 <div className="order-collect">
-                  <button
-                    className="collect-btn"
-                    onClick={() => setQrFor(qrFor === o.id ? null : o.id)}
-                  >
+                  <button className="collect-btn" onClick={() => openQr(o)}>
                     {qrFor === o.id ? "▲ Hide payment QR" : `📲 Show UPI QR · collect ₹${o.total}`}
                   </button>
                   {qrFor === o.id && (
                     <div className="collect-qr">
-                      <img
-                        src={qrDataUri(buildUpiLink({ amount: o.total, note: `NGS ${o.id}` }))}
-                        alt="UPI payment QR code"
-                      />
-                      <p>
-                        Scan with <strong>any UPI app</strong> (GPay, PhonePe, Paytm) to pay{" "}
-                        <strong>₹{o.total}</strong>
-                        <br />
-                        <span>Pays directly to the shop</span>
-                        <br />
-                        <code>{SHOP_UPI_ID}</code>
-                      </p>
+                      {qrState.loading && <p>Creating UPI QR…</p>}
+                      {qrState.error && <p className="collect-err">⚠️ {qrState.error}</p>}
+                      {qrState.url && (
+                        <>
+                          <img src={qrState.url} alt="UPI payment QR code" />
+                          <p>
+                            Scan with <strong>any UPI app</strong> (GPay, PhonePe, Paytm) to pay{" "}
+                            <strong>₹{o.total}</strong>
+                            <br />
+                            <span>Pays directly · confirms automatically</span>
+                          </p>
+                          <p className="collect-wait">⏳ Waiting for payment… turns green here once paid.</p>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

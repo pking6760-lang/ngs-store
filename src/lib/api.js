@@ -243,11 +243,11 @@ export async function createRazorpayOrder(orderDbId) {
   return invokeFn("razorpay-create-order", { orderId: orderDbId });
 }
 
-// Admin/delivery: create a gateway payment link for a not-yet-paid order, so
-// the customer can pay online at the door (QR). When they pay, the webhook
-// confirms it and the order flips to paid. Returns { shortUrl, linkId, amount }.
-export async function createCollectionLink(orderDbId) {
-  return invokeFn("razorpay-collect-link", { orderId: orderDbId });
+// Admin/delivery: create a Razorpay UPI QR for a not-yet-paid order. Any UPI app
+// scans it and pays directly; the qr_code.credited webhook then confirms the
+// order (turns it green live). Returns { imageUrl, qrId, amount }.
+export async function createOrderQr(orderDbId) {
+  return invokeFn("razorpay-create-qr", { orderId: orderDbId });
 }
 
 // Read the live payment/status of one of the customer's own orders. Used to
