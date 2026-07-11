@@ -8,7 +8,19 @@ import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
 import { createOrderQr } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
+import Receipt from "./Receipt.jsx";
 import { StatusPill } from "./Dashboard.jsx";
+import {
+  isPrinterSupported, listPairedPrinters, savedPrinter, savePrinter, printReceiptBluetooth,
+} from "../lib/printer.js";
+
+// Shop details printed on the receipt header.
+const SHOP = {
+  brand: "NGS",
+  name: "Nisha General Store",
+  address: "Sultanpur, New Delhi 110030",
+  phone: "",
+};
 
 export default function OrdersAdmin() {
   const orders = useOrders();
@@ -49,6 +61,51 @@ export default function OrdersAdmin() {
   function closeDetail() {
     setSelectedId(null);
     setQrFor(null);
+  }
+
+  // ── Thermal printing ──────────────────────────────────────────────────────
+  const [printMsg, setPrintMsg] = useState("");
+  const [picker, setPicker] = useState(null); // { order, devices } when choosing a printer
+
+  async function printReceipt(order) {
+    // On the web admin (or any non-app), use the browser print dialog.
+    if (!isPrinterSupported()) { window.print(); return; }
+    const saved = savedPrinter();
+    if (!saved) return openPicker(order);
+    await sendToPrinter(order, saved.address);
+  }
+
+  async function openPicker(order) {
+    setPrintMsg("Looking for paired printers…");
+    try {
+      const devices = await listPairedPrinters();
+      setPrintMsg("");
+      if (!devices || devices.length === 0) {
+        setPrintMsg("No paired device. Turn on Bluetooth and pair your printer in phone Settings first.");
+        return;
+      }
+      setPicker({ order, devices });
+    } catch {
+      setPrintMsg("Turn on Bluetooth and allow the permission, then try again.");
+    }
+  }
+
+  async function choosePrinter(dev) {
+    savePrinter(dev);
+    const order = picker.order;
+    setPicker(null);
+    await sendToPrinter(order, dev.address);
+  }
+
+  async function sendToPrinter(order, address) {
+    setPrintMsg("Printing…");
+    try {
+      await printReceiptBluetooth(order, SHOP, address);
+      setPrintMsg("✅ Sent to printer");
+      setTimeout(() => setPrintMsg(""), 2500);
+    } catch (e) {
+      setPrintMsg("⚠️ " + (e.message || "Print failed. Check the printer is on and paired."));
+    }
   }
 
   return (
@@ -98,13 +155,34 @@ export default function OrdersAdmin() {
           qrState={qrState}
           openQr={openQr}
           changeStatus={changeStatus}
+          onPrint={printReceipt}
+          onChangePrinter={() => openPicker(selected)}
+          printMsg={printMsg}
         />
+      )}
+
+      {picker && (
+        <div className="od-overlay" onClick={() => setPicker(null)}>
+          <div className="printer-pick" onClick={(e) => e.stopPropagation()}>
+            <h3>Choose your printer</h3>
+            <p className="od-muted">Paired Bluetooth devices:</p>
+            <div className="printer-list">
+              {picker.devices.map((d) => (
+                <button key={d.address} className="printer-item" onClick={() => choosePrinter(d)}>
+                  🖨️ {d.name || d.address}
+                  <span>{d.address}</span>
+                </button>
+              ))}
+            </div>
+            <button className="printer-cancel" onClick={() => setPicker(null)}>Cancel</button>
+          </div>
+        </div>
       )}
     </>
   );
 }
 
-function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus }) {
+function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
   const curIdx = ORDER_STATUSES.indexOf(o.status);
   const bill = [
     ["Items total", o.itemTotal],
@@ -177,6 +255,14 @@ function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus }
               ))}
               <div className="od-bill-row total"><span>Total</span><span>₹{o.total}</span></div>
             </div>
+            <button className="print-btn" onClick={() => onPrint(o)}>
+              🧾 Print receipt (thermal printer)
+            </button>
+            <div className="print-sub">
+              <button className="print-change" onClick={onChangePrinter}>Change printer</button>
+              {savedPrinter() && <span className="print-saved">🖨️ {savedPrinter().name}</span>}
+            </div>
+            {printMsg && <p className="print-msg">{printMsg}</p>}
           </section>
 
           {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
@@ -230,6 +316,8 @@ function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus }
           </section>
         </div>
       </div>
+      {/* Hidden on screen; the print stylesheet reveals only this at 58mm. */}
+      <Receipt order={o} shop={SHOP} />
     </div>
   );
 }
