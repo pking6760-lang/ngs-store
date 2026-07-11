@@ -20,7 +20,7 @@ const BACKEND = api.isBackendConfigured;
 
 // Generic backend hook: fetch once, then re-fetch on any realtime change to the
 // given tables. `fetcher` returns app-shaped data; `initial` shows instantly.
-function useBackend(fetcher, tables, initial) {
+function useBackend(fetcher, tables, initial, pollMs = 30000) {
   const [data, setData] = useState(initial);
   useEffect(() => {
     let alive = true;
@@ -33,7 +33,7 @@ function useBackend(fetcher, tables, initial) {
     const onVisible = () => { if (document.visibilityState === "visible") load(); };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", load);
-    const poll = setInterval(load, 30000);
+    const poll = setInterval(load, pollMs);
     return () => {
       alive = false;
       unsubs.forEach((u) => u && u());
@@ -60,7 +60,9 @@ export function useCategories() {
 }
 
 export function useOrders() {
-  if (BACKEND) return useBackend(api.fetchAllOrders, ["orders", "order_items"], []);
+  // Admin watches for incoming orders — poll fast (5s) as a fallback so a new
+  // order shows quickly even before Realtime pushes it.
+  if (BACKEND) return useBackend(api.fetchAllOrders, ["orders", "order_items"], [], 5000);
   const [orders, setOrders] = useState(getOrders);
   useEffect(() => subscribe(() => setOrders(getOrders())), []);
   return orders;
