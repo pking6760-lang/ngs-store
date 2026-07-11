@@ -7,6 +7,7 @@ import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
+import MapPicker from "./MapPicker.jsx";
 import {
   pointsForSpend,
   redeemableRupees,
@@ -46,6 +47,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [showCoupons, setShowCoupons] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const searchTimer = useRef();
 
   const lines = Object.entries(items)
@@ -450,13 +452,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   placeholder="Phone number (for delivery calls)"
                 />
               </div>
-              <button className="location-btn" onClick={useMyLocation} disabled={locating}>
-                {locating ? "📍 Getting location…" : "📍 Use my current location"}
-              </button>
+              <div className="location-actions">
+                <button className="location-btn" onClick={() => setShowMap(true)}>
+                  🗺️ Pin exact location on map
+                </button>
+                <button className="location-btn subtle" onClick={useMyLocation} disabled={locating}>
+                  {locating ? "📍 Getting location…" : "📍 Use current GPS"}
+                </button>
+              </div>
               {needsLocation && (
                 <div className="area-hint">
-                  📍 Optional — share your location for a faster, accurate
-                  delivery. You can still order without it.
+                  📍 Tip: pin your exact spot on the map so delivery reaches the
+                  right door. You can still order without it.
                 </div>
               )}
               {location && (
@@ -799,6 +806,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           </>
         )}
       </aside>
+      <MapPicker
+        open={showMap}
+        initial={location || getShopLocations(settings)[0] || null}
+        onClose={() => setShowMap(false)}
+        onConfirm={(lat, lng, addr) => {
+          setLocation({ lat, lng, accuracy: null });
+          if (addr) setAddress(addr);
+          setSuggestions([]);
+          setLocError("");
+          setShowMap(false);
+        }}
+      />
     </>
   );
 }

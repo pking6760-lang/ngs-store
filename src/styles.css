@@ -2487,3 +2487,53 @@ body {
   color: var(--muted);
   margin: 6px 2px 0;
 }
+
+/* Full-screen map location picker */
+.mappick-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: stretch; justify-content: center;
+}
+.mappick {
+  background: #fff;
+  width: 100%; max-width: 480px;
+  display: flex; flex-direction: column;
+}
+.mappick-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px; border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.mappick-head h3 { font-size: 16px; margin: 0; }
+.mappick-map-wrap { position: relative; flex: 1; min-height: 0; }
+.mappick-map { position: absolute; inset: 0; }
+/* Fixed centre pin — tip points at the exact map centre */
+.mappick-pin {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -100%);
+  font-size: 38px; line-height: 1;
+  pointer-events: none; z-index: 500;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35));
+}
+.mappick-gps {
+  position: absolute; right: 14px; bottom: 14px; z-index: 500;
+  background: #fff; border: 1px solid var(--line); border-radius: 22px;
+  padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--green);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+}
+.mappick-foot {
+  flex: none; padding: 14px; border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 16px rgba(0,0,0,0.06);
+}
+.mappick-addr {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 13px; margin-bottom: 10px;
+}
+.mappick-addr strong { color: var(--green); font-size: 12px; }
+.mappick-addr span { color: var(--ink); }
+.mappick-foot .checkout-btn { width: 100%; margin: 0; }
+
+/* Location action buttons (map pin + GPS) */
+.location-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.location-actions .location-btn { flex: 1; margin-top: 0; min-width: 140px; }
+.location-btn.subtle { background: #fff; }
