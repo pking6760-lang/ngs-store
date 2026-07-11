@@ -59,3 +59,51 @@ export async function authenticateBiometric() {
     return false;
   }
 }
+
+// ── Secure credential storage (so fingerprint can actually sign in) ──────────
+// The admin's email + password are stored encrypted on the device and only
+// released behind the fingerprint, so tapping "Login with fingerprint" can
+// retrieve them and open a real Supabase session.
+const CRED_SERVER = "ngs-admin";
+
+export async function storeCredentials(username, password) {
+  const { plugin } = await loadPlugin();
+  if (!plugin) return false;
+  try {
+    await plugin.setCredentials({ username, password, server: CRED_SERVER });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function hasStoredCredentials() {
+  const { plugin } = await loadPlugin();
+  if (!plugin) return false;
+  try {
+    const c = await plugin.getCredentials({ server: CRED_SERVER });
+    return !!(c && c.password);
+  } catch {
+    return false;
+  }
+}
+
+export async function getStoredCredentials() {
+  const { plugin } = await loadPlugin();
+  if (!plugin) return null;
+  try {
+    return await plugin.getCredentials({ server: CRED_SERVER });
+  } catch {
+    return null;
+  }
+}
+
+export async function clearStoredCredentials() {
+  const { plugin } = await loadPlugin();
+  if (!plugin) return;
+  try {
+    await plugin.deleteCredentials({ server: CRED_SERVER });
+  } catch {
+    /* ignore */
+  }
+}

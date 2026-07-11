@@ -12,7 +12,10 @@ import { updateSettings } from "../lib/actions.js";
 import * as api from "../lib/api.js";
 import { unlockAudio } from "../lib/sound.js";
 import { initAdminPush } from "../lib/push.js";
-import { isBiometricAvailable, authenticateBiometric } from "../lib/biometric.js";
+import {
+  isBiometricAvailable, authenticateBiometric,
+  storeCredentials, hasStoredCredentials, getStoredCredentials,
+} from "../lib/biometric.js";
 
 const BACKEND = api.isBackendConfigured;
 // Demo-only logins (used when no backend is configured). With a backend, the
@@ -204,12 +207,15 @@ function Login({ onSignIn }) {
   const [staffCode, setStaffCode] = useState("");
   const [error, setError] = useState("");
   const [bioBusy, setBioBusy] = useState(false);
-  // Show the fingerprint button only once the phone reports biometrics ready.
+  // Biometrics available on this phone, and whether we have saved admin
+  // credentials to unlock with them.
   const [bioOk, setBioOk] = useState(false);
+  const [bioSaved, setBioSaved] = useState(false);
 
   useEffect(() => {
     let active = true;
     isBiometricAvailable().then((ok) => active && setBioOk(ok));
+    hasStoredCredentials().then((ok) => active && setBioSaved(ok));
     return () => {
       active = false;
     };
@@ -221,8 +227,23 @@ function Login({ onSignIn }) {
     setBioBusy(true);
     try {
       const ok = await authenticateBiometric();
-      if (ok) onSignIn("admin", "Store Manager");
-      else setError("Fingerprint not recognised. Try again or use your password.");
+      if (!ok) {
+        setError("Fingerprint not recognised. Try again or use your password.");
+        return;
+      }
+      if (!BACKEND) { onSignIn("admin", "Store Manager"); return; }
+      // Backend: retrieve the saved credentials and open a real session.
+      const creds = await getStoredCredentials();
+      if (!creds?.username) {
+        setError("Sign in with your password once to enable fingerprint.");
+        return;
+      }
+      await api.signInWithPassword(creds.username, creds.password);
+      const profile = await api.getMyProfile();
+      if (profile?.role === "admin") onSignIn("admin", profile.name || "Store Manager");
+      else { await api.signOut(); setError("This account is not an admin."); }
+    } catch {
+      setError("Couldn't sign in with fingerprint. Use your password.");
     } finally {
       setBioBusy(false);
     }
@@ -236,8 +257,11 @@ function Login({ onSignIn }) {
       try {
         await api.signInWithPassword(email, pw);
         const profile = await api.getMyProfile();
-        if (profile?.role === "admin") onSignIn("admin", profile.name || "Store Manager");
-        else { await api.signOut(); setError("This account is not an admin."); }
+        if (profile?.role === "admin") {
+          // Save the credentials behind the fingerprint for next time.
+          if (bioOk) storeCredentials(email.trim(), pw).catch(() => {});
+          onSignIn("admin", profile.name || "Store Manager");
+        } else { await api.signOut(); setError("This account is not an admin."); }
       } catch {
         setError("Wrong email or password.");
       } finally { setBusy(false); }
@@ -315,7 +339,9 @@ function Login({ onSignIn }) {
             <button className="login-btn" type="submit" disabled={busy}>
               {busy ? "Signing in…" : "Sign in as admin"}
             </button>
-            {!BACKEND && bioOk && (
+            {/* Fingerprint shows in the demo, or on the backend once the admin
+                has signed in with a password at least once (creds saved). */}
+            {bioOk && (!BACKEND || bioSaved) && (
               <>
                 <div className="login-or">or</div>
                 <button
