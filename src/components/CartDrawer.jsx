@@ -5,7 +5,7 @@ import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hook
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay } from "../lib/payments.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import {
@@ -50,6 +50,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [payLink, setPayLink] = useState(null); // { url, order, count } for online QR pay
   const searchTimer = useRef();
 
   const lines = Object.entries(items)
@@ -148,6 +149,31 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     catch { /* ignore */ }
   }, [address, phone, location]);
 
+  // While the online-payment QR is showing, poll the order until the webhook
+  // marks it paid, then jump to the success screen.
+  useEffect(() => {
+    if (step !== "payqr" || !payLink?.order) return;
+    let alive = true;
+    const iv = setInterval(async () => {
+      try {
+        const st = await api.fetchOrderState(payLink.order.dbId);
+        if (alive && st?.payment_status === "paid") {
+          clearInterval(iv);
+          setPlaced({
+            total: payLink.order.total, count: payLink.count, eta: 12,
+            payment: "razorpay", pointsEarned: payLink.order.pointsEarned, code: payLink.order.id,
+          });
+          clear();
+          setUsePoints(false);
+          setAppliedCode(null);
+          setPayLink(null);
+          setStep("done");
+        }
+      } catch { /* keep polling */ }
+    }, 3000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [step, payLink]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function goToCheckout() {
     if (!settings.storeOpen) return;
     if (!isLoggedIn) {
@@ -242,107 +268,30 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     else placeOrder();
   }
 
-  // Verified online payment (Razorpay). Flow: create a HELD order on the server
-  // (real total computed there) → create a matching Razorpay order → open the
-  // Razorpay screen → on success the SERVER verifies the signature and only then
-  // confirms the order. Nothing is charged or confirmed on the phone's word.
+  // Verified online payment. Flow: create a HELD order on the server (real total
+  // computed there) → create a Razorpay payment link → show the customer a QR
+  // (scan from a computer / another phone) AND a "Pay now" button (opens the
+  // secure Razorpay page on this phone). When they pay, the webhook confirms the
+  // order server-side and we poll for it. Nothing is confirmed on the phone's
+  // word — only a real, verified payment turns the order live.
   async function startRazorpay() {
     setPlacing(true);
     setPlaceError("");
-    let order;
     try {
-      order = await api.placeOrder({
+      const order = await api.placeOrder({
         items: lines.map(({ product, qty }) => ({ id: product.id, qty })),
         coupon: appliedCode || null,
         location: location ? { ...location, distanceKm: dist } : null,
         payment: "razorpay",
         address: address.trim(),
       });
-      const rp = await api.createRazorpayOrder(order.dbId);
-      const Razorpay = await loadRazorpay();
-      const count = lines.reduce((a, l) => a + l.qty, 0);
-
-      let done = false;
-      const showSuccess = () => {
-        if (done) return;
-        done = true;
-        setPlaced({
-          total: order.total, count, eta: 12, payment: "razorpay",
-          pointsEarned: order.pointsEarned, code: order.id,
-        });
-        clear();
-        setUsePoints(false);
-        setAppliedCode(null);
-        setStep("done");
-        setPlacing(false);
-      };
-      // Fallback: if the in-page callback doesn't fire (async UPI), the webhook
-      // still confirms the order server-side — poll for it before giving up.
-      const pollPaid = async (tries = 6) => {
-        for (let i = 0; i < tries && !done; i++) {
-          await new Promise((r) => setTimeout(r, 2000));
-          try {
-            const st = await api.fetchOrderState(order.dbId);
-            if (st?.payment_status === "paid") { showSuccess(); return true; }
-          } catch { /* keep trying */ }
-        }
-        return false;
-      };
-
-      const rzp = new Razorpay({
-        key: rp.keyId,
-        order_id: rp.orderId,
-        amount: rp.amount,
-        currency: rp.currency || "INR",
-        name: "NGS Nisha General Store",
-        description: `Order ${order.id}`,
-        prefill: {
-          name: user?.name || "",
-          email: user?.email || "",
-          contact: cleanPhone || user?.phone || "",
-        },
-        theme: { color: "#0a9155" },
-        handler: async (resp) => {
-          try {
-            await api.verifyRazorpayPayment({
-              orderId: order.dbId,
-              razorpay_order_id: resp.razorpay_order_id,
-              razorpay_payment_id: resp.razorpay_payment_id,
-              razorpay_signature: resp.razorpay_signature,
-            });
-            showSuccess();
-          } catch {
-            // Verify didn't confirm from the browser — the webhook may still.
-            const ok = await pollPaid();
-            if (!ok) {
-              setPlacing(false);
-              setPlaceError(
-                "We couldn't confirm your payment yet. If money was deducted, your order " +
-                  "will appear shortly (or be refunded automatically). Please check 'My orders'."
-              );
-            }
-          }
-        },
-        modal: {
-          ondismiss: async () => {
-            // The customer closed the sheet — but an async UPI payment may have
-            // gone through. Give the webhook a moment before calling it cancelled.
-            const ok = await pollPaid(4);
-            if (!ok) {
-              setPlacing(false);
-              setPlaceError("Payment cancelled — your order was not placed. You can try again.");
-            }
-          },
-        },
-      });
-      rzp.on("payment.failed", (r) => {
-        setPlacing(false);
-        setPlaceError(r?.error?.description || "Payment failed. Please try again.");
-      });
-      rzp.open();
+      const { shortUrl } = await api.createCollectionLink(order.dbId);
+      setPayLink({ url: shortUrl, order, count: lines.reduce((a, l) => a + l.qty, 0) });
+      setStep("payqr");
     } catch (e) {
-      setPlacing(false);
       setPlaceError(e.message || "Couldn't start the payment. Please try again.");
+    } finally {
+      setPlacing(false);
     }
   }
 
@@ -430,6 +379,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   function handleClose() {
     setStep("cart");
     setPlaced(null);
+    setPayLink(null);
     setLocError("");
     onClose();
   }
@@ -445,7 +395,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           {step !== "cart" && step !== "done" && (
             <button
               className="back-btn small"
-              onClick={() => setStep(step === "pay" ? "checkout" : "cart")}
+              onClick={() => setStep(step === "pay" || step === "payqr" ? "checkout" : "cart")}
               aria-label="Back"
             >
               ←
@@ -456,6 +406,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               ? "Order placed"
               : step === "pay"
               ? "Pay with UPI"
+              : step === "payqr"
+              ? "Pay online"
               : step === "checkout"
               ? "Checkout"
               : "My Cart"}
@@ -490,6 +442,27 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             <button className="checkout-btn" onClick={handleClose}>
               Continue shopping
             </button>
+          </div>
+        ) : step === "payqr" && payLink ? (
+          <div className="pay-step">
+            <div className="pay-amount">
+              Amount to pay <strong>₹{payLink.order.total}</strong>
+              <span className="pay-fixed">🔒 Secured by Razorpay</span>
+            </div>
+            <div className="upi-qr-wrap">
+              <img className="upi-qr" src={qrDataUri(payLink.url)} alt="Payment QR code" />
+              <p className="upi-hint">
+                Scan with any UPI app (GPay, PhonePe, Paytm, BHIM)
+              </p>
+            </div>
+            <a className="upi-app-btn" href={payLink.url} target="_blank" rel="noopener noreferrer">
+              📱 Pay ₹{payLink.order.total} now →
+            </a>
+            <p className="upi-note">
+              ⏳ Waiting for payment… this screen updates automatically the moment
+              your payment goes through. You don't need to do anything after paying.
+            </p>
+            {placeError && <div className="auth-error">{placeError}</div>}
           </div>
         ) : step === "pay" ? (
           <div className="pay-step">
