@@ -262,6 +262,33 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       const Razorpay = await loadRazorpay();
       const count = lines.reduce((a, l) => a + l.qty, 0);
 
+      let done = false;
+      const showSuccess = () => {
+        if (done) return;
+        done = true;
+        setPlaced({
+          total: order.total, count, eta: 12, payment: "razorpay",
+          pointsEarned: order.pointsEarned, code: order.id,
+        });
+        clear();
+        setUsePoints(false);
+        setAppliedCode(null);
+        setStep("done");
+        setPlacing(false);
+      };
+      // Fallback: if the in-page callback doesn't fire (async UPI), the webhook
+      // still confirms the order server-side — poll for it before giving up.
+      const pollPaid = async (tries = 6) => {
+        for (let i = 0; i < tries && !done; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          try {
+            const st = await api.fetchOrderState(order.dbId);
+            if (st?.payment_status === "paid") { showSuccess(); return true; }
+          } catch { /* keep trying */ }
+        }
+        return false;
+      };
+
       const rzp = new Razorpay({
         key: rp.keyId,
         order_id: rp.orderId,
@@ -283,27 +310,28 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               razorpay_payment_id: resp.razorpay_payment_id,
               razorpay_signature: resp.razorpay_signature,
             });
-            setPlaced({
-              total: order.total, count, eta: 12, payment: "razorpay",
-              pointsEarned: order.pointsEarned, code: order.id,
-            });
-            clear();
-            setUsePoints(false);
-            setAppliedCode(null);
-            setStep("done");
-          } catch (e) {
-            setPlaceError(
-              (e.message || "Payment couldn't be verified.") +
-                " If money was deducted it will be refunded automatically."
-            );
-          } finally {
-            setPlacing(false);
+            showSuccess();
+          } catch {
+            // Verify didn't confirm from the browser — the webhook may still.
+            const ok = await pollPaid();
+            if (!ok) {
+              setPlacing(false);
+              setPlaceError(
+                "We couldn't confirm your payment yet. If money was deducted, your order " +
+                  "will appear shortly (or be refunded automatically). Please check 'My orders'."
+              );
+            }
           }
         },
         modal: {
-          ondismiss: () => {
-            setPlacing(false);
-            setPlaceError("Payment cancelled — your order was not placed. You can try again.");
+          ondismiss: async () => {
+            // The customer closed the sheet — but an async UPI payment may have
+            // gone through. Give the webhook a moment before calling it cancelled.
+            const ok = await pollPaid(4);
+            if (!ok) {
+              setPlacing(false);
+              setPlaceError("Payment cancelled — your order was not placed. You can try again.");
+            }
           },
         },
       });

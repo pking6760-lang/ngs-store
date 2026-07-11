@@ -230,6 +230,16 @@ export async function createRazorpayOrder(orderDbId) {
   return data; // { keyId, orderId, amount, currency, humanCode }
 }
 
+// Read the live payment/status of one of the customer's own orders. Used to
+// confirm success via the webhook when the in-page Razorpay callback doesn't
+// fire (common with async UPI). RLS lets a customer read only their own order.
+export async function fetchOrderState(dbId) {
+  const { data, error } = await must()
+    .from("orders").select("payment_status,status").eq("id", dbId).single();
+  if (error) throw error;
+  return data; // { payment_status, status }
+}
+
 // Hand the Razorpay result back to the server, which verifies the signature and
 // confirms the order. Returns { ok: true } only if the payment is genuine.
 export async function verifyRazorpayPayment(payload) {
