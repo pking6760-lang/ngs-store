@@ -3,29 +3,14 @@ import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { updateOrderStatus } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
-import { qrDataUri } from "../lib/payments.js";
-import { createCollectionLink } from "../lib/api.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
 
 export default function OrdersAdmin() {
   const orders = useOrders();
   const [filter, setFilter] = useState("all");
-  // Doorstep collection: which order's QR is open, and its gateway link state.
-  const [qrFor, setQrFor] = useState(null);
-  const [linkState, setLinkState] = useState({ loading: false, url: "", error: "" });
-
-  async function openCollect(order) {
-    if (qrFor === order.id) { setQrFor(null); return; }
-    setQrFor(order.id);
-    setLinkState({ loading: true, url: "", error: "" });
-    try {
-      const { shortUrl } = await createCollectionLink(order.dbId);
-      setLinkState({ loading: false, url: shortUrl, error: "" });
-    } catch (e) {
-      setLinkState({ loading: false, url: "", error: e.message || "Couldn't create link." });
-    }
-  }
+  const [qrFor, setQrFor] = useState(null); // order id whose UPI QR is open
 
   const shown =
     filter === "all" ? orders : orders.filter((o) => o.status === filter);
@@ -72,33 +57,31 @@ export default function OrdersAdmin() {
 
               {o.address && <div className="order-address">🏠 {o.address}</div>}
 
-              {/* Doorstep collection: for any order NOT already paid, the rider
-                  can show a gateway-verified QR. When the customer scans & pays,
-                  the webhook confirms it and this order flips to PAID live. */}
+              {/* Doorstep collection: for any order NOT already paid, show a
+                  plain UPI QR (amount pre-filled) that ANY UPI app scans and
+                  pays straight to the shop. Generated on the phone — no network. */}
               {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
                 <div className="order-collect">
-                  <button className="collect-btn" onClick={() => openCollect(o)}>
-                    {qrFor === o.id ? "▲ Hide payment QR" : `📲 Collect ₹${o.total} online (QR)`}
+                  <button
+                    className="collect-btn"
+                    onClick={() => setQrFor(qrFor === o.id ? null : o.id)}
+                  >
+                    {qrFor === o.id ? "▲ Hide payment QR" : `📲 Show UPI QR · collect ₹${o.total}`}
                   </button>
                   {qrFor === o.id && (
                     <div className="collect-qr">
-                      {linkState.loading && <p>Creating secure payment QR…</p>}
-                      {linkState.error && <p className="collect-err">⚠️ {linkState.error}</p>}
-                      {linkState.url && (
-                        <>
-                          <img src={qrDataUri(linkState.url)} alt="Payment QR code" />
-                          <p>
-                            Ask the customer to scan with their <strong>phone camera</strong> and
-                            pay <strong>₹{o.total}</strong>
-                            <br />
-                            <span>UPI, cards &amp; wallets · verified by Razorpay</span>
-                          </p>
-                          <a className="collect-link" href={linkState.url} target="_blank" rel="noopener noreferrer">
-                            Or open payment page →
-                          </a>
-                          <p className="collect-wait">⏳ Waiting for payment… this will turn green automatically once paid.</p>
-                        </>
-                      )}
+                      <img
+                        src={qrDataUri(buildUpiLink({ amount: o.total, note: `NGS ${o.id}` }))}
+                        alt="UPI payment QR code"
+                      />
+                      <p>
+                        Scan with <strong>any UPI app</strong> (GPay, PhonePe, Paytm) to pay{" "}
+                        <strong>₹{o.total}</strong>
+                        <br />
+                        <span>Pays directly to the shop</span>
+                        <br />
+                        <code>{SHOP_UPI_ID}</code>
+                      </p>
                     </div>
                   )}
                 </div>
