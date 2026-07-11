@@ -95,52 +95,77 @@ function fmt(iso) {
 export function buildReceiptBytes(order, shop) {
   const b = [];
   const p = (arr) => { for (const x of arr) b.push(x); };
+  const feed = (n = 1) => p([0x1b, 0x64, n]);   // blank lines
+  const rule = () => p(line("-".repeat(W)));
   const rs = (v) => "Rs " + Math.round(Number(v) || 0);
 
-  p([0x1b, 0x40]);            // initialise
-  p([0x1b, 0x61, 1]);         // center
-  p([0x1d, 0x21, 0x11]); p(line(shop.brand)); p([0x1d, 0x21, 0x00]); // big brand
-  p([0x1b, 0x45, 1]); p(line(shop.name)); p([0x1b, 0x45, 0]);        // bold shop name
+  p([0x1b, 0x40]);                 // initialise
+  p([0x1b, 0x33, 40]);             // line spacing ~40 dots (a bit airier)
+
+  // ── Header (centered) ──
+  p([0x1b, 0x61, 1]);
+  p([0x1d, 0x21, 0x11]); p([0x1b, 0x45, 1]); p(line(shop.brand)); p([0x1b, 0x45, 0]); p([0x1d, 0x21, 0x00]);
+  feed(1);
+  p([0x1b, 0x45, 1]); p(line(shop.name)); p([0x1b, 0x45, 0]);
   p(line(shop.address));
   if (shop.phone) p(line("Ph: " + shop.phone));
-  p([0x1b, 0x61, 0]);         // left
-  p(line("-".repeat(W)));
+  p([0x1b, 0x61, 0]);              // back to left
+  feed(1);
+  rule();
 
+  // ── Order info ──
   p(line(lr("Bill No", order.id)));
   p(line(lr("Date", fmt(order.createdAt))));
   if (order.customer) p(line(lr("Name", order.customer)));
   if (order.userPhone) p(line(lr("Phone", order.userPhone)));
-  p(line("-".repeat(W)));
+  rule();
 
-  p(line(padR("Item", 18) + padL("Qty", 5) + padL("Amt", 9)));
+  // ── Items ──
+  p([0x1b, 0x45, 1]); p(line(padR("Item", 17) + padL("Qty", 5) + padL("Amt", 10))); p([0x1b, 0x45, 0]);
+  feed(1);
   for (const it of order.items) {
-    p(line(padR(it.name, 18) + padL(it.qty, 5) + padL(rs(it.price * it.qty), 9)));
+    const amt = padL(rs(it.price * it.qty), 10);
+    const qty = padL(it.qty, 5);
+    // Long names wrap onto their own line so the qty/amount always line up.
+    if (String(it.name).length > 17) {
+      p(line(it.name));
+      p(line(padR("", 17) + qty + amt));
+    } else {
+      p(line(padR(it.name, 17) + qty + amt));
+    }
   }
-  p(line("-".repeat(W)));
+  rule();
 
+  // ── Bill ──
   p(line(lr("Subtotal", rs(order.itemTotal))));
   if (order.couponDiscount > 0) p(line(lr("Coupon", "-" + rs(order.couponDiscount))));
   if (order.discount > 0) p(line(lr("Points disc", "-" + rs(order.discount))));
   if (order.deliveryFee > 0) p(line(lr("Delivery", rs(order.deliveryFee))));
   if (order.handling > 0) p(line(lr("Handling", rs(order.handling))));
   if (order.surgeFee > 0) p(line(lr("Surge", rs(order.surgeFee))));
-  p(line("-".repeat(W)));
+  rule();
 
+  // ── Total ──
+  feed(1);
   p([0x1b, 0x45, 1]); p([0x1d, 0x21, 0x01]);   // bold + double height
   p(line(lr("TOTAL", rs(order.total))));
   p([0x1d, 0x21, 0x00]); p([0x1b, 0x45, 0]);
-
+  feed(1);
   const paid = order.paymentStatus === "paid"
     ? (order.razorpayPaymentId ? "PAID ONLINE" : "PAID CASH")
     : "TO PAY";
   p(line(lr("Payment", paid)));
-  p(line("-".repeat(W)));
+  feed(1);
+  rule();
 
-  p([0x1b, 0x61, 1]);         // center
+  // ── Footer ──
+  feed(1);
+  p([0x1b, 0x61, 1]);
   p(line("Thank you! Visit again"));
   p(line("- " + shop.brand + " -"));
-  p([0x1b, 0x64, 4]);         // feed 4 lines
-  p([0x1d, 0x56, 0x00]);      // cut (ignored by printers without a cutter)
+  p([0x1b, 0x61, 0]);
+  p([0x1b, 0x64, 5]);              // feed to tear off
+  p([0x1d, 0x56, 0x00]);           // cut (ignored if no cutter)
 
   return new Uint8Array(b);
 }
