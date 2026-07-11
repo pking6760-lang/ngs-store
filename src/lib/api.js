@@ -250,6 +250,13 @@ export async function createOrderQr(orderDbId) {
   return invokeFn("razorpay-create-qr", { orderId: orderDbId });
 }
 
+// Create a Razorpay payment link for a not-yet-paid order — used for the
+// "pay on this phone" button on the customer checkout (opens the secure Razorpay
+// page). Verified server-side by the payment_link.paid webhook.
+export async function createCollectionLink(orderDbId) {
+  return invokeFn("razorpay-collect-link", { orderId: orderDbId });
+}
+
 // Read the live payment/status of one of the customer's own orders. Used to
 // confirm success via the webhook when the in-page Razorpay callback doesn't
 // fire (common with async UPI). RLS lets a customer read only their own order.
