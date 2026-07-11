@@ -97,6 +97,33 @@ export async function reverseGeocode(lat, lng) {
   return clean.join(", ") || data.display_name || "";
 }
 
+// Address autocomplete: as the customer types, return matching places (with
+// coordinates) so they can pick their location on the "map" without granting
+// GPS permission. Free, no API key (OpenStreetMap via Photon). `bias` is an
+// optional {lat,lng} (e.g. the shop) so nearby results rank first.
+export async function searchAddress(query, bias) {
+  const q = (query || "").trim();
+  if (q.length < 3) return [];
+  let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=en`;
+  if (bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng)) {
+    url += `&lat=${bias.lat}&lon=${bias.lng}`;
+  }
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.features || [])
+    .map((f) => {
+      const p = f.properties || {};
+      const [lng, lat] = f.geometry.coordinates;
+      const label = [p.name, p.street, p.district, p.city || p.county, p.state, p.postcode]
+        .filter(Boolean)
+        .filter((v, i, arr) => v !== arr[i - 1])
+        .join(", ");
+      return { label, lat, lng };
+    })
+    .filter((s) => s.label);
+}
+
 // Straight-line distance between two {lat, lng} points, in kilometres.
 export function distanceKm(a, b) {
   if (!a || !b) return null;

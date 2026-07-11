@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
-import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode } from "../lib/location.js";
+import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import {
@@ -44,6 +44,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [appliedCode, setAppliedCode] = useState(null);
   const [couponError, setCouponError] = useState("");
   const [showCoupons, setShowCoupons] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef();
 
   const lines = Object.entries(items)
     .map(([id, qty]) => {
@@ -148,6 +151,30 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       return;
     }
     setStep("checkout");
+  }
+
+  // As the customer types their address, look up matching places (debounced).
+  function onAddressChange(value) {
+    setAddress(value);
+    clearTimeout(searchTimer.current);
+    if (value.trim().length < 3) { setSuggestions([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const shop = getShopLocations(settings)[0];
+        const res = await searchAddress(value, shop ? { lat: shop.lat, lng: shop.lng } : null);
+        setSuggestions(res);
+      } catch { setSuggestions([]); }
+      finally { setSearching(false); }
+    }, 350);
+  }
+
+  // Customer picks a place → fill the address and capture its coordinates.
+  function pickSuggestion(s) {
+    setAddress(s.label);
+    setLocation({ lat: s.lat, lng: s.lng, accuracy: null });
+    setSuggestions([]);
+    setLocError("");
   }
 
   async function useMyLocation() {
@@ -383,13 +410,36 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           <div className="checkout-step">
             <div className="checkout-section">
               <h4>Delivery address</h4>
-              <textarea
-                className="checkout-address"
-                rows={3}
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="House / flat no, street, area, city, PIN"
-              />
+              <div className="address-autocomplete">
+                <textarea
+                  className="checkout-address"
+                  rows={3}
+                  value={address}
+                  onChange={(e) => onAddressChange(e.target.value)}
+                  placeholder="Start typing your area / street, then pick it below"
+                />
+                {(searching || suggestions.length > 0) && (
+                  <div className="address-suggest">
+                    {searching && suggestions.length === 0 && (
+                      <div className="address-suggest-loading">Searching the map…</div>
+                    )}
+                    {suggestions.map((s, i) => (
+                      <button
+                        type="button"
+                        className="address-suggest-item"
+                        key={i}
+                        onClick={() => pickSuggestion(s)}
+                      >
+                        📍 {s.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="address-hint">
+                Tip: pick your area from the list so we get your exact location,
+                then add your house / flat number.
+              </p>
               <div className="checkout-phone">
                 <span className="checkout-phone-cc">🇮🇳 +91</span>
                 <input
