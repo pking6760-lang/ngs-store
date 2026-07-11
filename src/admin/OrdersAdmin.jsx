@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
-import { updateOrderStatus, markCashReceived } from "../lib/actions.js";
+import {
+  updateOrderStatus, markCashReceived, acceptOrder, rejectOrder,
+} from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID, cleanUpiQrFromImage } from "../lib/payments.js";
+import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
 import { createOrderQr } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
@@ -11,31 +13,32 @@ import { StatusPill } from "./Dashboard.jsx";
 export default function OrdersAdmin() {
   const orders = useOrders();
   const [filter, setFilter] = useState("all");
-  // Doorstep collection: which order's QR is open + its QR image + whether it's
-  // the gateway QR (auto-confirms) or the plain UPI fallback (confirm manually).
+  const [selectedId, setSelectedId] = useState(null);
+  // Doorstep QR state (for the detail view).
   const [qrFor, setQrFor] = useState(null);
   const [qrState, setQrState] = useState({ loading: false, url: "", verified: false });
+
+  // Keep the open detail in sync with live order updates (payment turning green,
+  // status changes) by looking the order up fresh each render.
+  const selected = selectedId ? orders.find((o) => o.id === selectedId) : null;
+
+  const shown = filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
   async function openQr(order) {
     if (qrFor === order.id) { setQrFor(null); return; }
     setQrFor(order.id);
     setQrState({ loading: true, url: "", verified: false });
     try {
-      // Gateway QR (auto-verifies). Redraw it as a plain, clean QR (no branding).
       const { imageUrl, imageDataUrl } = await createOrderQr(order.dbId);
       const cleanQr = await cleanUpiQrFromImage(imageDataUrl);
       setQrState({ loading: false, url: cleanQr || imageDataUrl || imageUrl, verified: true });
     } catch {
-      // Fallback: a plain UPI QR straight to the shop. Works everywhere; the
-      // rider confirms by tapping Delivered after the money lands.
       const upi = qrDataUri(buildUpiLink({ amount: order.total, note: `NGS ${order.id}` }));
       setQrState({ loading: false, url: upi, verified: false });
     }
   }
 
-  // Advancing an order's status. When it's marked Delivered and it wasn't paid
-  // online, the money must have been cash — so mark it paid-by-cash automatically
-  // (no extra tap for the rider).
+  // Marking Delivered on an unpaid order means the cash was taken → record it.
   async function changeStatus(order, status) {
     await updateOrderStatus(order, status);
     if (status === "Delivered" && order.paymentStatus !== "paid") {
@@ -43,20 +46,18 @@ export default function OrdersAdmin() {
     }
   }
 
-  const shown =
-    filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  function closeDetail() {
+    setSelectedId(null);
+    setQrFor(null);
+  }
 
   return (
     <>
       <div className="toolbar">
         <div className="filter-chips">
-          <Chip active={filter === "all"} onClick={() => setFilter("all")}>
-            All
-          </Chip>
+          <Chip active={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
           {ORDER_STATUSES.map((s) => (
-            <Chip key={s} active={filter === s} onClick={() => setFilter(s)}>
-              {s}
-            </Chip>
+            <Chip key={s} active={filter === s} onClick={() => setFilter(s)}>{s}</Chip>
           ))}
         </div>
       </div>
@@ -66,145 +67,174 @@ export default function OrdersAdmin() {
           <p className="panel-empty">No orders in this view yet.</p>
         </section>
       ) : (
-        <div className="orders-list">
-          {shown.map((o) => (
-            <div className="order-card" key={o.id}>
-              <div className="order-card-head">
-                <div>
-                  <span className="order-id">#{o.id}</span>
-                  <span className="order-time">{formatTime(o.createdAt)}</span>
+        <div className="order-rows">
+          {shown.map((o) => {
+            const isNew = o.accepted === false && o.status !== "Cancelled";
+            return (
+              <button className="order-row" key={o.id} onClick={() => setSelectedId(o.id)}>
+                <div className="order-row-top">
+                  <span className="order-row-id">#{o.id}</span>
+                  <span className="order-row-total">₹{o.total}</span>
                 </div>
-                <StatusPill status={o.status} />
-              </div>
-
-              <div className="order-customer">
-                👤 {o.customer}
-                {o.userPhone ? ` · 📞 +91 ${o.userPhone}` : ""}
-                {o.member && <span className="member-chip">👑 Prime</span>}
-                {o.accepted === false && o.status !== "Cancelled" && (
-                  <span className="await-chip">⏳ Awaiting accept</span>
-                )}
-              </div>
-
-              {o.address && <div className="order-address">🏠 {o.address}</div>}
-
-              {/* Doorstep collection: for any order NOT already paid, show a
-                  Razorpay UPI QR. The customer scans it with ANY UPI app and pays
-                  directly; the webhook then flips this order to PAID (green) live. */}
-              {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
-                <div className="order-collect">
-                  <button className="collect-btn" onClick={() => openQr(o)}>
-                    {qrFor === o.id ? "▲ Hide payment QR" : `📲 Show UPI QR · or collect ₹${o.total} cash`}
-                  </button>
-                  {qrFor === o.id && (
-                    <div className="collect-qr">
-                      {qrState.loading && <p>Creating UPI QR…</p>}
-                      {qrState.url && (
-                        <>
-                          <img src={qrState.url} alt="UPI payment QR code" />
-                          <p>
-                            Scan with <strong>any UPI app</strong> (GPay, PhonePe, Paytm) to pay{" "}
-                            <strong>₹{o.total}</strong>
-                            <br />
-                            <span>Pays directly to the shop</span>
-                          </p>
-                          {qrState.verified ? (
-                            <p className="collect-wait">⏳ Waiting for payment… turns green here once paid.</p>
-                          ) : (
-                            <p className="collect-wait">After the money is received, tap <strong>Delivered</strong>.</p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
+                <div className="order-row-bottom">
+                  <span className="order-row-time">{formatTime(o.createdAt)}</span>
+                  <span className="order-row-tags">
+                    {isNew && <span className="row-new">● NEW</span>}
+                    {o.paymentStatus === "paid" && <span className="row-paid">✅ paid</span>}
+                    <StatusPill status={o.status} />
+                  </span>
                 </div>
-              )}
-
-              <div className="order-meta">
-                <PaymentTag order={o} />
-                {o.location ? (
-                  <a
-                    className="order-track-link"
-                    href={googleMapsLink(o.location)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    📍 Track on Google Maps
-                  </a>
-                ) : (
-                  <span className="order-noloc">📍 No location shared</span>
-                )}
-              </div>
-
-              <div className="order-items">
-                {o.items.map((it) => (
-                  <div className="order-item" key={it.id}>
-                    <span className="order-item-icon">
-                      <ProductThumb
-                        image={it.image}
-                        name={it.name}
-                        category={it.category}
-                        size={28}
-                        radius={6}
-                      />
-                    </span>
-                    <span className="order-item-name">{it.name}</span>
-                    <span className="order-item-qty">× {it.qty}</span>
-                    <span className="order-item-price">₹{it.price * it.qty}</span>
-                  </div>
-                ))}
-              </div>
-
-              {(o.pointsEarned > 0 || o.pointsUsed > 0 || o.discount > 0 || o.couponDiscount > 0) && (
-                <div className="order-points-row">
-                  {o.couponDiscount > 0 && (
-                    <span>🎟️ {o.couponCode} −₹{o.couponDiscount}</span>
-                  )}
-                  {o.discount > 0 && <span>₹{o.discount} points discount</span>}
-                  {o.pointsUsed > 0 && <span>−{o.pointsUsed} pts used</span>}
-                  {o.pointsEarned > 0 && <span>+{o.pointsEarned} pts earned</span>}
-                </div>
-              )}
-
-              <div className="order-card-foot">
-                <div className="order-total">
-                  Total <strong>₹{o.total}</strong>
-                </div>
-                {o.status === "Delivered" ? (
-                  <span className="order-done-tag">✅ Delivered</span>
-                ) : o.status === "Cancelled" ? (
-                  <span className="order-cancel-tag">✖ Cancelled</span>
-                ) : (
-                  <label className="order-status-select">
-                    <span>Update status</span>
-                    <select
-                      value={o.status}
-                      onChange={(e) => changeStatus(o, e.target.value)}
-                    >
-                      {/* Only the current status and the steps AFTER it — an
-                          order can move forward, never back. */}
-                      {ORDER_STATUSES.slice(
-                        Math.max(0, ORDER_STATUSES.indexOf(o.status))
-                      ).map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-              </div>
-            </div>
-          ))}
+              </button>
+            );
+          })}
         </div>
+      )}
+
+      {selected && (
+        <OrderDetail
+          order={selected}
+          onClose={closeDetail}
+          qrFor={qrFor}
+          qrState={qrState}
+          openQr={openQr}
+          changeStatus={changeStatus}
+        />
       )}
     </>
   );
 }
 
-// A clear, at-a-glance payment badge. Once an order is PAID we show HOW it was
-// paid: a Razorpay id means it was paid online (UPI QR / online checkout); no id
-// means the rider collected cash. Until then, a COD order says "collect".
+function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus }) {
+  const curIdx = ORDER_STATUSES.indexOf(o.status);
+  const bill = [
+    ["Items total", o.itemTotal],
+    o.couponDiscount > 0 && [`Coupon (${o.couponCode})`, -o.couponDiscount],
+    o.discount > 0 && ["Points discount", -o.discount],
+    o.deliveryFee > 0 && ["Delivery fee", o.deliveryFee],
+    o.handling > 0 && ["Handling", o.handling],
+    o.surgeFee > 0 && ["Surge", o.surgeFee],
+  ].filter(Boolean);
+
+  return (
+    <div className="od-overlay" onClick={onClose}>
+      <div className="od-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="od-head">
+          <button className="back-btn small" onClick={onClose} aria-label="Back">←</button>
+          <div className="od-head-title">
+            <span className="order-id">#{o.id}</span>
+            <span className="order-time">{formatTime(o.createdAt)}</span>
+          </div>
+          <StatusPill status={o.status} />
+        </div>
+
+        <div className="od-body">
+          <div className="od-payline"><PaymentTag order={o} /></div>
+
+          <section className="od-section">
+            <h4>Customer</h4>
+            <div className="od-row">
+              👤 <strong>{o.customer || "Customer"}</strong>
+              {o.member && <span className="member-chip">👑 Prime</span>}
+            </div>
+            {o.userPhone && (
+              <a className="od-call" href={`tel:+91${o.userPhone}`}>📞 Call +91 {o.userPhone}</a>
+            )}
+          </section>
+
+          <section className="od-section">
+            <h4>Delivery</h4>
+            <div className="od-row">🏠 {o.address || "No address given"}</div>
+            {o.location ? (
+              <a className="od-map" href={googleMapsLink(o.location)} target="_blank" rel="noopener noreferrer">
+                📍 Open location in Google Maps →
+              </a>
+            ) : (
+              <div className="od-muted">📍 No location shared</div>
+            )}
+            {o.distanceKm != null && <div className="od-muted">{o.distanceKm} km from shop</div>}
+          </section>
+
+          <section className="od-section">
+            <h4>Items ({o.count})</h4>
+            <div className="order-items">
+              {o.items.map((it) => (
+                <div className="order-item" key={it.id}>
+                  <span className="order-item-icon">
+                    <ProductThumb image={it.image} name={it.name} category={it.category} size={28} radius={6} />
+                  </span>
+                  <span className="order-item-name">{it.name}</span>
+                  <span className="order-item-qty">× {it.qty}</span>
+                  <span className="order-item-price">₹{it.price * it.qty}</span>
+                </div>
+              ))}
+            </div>
+            <div className="od-bill">
+              {bill.map(([label, amt]) => (
+                <div className="od-bill-row" key={label}>
+                  <span>{label}</span>
+                  <span className={amt < 0 ? "free" : ""}>{amt < 0 ? `−₹${-amt}` : `₹${amt}`}</span>
+                </div>
+              ))}
+              <div className="od-bill-row total"><span>Total</span><span>₹{o.total}</span></div>
+            </div>
+          </section>
+
+          {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
+            <section className="od-section">
+              <h4>Collect payment</h4>
+              <button className="collect-btn" onClick={() => openQr(o)}>
+                {qrFor === o.id ? "▲ Hide payment QR" : "📲 Show UPI QR (scan & pay)"}
+              </button>
+              {qrFor === o.id && (
+                <div className="collect-qr">
+                  {qrState.loading && <p>Creating UPI QR…</p>}
+                  {qrState.url && (
+                    <>
+                      <img src={qrState.url} alt="UPI payment QR code" />
+                      <p>
+                        Scan with <strong>any UPI app</strong> to pay <strong>₹{o.total}</strong>
+                        <br /><span>Pays directly · confirms automatically</span>
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+              <p className="od-muted">Taking cash instead? Just tap <strong>Delivered</strong> below — it records as paid cash.</p>
+            </section>
+          )}
+
+          <section className="od-section">
+            <h4>Update order</h4>
+            {o.accepted === false && o.status !== "Cancelled" && (
+              <div className="od-accept-row">
+                <button className="od-accept" onClick={() => acceptOrder(o)}>✅ Accept order</button>
+                <button className="od-reject" onClick={() => rejectOrder(o)}>✖ Reject</button>
+              </div>
+            )}
+            {o.status === "Cancelled" ? (
+              <div className="order-cancel-tag">✖ Cancelled</div>
+            ) : (
+              <div className="od-status-btns">
+                {ORDER_STATUSES.map((s, i) => (
+                  <button
+                    key={s}
+                    className={`od-status ${i < curIdx ? "done" : ""} ${i === curIdx ? "current" : ""}`}
+                    disabled={i <= curIdx}
+                    onClick={() => changeStatus(o, s)}
+                  >
+                    {i < curIdx ? "✓ " : ""}{s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Payment badge: paid online (has Razorpay id) vs paid cash (no id) vs to-collect.
 function PaymentTag({ order }) {
   if (order.paymentStatus === "paid") {
     return order.razorpayPaymentId ? (
@@ -225,9 +255,7 @@ function PaymentTag({ order }) {
 
 function Chip({ active, onClick, children }) {
   return (
-    <button className={`chip ${active ? "active" : ""}`} onClick={onClick}>
-      {children}
-    </button>
+    <button className={`chip ${active ? "active" : ""}`} onClick={onClick}>{children}</button>
   );
 }
 
@@ -235,10 +263,7 @@ function formatTime(iso) {
   try {
     const d = new Date(iso);
     return d.toLocaleString(undefined, {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
     });
   } catch {
     return "";
