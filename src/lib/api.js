@@ -15,6 +15,38 @@ function must() {
   return supabase;
 }
 
+// Call a Supabase Edge Function with a plain fetch. supabase-js's
+// functions.invoke() can throw "Failed to send a request to the Edge Function"
+// inside the Android WebView; a direct fetch to the function URL is reliable
+// there and gives us the real server error message.
+const FN_URL = import.meta.env.VITE_SUPABASE_URL;
+const FN_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
+async function invokeFn(name, body) {
+  let token = FN_ANON;
+  try {
+    const { data } = await must().auth.getSession();
+    if (data?.session?.access_token) token = data.session.access_token;
+  } catch { /* fall back to anon */ }
+  let res;
+  try {
+    res = await fetch(`${FN_URL}/functions/v1/${name}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: FN_ANON,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body || {}),
+    });
+  } catch {
+    throw new Error("Network error — please check your connection and try again.");
+  }
+  let data = {};
+  try { data = await res.json(); } catch { /* non-JSON body */ }
+  if (!res.ok || data?.error) throw new Error(data?.error || `Request failed (${res.status}).`);
+  return data;
+}
+
 /* ─── Shape mappers: DB (snake_case) ↔ app (camelCase) ──────────────────────
    The screens were built against the localStorage shapes, so we translate
    database rows into those same shapes and vice-versa. This keeps the UI code
@@ -205,41 +237,17 @@ export async function placeOrder({ items, coupon, location, payment, address }) 
   return mapOrder(data);
 }
 
-// When an Edge Function returns a non-2xx status, supabase-js gives a generic
-// "non-2xx status code" error and stashes the real Response on error.context.
-// Pull the actual server message out so the customer (and we) see what failed.
-async function edgeError(error, data, fallback) {
-  if (data?.error) return new Error(data.error);
-  try {
-    const body = await error?.context?.json?.();
-    if (body?.error) return new Error(body.error);
-  } catch { /* not JSON */ }
-  try {
-    const txt = await error?.context?.text?.();
-    if (txt) return new Error(txt.slice(0, 200));
-  } catch { /* ignore */ }
-  return new Error(error?.message || fallback);
-}
-
 // Ask the server to create a Razorpay order for an already-placed (held) order.
 // The server reads the real total from the DB — the phone never sends an amount.
 export async function createRazorpayOrder(orderDbId) {
-  const { data, error } = await must().functions.invoke("razorpay-create-order", {
-    body: { orderId: orderDbId },
-  });
-  if (error || data?.error) throw await edgeError(error, data, "Couldn't start payment.");
-  return data; // { keyId, orderId, amount, currency, humanCode }
+  return invokeFn("razorpay-create-order", { orderId: orderDbId });
 }
 
 // Admin/delivery: create a gateway payment link for a not-yet-paid order, so
 // the customer can pay online at the door (QR). When they pay, the webhook
 // confirms it and the order flips to paid. Returns { shortUrl, linkId, amount }.
 export async function createCollectionLink(orderDbId) {
-  const { data, error } = await must().functions.invoke("razorpay-collect-link", {
-    body: { orderId: orderDbId },
-  });
-  if (error || data?.error) throw await edgeError(error, data, "Couldn't create payment link.");
-  return data;
+  return invokeFn("razorpay-collect-link", { orderId: orderDbId });
 }
 
 // Read the live payment/status of one of the customer's own orders. Used to
@@ -255,8 +263,7 @@ export async function fetchOrderState(dbId) {
 // Hand the Razorpay result back to the server, which verifies the signature and
 // confirms the order. Returns { ok: true } only if the payment is genuine.
 export async function verifyRazorpayPayment(payload) {
-  const { data, error } = await must().functions.invoke("razorpay-verify", { body: payload });
-  if (error || data?.error) throw await edgeError(error, data, "Couldn't verify payment.");
+  const data = await invokeFn("razorpay-verify", payload);
   pingLocal("orders");
   pingLocal("products");
   return data;
