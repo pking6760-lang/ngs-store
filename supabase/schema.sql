@@ -114,6 +114,8 @@ create table if not exists public.orders (
   total          numeric(10,2) not null,
   payment_method text default 'upi',
   payment_status text not null default 'pending', -- pending|paid|failed (server-confirmed)
+  razorpay_order_id   text,                  -- set when an online payment is started
+  razorpay_payment_id text,                  -- set when the payment is verified
   address        text,                       -- delivery address (snapshot at order time)
   distance_km    numeric(6,2),
   location       jsonb,                      -- {lat,lng}
@@ -333,6 +335,9 @@ declare
   v_rewards    jsonb;
   v_order      public.orders;
   v_code       text;
+  -- Online (gateway) payments are held until the payment is verified server-side.
+  v_online     boolean := lower(coalesce(p_payment, '')) in ('razorpay', 'online', 'card');
+  v_status     text;
 begin
   if v_uid is null then
     raise exception 'You must be signed in to place an order.';
@@ -418,14 +423,15 @@ begin
                 * coalesce((v_rewards->>'earnPoints')::int, 0);
   end if;
 
-  -- 5) Insert the order + items atomically; snapshot server prices.
+  -- 5) Insert the order + item snapshot. Online orders start HELD until paid.
+  v_status := case when v_online then 'Awaiting payment' else 'Placed' end;
   v_code := 'NGS' || nextval('public.order_code_seq');
   insert into public.orders (
     human_code, user_id, customer_name, user_phone, status, accepted, member,
     item_total, discount, coupon_code, delivery_fee, handling, surge_fee, points_earned,
     total, payment_method, payment_status, address, distance_km, location
   ) values (
-    v_code, v_uid, v_profile.name, v_profile.phone, 'Placed', null, v_profile.is_member,
+    v_code, v_uid, v_profile.name, v_profile.phone, v_status, null, v_profile.is_member,
     v_item_total, v_discount, v_coupon.code, v_delivery, v_handling, v_surge, v_points,
     v_total, p_payment, 'pending', nullif(trim(coalesce(p_address, '')), ''),
     case when p_location is null then null
@@ -438,13 +444,16 @@ begin
     select * into v_prod from public.products where id = (v_line->>'id');
     insert into public.order_items (order_id, product_id, name, icon, qty, price)
       values (v_order.id, v_prod.id, v_prod.name, v_prod.icon, v_qty, v_prod.price);
-    if v_prod.stock is not null then
+    -- Confirmed orders (COD/legacy) decrement stock now; online orders decrement
+    -- on payment confirmation so an abandoned payment never eats inventory.
+    if not v_online and v_prod.stock is not null then
       update public.products set stock = greatest(0, stock - v_qty) where id = v_prod.id;
     end if;
   end loop;
 
-  -- 6) Award points via the ledger + profile balance (server-only path).
-  if v_points > 0 then
+  -- 6) Award points now for confirmed orders; online orders get theirs inside
+  --    mark_order_paid() once payment is verified.
+  if not v_online and v_points > 0 then
     insert into public.points_ledger (user_id, order_id, delta, reason)
       values (v_uid, v_order.id, v_points, 'Earned on ' || v_code);
     -- Runs as the function owner (postgres), so the profile guard trusts it.
@@ -457,6 +466,59 @@ $$;
 
 -- Customers may execute place_order, but only through this vetted function.
 grant execute on function public.place_order(jsonb, text, jsonb, text, text) to authenticated;
+
+-- ============================================================================
+-- FUNCTION: mark_order_paid() — the ONLY confirmation path for online payments
+-- ============================================================================
+-- Executable ONLY by the service role (the Edge Functions, after they have
+-- cryptographically verified a Razorpay payment). Idempotent: the client
+-- callback and the webhook may both call it; only the first does the work.
+create or replace function public.mark_order_paid(
+  p_order      uuid,
+  p_payment_id text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order public.orders;
+  v_line  record;
+begin
+  select * into v_order from public.orders where id = p_order;
+  if v_order.id is null then
+    raise exception 'Order not found.';
+  end if;
+  if v_order.payment_status = 'paid' then
+    return; -- already confirmed
+  end if;
+
+  update public.orders set
+    payment_status      = 'paid',
+    status              = case when status = 'Awaiting payment' then 'Placed' else status end,
+    razorpay_payment_id = coalesce(p_payment_id, razorpay_payment_id)
+  where id = p_order;
+
+  for v_line in select product_id, qty from public.order_items where order_id = p_order loop
+    update public.products set stock = greatest(0, stock - v_line.qty)
+      where id = v_line.product_id and stock is not null;
+  end loop;
+
+  if v_order.points_earned > 0
+     and not exists (select 1 from public.points_ledger where order_id = p_order) then
+    insert into public.points_ledger (user_id, order_id, delta, reason)
+      values (v_order.user_id, p_order, v_order.points_earned, 'Earned on ' || v_order.human_code);
+    update public.profiles set points = points + v_order.points_earned
+      where id = v_order.user_id;
+  end if;
+end;
+$$;
+
+revoke all on function public.mark_order_paid(uuid, text) from public;
+revoke all on function public.mark_order_paid(uuid, text) from anon;
+revoke all on function public.mark_order_paid(uuid, text) from authenticated;
+grant execute on function public.mark_order_paid(uuid, text) to service_role;
 
 -- ============================================================================
 -- FUNCTION: rate_order() — customer rates only their own delivered order

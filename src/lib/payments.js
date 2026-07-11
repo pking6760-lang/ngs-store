@@ -22,6 +22,30 @@ export function buildUpiLink({ amount, note, txnRef }) {
   return `upi://pay?${params.toString()}`;
 }
 
+// Razorpay online payments (UPI / cards / netbanking / wallets), verified on
+// the server. Enabled only when a public key id is present at build time; until
+// then the app keeps the simple UPI-QR + COD flow so nothing breaks.
+export const RAZORPAY_ENABLED = Boolean(import.meta.env.VITE_RAZORPAY_KEY_ID);
+
+// Load Razorpay's checkout script on demand (only when the customer actually
+// chooses to pay online). Resolves with the global Razorpay constructor.
+let razorpayPromise = null;
+export function loadRazorpay() {
+  if (typeof window !== "undefined" && window.Razorpay) return Promise.resolve(window.Razorpay);
+  if (razorpayPromise) return razorpayPromise;
+  razorpayPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(window.Razorpay);
+    s.onerror = () => {
+      razorpayPromise = null;
+      reject(new Error("Couldn't load the payment screen. Check your internet and try again."));
+    };
+    document.body.appendChild(s);
+  });
+  return razorpayPromise;
+}
+
 // Render any string to a scannable QR code as a data-URI (PNG-like GIF).
 // Used so a customer on desktop can scan with their phone's UPI app.
 export function qrDataUri(text) {

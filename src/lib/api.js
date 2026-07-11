@@ -204,10 +204,34 @@ export async function placeOrder({ items, coupon, location, payment, address }) 
   return mapOrder(data);
 }
 
+// Ask the server to create a Razorpay order for an already-placed (held) order.
+// The server reads the real total from the DB — the phone never sends an amount.
+export async function createRazorpayOrder(orderDbId) {
+  const { data, error } = await must().functions.invoke("razorpay-create-order", {
+    body: { orderId: orderDbId },
+  });
+  if (error) throw new Error(data?.error || error.message || "Couldn't start payment.");
+  if (data?.error) throw new Error(data.error);
+  return data; // { keyId, orderId, amount, currency, humanCode }
+}
+
+// Hand the Razorpay result back to the server, which verifies the signature and
+// confirms the order. Returns { ok: true } only if the payment is genuine.
+export async function verifyRazorpayPayment(payload) {
+  const { data, error } = await must().functions.invoke("razorpay-verify", { body: payload });
+  if (error) throw new Error(data?.error || error.message || "Couldn't verify payment.");
+  if (data?.error) throw new Error(data.error);
+  pingLocal("orders");
+  pingLocal("products");
+  return data;
+}
+
 export async function fetchMyOrders() {
   const { data, error } = await must()
     .from("orders")
     .select("*, order_items(*)")
+    // Hide online orders whose payment never completed.
+    .neq("status", "Awaiting payment")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);
@@ -307,6 +331,8 @@ export async function updateSettings(patch) {
 export async function fetchAllOrders() {
   const { data, error } = await must()
     .from("orders").select("*, order_items(*)")
+    // Never surface an online order to the shop until its payment is confirmed.
+    .neq("status", "Awaiting payment")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);

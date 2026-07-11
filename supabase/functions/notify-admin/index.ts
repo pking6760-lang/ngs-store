@@ -92,6 +92,10 @@ Deno.serve(async (req) => {
     const payload = await req.json().catch(() => ({}));
     const order = payload.record ?? payload;
     if (!order || payload.type === "DELETE") return new Response("skip", { status: 200 });
+    // Online orders are inserted in a held 'Awaiting payment' state — don't alert
+    // the shop until the payment is verified (razorpay-verify / -webhook re-post
+    // this order with status 'Placed' once it's paid).
+    if (order.status === "Awaiting payment") return new Response("held", { status: 200 });
 
     const tokens = await getTokens();
     if (!tokens.length) return new Response("no devices", { status: 200 });

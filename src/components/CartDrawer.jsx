@@ -5,7 +5,7 @@ import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hook
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import {
@@ -39,7 +39,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [location, setLocation] = useState(() => loadDraft().location || null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
-  const [payment, setPayment] = useState("upi"); // upi | cod
+  // razorpay (verified online) | upi (legacy QR, unverified) | cod. When online
+  // payments are enabled we default to them and drop the unverified QR option.
+  const [payment, setPayment] = useState(RAZORPAY_ENABLED ? "razorpay" : "upi");
   const [usePoints, setUsePoints] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCode, setAppliedCode] = useState(null);
@@ -235,8 +237,85 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     if (address.trim() !== user?.address || cleanPhone !== user?.phone) {
       await updateProfile({ address: address.trim(), phone: cleanPhone });
     }
-    if (payment === "upi") setStep("pay");
+    if (payment === "razorpay") startRazorpay();
+    else if (payment === "upi") setStep("pay");
     else placeOrder();
+  }
+
+  // Verified online payment (Razorpay). Flow: create a HELD order on the server
+  // (real total computed there) → create a matching Razorpay order → open the
+  // Razorpay screen → on success the SERVER verifies the signature and only then
+  // confirms the order. Nothing is charged or confirmed on the phone's word.
+  async function startRazorpay() {
+    setPlacing(true);
+    setPlaceError("");
+    let order;
+    try {
+      order = await api.placeOrder({
+        items: lines.map(({ product, qty }) => ({ id: product.id, qty })),
+        coupon: appliedCode || null,
+        location: location ? { ...location, distanceKm: dist } : null,
+        payment: "razorpay",
+        address: address.trim(),
+      });
+      const rp = await api.createRazorpayOrder(order.dbId);
+      const Razorpay = await loadRazorpay();
+      const count = lines.reduce((a, l) => a + l.qty, 0);
+
+      const rzp = new Razorpay({
+        key: rp.keyId,
+        order_id: rp.orderId,
+        amount: rp.amount,
+        currency: rp.currency || "INR",
+        name: "NGS Nisha General Store",
+        description: `Order ${order.id}`,
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: cleanPhone || user?.phone || "",
+        },
+        theme: { color: "#0a9155" },
+        handler: async (resp) => {
+          try {
+            await api.verifyRazorpayPayment({
+              orderId: order.dbId,
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+            });
+            setPlaced({
+              total: order.total, count, eta: 12, payment: "razorpay",
+              pointsEarned: order.pointsEarned, code: order.id,
+            });
+            clear();
+            setUsePoints(false);
+            setAppliedCode(null);
+            setStep("done");
+          } catch (e) {
+            setPlaceError(
+              (e.message || "Payment couldn't be verified.") +
+                " If money was deducted it will be refunded automatically."
+            );
+          } finally {
+            setPlacing(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPlacing(false);
+            setPlaceError("Payment cancelled — your order was not placed. You can try again.");
+          },
+        },
+      });
+      rzp.on("payment.failed", (r) => {
+        setPlacing(false);
+        setPlaceError(r?.error?.description || "Payment failed. Please try again.");
+      });
+      rzp.open();
+    } catch (e) {
+      setPlacing(false);
+      setPlaceError(e.message || "Couldn't start the payment. Please try again.");
+    }
   }
 
   // Backend checkout: the SERVER recomputes prices, coupon, delivery, total and
@@ -366,7 +445,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {placed.count} item{placed.count > 1 ? "s" : ""} • ₹{placed.total}
             </p>
             <p className="success-pay">
-              {placed.payment === "upi" ? "Paid via UPI" : "Cash on delivery"}
+              {placed.payment === "razorpay"
+                ? "✅ Paid online"
+                : placed.payment === "upi"
+                ? "Paid via UPI"
+                : "Cash on delivery"}
             </p>
             {placed.pointsEarned > 0 && (
               <p className="success-points">
@@ -502,14 +585,25 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
             <div className="checkout-section">
               <h4>Payment method</h4>
-              <label className={`pay-option ${payment === "upi" ? "sel" : ""}`}>
-                <input type="radio" name="pay" checked={payment === "upi"} onChange={() => setPayment("upi")} />
-                <span className="pay-option-icon">🟣</span>
-                <span className="pay-option-text">
-                  <strong>UPI</strong>
-                  <small>GPay, PhonePe, Paytm, BHIM</small>
-                </span>
-              </label>
+              {RAZORPAY_ENABLED ? (
+                <label className={`pay-option ${payment === "razorpay" ? "sel" : ""}`}>
+                  <input type="radio" name="pay" checked={payment === "razorpay"} onChange={() => setPayment("razorpay")} />
+                  <span className="pay-option-icon">💳</span>
+                  <span className="pay-option-text">
+                    <strong>Pay online</strong>
+                    <small>UPI, Cards, Wallets · secure &amp; instant</small>
+                  </span>
+                </label>
+              ) : (
+                <label className={`pay-option ${payment === "upi" ? "sel" : ""}`}>
+                  <input type="radio" name="pay" checked={payment === "upi"} onChange={() => setPayment("upi")} />
+                  <span className="pay-option-icon">🟣</span>
+                  <span className="pay-option-text">
+                    <strong>UPI</strong>
+                    <small>GPay, PhonePe, Paytm, BHIM</small>
+                  </span>
+                </label>
+              )}
               <label className={`pay-option ${payment === "cod" ? "sel" : ""}`}>
                 <input type="radio" name="pay" checked={payment === "cod"} onChange={() => setPayment("cod")} />
                 <span className="pay-option-icon">💵</span>
@@ -567,6 +661,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 ? "Placing…"
                 : outOfArea
                 ? "Outside delivery area"
+                : payment === "razorpay"
+                ? `Pay ₹${grandTotal} securely`
                 : payment === "upi"
                 ? `Pay ₹${grandTotal} with UPI`
                 : `Place order • ₹${grandTotal}`}
