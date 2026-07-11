@@ -2418,3 +2418,30 @@ body {
   text-align: center;
   margin: 4px 0 2px;
 }
+
+/* Phone field on the checkout screen (required for delivery calls) */
+.checkout-phone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 12px;
+  margin-top: 8px;
+}
+.checkout-phone:focus-within { border-color: var(--green); }
+.checkout-phone-cc {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.checkout-phone input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 12px 0;
+  font-size: 15px;
+}

@@ -12,6 +12,14 @@ import {
   redeemableRupees,
 } from "../lib/rewards.js";
 
+// Persist the delivery address + phone the customer typed, so a page refresh
+// doesn't wipe them (the cart itself is already saved by CartContext).
+const DRAFT_KEY = "ngs-checkout-draft-v1";
+function loadDraft() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); }
+  catch { return {}; }
+}
+
 export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const { items, add, remove, deleteItem, clear } = useCart();
   const { user, isLoggedIn, updateProfile, applyRewards } = useAuth();
@@ -25,7 +33,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [placed, setPlaced] = useState(null);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState("");
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(() => loadDraft().address || "");
+  const [phone, setPhone] = useState(() => loadDraft().phone || "");
   const [location, setLocation] = useState(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
@@ -118,11 +127,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const outOfArea = areaEnforced && dist != null && dist > maxKm;
   const needsLocation = areaEnforced && !location;
 
+  // Prefill from the saved profile when the field is still empty.
   useEffect(() => {
-    if (step === "checkout" && user?.address && !address) {
-      setAddress(user.address);
-    }
-  }, [step, user, address]);
+    if (step !== "checkout") return;
+    if (user?.address && !address) setAddress(user.address);
+    if (user?.phone && !phone) setPhone(user.phone);
+  }, [step, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Remember what they typed across refreshes.
+  useEffect(() => {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ address, phone })); }
+    catch { /* ignore */ }
+  }, [address, phone]);
 
   function goToCheckout() {
     if (!settings.storeOpen) return;
@@ -162,9 +178,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     setCouponError("");
   }
 
-  function proceedFromCheckout() {
+  const cleanPhone = phone.replace(/\D/g, "");
+
+  async function proceedFromCheckout() {
     if (!address.trim()) {
       setLocError("Please enter a delivery address.");
+      return;
+    }
+    if (cleanPhone.length !== 10) {
+      setLocError("Please enter a valid 10-digit phone number so we can call about your delivery.");
       return;
     }
     if (needsLocation) {
@@ -172,8 +194,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       return;
     }
     if (outOfArea) return; // button is disabled, but guard anyway
-    if (address.trim() !== user?.address) {
-      updateProfile({ address: address.trim() });
+    setLocError("");
+    // Save address + phone to the profile. Await it so the server has the phone
+    // when place_order records the order (needed to call the customer).
+    if (address.trim() !== user?.address || cleanPhone !== user?.phone) {
+      await updateProfile({ address: address.trim(), phone: cleanPhone });
     }
     if (payment === "upi") setStep("pay");
     else placeOrder();
@@ -215,7 +240,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       createdAt: new Date().toISOString(),
       userId: user?.id,
       customer: user?.name || "You",
-      userPhone: user?.phone || "",
+      userPhone: cleanPhone || user?.phone || "",
       address: address.trim(),
       location,
       distanceKm: dist,
@@ -354,6 +379,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="House / flat no, street, area, city, PIN"
               />
+              <div className="checkout-phone">
+                <span className="checkout-phone-cc">🇮🇳 +91</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="Phone number (for delivery calls)"
+                />
+              </div>
               <button className="location-btn" onClick={useMyLocation} disabled={locating}>
                 {locating ? "📍 Getting location…" : "📍 Use my current location"}
               </button>
