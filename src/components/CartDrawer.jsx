@@ -225,7 +225,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         address: address.trim(),
       });
       setPlaced({
-        total: order.total, count: order.count, eta: 12, payment,
+        // place_order returns only the order row (no joined items), so count
+        // the cart we just sent rather than order.count (which would be 0).
+        total: order.total,
+        count: lines.reduce((a, l) => a + l.qty, 0),
+        eta: 12, payment,
         pointsEarned: order.pointsEarned, code: order.id,
       });
       clear();
