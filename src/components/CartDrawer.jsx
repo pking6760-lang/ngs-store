@@ -215,6 +215,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         coupon: appliedCode || null,
         location: location ? { ...location, distanceKm: dist } : null,
         payment,
+        address: address.trim(),
       });
       setPlaced({
         total: order.total, count: order.count, eta: 12, payment,

@@ -114,6 +114,7 @@ create table if not exists public.orders (
   total          numeric(10,2) not null,
   payment_method text default 'upi',
   payment_status text not null default 'pending', -- pending|paid|failed (server-confirmed)
+  address        text,                       -- delivery address (snapshot at order time)
   distance_km    numeric(6,2),
   location       jsonb,                      -- {lat,lng}
   rating         integer,
@@ -304,7 +305,8 @@ create or replace function public.place_order(
   p_items    jsonb,
   p_coupon   text default null,
   p_location jsonb default null,
-  p_payment  text default 'upi'
+  p_payment  text default 'upi',
+  p_address  text default null
 )
 returns public.orders
 language plpgsql
@@ -421,11 +423,11 @@ begin
   insert into public.orders (
     human_code, user_id, customer_name, user_phone, status, accepted, member,
     item_total, discount, coupon_code, delivery_fee, handling, surge_fee, points_earned,
-    total, payment_method, payment_status, distance_km, location
+    total, payment_method, payment_status, address, distance_km, location
   ) values (
     v_code, v_uid, v_profile.name, v_profile.phone, 'Placed', null, v_profile.is_member,
     v_item_total, v_discount, v_coupon.code, v_delivery, v_handling, v_surge, v_points,
-    v_total, p_payment, 'pending',
+    v_total, p_payment, 'pending', nullif(trim(coalesce(p_address, '')), ''),
     case when p_location is null then null
          else round((p_location->>'distanceKm')::numeric, 2) end,
     p_location
@@ -454,7 +456,7 @@ end;
 $$;
 
 -- Customers may execute place_order, but only through this vetted function.
-grant execute on function public.place_order(jsonb, text, jsonb, text) to authenticated;
+grant execute on function public.place_order(jsonb, text, jsonb, text, text) to authenticated;
 
 -- ============================================================================
 -- FUNCTION: rate_order() — customer rates only their own delivered order

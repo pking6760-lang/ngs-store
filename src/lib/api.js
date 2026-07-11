@@ -65,7 +65,7 @@ function mapOrder(r) {
     itemTotal: num(r.item_total), discount: num(r.discount), couponCode: r.coupon_code,
     deliveryFee: num(r.delivery_fee), handling: num(r.handling), surgeFee: num(r.surge_fee),
     pointsEarned: r.points_earned, total: num(r.total), paymentStatus: r.payment_status,
-    distanceKm: num(r.distance_km), location: r.location,
+    address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
 }
@@ -189,13 +189,14 @@ export async function fetchSettings() {
 // Place an order. The phone sends only product ids + quantities (+ optional
 // coupon and location); the SERVER computes prices, discount, delivery, total
 // and points. Returns the created order row.
-export async function placeOrder({ items, coupon, location, payment }) {
+export async function placeOrder({ items, coupon, location, payment, address }) {
   const p_items = items.map((i) => ({ id: i.id, qty: i.qty }));
   const { data, error } = await must().rpc("place_order", {
     p_items,
     p_coupon: coupon || null,
     p_location: location || null,
     p_payment: payment || "upi",
+    p_address: address || null,
   });
   if (error) throw error;
   pingLocal("orders");
