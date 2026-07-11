@@ -98,6 +98,7 @@ function mapOrder(r) {
     deliveryFee: num(r.delivery_fee), handling: num(r.handling), surgeFee: num(r.surge_fee),
     pointsEarned: r.points_earned, total: num(r.total),
     payment: r.payment_method, paymentMethod: r.payment_method, paymentStatus: r.payment_status,
+    razorpayPaymentId: r.razorpay_payment_id,
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };

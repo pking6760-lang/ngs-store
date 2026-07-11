@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
-import { updateOrderStatus } from "../lib/actions.js";
+import { updateOrderStatus, markCashReceived } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, cleanUpiQrFromImage } from "../lib/payments.js";
 import { createOrderQr } from "../lib/api.js";
@@ -30,6 +30,16 @@ export default function OrdersAdmin() {
       // rider confirms by tapping Delivered after the money lands.
       const upi = qrDataUri(buildUpiLink({ amount: order.total, note: `NGS ${order.id}` }));
       setQrState({ loading: false, url: upi, verified: false });
+    }
+  }
+
+  // Advancing an order's status. When it's marked Delivered and it wasn't paid
+  // online, the money must have been cash — so mark it paid-by-cash automatically
+  // (no extra tap for the rider).
+  async function changeStatus(order, status) {
+    await updateOrderStatus(order, status);
+    if (status === "Delivered" && order.paymentStatus !== "paid") {
+      await markCashReceived(order);
     }
   }
 
@@ -84,7 +94,7 @@ export default function OrdersAdmin() {
               {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
                 <div className="order-collect">
                   <button className="collect-btn" onClick={() => openQr(o)}>
-                    {qrFor === o.id ? "▲ Hide payment QR" : `📲 Show UPI QR · collect ₹${o.total}`}
+                    {qrFor === o.id ? "▲ Hide payment QR" : `📲 Show UPI QR · or collect ₹${o.total} cash`}
                   </button>
                   {qrFor === o.id && (
                     <div className="collect-qr">
@@ -169,7 +179,7 @@ export default function OrdersAdmin() {
                     <span>Update status</span>
                     <select
                       value={o.status}
-                      onChange={(e) => updateOrderStatus(o, e.target.value)}
+                      onChange={(e) => changeStatus(o, e.target.value)}
                     >
                       {/* Only the current status and the steps AFTER it — an
                           order can move forward, never back. */}
@@ -192,23 +202,23 @@ export default function OrdersAdmin() {
   );
 }
 
-// A clear, at-a-glance payment badge: is this order already PAID, or does the
-// rider need to COLLECT cash on delivery?
+// A clear, at-a-glance payment badge. Once an order is PAID we show HOW it was
+// paid: a Razorpay id means it was paid online (UPI QR / online checkout); no id
+// means the rider collected cash. Until then, a COD order says "collect".
 function PaymentTag({ order }) {
-  const method = order.paymentMethod || order.payment;
-  const online = method === "razorpay" || method === "online" || method === "card";
-  if (online) {
-    return order.paymentStatus === "paid" ? (
+  if (order.paymentStatus === "paid") {
+    return order.razorpayPaymentId ? (
       <span className="order-pay-tag paid">✅ PAID online · ₹{order.total}</span>
     ) : (
-      <span className="order-pay-tag unpaid">⏳ Online — payment pending</span>
+      <span className="order-pay-tag paidcash">💵 PAID cash · ₹{order.total}</span>
     );
   }
+  const method = order.paymentMethod || order.payment;
   if (method === "cod") {
-    return <span className="order-pay-tag cod">💵 COLLECT ₹{order.total} cash on delivery</span>;
+    return <span className="order-pay-tag cod">💵 COLLECT ₹{order.total} (cash or UPI)</span>;
   }
-  if (method === "upi") {
-    return <span className="order-pay-tag">🟣 UPI · ₹{order.total}</span>;
+  if (method === "razorpay" || method === "online" || method === "card") {
+    return <span className="order-pay-tag unpaid">⏳ Online — payment pending</span>;
   }
   return <span className="order-pay-tag">💳 ₹{order.total}</span>;
 }

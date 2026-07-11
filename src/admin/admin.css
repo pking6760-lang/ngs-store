@@ -531,6 +531,33 @@ body {
   color: #b3261e;
   border: 1px solid #f6c9c6;
 }
+/* Paid in cash — settled (green), but distinct wording from "paid online". */
+.order-pay-tag.paidcash {
+  background: #eef7e9;
+  color: #4d7a1e;
+  border: 1px solid #d3e8bd;
+}
+.collect-row {
+  display: flex;
+  gap: 8px;
+}
+.collect-row .collect-btn {
+  flex: 1;
+}
+.cash-btn {
+  flex: 1;
+  border: 1px solid #ffdf9e;
+  background: #fff8ec;
+  color: #9a6100;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.cash-btn:active {
+  background: #ffefd0;
+}
 /* Doorstep UPI collection */
 .order-collect {
   margin: 8px 0 2px;
