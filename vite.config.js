@@ -7,8 +7,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         // Two separate websites, one build:
-        main: "index.html", //   customer storefront  →  /
-        admin: "admin.html", //  admin dashboard      →  /admin.html
+        main: "index.html", //     customer storefront  →  /
+        admin: "admin.html", //    admin dashboard      →  /admin.html
+        partner: "partner.html", //  NGS Partner (staff)  →  /partner.html
       },
     },
   },

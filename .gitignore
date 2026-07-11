@@ -39,3 +39,11 @@ preview/
 
 # Firebase CLI deploy cache
 .firebase/
+
+# NGS Partner Android project — ignore build output (like android/)
+android-partner/build/
+android-partner/app/build/
+android-partner/.gradle/
+android-partner/capacitor-cordova-android-plugins/build/
+android-partner/app/src/main/assets/public/
+www-partner/

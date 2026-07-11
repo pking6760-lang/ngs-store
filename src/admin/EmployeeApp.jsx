@@ -1,5 +1,5 @@
 import { useOrders } from "../lib/hooks.js";
-import { updateOrderStatus } from "../lib/actions.js";
+import { advanceStatus } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 
@@ -118,21 +118,21 @@ export default function EmployeeApp({ role, name, onLogout }) {
               {isPicker ? (
                 <button
                   className="emp-action"
-                  onClick={() => updateOrderStatus(o, "Packed")}
+                  onClick={() => advanceStatus(o, "Packed")}
                 >
                   ✅ Mark packed
                 </button>
               ) : o.status === "Packed" ? (
                 <button
                   className="emp-action"
-                  onClick={() => updateOrderStatus(o, "Out for delivery")}
+                  onClick={() => advanceStatus(o, "Out for delivery")}
                 >
                   🛵 Start delivery
                 </button>
               ) : (
                 <button
                   className="emp-action deliver"
-                  onClick={() => updateOrderStatus(o, "Delivered")}
+                  onClick={() => advanceStatus(o, "Delivered")}
                 >
                   📦 Mark delivered
                 </button>

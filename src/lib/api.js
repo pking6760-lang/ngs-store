@@ -405,6 +405,15 @@ export async function updateOrderStatus(dbId, status) {
   return { ok: true };
 }
 
+// Staff (NGS Partner app) advance an order's status via a role-checked RPC —
+// they can't touch prices or payments, only move the status forward.
+export async function advanceOrderStatus(dbId, status) {
+  const { error } = await must().rpc("advance_order_status", { p_order: dbId, p_status: status });
+  if (error) throw error;
+  pingLocal("orders");
+  return { ok: true };
+}
+
 export async function acceptOrder(dbId) {
   const { error } = await must().from("orders").update({ accepted: true }).eq("id", dbId);
   if (error) throw error;

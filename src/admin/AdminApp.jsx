@@ -5,7 +5,6 @@ import OrdersAdmin from "./OrdersAdmin.jsx";
 import CouponsAdmin from "./CouponsAdmin.jsx";
 import CustomersAdmin from "./CustomersAdmin.jsx";
 import DeliveryAdmin from "./DeliveryAdmin.jsx";
-import EmployeeApp from "./EmployeeApp.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
@@ -21,8 +20,7 @@ const BACKEND = api.isBackendConfigured;
 // Demo-only logins (used when no backend is configured). With a backend, the
 // admin signs in with the real email + password of their admin account.
 const ADMIN_PASSWORD = "admin123";
-const STAFF_PASSCODE = "staff123";
-const ROLE_KEY = "ngs-admin-role"; // "admin" | "picker" | "delivery"
+const ROLE_KEY = "ngs-admin-role"; // "admin"
 const NAME_KEY = "ngs-admin-name";
 
 const NAV = [
@@ -74,12 +72,7 @@ export default function AdminApp() {
 
   if (!role) return <Login onSignIn={signIn} />;
 
-  // Staff (picker / delivery worker) get their own focused screen.
-  if (role === "picker" || role === "delivery") {
-    return <EmployeeApp role={role} name={name} onLogout={logout} />;
-  }
-
-  // Admin dashboard.
+  // Admin dashboard. (Employees use the separate NGS Partner app.)
   return (
     <div className="admin">
       <aside className="admin-sidebar">
@@ -198,13 +191,9 @@ export function StoreControls() {
 }
 
 function Login({ onSignIn }) {
-  const [tab, setTab] = useState("admin"); // "admin" | "staff"
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
-  const [staffRole, setStaffRole] = useState("picker");
-  const [staffName, setStaffName] = useState("");
-  const [staffCode, setStaffCode] = useState("");
   const [error, setError] = useState("");
   const [bioBusy, setBioBusy] = useState(false);
   // Biometrics available on this phone, and whether we have saved admin
@@ -271,18 +260,6 @@ function Login({ onSignIn }) {
     else setError("Incorrect password. Try again.");
   }
 
-  function submitStaff(e) {
-    e.preventDefault();
-    unlockAudio();
-    if (staffCode !== STAFF_PASSCODE) {
-      setError("Incorrect staff passcode.");
-      return;
-    }
-    const label =
-      staffName.trim() || (staffRole === "picker" ? "Picker" : "Delivery");
-    onSignIn(staffRole, label);
-  }
-
   return (
     <div className="login-screen">
       <div className="login-card">
@@ -291,113 +268,46 @@ function Login({ onSignIn }) {
           <span className="admin-logo-sub">admin</span>
         </div>
 
-        <div className="auth-tabs">
-          <button
-            className={`auth-tab ${tab === "admin" ? "active" : ""}`}
-            onClick={() => {
-              setTab("admin");
-              setError("");
-            }}
-          >
-            Admin
-          </button>
-          <button
-            className={`auth-tab ${tab === "staff" ? "active" : ""}`}
-            onClick={() => {
-              setTab("staff");
-              setError("");
-            }}
-          >
-            Employee
-          </button>
-        </div>
-
-        {tab === "admin" ? (
-          <form onSubmit={submitAdmin}>
-            <p className="login-sub">Manage products, orders and the store</p>
-            {BACKEND && (
-              <input
-                className="login-input"
-                type="email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                placeholder="Admin email"
-                autoFocus
-              />
-            )}
+        <form onSubmit={submitAdmin}>
+          <p className="login-sub">Manage products, orders and the store</p>
+          {BACKEND && (
             <input
               className="login-input"
-              type="password"
-              value={pw}
-              onChange={(e) => {
-                setPw(e.target.value);
-                setError("");
-              }}
-              placeholder="Password"
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(""); }}
+              placeholder="Admin email"
+              autoFocus
             />
-            {error && <div className="login-error">{error}</div>}
-            <button className="login-btn" type="submit" disabled={busy}>
-              {busy ? "Signing in…" : "Sign in as admin"}
-            </button>
-            {/* Fingerprint shows in the demo, or on the backend once the admin
-                has signed in with a password at least once (creds saved). */}
-            {bioOk && (!BACKEND || bioSaved) && (
-              <>
-                <div className="login-or">or</div>
-                <button
-                  type="button"
-                  className="fingerprint-btn"
-                  onClick={fingerprintLogin}
-                  disabled={bioBusy}
-                >
-                  <span className="fingerprint-icon">☝️</span>
-                  {bioBusy ? "Waiting for fingerprint…" : "Login with fingerprint"}
-                </button>
-              </>
-            )}
-          </form>
-        ) : (
-          <form onSubmit={submitStaff}>
-            <p className="login-sub">Pickers & delivery partners</p>
-            <div className="role-picker">
+          )}
+          <input
+            className="login-input"
+            type="password"
+            value={pw}
+            onChange={(e) => { setPw(e.target.value); setError(""); }}
+            placeholder="Password"
+          />
+          {error && <div className="login-error">{error}</div>}
+          <button className="login-btn" type="submit" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in as admin"}
+          </button>
+          {/* Fingerprint shows in the demo, or on the backend once the admin
+              has signed in with a password at least once (creds saved). */}
+          {bioOk && (!BACKEND || bioSaved) && (
+            <>
+              <div className="login-or">or</div>
               <button
                 type="button"
-                className={`role-opt ${staffRole === "picker" ? "sel" : ""}`}
-                onClick={() => setStaffRole("picker")}
+                className="fingerprint-btn"
+                onClick={fingerprintLogin}
+                disabled={bioBusy}
               >
-                🧺 Picker
+                <span className="fingerprint-icon">☝️</span>
+                {bioBusy ? "Waiting for fingerprint…" : "Login with fingerprint"}
               </button>
-              <button
-                type="button"
-                className={`role-opt ${staffRole === "delivery" ? "sel" : ""}`}
-                onClick={() => setStaffRole("delivery")}
-              >
-                🛵 Delivery
-              </button>
-            </div>
-            <input
-              className="login-input"
-              type="text"
-              value={staffName}
-              onChange={(e) => setStaffName(e.target.value)}
-              placeholder="Your name"
-            />
-            <input
-              className="login-input"
-              type="password"
-              value={staffCode}
-              onChange={(e) => {
-                setStaffCode(e.target.value);
-                setError("");
-              }}
-              placeholder="Staff passcode"
-            />
-            {error && <div className="login-error">{error}</div>}
-            <button className="login-btn" type="submit">
-              Sign in as {staffRole}
-            </button>
-          </form>
-        )}
+            </>
+          )}
+        </form>
       </div>
     </div>
   );

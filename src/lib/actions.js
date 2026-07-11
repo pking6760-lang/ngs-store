@@ -89,6 +89,11 @@ export async function markCashReceived(order) {
   if (BACKEND) return api.updateOrderById(order.dbId || order.id, { payment_status: "paid" });
   return store.updateOrderStatus(order.id ?? order, order.status);
 }
+// Staff (NGS Partner app) move an order forward through the flow.
+export async function advanceStatus(order, status) {
+  if (BACKEND) return api.advanceOrderStatus(order.dbId || order.id, status);
+  return store.updateOrderStatus(order.id ?? order, status);
+}
 export async function acceptOrder(order) {
   if (BACKEND) return api.acceptOrder(order.dbId || order.id);
   return store.acceptOrder(order.id ?? order);
