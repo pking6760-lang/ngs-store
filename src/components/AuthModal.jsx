@@ -1,22 +1,41 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 
 // Passwordless login. With a real backend it's email → 6-digit code. In the
 // demo it's phone → 4-digit code shown on screen. `reason` optionally explains
 // why we're asking.
 export default function AuthModal({ open, onClose, onSuccess, reason }) {
-  const { authMode, requestOtp, verifyOtp, cancelOtp } = useAuth();
+  const { authMode, requestOtp, verifyOtp, cancelOtp, pendingContact, awaitingOtp } = useAuth();
   const email = authMode === "email";
-  const [contact, setContact] = useState("");
+  const [contact, setContact] = useState(awaitingOtp ? pendingContact || "" : "");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [stage, setStage] = useState("contact"); // "contact" | "otp"
+  const [stage, setStage] = useState(awaitingOtp ? "otp" : "contact"); // "contact" | "otp"
   const [isNew, setIsNew] = useState(false);
   const [demoCode, setDemoCode] = useState(""); // demo phone mode only
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // If we open (or re-open after a mobile tab reload) while a code is already
+  // pending, jump straight to the code screen with the email pre-filled — the
+  // customer should never be forced to request a fresh code just because they
+  // popped over to their inbox.
+  useEffect(() => {
+    if (open && awaitingOtp && stage === "contact") {
+      setStage("otp");
+      if (pendingContact) setContact(pendingContact);
+    }
+  }, [open, awaitingOtp]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!open) return null;
+
+  // Tapping the dark area outside the box dismisses the modal — but NOT while a
+  // code is in progress, otherwise a stray tap (e.g. after copying the code
+  // from the email app) would throw the whole verification away.
+  function onBackdrop() {
+    if (stage === "otp" || busy) return;
+    close();
+  }
 
   function close() {
     cancelOtp();
@@ -50,7 +69,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
   const codeLen = email ? 10 : 4;
 
   return (
-    <div className="modal-overlay" onClick={close}>
+    <div className="modal-overlay" onClick={onBackdrop}>
       <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={close} aria-label="Close">✕</button>
 

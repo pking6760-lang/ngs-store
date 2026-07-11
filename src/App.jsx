@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "./components/Header.jsx";
 import ProductCard from "./components/ProductCard.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
@@ -45,7 +45,14 @@ export default function App() {
   const [accountTab, setAccountTab] = useState("orders");
   const [authOpen, setAuthOpen] = useState(false);
   const { totalCount, items } = useCart();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, awaitingOtp } = useAuth();
+
+  // If a one-time code is still pending (e.g. the mobile browser reloaded the
+  // tab while the customer was in their email app), re-open the login modal so
+  // they land back on the code screen instead of a blank home page.
+  useEffect(() => {
+    if (awaitingOtp) setAuthOpen(true);
+  }, [awaitingOtp]);
   const products = useProducts();
   const settings = useSettings();
   const categories = useCategories();

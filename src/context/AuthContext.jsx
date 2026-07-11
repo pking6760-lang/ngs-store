@@ -9,6 +9,21 @@ import * as api from "../lib/api.js";
 const BACKEND = api.isBackendConfigured;
 const USERS_KEY = "ngs-users-v1";
 const SESSION_KEY = "ngs-current-user-v1";
+// Remember the "we've sent you a code, waiting for it" state so that if the
+// customer switches to their email app (and the mobile browser reloads the
+// tab when they come back) they land straight back on the code screen instead
+// of starting over. sessionStorage → cleared automatically when they fully
+// close the browser, so it never goes stale across days.
+const PENDING_KEY = "ngs-pending-email-v1";
+function readPending() {
+  try { return sessionStorage.getItem(PENDING_KEY) || null; } catch { return null; }
+}
+function writePending(email) {
+  try {
+    if (email) sessionStorage.setItem(PENDING_KEY, email);
+    else sessionStorage.removeItem(PENDING_KEY);
+  } catch { /* ignore */ }
+}
 
 const AuthContext = createContext(null);
 
@@ -33,7 +48,13 @@ export function AuthProvider({ children }) {
 function BackendAuth({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState(null);
+  const [pendingEmail, setPendingEmailState] = useState(readPending);
+
+  // Keep React state and sessionStorage in lock-step.
+  function setPendingEmail(email) {
+    writePending(email);
+    setPendingEmailState(email);
+  }
 
   async function refresh() {
     try { setUser(await api.getMyProfile()); } catch { setUser(null); }
@@ -43,11 +64,11 @@ function BackendAuth({ children }) {
     let alive = true;
     api.getSession().then(async (s) => {
       if (!alive) return;
-      if (s) await refresh();
+      if (s) { await refresh(); setPendingEmail(null); }
       setReady(true);
     });
     const unsub = api.onAuthChange(async (session) => {
-      if (session) await refresh();
+      if (session) { await refresh(); setPendingEmail(null); }
       else setUser(null);
     });
     return () => { alive = false; unsub(); };
