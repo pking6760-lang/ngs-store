@@ -122,7 +122,11 @@ export default function OrdersAdmin() {
                       value={o.status}
                       onChange={(e) => updateOrderStatus(o, e.target.value)}
                     >
-                      {ORDER_STATUSES.map((s) => (
+                      {/* Only the current status and the steps AFTER it — an
+                          order can move forward, never back. */}
+                      {ORDER_STATUSES.slice(
+                        Math.max(0, ORDER_STATUSES.indexOf(o.status))
+                      ).map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
