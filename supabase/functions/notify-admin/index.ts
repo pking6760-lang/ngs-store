@@ -1,15 +1,15 @@
 // Supabase Edge Function: notify-admin
-// Triggered by a Database Webhook when a row is inserted into public.orders.
+// Triggered by a DB trigger when a row is inserted into public.orders.
 // Sends a Firebase Cloud Messaging push to every registered admin device.
+// Uses only the built-in fetch + Web Crypto (no external imports) for reliable
+// cold-start.
 //
-// Secrets it needs (set with `supabase secrets set`):
-//   FIREBASE_SERVICE_ACCOUNT  – the service-account JSON (string)
-// Supabase injects SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY automatically.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
+// Secrets: FIREBASE_SERVICE_ACCOUNT (json), WEBHOOK_SECRET.
+// Supabase injects SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
 const svc = JSON.parse(Deno.env.get("FIREBASE_SERVICE_ACCOUNT") ?? "{}");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET") ?? "";
 
 function b64url(buf: ArrayBuffer | Uint8Array): string {
   const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
@@ -23,22 +23,19 @@ async function importKey(pem: string): Promise<CryptoKey> {
   const der = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
   return crypto.subtle.importKey(
     "pkcs8", der.buffer,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false, ["sign"],
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"],
   );
 }
 
-// Mint an OAuth access token for FCM from the service account.
 async function getAccessToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const header = b64url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
-  const claim = b64url(new TextEncoder().encode(JSON.stringify({
+  const enc = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+  const unsigned = `${enc({ alg: "RS256", typ: "JWT" })}.${enc({
     iss: svc.client_email,
     scope: "https://www.googleapis.com/auth/firebase.messaging",
     aud: "https://oauth2.googleapis.com/token",
     iat: now, exp: now + 3600,
-  })));
-  const unsigned = `${header}.${claim}`;
+  })}`;
   const key = await importKey(svc.private_key);
   const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
   const jwt = `${unsigned}.${b64url(sig)}`;
@@ -50,6 +47,22 @@ async function getAccessToken(): Promise<string> {
   const data = await res.json();
   if (!data.access_token) throw new Error("token: " + JSON.stringify(data));
   return data.access_token;
+}
+
+const sbHeaders = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` };
+
+async function getTokens(): Promise<string[]> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/admin_push_tokens?select=token`, { headers: sbHeaders });
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows.map((r: { token: string }) => r.token) : [];
+}
+
+async function deleteTokens(tokens: string[]) {
+  if (!tokens.length) return;
+  const list = tokens.map((t) => `"${t}"`).join(",");
+  await fetch(`${SUPABASE_URL}/rest/v1/admin_push_tokens?token=in.(${list})`, {
+    method: "DELETE", headers: sbHeaders,
+  });
 }
 
 async function sendFcm(accessToken: string, token: string, title: string, body: string) {
@@ -68,37 +81,30 @@ async function sendFcm(accessToken: string, token: string, title: string, body: 
       }),
     },
   );
-  return { token, status: res.status, body: await res.text() };
+  return { token, status: res.status };
 }
-
-const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET") ?? "";
 
 Deno.serve(async (req) => {
   try {
-    // Only our database trigger (which knows the secret) may call this.
     if (WEBHOOK_SECRET && req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
       return new Response("forbidden", { status: 401 });
     }
-    const payload = await req.json();
+    const payload = await req.json().catch(() => ({}));
     const order = payload.record ?? payload;
     if (!order || payload.type === "DELETE") return new Response("skip", { status: 200 });
 
-    const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data: tokens } = await sb.from("admin_push_tokens").select("token");
-    if (!tokens?.length) return new Response("no devices", { status: 200 });
+    const tokens = await getTokens();
+    if (!tokens.length) return new Response("no devices", { status: 200 });
 
     const accessToken = await getAccessToken();
     const title = `🛒 New order ${order.human_code ?? ""}`.trim();
     const body = `${order.customer_name ?? "A customer"} · ₹${order.total ?? ""}`;
-    const results = await Promise.all(
-      tokens.map((t: { token: string }) => sendFcm(accessToken, t.token, title, body)),
-    );
+    const results = await Promise.all(tokens.map((t) => sendFcm(accessToken, t, title, body)));
 
-    // Clean up tokens FCM reports as invalid/unregistered.
     const dead = results.filter((r) => r.status === 404 || r.status === 400).map((r) => r.token);
-    if (dead.length) await sb.from("admin_push_tokens").delete().in("token", dead);
+    await deleteTokens(dead);
 
-    return new Response(JSON.stringify({ sent: results.length }), {
+    return new Response(JSON.stringify({ sent: results.length, dead: dead.length }), {
       status: 200, headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
