@@ -561,8 +561,9 @@ body {
   border-radius: 12px;
 }
 .collect-qr img {
-  width: 200px;
-  height: 200px;
+  width: 260px;
+  max-width: 80vw;
+  height: auto;
   image-rendering: pixelated;
 }
 .collect-qr p {

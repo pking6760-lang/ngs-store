@@ -1210,9 +1210,12 @@ button {
   padding: 18px;
 }
 .upi-qr {
-  width: 200px;
-  height: 200px;
+  width: 280px;
+  max-width: 82vw;
+  height: auto;
   image-rendering: pixelated;
+  background: #fff;
+  border-radius: 8px;
 }
 .upi-hint {
   font-size: 12px;

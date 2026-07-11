@@ -3,7 +3,7 @@ import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { updateOrderStatus } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID } from "../lib/payments.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID, cleanUpiQrFromImage } from "../lib/payments.js";
 import { createOrderQr } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { StatusPill } from "./Dashboard.jsx";
@@ -21,9 +21,10 @@ export default function OrdersAdmin() {
     setQrFor(order.id);
     setQrState({ loading: true, url: "", verified: false });
     try {
-      // Gateway QR (auto-verifies) — works once "QR Codes" is enabled on the account.
-      const { imageUrl } = await createOrderQr(order.dbId);
-      setQrState({ loading: false, url: imageUrl, verified: true });
+      // Gateway QR (auto-verifies). Redraw it as a plain, clean QR (no branding).
+      const { imageUrl, imageDataUrl } = await createOrderQr(order.dbId);
+      const cleanQr = await cleanUpiQrFromImage(imageDataUrl);
+      setQrState({ loading: false, url: cleanQr || imageDataUrl || imageUrl, verified: true });
     } catch {
       // Fallback: a plain UPI QR straight to the shop. Works everywhere; the
       // rider confirms by tapping Delivered after the money lands.

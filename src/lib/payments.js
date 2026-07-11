@@ -1,4 +1,5 @@
 import qrcode from "qrcode-generator";
+import jsQR from "jsqr";
 
 // The shop's real UPI ID (VPA) that receives payments. This is a Paytm
 // merchant QR handle (@ptys), so UPI apps treat payments as merchant
@@ -48,10 +49,35 @@ export function loadRazorpay() {
 
 // Render any string to a scannable QR code as a data-URI (PNG-like GIF).
 // Used so a customer on desktop can scan with their phone's UPI app.
-export function qrDataUri(text) {
+export function qrDataUri(text, cellSize = 6, margin = 4) {
   const qr = qrcode(0, "M"); // type 0 = auto-size, error correction M
   qr.addData(text);
   qr.make();
-  // cellSize=5px, margin=4 cells — crisp and scannable.
-  return qr.createDataURL(5, 4);
+  return qr.createDataURL(cellSize, margin);
+}
+
+// Read the UPI code out of Razorpay's branded QR image and redraw it as a plain
+// black-and-white QR (no card, no logos) — a big, clean, genuine QR. The payment
+// still routes through Razorpay (same code), so it stays verified. Returns a
+// data-URI, or "" if it couldn't be decoded (caller falls back to the image).
+export async function cleanUpiQrFromImage(imageDataUrl) {
+  if (!imageDataUrl || typeof document === "undefined") return "";
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = imageDataUrl;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const px = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(px.data, canvas.width, canvas.height);
+    return code?.data ? qrDataUri(code.data, 8, 4) : "";
+  } catch {
+    return "";
+  }
 }

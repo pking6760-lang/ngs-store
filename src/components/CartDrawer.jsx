@@ -5,7 +5,7 @@ import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hook
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay } from "../lib/payments.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage } from "../lib/payments.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import {
@@ -287,8 +287,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       });
       // Verified native UPI QR shown ON our page (scan with any app → pays
       // directly → auto-confirms via webhook). No redirect to any gateway page.
-      const { imageUrl } = await api.createOrderQr(order.dbId);
-      setPayLink({ imageUrl, order, count: lines.reduce((a, l) => a + l.qty, 0) });
+      // Redraw it as a plain, clean QR (no branded card).
+      const { imageUrl, imageDataUrl } = await api.createOrderQr(order.dbId);
+      const cleanQr = await cleanUpiQrFromImage(imageDataUrl);
+      setPayLink({
+        imageUrl, imageDataUrl, cleanQr,
+        order, count: lines.reduce((a, l) => a + l.qty, 0),
+      });
       setStep("payqr");
     } catch (e) {
       setPlaceError(e.message || "Couldn't start the payment. Please try again.");
@@ -493,14 +498,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               Amount to pay <strong>₹{payLink.order.total}</strong>
               <span className="pay-fixed">🔒 Secured by Razorpay</span>
             </div>
-            {payLink.imageUrl && (
-              <div className="upi-qr-wrap">
-                <img className="upi-qr" src={payLink.imageUrl} alt="UPI payment QR code" />
-                <p className="upi-hint">
-                  Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly
-                </p>
-              </div>
-            )}
+            <div className="upi-qr-wrap">
+              <img
+                className={`upi-qr ${payLink.cleanQr ? "clean" : ""}`}
+                src={payLink.cleanQr || payLink.imageDataUrl || payLink.imageUrl}
+                alt="UPI payment QR code"
+              />
+              <p className="upi-hint">
+                Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly
+              </p>
+            </div>
             <button className="upi-app-btn" onClick={payOnThisPhone}>
               📱 Or pay on this phone
             </button>

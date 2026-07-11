@@ -82,7 +82,21 @@ Deno.serve(async (req) => {
       return json({ error: qr?.error?.description || "Couldn't create QR." }, 502);
     }
 
-    return json({ imageUrl: qr.image_url, qrId: qr.id, amount: amountPaise });
+    // Also return the image as base64 (the Razorpay image host sends no CORS
+    // headers, so the browser can't read it into a canvas directly). The app
+    // reads the UPI code out of this and redraws a clean, plain QR.
+    let imageDataUrl = "";
+    try {
+      const imgRes = await fetch(qr.image_url);
+      if (imgRes.ok) {
+        const buf = new Uint8Array(await imgRes.arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        imageDataUrl = `data:image/png;base64,${btoa(bin)}`;
+      }
+    } catch { /* client will fall back to image_url */ }
+
+    return json({ imageUrl: qr.image_url, imageDataUrl, qrId: qr.id, amount: amountPaise });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
