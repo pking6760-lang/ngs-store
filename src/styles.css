@@ -2058,6 +2058,8 @@ input:focus-visible {
   stroke-dasharray: 48; stroke-dashoffset: 48; animation: ovDraw .35s ease .4s forwards; }
 @keyframes ovDraw { to { stroke-dashoffset: 0; } }
 
+.success-anim { display: block; width: 86px; height: 86px; margin: 4px auto 8px; }
+
 @media (prefers-reduced-motion: reduce) {
   .splash-logo span, .splash-tag, .fade-up, .ov, .splash-bar > span { animation-duration: .01ms !important; }
   .ngs-spin, .pl-ring, .ov-ring::before { animation-duration: 1.4s; }

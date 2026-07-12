@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { ActionOverlay } from "./Motion.jsx";
+import { withMinTime } from "../lib/ux.js";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
@@ -350,13 +352,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     setPlacing(true);
     setPlaceError("");
     try {
-      const order = await api.placeOrder({
+      const order = await withMinTime(() => api.placeOrder({
         items: lines.map(({ product, qty }) => ({ id: product.id, qty })),
         coupon: appliedCode || null,
         location: location ? { ...location, distanceKm: dist } : null,
         payment,
         address: address.trim(),
-      });
+      }), 900, 1800);
       setPlaced({
         // place_order returns only the order row (no joined items), so count
         // the cart we just sent rather than order.count (which would be 0).
@@ -438,6 +440,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   return (
     <>
+      {placing && <ActionOverlay variant="customer" mode="processing" title="Placing your order…" sub="Just a moment" accent="#0AA25F" />}
       <div className={`drawer-overlay ${open ? "show" : ""}`} onClick={handleClose} />
       <aside className={`cart-drawer ${open ? "open" : ""}`}>
         <div className="drawer-head">
@@ -468,7 +471,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
         {step === "done" && placed ? (
           <div className="order-success">
-            <div className="success-badge">✅</div>
+            <svg className="ov-check success-anim" viewBox="0 0 72 72" aria-hidden="true" style={{ "--ov-accent": "#0AA25F" }}>
+              <circle cx="36" cy="36" r="27" />
+              <path d="M23 37 l9 9 l17 -19" />
+            </svg>
             <h3>Order confirmed!</h3>
             <p>
               {placed.count} item{placed.count > 1 ? "s" : ""} • ₹{placed.total}

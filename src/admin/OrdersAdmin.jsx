@@ -10,6 +10,7 @@ import { createOrderQr } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import Receipt from "./Receipt.jsx";
 import { StatusPill } from "./Dashboard.jsx";
+import { withMinTime } from "../lib/ux.js";
 import {
   isPrinterSupported, listPairedPrinters, savedPrinter, savePrinter, printReceiptBluetooth,
 } from "../lib/printer.js";
@@ -52,10 +53,12 @@ export default function OrdersAdmin() {
 
   // Marking Delivered on an unpaid order means the cash was taken → record it.
   async function changeStatus(order, status) {
-    await updateOrderStatus(order, status);
-    if (status === "Delivered" && order.paymentStatus !== "paid") {
-      await markCashReceived(order);
-    }
+    await withMinTime(async () => {
+      await updateOrderStatus(order, status);
+      if (status === "Delivered" && order.paymentStatus !== "paid") {
+        await markCashReceived(order);
+      }
+    }, 550, 1100);
   }
 
   function closeDetail() {
@@ -184,6 +187,8 @@ export default function OrdersAdmin() {
 
 function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
   const curIdx = ORDER_STATUSES.indexOf(o.status);
+  const [statusBusy, setStatusBusy] = useState(null);
+  async function doChange(s) { setStatusBusy(s); try { await changeStatus(o, s); } finally { setStatusBusy(null); } }
   const bill = [
     ["Items total", o.itemTotal],
     o.couponDiscount > 0 && [`Coupon (${o.couponCode})`, -o.couponDiscount],
@@ -307,10 +312,10 @@ function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus, 
                   <button
                     key={s}
                     className={`od-status ${i < curIdx ? "done" : ""} ${i === curIdx ? "current" : ""}`}
-                    disabled={i <= curIdx}
-                    onClick={() => changeStatus(o, s)}
+                    disabled={i <= curIdx || statusBusy}
+                    onClick={() => doChange(s)}
                   >
-                    {i < curIdx ? "✓ " : ""}{s}
+                    {statusBusy === s ? <span className="ngs-spin" /> : <>{i < curIdx ? "✓ " : ""}{s}</>}
                   </button>
                 ))}
               </div>
