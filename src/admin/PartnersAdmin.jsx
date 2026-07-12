@@ -50,6 +50,45 @@ function DocViewer({ doc, onClose }) {
   );
 }
 
+// A partner's money at a glance + the two owner actions: confirm a cash
+// deposit (clears cash-in-hand) and record a payout.
+function WalletBlock({ partner, w, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const bal = w?.balance || 0, cash = w?.cashInHand || 0, strikes = w?.strikes || 0;
+
+  async function deposit() {
+    const v = Number(prompt(`Cash received from ${partner.fullName}? (they owe ₹${Math.round(cash)})`, Math.round(cash) || ""));
+    if (!v || v <= 0) return;
+    setBusy(true); setMsg("");
+    try { await api.partnerDepositCash(partner.userId, v); setMsg("✓ Deposit recorded"); await onChange(); }
+    catch (e) { setMsg(e.message); } finally { setBusy(false); }
+  }
+  async function payout() {
+    const suggested = Math.max(0, Math.round(bal));
+    const v = Number(prompt(`Pay out to ${partner.fullName}? (balance ₹${Math.round(bal)})`, suggested || ""));
+    if (!v || v <= 0) return;
+    setBusy(true); setMsg("");
+    try { await api.partnerRecordPayoutAdmin(partner.userId, v, "Weekly payout"); setMsg("✓ Payout recorded"); await onChange(); }
+    catch (e) { setMsg(e.message); } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="pwallet">
+      <div className="pwallet-stats">
+        <div className="pw-stat"><span>Balance</span><strong className={bal < 0 ? "neg" : ""}>₹{Math.round(bal)}</strong></div>
+        <div className="pw-stat"><span>Cash in hand</span><strong className={cash > 0 ? "warn" : ""}>₹{Math.round(cash)}</strong></div>
+        <div className="pw-stat"><span>Strikes</span><strong className={strikes >= 2 ? "neg" : ""}>{strikes}</strong></div>
+      </div>
+      <div className="pwallet-actions">
+        <button disabled={busy || cash <= 0} onClick={deposit}>💵 Confirm cash deposit</button>
+        <button disabled={busy || bal <= 0} onClick={payout}>💸 Record payout</button>
+      </div>
+      {msg && <div className="pwallet-msg">{msg}</div>}
+    </div>
+  );
+}
+
 export default function PartnersAdmin() {
   const partners = usePartners();
   const [filter, setFilter] = useState("pending");
@@ -57,8 +96,14 @@ export default function PartnersAdmin() {
   const [busy, setBusy] = useState(null);
   const [viewer, setViewer] = useState(null);
   const [err, setErr] = useState("");
+  const [wallets, setWallets] = useState({});
+
+  const loadWallets = () => api.fetchPartnerWallets().then(setWallets).catch(() => {});
+  useEffect(() => { loadWallets(); }, [partners.length]);
 
   const shown = partners.filter((p) => (filter === "all" ? true : p.status === filter));
+  const cashOnRoad = Object.values(wallets).reduce((s, w) => s + (w.cashInHand || 0), 0);
+  const holders = Object.values(wallets).filter((w) => (w.cashInHand || 0) > 0).length;
 
   async function decide(p, status) {
     setErr("");
@@ -70,6 +115,13 @@ export default function PartnersAdmin() {
 
   return (
     <>
+      {cashOnRoad > 0 && (
+        <div className="cash-road">
+          <span>💵 Cash on the road</span>
+          <strong>₹{Math.round(cashOnRoad).toLocaleString("en-IN")}</strong>
+          <small>held by {holders} partner{holders === 1 ? "" : "s"}</small>
+        </div>
+      )}
       <div className="toolbar">
         <div className="filter-chips">
           {["pending", "approved", "rejected", "all"].map((f) => (
@@ -146,6 +198,10 @@ export default function PartnersAdmin() {
                       <DocView path={p.pan} label="PAN" onOpen={setViewer} />
                       {p.dl && <DocView path={p.dl} label="Licence" onOpen={setViewer} />}
                     </div>
+
+                    {p.status === "approved" && (
+                      <WalletBlock partner={p} w={wallets[p.userId]} onChange={loadWallets} />
+                    )}
 
                     {err && busy === null && <div className="preg-error" style={{ marginTop: 10 }}>{err}</div>}
                     {p.status !== "approved" && (

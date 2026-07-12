@@ -537,6 +537,45 @@ export async function getMyStrikes() {
   return (data || []).map((s) => ({ id: s.id, reason: s.reason, at: s.created_at }));
 }
 
+// Admin: raw ops_config for the settings editor + update.
+export async function getOpsConfigRaw() {
+  const { data, error } = await must().from("ops_config").select("*").eq("id", 1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+export async function updateOpsConfig(patch) {
+  const { error } = await must().from("ops_config")
+    .update({ ...patch, updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) throw new Error(error.message || "Couldn't save settings.");
+  pingLocal("ops_config");
+  return { ok: true };
+}
+
+// Admin: every partner's wallet balance, cash-in-hand and strike count.
+export async function fetchPartnerWallets() {
+  const [led, strk] = await Promise.all([
+    must().from("wallet_ledger").select("partner_id,amount,cash_delta"),
+    must().from("partner_strikes").select("partner_id"),
+  ]);
+  const map = {};
+  const get = (id) => (map[id] || (map[id] = { balance: 0, cashInHand: 0, strikes: 0 }));
+  (led.data || []).forEach((r) => { const m = get(r.partner_id); m.balance += Number(r.amount); m.cashInHand += Number(r.cash_delta); });
+  (strk.data || []).forEach((r) => { get(r.partner_id).strikes += 1; });
+  return map;
+}
+export async function partnerDepositCash(userId, amount) {
+  const { error } = await must().rpc("partner_deposit_cash", { p_user: userId, p_amount: amount });
+  if (error) throw new Error(error.message || "Couldn't record deposit.");
+  pingLocal("wallet_ledger");
+  return { ok: true };
+}
+export async function partnerRecordPayoutAdmin(userId, amount, note) {
+  const { error } = await must().rpc("partner_record_payout", { p_user: userId, p_amount: amount, p_note: note || null });
+  if (error) throw new Error(error.message || "Couldn't record payout.");
+  pingLocal("wallet_ledger");
+  return { ok: true };
+}
+
 // Order lifecycle (used once dispatch is wired).
 export async function partnerAccept(orderId) {
   const { error } = await must().rpc("partner_accept", { p_order: orderId });
