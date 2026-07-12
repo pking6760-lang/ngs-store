@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
+import { initPartnerPush } from "../lib/partnerPush.js";
+import { unlockAudio, stopAlarm } from "../lib/sound.js";
 
 /* ── date helpers (IST) ─────────────────────────────────────────────────── */
 const IST = "Asia/Kolkata";
@@ -54,6 +56,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
 
   // Live everywhere: reload the instant any of the partner's own data changes,
   // plus a light safety poll and refetch on refocus.
+  useEffect(() => { initPartnerPush(); }, []);
   useEffect(() => {
     reload();
     const unsubs = ["wallet_ledger", "partner_slots", "partner_presence", "ops_config", "partner_strikes"]
@@ -157,6 +160,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
   }, [presence.activeOrderId]);
 
   async function taskAction(fn) {
+    stopAlarm(); // they're handling it — silence the ring
     setTaskBusy(true);
     try { await fn(); const t = await api.getMyTask(); setTask(t); await reload(); }
     catch (e) { alert(e.message || "Something went wrong."); }
@@ -171,6 +175,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
   const firstName = (name || "there").split(" ")[0];
 
   async function toggle() {
+    unlockAudio(); // prime the alarm sound on this tap (browsers need a gesture)
     setBusy(true);
     try { await api.setOnline(!presence.isOnline); setPresence((p) => ({ ...p, isOnline: !p.isOnline })); }
     catch { /* ignore */ } finally { setBusy(false); }
