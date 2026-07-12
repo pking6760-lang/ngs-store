@@ -2038,9 +2038,19 @@ body {
 .partner-kv span:first-child { color: #888; }
 .partner-kv span:last-child { font-weight: 600; text-align: right; }
 .pdocs { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
-.pdoc { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #555; font-size: 11px; }
+.pdoc { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #555; font-size: 11px; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
 .pdoc img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
 .pdoc-loading { width: 84px; height: 84px; border-radius: 8px; background: #f0f0f2; display: flex; align-items: center; justify-content: center; color: #aaa; }
+
+/* Full-screen in-app document viewer (documents stay inside the app — the
+   backend address is never shown). */
+.doc-viewer { position: fixed; inset: 0; z-index: 3000; background: rgba(8, 10, 12, 0.96);
+  display: flex; flex-direction: column; }
+.doc-viewer-bar { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; color: #fff; font-size: 15px; font-weight: 600; }
+.doc-viewer-bar button { background: rgba(255,255,255,0.14); border: 0; color: #fff;
+  width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+.doc-viewer img { flex: 1; min-height: 0; width: 100%; object-fit: contain; padding: 0 12px 24px; }
 
 /* NGS Partner login card */
 .partner-login-card { background: #fff; width: 100%; max-width: 360px; border-radius: 16px; padding: 20px; }

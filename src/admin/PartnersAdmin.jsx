@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { usePartners } from "../lib/hooks.js";
 import * as api from "../lib/api.js";
 
-// One document photo. Loads a preview, and on tap generates a FRESH signed URL
-// so the link is never expired when the admin opens the full image.
-function DocView({ path, label }) {
+// One document photo. Loads a preview; tapping opens it full-screen INSIDE the
+// app (never navigates away, so the backend address is never shown).
+function DocView({ path, label, onOpen }) {
   const [url, setUrl] = useState(null);
   const [opening, setOpening] = useState(false);
   useEffect(() => {
@@ -17,7 +17,7 @@ function DocView({ path, label }) {
     setOpening(true);
     try {
       const fresh = await api.partnerDocUrl(path);
-      if (fresh) window.open(fresh, "_blank", "noopener");
+      if (fresh) onOpen({ url: fresh, label });
     } finally { setOpening(false); }
   }
   return (
@@ -28,11 +28,26 @@ function DocView({ path, label }) {
   );
 }
 
+// Full-screen in-app image viewer.
+function DocViewer({ doc, onClose }) {
+  if (!doc) return null;
+  return (
+    <div className="doc-viewer" onClick={onClose}>
+      <div className="doc-viewer-bar">
+        <span>{doc.label}</span>
+        <button onClick={onClose} aria-label="Close">✕</button>
+      </div>
+      <img src={doc.url} alt={doc.label} onClick={(e) => e.stopPropagation()} />
+    </div>
+  );
+}
+
 export default function PartnersAdmin() {
   const partners = usePartners();
   const [filter, setFilter] = useState("pending");
   const [openId, setOpenId] = useState(null);
   const [busy, setBusy] = useState(null);
+  const [viewer, setViewer] = useState(null);
 
   const shown = partners.filter((p) => (filter === "all" ? true : p.status === filter));
 
@@ -84,10 +99,10 @@ export default function PartnersAdmin() {
                     )}
 
                     <div className="pdocs">
-                      <DocView path={p.aadhaarFront} label="Aadhaar front" />
-                      <DocView path={p.aadhaarBack} label="Aadhaar back" />
-                      <DocView path={p.pan} label="PAN" />
-                      {p.dl && <DocView path={p.dl} label="Licence" />}
+                      <DocView path={p.aadhaarFront} label="Aadhaar front" onOpen={setViewer} />
+                      <DocView path={p.aadhaarBack} label="Aadhaar back" onOpen={setViewer} />
+                      <DocView path={p.pan} label="PAN" onOpen={setViewer} />
+                      {p.dl && <DocView path={p.dl} label="Licence" onOpen={setViewer} />}
                     </div>
 
                     {p.status !== "approved" && (
@@ -108,6 +123,8 @@ export default function PartnersAdmin() {
           })}
         </div>
       )}
+
+      <DocViewer doc={viewer} onClose={() => setViewer(null)} />
     </>
   );
 }
