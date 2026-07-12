@@ -8,7 +8,7 @@ import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import PartnersAdmin from "./PartnersAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
-import { useSettings } from "../lib/hooks.js";
+import { useSettings, useOrders, usePartners } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
 import * as api from "../lib/api.js";
 import { unlockAudio } from "../lib/sound.js";
@@ -25,21 +25,21 @@ const ADMIN_PASSWORD = "admin123";
 const ROLE_KEY = "ngs-admin-role"; // "admin"
 const NAME_KEY = "ngs-admin-name";
 
-const NAV = [
-  { id: "dashboard", label: "Home", icon: "📊" },
-  { id: "orders", label: "Orders", icon: "🧾" },
-  { id: "products", label: "Products", icon: "📦" },
-  { id: "customers", label: "Customers", icon: "👥" },
-  { id: "partners", label: "Partners", icon: "🧑‍🔧" },
-  { id: "delivery", label: "Delivery", icon: "🚴" },
-  { id: "offers", label: "Offers", icon: "🎟️" },
-  { id: "settings", label: "Settings", icon: "⚙️" },
+const TILES = [
+  { id: "dashboard", label: "Overview", icon: "📊", tint: "#4C6EF5" },
+  { id: "orders", label: "Orders", icon: "🧾", tint: "#1C7ED6" },
+  { id: "products", label: "Products", icon: "📦", tint: "#F08C00" },
+  { id: "customers", label: "Customers", icon: "👥", tint: "#7048E8" },
+  { id: "partners", label: "Partners", icon: "🛵", tint: "#0CA678" },
+  { id: "delivery", label: "Delivery", icon: "🚴", tint: "#0C8599" },
+  { id: "offers", label: "Offers", icon: "🎟️", tint: "#E64980" },
+  { id: "settings", label: "Settings", icon: "⚙️", tint: "#5C6570" },
 ];
 
 export default function AdminApp() {
   const [role, setRole] = useState(() => sessionStorage.getItem(ROLE_KEY) || null);
   const [name, setName] = useState(() => sessionStorage.getItem(NAME_KEY) || "");
-  const [view, setView] = useState("dashboard");
+  const [view, setView] = useState("menu");
 
   // In backend mode, restore an existing admin session on load so a signed-in
   // admin isn't asked to log in again.
@@ -76,73 +76,73 @@ export default function AdminApp() {
 
   if (!role) return <Login onSignIn={signIn} />;
 
-  // Admin dashboard. (Employees use the separate NGS Partner app.)
+  // One clean screen: a home menu of tiles → each opens a section with a back
+  // button. No sidebar, no bottom bar. (Employees use the NGS Partner app.)
   return (
-    <div className="admin">
-      <aside className="admin-sidebar">
-        <div className="admin-brand">
-          <span className="admin-logo">NGS</span>
-          <span className="admin-logo-sub">admin</span>
-        </div>
-        <nav className="admin-nav">
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              className={`admin-nav-item ${view === n.id ? "active" : ""}`}
-              onClick={() => setView(n.id)}
-            >
-              <span className="admin-nav-icon">{n.icon}</span>
-              <span className="admin-nav-label">{n.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="admin-sidebar-foot">
-          <button className="admin-logout" onClick={logout}>
-            Log out
-          </button>
-        </div>
-      </aside>
-
-      <main className="admin-main">
-        <header className="admin-topbar">
-          <h1 className="admin-title">{NAV.find((n) => n.id === view)?.label}</h1>
-          <StoreControls />
-          <div className="admin-user">
-            <span className="admin-avatar">🧑‍💼</span>
-            <span className="admin-user-name">{name || "Store Manager"}</span>
-            <button className="admin-logout-icon" onClick={logout} title="Log out">
-              ⎋
-            </button>
-          </div>
-        </header>
-
-        <div className="admin-content">
-          {view === "dashboard" && <Dashboard onNavigate={setView} />}
-          {view === "products" && <ProductsAdmin />}
-          {view === "orders" && <OrdersAdmin />}
-          {view === "customers" && <CustomersAdmin />}
-          {view === "partners" && <PartnersAdmin />}
-          {view === "delivery" && <DeliveryAdmin />}
-          {view === "offers" && <CouponsAdmin />}
-          {view === "settings" && <OpsSettings />}
-        </div>
-      </main>
-
-      <nav className="admin-bottom-nav">
-        {NAV.map((n) => (
-          <button
-            key={n.id}
-            className={`bottom-nav-item ${view === n.id ? "active" : ""}`}
-            onClick={() => setView(n.id)}
-          >
-            <span className="bottom-nav-icon">{n.icon}</span>
-            <span className="bottom-nav-label">{n.label}</span>
-          </button>
-        ))}
-      </nav>
-
+    <div className="adm">
+      {view === "menu" ? (
+        <AdminHome name={name} onOpen={setView} onLogout={logout} />
+      ) : (
+        <AdminSection view={view} onOpen={setView} />
+      )}
       {/* Forced new-order screen with alarm (admin only). */}
       <IncomingOrder />
+    </div>
+  );
+}
+
+function AdminHome({ name, onOpen, onLogout }) {
+  const orders = useOrders();
+  const partners = usePartners();
+  const activeOrders = orders.filter((o) => o.status !== "Delivered" && o.status !== "Cancelled").length;
+  const pendingPartners = partners.filter((p) => p.status === "pending").length;
+  const badge = { orders: activeOrders, partners: pendingPartners };
+
+  return (
+    <div className="adm-home">
+      <header className="adm-hero">
+        <div className="adm-hero-top">
+          <div className="adm-brand">
+            <span className="adm-logo">NGS</span>
+            <span className="adm-sub">admin</span>
+          </div>
+          <button className="adm-logout" onClick={onLogout}>Log out</button>
+        </div>
+        <div className="adm-hello">Hi, {name || "Store Manager"} 👋</div>
+        <StoreControls />
+      </header>
+
+      <div className="adm-grid">
+        {TILES.map((t) => (
+          <button key={t.id} className="adm-tile" onClick={() => onOpen(t.id)}>
+            <span className="adm-tile-ic" style={{ background: `${t.tint}1A`, color: t.tint }}>{t.icon}</span>
+            <span className="adm-tile-lbl">{t.label}</span>
+            {badge[t.id] > 0 && <span className="adm-tile-badge">{badge[t.id]}</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AdminSection({ view, onOpen }) {
+  const label = TILES.find((t) => t.id === view)?.label || "";
+  return (
+    <div className="adm-sec">
+      <header className="adm-secbar">
+        <button className="adm-back" onClick={() => onOpen("menu")} aria-label="Back">←</button>
+        <h1>{label}</h1>
+      </header>
+      <div className="adm-sec-body">
+        {view === "dashboard" && <Dashboard onNavigate={onOpen} />}
+        {view === "products" && <ProductsAdmin />}
+        {view === "orders" && <OrdersAdmin />}
+        {view === "customers" && <CustomersAdmin />}
+        {view === "partners" && <PartnersAdmin />}
+        {view === "delivery" && <DeliveryAdmin />}
+        {view === "offers" && <CouponsAdmin />}
+        {view === "settings" && <OpsSettings />}
+      </div>
     </div>
   );
 }
