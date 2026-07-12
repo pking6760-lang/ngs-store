@@ -25,6 +25,10 @@
 }
 .pd-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px 24px;
   padding-top: max(14px, env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 16px; }
+/* Keep every block at its natural size — the page scrolls instead of the cards
+   squishing/clipping when the list grows. */
+.pd-scroll > * { flex-shrink: 0; }
+.pd-hero { flex-shrink: 0; }
 
 /* Top bar */
 .pd-top { display: flex; align-items: center; gap: 12px; }
