@@ -297,6 +297,9 @@ function Slots({ role, cfg, slots, reload }) {
   const openH = cfg?.storeOpenHour ?? 6, closeH = cfg?.storeCloseHour ?? 23;
   const hours = []; for (let h = 0; h <= 22; h += 2) if (h >= openH && h < closeH) hours.push(h);
   const mine = new Set(slots.filter((s) => s.date === dateISO && s.status !== "cancelled").map((s) => s.hour));
+  // A slot that has already started (or passed) today can't be booked.
+  const nowHourIST = parseInt(new Intl.DateTimeFormat("en-GB", { timeZone: IST, hour: "2-digit", hour12: false }).format(new Date()), 10);
+  const isToday = dateISO === istDateISO();
 
   useEffect(() => { api.getSlotCounts(dateISO).then(setCounts).catch(() => setCounts({})); }, [dateISO, busy]);
 
@@ -322,12 +325,13 @@ function Slots({ role, cfg, slots, reload }) {
         {hours.map((h) => {
           const booked = mine.has(h);
           const cnt = counts[`${role}:${h}`] || 0;
+          const past = isToday && h <= nowHourIST;
           const full = cnt >= 10 && !booked;
           return (
-            <button key={h} className={`pd-slot ${booked ? "booked" : ""} ${full ? "full" : ""}`}
-              disabled={booked || full || busy === h} onClick={() => book(h)}>
+            <button key={h} className={`pd-slot ${booked ? "booked" : ""} ${full || past ? "full" : ""}`}
+              disabled={booked || full || past || busy === h} onClick={() => book(h)}>
               <div className="s-time">{hourLabel(h)}</div>
-              <div className="s-cap">{booked ? "✓ Booked" : full ? "Full" : busy === h ? "Booking…" : `${cnt}/10 booked`}</div>
+              <div className="s-cap">{past ? "Closed" : booked ? "✓ Booked" : full ? "Full" : busy === h ? "Booking…" : `${cnt}/10 booked`}</div>
             </button>
           );
         })}
