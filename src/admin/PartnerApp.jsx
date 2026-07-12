@@ -76,8 +76,10 @@ function PartnerInner() {
   });
 
   useEffect(() => {
-    if (!isLoggedIn || isAdmin) { setPartner(null); return; }
+    if (isAdmin) { setPartner(null); return; }
+    if (!isLoggedIn) { setPartner(undefined); return; }
     let alive = true;
+    setPartner(undefined); // show the loading splash — never flash the register form
     const load = () => api.getMyPartner()
       .then((p) => { if (alive) setPartner(p); })
       .catch(() => { if (alive) setPartner(null); });
