@@ -2041,3 +2041,9 @@ body {
 .pdoc { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #555; font-size: 11px; }
 .pdoc img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
 .pdoc-loading { width: 84px; height: 84px; border-radius: 8px; background: #f0f0f2; display: flex; align-items: center; justify-content: center; color: #aaa; }
+
+/* NGS Partner login card */
+.partner-login-card { background: #fff; width: 100%; max-width: 360px; border-radius: 16px; padding: 20px; }
+.partner-login-card .login-input { width: 100%; margin-bottom: 10px; }
+.pl-sub { font-size: 14px; color: #555; margin-bottom: 12px; }
+.pl-sub .link-btn { font-size: 13px; }

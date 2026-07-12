@@ -1,9 +1,61 @@
 import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
-import AuthModal from "../components/AuthModal.jsx";
 import EmployeeApp from "./EmployeeApp.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
 import * as api from "../lib/api.js";
+
+// Branded "NGS Partner" email-code login (separate from the customer login).
+function PartnerLogin() {
+  const [stage, setStage] = useState("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function send(e) {
+    e.preventDefault();
+    setBusy(true); setError("");
+    try { await api.partnerLoginSend(email); setStage("code"); }
+    catch (err) { setError(err.message || "Couldn't send the code."); }
+    finally { setBusy(false); }
+  }
+  async function verify(e) {
+    e.preventDefault();
+    setBusy(true); setError("");
+    try { await api.partnerLoginVerify(email, code); } // success → session set → parent re-renders
+    catch (err) { setError(err.message || "Couldn't verify."); setBusy(false); }
+  }
+
+  return (
+    <div className="partner-login-bg">
+      <div className="partner-login-brand">
+        <span className="admin-logo">NGS</span>
+        <span className="admin-logo-sub">partner</span>
+        <p>Picking &amp; delivery</p>
+      </div>
+      <div className="partner-login-card">
+        {stage === "email" ? (
+          <form onSubmit={send}>
+            <p className="pl-sub">Log in with your email — we'll send you a code.</p>
+            <input className="login-input" type="email" value={email} autoFocus
+              onChange={(e) => { setEmail(e.target.value); setError(""); }} placeholder="you@example.com" />
+            {error && <div className="login-error">{error}</div>}
+            <button className="login-btn" type="submit" disabled={busy}>{busy ? "Sending…" : "Email me a code"}</button>
+          </form>
+        ) : (
+          <form onSubmit={verify}>
+            <p className="pl-sub">Enter the code sent to <strong>{email}</strong>.{" "}
+              <button type="button" className="link-btn" onClick={() => { setStage("email"); setCode(""); setError(""); }}>Change</button></p>
+            <input className="login-input" type="tel" inputMode="numeric" value={code} autoFocus
+              onChange={(e) => { setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} placeholder="6-digit code" />
+            {error && <div className="login-error">{error}</div>}
+            <button className="login-btn" type="submit" disabled={busy}>{busy ? "Verifying…" : "Verify & continue"}</button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Splash({ text }) {
   return (
@@ -42,19 +94,7 @@ function PartnerInner() {
 
   if (!ready) return <Splash />;
 
-  if (!isLoggedIn) {
-    return (
-      <div className="partner-login-bg">
-        <div className="partner-login-brand">
-          <span className="admin-logo">NGS</span>
-          <span className="admin-logo-sub">partner</span>
-          <p>Picking &amp; delivery</p>
-        </div>
-        <AuthModal open onClose={() => {}} onSuccess={() => {}}
-          reason="Log in to the NGS Partner app with your email." />
-      </div>
-    );
-  }
+  if (!isLoggedIn) return <PartnerLogin />;
 
   // Admin can use the partner app directly (covering a shift / testing).
   if (isAdmin) {

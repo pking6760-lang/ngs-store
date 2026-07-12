@@ -354,6 +354,18 @@ async function compressImage(file, max = 1600, quality = 0.82) {
   } catch { return file; }
 }
 
+// NGS Partner login — a branded OTP email, separate from the customer login.
+export async function partnerLoginSend(email) {
+  return invokeFn("partner-otp-send", { email: (email || "").trim() });
+}
+export async function partnerLoginVerify(email, code) {
+  const data = await invokeFn("partner-otp-verify", { email: (email || "").trim(), code: (code || "").trim() });
+  // Exchange the one-time token for a real session.
+  const { error } = await must().auth.verifyOtp({ token_hash: data.tokenHash, type: "magiclink" });
+  if (error) throw new Error(error.message || "Couldn't complete login. Try again.");
+  return { ok: true };
+}
+
 // The signed-in person's own partner registration (or null if not registered).
 export async function getMyPartner() {
   const { data: u } = await must().auth.getUser();
