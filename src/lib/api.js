@@ -61,7 +61,8 @@ function mapProduct(r) {
     category: r.category, stock: r.stock, active: r.active,
     // Public merchandising flags: `bait` (best-price deal) and `hot` (selling
     // fast). Cost, tier and the sales numbers are admin-only (fetchAdminProducts).
-    bait: !!r.bait, hot: !!r.hot };
+    bait: !!r.bait, hot: !!r.hot,
+    bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [] };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color };

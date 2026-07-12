@@ -43,6 +43,10 @@ export default function SmartPricing() {
           clearance_markup: (Number(cfg.clearance_markup) || 0),
           floor_markup: (Number(cfg.floor_markup) || 0),
           bait_count: Number(cfg.bait_count) || 0,
+          bulk_enabled: cfg.bulk_enabled,
+          bulk_min_1: Number(cfg.bulk_min_1) || 0, bulk_off_1: Number(cfg.bulk_off_1) || 0,
+          bulk_min_2: Number(cfg.bulk_min_2) || 0, bulk_off_2: Number(cfg.bulk_off_2) || 0,
+          bulk_min_3: Number(cfg.bulk_min_3) || 0, bulk_off_3: Number(cfg.bulk_off_3) || 0,
         });
         await api.smartReprice();
       });
@@ -128,6 +132,39 @@ export default function SmartPricing() {
         </button>
       </div>
 
+      <div className="sp-card">
+        <div className="sp-row sp-toggle-row">
+          <div>
+            <strong>Bulk pricing</strong>
+            <span className="sp-sub">Buy more, pay less per unit — auto-built from cost</span>
+          </div>
+          <button
+            type="button"
+            className={`sp-switch ${cfg.bulk_enabled ? "on" : ""}`}
+            onClick={() => set("bulk_enabled", !cfg.bulk_enabled)}
+            aria-label="Toggle bulk pricing"
+          >
+            <span />
+          </button>
+        </div>
+        {cfg.bulk_enabled && (
+          <>
+            <div className="sp-grid" style={{ marginTop: 10 }}>
+              <Field label="Tier 1 qty ≥" value={cfg.bulk_min_1} onChange={(v) => set("bulk_min_1", v)} />
+              <Field label="Tier 1 % off" value={pct(cfg.bulk_off_1)} onChange={(v) => set("bulk_off_1", v / 100)} />
+              <Field label="Tier 2 qty ≥" value={cfg.bulk_min_2} onChange={(v) => set("bulk_min_2", v)} />
+              <Field label="Tier 2 % off" value={pct(cfg.bulk_off_2)} onChange={(v) => set("bulk_off_2", v / 100)} />
+              <Field label="Tier 3 qty ≥" value={cfg.bulk_min_3} onChange={(v) => set("bulk_min_3", v)} />
+              <Field label="Tier 3 % off" value={pct(cfg.bulk_off_3)} onChange={(v) => set("bulk_off_3", v / 100)} />
+            </div>
+            <p className="sp-note">Discounts are capped at the floor margin, so thin-margin items get smaller (or no) breaks automatically.</p>
+          </>
+        )}
+        <button className="sp-save" disabled={busy} onClick={saveAndReprice}>
+          {busy ? "Working…" : "Save & apply"}
+        </button>
+      </div>
+
       <div className="sp-actionbar">
         <span>{baitCount} product{baitCount === 1 ? "" : "s"} advertised as deals</span>
         <button className="sp-recompute" disabled={busy} onClick={recompute}>↻ Recompute now</button>
@@ -159,6 +196,11 @@ export default function SmartPricing() {
                 <strong>₹{Math.round(p.price)}</strong>
                 {p.cost != null && p.price > 0 && (
                   <span className="sp-item-margin">{Math.round(((p.price - p.cost) / p.price) * 100)}%</span>
+                )}
+                {Array.isArray(p.bulkTiers) && p.bulkTiers.length > 0 && (
+                  <span className="sp-item-bulk">
+                    {p.bulkTiers.map((t) => `${t.q}+ ₹${t.price}`).join(" · ")}
+                  </span>
                 )}
               </div>
               {g.tier !== "unpriced" && (

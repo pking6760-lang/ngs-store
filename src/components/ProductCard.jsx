@@ -1,5 +1,6 @@
 import { useCart } from "../context/CartContext.jsx";
 import ProductThumb from "./ProductThumb.jsx";
+import { firstBulkTier } from "../lib/bulk.js";
 
 // Show scarcity urgency when stock is running low.
 const LOW_STOCK = 5;
@@ -13,6 +14,7 @@ export default function ProductCard({ product, badge }) {
   const outOfStock = product.inStock === false || (hasStockLimit && product.stock <= 0);
   const lowStock = hasStockLimit && product.stock > 0 && product.stock <= LOW_STOCK;
   const atMax = hasStockLimit && qty >= product.stock;
+  const bulkTier = firstBulkTier(product);
 
   return (
     <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
@@ -47,6 +49,9 @@ export default function ProductCard({ product, badge }) {
           <span className="product-hot">🔥 Bestseller</span>
         )}
       </div>
+      {bulkTier && !outOfStock && (
+        <div className="product-bulk">🛒 {bulkTier.q}+ at ₹{bulkTier.price} each</div>
+      )}
       <div className="product-footer">
         <div className="product-price">
           <div className="price-line">

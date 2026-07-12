@@ -8,6 +8,7 @@ import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "..
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage } from "../lib/payments.js";
+import { bulkUnitPrice } from "../lib/bulk.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import {
@@ -58,7 +59,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const lines = Object.entries(items)
     .map(([id, qty]) => {
       const product = products.find((p) => p.id === id);
-      return product ? { product, qty } : null;
+      if (!product) return null;
+      return { product, qty, unit: bulkUnitPrice(product, qty) };
     })
     .filter(Boolean);
 
@@ -72,9 +74,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     });
   }, [lines, setQty]);
 
-  const itemTotal = lines.reduce((sum, l) => sum + l.product.price * l.qty, 0);
+  const itemTotal = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
   const savings = lines.reduce(
-    (sum, l) => sum + (l.product.mrp - l.product.price) * l.qty,
+    (sum, l) => sum + (l.product.mrp - l.unit) * l.qty,
     0
   );
 
@@ -99,9 +101,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // Per-category subtotals + a name lookup, so coupons can require a certain
   // product type or a minimum amount.
   const catTotals = {};
-  for (const { product, qty } of lines) {
+  for (const { product, qty, unit } of lines) {
     catTotals[product.category] =
-      (catTotals[product.category] || 0) + product.price * qty;
+      (catTotals[product.category] || 0) + unit * qty;
   }
   const catName = (id) => categories.find((c) => c.id === id)?.name || id;
   const couponCtx = { itemTotal, catTotals, catName };
@@ -764,7 +766,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             )}
 
             <div className="cart-lines">
-              {lines.map(({ product, qty }) => (
+              {lines.map(({ product, qty, unit }) => {
+                const nextTier = (product.bulkTiers || []).find((t) => t.q > qty);
+                const bulkOn = unit < product.price;
+                return (
                 <div className="cart-line" key={product.id}>
                   <div className="cart-line-icon">
                     <ProductThumb
@@ -776,7 +781,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   </div>
                   <div className="cart-line-info">
                     <div className="cart-line-name">{product.name}</div>
-                    <div className="cart-line-unit">{product.unit}</div>
+                    <div className="cart-line-unit">
+                      {product.unit}
+                      {bulkOn && <span className="cart-line-bulk"> · ₹{unit}/ea bulk</span>}
+                    </div>
+                    {nextTier && (
+                      <div className="cart-line-nudge">
+                        Add {nextTier.q - qty} more → ₹{nextTier.price}/ea
+                      </div>
+                    )}
                   </div>
                   <div className="cart-line-right">
                     <div className="qty-stepper small">
@@ -790,7 +803,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     {typeof product.stock === "number" && qty >= product.stock && (
                       <div className="cart-line-max">Only {product.stock} in stock</div>
                     )}
-                    <div className="cart-line-price">₹{product.price * qty}</div>
+                    <div className="cart-line-price">
+                      ₹{unit * qty}
+                      {bulkOn && <span className="cart-line-was">₹{product.price * qty}</span>}
+                    </div>
                     <button
                       className="line-delete"
                       onClick={() => deleteItem(product.id)}
@@ -800,7 +816,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {canRedeem && isLoggedIn && availablePoints > 0 && maxRedeemRupees > 0 && (
