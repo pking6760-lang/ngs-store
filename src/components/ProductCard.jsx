@@ -9,9 +9,10 @@ export default function ProductCard({ product, badge }) {
   const qty = items[product.id] || 0;
   const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
   const savings = product.mrp - product.price;
-  const outOfStock = product.inStock === false;
-  const lowStock =
-    typeof product.stock === "number" && product.stock > 0 && product.stock <= LOW_STOCK;
+  const hasStockLimit = typeof product.stock === "number";
+  const outOfStock = product.inStock === false || (hasStockLimit && product.stock <= 0);
+  const lowStock = hasStockLimit && product.stock > 0 && product.stock <= LOW_STOCK;
+  const atMax = hasStockLimit && qty >= product.stock;
 
   return (
     <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
@@ -63,7 +64,7 @@ export default function ProductCard({ product, badge }) {
             Sold out
           </button>
         ) : qty === 0 ? (
-          <button className="add-btn" onClick={() => add(product.id)}>
+          <button className="add-btn" onClick={() => add(product.id, product.stock)}>
             ADD
           </button>
         ) : (
@@ -72,7 +73,11 @@ export default function ProductCard({ product, badge }) {
               −
             </button>
             <span>{qty}</span>
-            <button onClick={() => add(product.id)} aria-label="Add one">
+            <button
+              onClick={() => add(product.id, product.stock)}
+              disabled={atMax}
+              aria-label="Add one"
+            >
               +
             </button>
           </div>

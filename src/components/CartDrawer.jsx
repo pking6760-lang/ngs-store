@@ -24,7 +24,7 @@ function loadDraft() {
 }
 
 export default function CartDrawer({ open, onClose, onRequireLogin }) {
-  const { items, add, remove, deleteItem, clear } = useCart();
+  const { items, add, remove, deleteItem, clear, setQty } = useCart();
   const { user, isLoggedIn, updateProfile, applyRewards } = useAuth();
   const products = useProducts();
   const settings = useSettings();
@@ -61,6 +61,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       return product ? { product, qty } : null;
     })
     .filter(Boolean);
+
+  // Self-heal: if a cart quantity is above what's now in stock (e.g. stock
+  // dropped after it was added), clamp it down so checkout can't fail.
+  useEffect(() => {
+    lines.forEach(({ product, qty }) => {
+      if (typeof product.stock === "number" && qty > product.stock) {
+        setQty(product.id, product.stock);
+      }
+    });
+  }, [lines, setQty]);
 
   const itemTotal = lines.reduce((sum, l) => sum + l.product.price * l.qty, 0);
   const savings = lines.reduce(
@@ -772,8 +782,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <div className="qty-stepper small">
                       <button onClick={() => remove(product.id)}>−</button>
                       <span>{qty}</span>
-                      <button onClick={() => add(product.id)}>+</button>
+                      <button
+                        onClick={() => add(product.id, product.stock)}
+                        disabled={typeof product.stock === "number" && qty >= product.stock}
+                      >+</button>
                     </div>
+                    {typeof product.stock === "number" && qty >= product.stock && (
+                      <div className="cart-line-max">Only {product.stock} in stock</div>
+                    )}
                     <div className="cart-line-price">₹{product.price * qty}</div>
                     <button
                       className="line-delete"

@@ -17,7 +17,14 @@ function loadInitial() {
 function reducer(state, action) {
   switch (action.type) {
     case "ADD": {
-      const qty = (state[action.id] || 0) + 1;
+      // Never let the cart quantity exceed available stock (when known).
+      const cap = typeof action.max === "number" ? action.max : Infinity;
+      const qty = Math.min((state[action.id] || 0) + 1, cap);
+      if (qty <= 0) {
+        const next = { ...state };
+        delete next[action.id];
+        return next;
+      }
       return { ...state, [action.id]: qty };
     }
     case "REMOVE": {
@@ -28,6 +35,15 @@ function reducer(state, action) {
         return next;
       }
       return { ...state, [action.id]: current - 1 };
+    }
+    case "SET": {
+      if (action.qty <= 0) {
+        const next = { ...state };
+        delete next[action.id];
+        return next;
+      }
+      if (state[action.id] === action.qty) return state;
+      return { ...state, [action.id]: action.qty };
     }
     case "DELETE": {
       const next = { ...state };
@@ -55,8 +71,9 @@ export function CartProvider({ children }) {
   const value = useMemo(
     () => ({
       items,
-      add: (id) => dispatch({ type: "ADD", id }),
+      add: (id, max) => dispatch({ type: "ADD", id, max }),
       remove: (id) => dispatch({ type: "REMOVE", id }),
+      setQty: (id, qty) => dispatch({ type: "SET", id, qty }),
       deleteItem: (id) => dispatch({ type: "DELETE", id }),
       clear: () => dispatch({ type: "CLEAR" }),
       totalCount: Object.values(items).reduce((a, b) => a + b, 0),
