@@ -33,3 +33,16 @@ export function fileToResizedDataUrl(file, max = 600, quality = 0.82) {
     reader.readAsDataURL(file);
   });
 }
+
+// Download an image by URL (e.g. an Open Food Facts product photo) and turn it
+// into the same small, self-contained data URL a manual upload produces — so a
+// barcode-filled product doesn't depend on an external CDN staying up. The
+// remote host must allow cross-origin reads (Open-*-Facts sends
+// `access-control-allow-origin: *`, so its images work).
+export async function urlToResizedDataUrl(url, max = 600, quality = 0.82) {
+  const res = await fetch(url, { mode: "cors" });
+  if (!res.ok) throw new Error("Couldn't download that image.");
+  const blob = await res.blob();
+  if (!blob.type.startsWith("image/")) throw new Error("That wasn't an image.");
+  return fileToResizedDataUrl(blob, max, quality);
+}

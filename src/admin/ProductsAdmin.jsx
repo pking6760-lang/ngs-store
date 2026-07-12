@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, lazy, Suspense } from "react";
 import { useProducts, useCategories } from "../lib/hooks.js";
 import AdminPortal from "./AdminPortal.jsx";
 import {
@@ -7,8 +7,12 @@ import {
   addCategory,
   deleteCategory,
 } from "../lib/actions.js";
-import { fileToResizedDataUrl } from "../lib/image.js";
+import { fileToResizedDataUrl, urlToResizedDataUrl } from "../lib/image.js";
+import { lookupProductByBarcode, guessCategory } from "../lib/productLookup.js";
 import ProductThumb from "../components/ProductThumb.jsx";
+// The scanner pulls in ZXing (~300 KB) — load it only when scanning starts so
+// the admin app itself stays light.
+const BarcodeScanner = lazy(() => import("./BarcodeScanner.jsx"));
 
 const EMPTY = {
   id: "",
@@ -260,9 +264,46 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   const [form, setForm] = useState(product);
   const [imgBusy, setImgBusy] = useState(false);
   const [imgError, setImgError] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [lookup, setLookup] = useState(null); // { busy, ok, msg }
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  // A barcode was scanned (or typed) — look it up in the open product DBs and
+  // auto-fill name, size, category and photo, so the owner only sets price &
+  // stock. Fields the DB doesn't know are left untouched.
+  async function onScanned(code) {
+    setScanning(false);
+    setLookup({ busy: true, msg: `Looking up ${code}…` });
+    const res = await lookupProductByBarcode(code);
+    if (!res.found) {
+      setLookup({ busy: false, ok: false, msg: res.reason || "Not found — fill it in by hand." });
+      return;
+    }
+    setForm((f) => {
+      const next = { ...f };
+      if (res.name) next.name = res.name;
+      if (res.unit) next.unit = res.unit;
+      const cat = guessCategory(res, categories);
+      if (cat) next.category = cat;
+      return next;
+    });
+    // Pull the product photo in the background (network), then resize + store it.
+    if (res.imageUrl) {
+      setImgBusy(true);
+      try {
+        const dataUrl = await urlToResizedDataUrl(res.imageUrl);
+        update("image", dataUrl);
+      } catch {
+        // Fall back to linking the remote image if the download fails.
+        update("image", res.imageUrl);
+      } finally {
+        setImgBusy(false);
+      }
+    }
+    setLookup({ busy: false, ok: true, msg: "Filled from database — now set price & stock." });
   }
 
   async function pickImage(e) {
@@ -310,6 +351,18 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
         </div>
 
         <div className="modal-body">
+          <div className="field wide scan-field">
+            <button type="button" className="scan-btn" onClick={() => setScanning(true)}>
+              📷 Scan barcode to auto-fill
+            </button>
+            {lookup && (
+              <p className={`scan-status ${lookup.busy ? "busy" : lookup.ok ? "ok" : "miss"}`}>
+                {lookup.busy && <span className="ngs-spin" aria-hidden />}
+                {lookup.msg}
+              </p>
+            )}
+          </div>
+
           <label className="field wide">
             <span>Product name</span>
             <input
@@ -449,6 +502,12 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
           </button>
         </div>
       </form>
+
+      {scanning && (
+        <Suspense fallback={null}>
+          <BarcodeScanner onDetected={onScanned} onClose={() => setScanning(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

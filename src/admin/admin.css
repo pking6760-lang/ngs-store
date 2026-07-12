@@ -704,6 +704,87 @@ body {
   background: #fff;
 }
 
+/* ─── Barcode scan (auto-fill a product) ─────────────────── */
+.scan-field { gap: 8px; }
+.scan-btn {
+  width: 100%;
+  border: 1px solid #c7d2fe;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: #2B44A8;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 13px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.scan-btn:active { background: #dbe2fb; }
+.scan-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; font-weight: 600; margin: 0;
+}
+.scan-status.busy { color: #2B44A8; }
+.scan-status.ok { color: #1b7a3d; }
+.scan-status.miss { color: #b45309; }
+
+.scan-overlay {
+  position: fixed; inset: 0; z-index: 400; background: #0b0e14;
+  display: flex; flex-direction: column; color: #fff;
+}
+.scan-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; font-weight: 800; font-size: 16px;
+  background: rgba(0,0,0,0.4);
+}
+.scan-close {
+  border: none; background: rgba(255,255,255,0.14); color: #fff;
+  width: 34px; height: 34px; border-radius: 50%; font-size: 16px; cursor: pointer;
+}
+.scan-stage { flex: 1; position: relative; overflow: hidden; }
+.scan-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.scan-frame {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(78vw, 340px); height: min(46vw, 200px);
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,0.5);
+  border-radius: 14px;
+}
+.scan-corner {
+  position: absolute; width: 26px; height: 26px; border: 3px solid #3B5BDB;
+}
+.scan-corner.tl { top: -2px; left: -2px; border-right: 0; border-bottom: 0; border-radius: 12px 0 0 0; }
+.scan-corner.tr { top: -2px; right: -2px; border-left: 0; border-bottom: 0; border-radius: 0 12px 0 0; }
+.scan-corner.bl { bottom: -2px; left: -2px; border-right: 0; border-top: 0; border-radius: 0 0 0 12px; }
+.scan-corner.br { bottom: -2px; right: -2px; border-left: 0; border-top: 0; border-radius: 0 0 12px 0; }
+.scan-laser {
+  position: absolute; left: 8px; right: 8px; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, #5b7cfa, transparent);
+  box-shadow: 0 0 12px 2px rgba(91,124,250,0.8);
+  animation: scanLaser 1.8s ease-in-out infinite;
+}
+@keyframes scanLaser {
+  0%, 100% { top: 10%; }
+  50% { top: 88%; }
+}
+.scan-hint {
+  position: absolute; bottom: 22px; left: 0; right: 0; text-align: center;
+  font-size: 13px; color: rgba(255,255,255,0.85); margin: 0;
+}
+.scan-error { flex: 1; display: flex; align-items: center; justify-content: center; padding: 30px; text-align: center; }
+.scan-error p { font-size: 14px; line-height: 1.5; color: #e6e8ee; max-width: 320px; }
+.scan-manual {
+  display: flex; gap: 8px; padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  background: rgba(0,0,0,0.4);
+}
+.scan-manual input {
+  flex: 1; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+  color: #fff; border-radius: 10px; padding: 11px 13px; font-size: 15px; outline: none;
+}
+.scan-manual input::placeholder { color: rgba(255,255,255,0.5); }
+.scan-manual button {
+  border: none; background: #3B5BDB; color: #fff; font-weight: 800;
+  padding: 0 18px; border-radius: 10px; cursor: pointer;
+}
+.scan-manual button:disabled { opacity: 0.4; }
+
 /* ─── Modal ──────────────────────────────────────────────── */
 /* Product/category modals are portaled to <body> (so their fixed overlay
    anchors to the viewport, not the scrolling section). Re-declare the admin's
