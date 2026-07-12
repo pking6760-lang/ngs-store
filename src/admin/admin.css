@@ -2120,7 +2120,19 @@ body {
 }
 .adm { position: fixed; inset: 0; background: var(--a-bg); color: var(--a-ink); overflow: hidden;
   display: flex; flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;
+  /* The redesigned admin roots at .adm (not the old .admin). Older controls
+     that still reference the shared customer tokens (product editor Save
+     button, In-stock toggle, upload button, focus rings, field labels,
+     input borders) inherit them from here, so re-point the whole accent set
+     to the admin's neutral-indigo palette — this is what actually recolors
+     the live app. The customer theme's --muted/--line are green-tinted, which
+     is why field labels read olive-green; override those to neutral too. */
+  --green: #3B5BDB;
+  --green-dark: #2B44A8;
+  --muted: #6B7885;
+  --line: #E2E8EF;
+}
 
 /* Home */
 .adm-home { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 30px; }
