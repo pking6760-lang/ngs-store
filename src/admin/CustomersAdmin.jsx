@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useCustomers, useOrders, useUserNotifications } from "../lib/hooks.js";
 import { sendNotification } from "../lib/actions.js";
+import AdminPortal from "./AdminPortal.jsx";
 
 export default function CustomersAdmin() {
   const customers = useCustomers();
@@ -55,11 +56,13 @@ export default function CustomersAdmin() {
       )}
 
       {selected && (
-        <CustomerDetail
-          customer={selected}
-          orders={orders.filter((o) => o.userId === selected.id)}
-          onClose={() => setSelectedId(null)}
-        />
+        <AdminPortal>
+          <CustomerDetail
+            customer={selected}
+            orders={orders.filter((o) => o.userId === selected.id)}
+            onClose={() => setSelectedId(null)}
+          />
+        </AdminPortal>
       )}
     </>
   );

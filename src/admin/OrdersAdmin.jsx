@@ -8,6 +8,7 @@ import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
 import { createOrderQr } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
+import AdminPortal from "./AdminPortal.jsx";
 import Receipt from "./Receipt.jsx";
 import { StatusPill } from "./Dashboard.jsx";
 import { withMinTime } from "../lib/ux.js";
@@ -151,35 +152,39 @@ export default function OrdersAdmin() {
       )}
 
       {selected && (
-        <OrderDetail
-          order={selected}
-          onClose={closeDetail}
-          qrFor={qrFor}
-          qrState={qrState}
-          openQr={openQr}
-          changeStatus={changeStatus}
-          onPrint={printReceipt}
-          onChangePrinter={() => openPicker(selected)}
-          printMsg={printMsg}
-        />
+        <AdminPortal>
+          <OrderDetail
+            order={selected}
+            onClose={closeDetail}
+            qrFor={qrFor}
+            qrState={qrState}
+            openQr={openQr}
+            changeStatus={changeStatus}
+            onPrint={printReceipt}
+            onChangePrinter={() => openPicker(selected)}
+            printMsg={printMsg}
+          />
+        </AdminPortal>
       )}
 
       {picker && (
-        <div className="od-overlay" onClick={() => setPicker(null)}>
-          <div className="printer-pick" onClick={(e) => e.stopPropagation()}>
-            <h3>Choose your printer</h3>
-            <p className="od-muted">Paired Bluetooth devices:</p>
-            <div className="printer-list">
-              {picker.devices.map((d) => (
-                <button key={d.address} className="printer-item" onClick={() => choosePrinter(d)}>
-                  🖨️ {d.name || d.address}
-                  <span>{d.address}</span>
-                </button>
-              ))}
+        <AdminPortal>
+          <div className="od-overlay" onClick={() => setPicker(null)}>
+            <div className="printer-pick" onClick={(e) => e.stopPropagation()}>
+              <h3>Choose your printer</h3>
+              <p className="od-muted">Paired Bluetooth devices:</p>
+              <div className="printer-list">
+                {picker.devices.map((d) => (
+                  <button key={d.address} className="printer-item" onClick={() => choosePrinter(d)}>
+                    🖨️ {d.name || d.address}
+                    <span>{d.address}</span>
+                  </button>
+                ))}
+              </div>
+              <button className="printer-cancel" onClick={() => setPicker(null)}>Cancel</button>
             </div>
-            <button className="printer-cancel" onClick={() => setPicker(null)}>Cancel</button>
           </div>
-        </div>
+        </AdminPortal>
       )}
     </>
   );

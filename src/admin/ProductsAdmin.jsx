@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useProducts, useCategories } from "../lib/hooks.js";
+import AdminPortal from "./AdminPortal.jsx";
 import {
   upsertProduct,
   deleteProduct,
@@ -129,27 +130,31 @@ export default function ProductsAdmin() {
       </section>
 
       {editing && (
-        <ProductModal
-          product={editing}
-          categories={categories}
-          onClose={() => setEditing(null)}
-          onSave={(prod) => {
-            upsertProduct(prod);
-            setEditing(null);
-          }}
-          onDelete={(id) => {
-            deleteProduct(id);
-            setEditing(null);
-          }}
-        />
+        <AdminPortal>
+          <ProductModal
+            product={editing}
+            categories={categories}
+            onClose={() => setEditing(null)}
+            onSave={(prod) => {
+              upsertProduct(prod);
+              setEditing(null);
+            }}
+            onDelete={(id) => {
+              deleteProduct(id);
+              setEditing(null);
+            }}
+          />
+        </AdminPortal>
       )}
 
       {managingCats && (
-        <CategoryManager
-          categories={categories}
-          products={products}
-          onClose={() => setManagingCats(false)}
-        />
+        <AdminPortal>
+          <CategoryManager
+            categories={categories}
+            products={products}
+            onClose={() => setManagingCats(false)}
+          />
+        </AdminPortal>
       )}
     </>
   );

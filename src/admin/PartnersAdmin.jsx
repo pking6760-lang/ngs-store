@@ -4,6 +4,7 @@ import * as api from "../lib/api.js";
 import { kycReport } from "../lib/kyc.js";
 import { withMinTime } from "../lib/ux.js";
 import { ActionOverlay } from "../components/Motion.jsx";
+import AdminPortal from "./AdminPortal.jsx";
 
 function fmtDate(iso) {
   if (!iso) return "";
@@ -42,13 +43,15 @@ function DocView({ path, label, onOpen }) {
 function DocViewer({ doc, onClose }) {
   if (!doc) return null;
   return (
-    <div className="doc-viewer" onClick={onClose}>
-      <div className="doc-viewer-bar">
-        <span>{doc.label}</span>
-        <button onClick={onClose} aria-label="Close">✕</button>
+    <AdminPortal>
+      <div className="doc-viewer" onClick={onClose}>
+        <div className="doc-viewer-bar">
+          <span>{doc.label}</span>
+          <button onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <img src={doc.url} alt={doc.label} onClick={(e) => e.stopPropagation()} />
       </div>
-      <img src={doc.url} alt={doc.label} onClick={(e) => e.stopPropagation()} />
-    </div>
+    </AdminPortal>
   );
 }
 
@@ -103,14 +106,18 @@ function WalletBlock({ partner, w, onChange }) {
       {msg && <div className="pwallet-msg">{msg}</div>}
 
       {modal === "deposit" && (
-        <AmountModal title={`Cash deposit — ${partner.fullName}`} hint={`They owe the shop ₹${Math.round(cash)}.`}
-          suggest={Math.round(cash)} okLabel="Confirm" onCancel={() => setModal(null)}
-          onSubmit={(v) => submit("deposit", v)} />
+        <AdminPortal>
+          <AmountModal title={`Cash deposit — ${partner.fullName}`} hint={`They owe the shop ₹${Math.round(cash)}.`}
+            suggest={Math.round(cash)} okLabel="Confirm" onCancel={() => setModal(null)}
+            onSubmit={(v) => submit("deposit", v)} />
+        </AdminPortal>
       )}
       {modal === "payout" && (
-        <AmountModal title={`Pay out — ${partner.fullName}`} hint={`Current balance ₹${Math.round(bal)}.`}
-          suggest={Math.max(0, Math.round(bal))} okLabel="Pay out" onCancel={() => setModal(null)}
-          onSubmit={(v) => submit("payout", v)} />
+        <AdminPortal>
+          <AmountModal title={`Pay out — ${partner.fullName}`} hint={`Current balance ₹${Math.round(bal)}.`}
+            suggest={Math.max(0, Math.round(bal))} okLabel="Pay out" onCancel={() => setModal(null)}
+            onSubmit={(v) => submit("payout", v)} />
+        </AdminPortal>
       )}
     </div>
   );
@@ -266,7 +273,7 @@ export default function PartnersAdmin() {
       )}
 
       <DocViewer doc={viewer} onClose={() => setViewer(null)} />
-      {approved && <ActionOverlay variant="admin" mode="success" title="Partner approved" sub="They can start now" accent="#3B5BDB" />}
+      {approved && <AdminPortal><ActionOverlay variant="admin" mode="success" title="Partner approved" sub="They can start now" accent="#3B5BDB" /></AdminPortal>}
     </>
   );
 }

@@ -705,6 +705,16 @@ body {
 }
 
 /* ─── Modal ──────────────────────────────────────────────── */
+/* Product/category modals are portaled to <body> (so their fixed overlay
+   anchors to the viewport, not the scrolling section). Re-declare the admin's
+   indigo tokens on the portal wrapper — it lives outside .adm, so it would
+   otherwise fall back to the customer green/olive palette. */
+.adm-modal-portal {
+  --green: #3B5BDB;
+  --green-dark: #2B44A8;
+  --muted: #6B7885;
+  --line: #E2E8EF;
+}
 .modal-overlay {
   position: fixed;
   inset: 0;
