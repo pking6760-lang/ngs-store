@@ -161,3 +161,88 @@
 .lo-item { display: flex; justify-content: space-between; font-size: 14px; padding: 7px 0; border-top: 1px solid var(--p-line); }
 .lo-item:first-of-type { border-top: none; }
 .lo-accept { background: linear-gradient(135deg, var(--p-red-bright), var(--p-red)) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Red/black overrides for the login + registration + terms flow (partner-only)
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* Login */
+.partner-login-bg { background: radial-gradient(1000px 500px at 50% -10%, rgba(229,18,46,0.14), transparent 60%), var(--p-bg) !important; color: var(--p-text); }
+.admin-logo { color: var(--p-red-bright) !important; }
+.admin-logo-sub { color: var(--p-sec) !important; }
+.partner-login-brand p { color: var(--p-sec) !important; }
+.partner-login-card { background: var(--p-card) !important; border: 1px solid var(--p-line); box-shadow: 0 20px 50px -20px rgba(0,0,0,0.7); }
+.pl-sub { color: var(--p-sec) !important; }
+.partner-splash { background: var(--p-bg) !important; }
+
+/* Inputs — dark with red focus */
+.login-input, .preg-field input, .preg-field textarea {
+  background: var(--p-card2) !important; color: var(--p-text) !important; border: 1px solid var(--p-line) !important; }
+.login-input::placeholder, .preg-field input::placeholder, .preg-field textarea::placeholder { color: var(--p-muted) !important; }
+.login-input:focus, .preg-field input:focus, .preg-field textarea:focus { border-color: var(--p-red) !important; outline: none; }
+
+/* Buttons + links + errors */
+.login-btn, .preg-next { background: linear-gradient(135deg, var(--p-red), var(--p-red-deep)) !important; color: #fff !important;
+  box-shadow: 0 12px 30px -12px rgba(229,18,46,0.7); }
+.link-btn, .terms-link { color: var(--p-red-bright) !important; }
+.login-error, .preg-error { background: rgba(255,71,87,0.12) !important; color: var(--p-red-bright) !important; border: 1px solid rgba(255,71,87,0.4) !important; }
+.preg-inline-warn { color: var(--p-amber) !important; }
+
+/* Registration shell */
+.preg { background: var(--p-bg) !important; color: var(--p-text); }
+.preg-head { border-bottom: 1px solid var(--p-line) !important; background: var(--p-panel) !important; }
+.preg-step { color: var(--p-sec) !important; }
+.preg-sub { color: var(--p-sec) !important; }
+.preg-body h2, .preg-body h3, .preg-h3 { color: var(--p-text) !important; }
+.preg-field > span { color: var(--p-sec) !important; }
+.preg-field > span em { color: var(--p-muted) !important; }
+.back-btn { background: var(--p-card2) !important; color: var(--p-text) !important; border: 1px solid var(--p-line) !important; }
+.preg-note { color: var(--p-muted) !important; }
+.preg-ev { color: var(--p-text) !important; }
+
+/* Role-choice cards */
+.role-card { background: var(--p-card) !important; border: 1px solid var(--p-line) !important; color: var(--p-text) !important; }
+.role-card strong { color: var(--p-text) !important; }
+.role-card small { color: var(--p-sec) !important; }
+
+/* Document photo tiles */
+.doc-photo { background: var(--p-card) !important; border: 1px solid var(--p-line) !important; }
+.doc-photo-label strong { color: var(--p-text) !important; }
+.doc-photo-label span { color: var(--p-sec) !important; }
+.doc-add { background: var(--p-card2) !important; border: 1px dashed var(--p-line) !important; color: var(--p-sec) !important; }
+.doc-thumb span { color: var(--p-sec) !important; }
+
+/* Number validation + IFSC hints */
+.preg-field input.num-ok { background: rgba(52,211,153,0.08) !important; border-color: var(--p-mint) !important; }
+.preg-field input.num-bad { background: rgba(255,71,87,0.08) !important; border-color: var(--p-red-bright) !important; }
+.num-hint.ok { color: var(--p-mint) !important; }
+.num-hint.bad { color: var(--p-red-bright) !important; }
+.ifsc-hint { background: var(--p-card2) !important; color: var(--p-sec) !important; }
+.ifsc-hint.ok { background: rgba(52,211,153,0.1) !important; color: var(--p-mint) !important; }
+.ifsc-hint.ok span { color: var(--p-mint) !important; }
+.ifsc-hint.bad { background: rgba(255,71,87,0.1) !important; color: var(--p-red-bright) !important; }
+
+/* Consent block */
+.preg-consent { border-top: 1px solid var(--p-line) !important; }
+.preg-check { color: var(--p-text) !important; }
+.preg-check strong { color: #fff !important; }
+
+/* Pending / rejected / not-approved states */
+.partner-notstaff { background: var(--p-bg) !important; color: var(--p-text) !important; }
+.partner-notstaff h2 { color: var(--p-text) !important; }
+.partner-notstaff p { color: var(--p-sec) !important; }
+.emp-logout { background: var(--p-card2) !important; color: var(--p-red-bright) !important; border: 1px solid var(--p-line) !important; }
+
+/* Admin coverage role bar */
+.partner-rolebar { background: var(--p-panel) !important; border-bottom: 1px solid var(--p-line) !important; }
+.partner-rolebar button { color: var(--p-sec) !important; background: transparent !important; }
+.partner-rolebar button.sel { background: linear-gradient(135deg, var(--p-red), var(--p-red-deep)) !important; color: #fff !important; }
+
+/* Terms & Conditions page → dark */
+.terms-page { background: var(--p-bg) !important; }
+.terms-bar { background: var(--p-panel) !important; border-bottom: 1px solid var(--p-line) !important; color: var(--p-text) !important; }
+.terms-bar button { background: var(--p-card2) !important; color: var(--p-text) !important; }
+.terms-body h1 { color: var(--p-text) !important; }
+.terms-body h2 { color: var(--p-red-bright) !important; }
+.terms-body p, .terms-body li { color: var(--p-sec) !important; }
+.terms-meta { color: var(--p-muted) !important; }
+.terms-ack { background: var(--p-card) !important; color: var(--p-text) !important; }
