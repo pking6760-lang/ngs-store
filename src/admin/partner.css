@@ -167,8 +167,10 @@
 .lo-accept { background: linear-gradient(135deg, var(--p-red-bright), var(--p-red)) !important; }
 
 /* Doorstep UPI QR on the rider card */
-.lo-qr-btn { width: 100%; border: 1px solid var(--p-line); background: var(--p-card2); color: var(--p-text);
-  font-weight: 700; font-size: 14px; padding: 12px; border-radius: 12px; cursor: pointer; }
+.lo-qr-btn { width: 100%; border: 1px solid rgba(255,71,87,0.5); background: rgba(229,18,46,0.12); color: #FF4757;
+  font-weight: 800; font-size: 14px; padding: 13px; border-radius: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px; }
+.lo-qr-btn:active { background: rgba(229,18,46,0.2); }
 .lo-qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 2px; }
 .lo-qr { background: #fff; padding: 12px; border-radius: 14px; }
 .lo-qr img { width: 200px; height: 200px; display: block; }

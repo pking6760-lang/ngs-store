@@ -516,8 +516,8 @@ body {
 }
 /* Already paid online — calm green so the rider knows: collect nothing. */
 .order-pay-tag.paid {
-  background: #e3f6ec;
-  color: #0a7a44;
+  background: #eef2ff;
+  color: #3B5BDB;
   border: 1px solid #b6e6cd;
 }
 /* Cash on delivery — amber, prominent: the rider MUST collect this much. */
@@ -564,17 +564,21 @@ body {
 }
 .collect-btn {
   width: 100%;
-  border: 1px dashed #3B5BDB;
-  background: #eafaf1;
-  color: #0a7a44;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #3B5BDB;
   font-weight: 700;
   font-size: 13px;
-  padding: 9px 12px;
-  border-radius: 10px;
+  padding: 11px 12px;
+  border-radius: 12px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 .collect-btn:active {
-  background: #d8f3e4;
+  background: #e0e7ff;
 }
 .collect-qr {
   margin-top: 10px;
@@ -616,7 +620,7 @@ body {
 .collect-link {
   font-size: 13px;
   font-weight: 700;
-  color: #0a7a44;
+  color: #3B5BDB;
   text-decoration: none;
 }
 .collect-wait {
@@ -1823,7 +1827,7 @@ body {
   align-items: baseline;
 }
 .order-row-id { font-weight: 800; font-size: 15px; color: #111; }
-.order-row-total { font-weight: 800; font-size: 16px; color: #0a7a44; }
+.order-row-total { font-weight: 800; font-size: 16px; color: #3B5BDB; }
 .order-row-bottom {
   display: flex;
   justify-content: space-between;
@@ -1837,8 +1841,8 @@ body {
   background: #fdeaea; border-radius: 999px; padding: 2px 7px;
 }
 .row-paid {
-  font-size: 10.5px; font-weight: 800; color: #0a7a44;
-  background: #e3f6ec; border-radius: 999px; padding: 2px 7px;
+  font-size: 10.5px; font-weight: 800; color: #3B5BDB;
+  background: #eef2ff; border-radius: 999px; padding: 2px 7px;
 }
 
 /* ── Order detail panel ───────────────────────────────────────────────────── */
@@ -1872,14 +1876,14 @@ body {
 .od-row { font-size: 14.5px; color: #222; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .od-call {
   display: inline-block; margin-top: 10px;
-  background: #e3f6ec; color: #0a7a44; font-weight: 800; font-size: 14px;
+  background: #eef2ff; color: #3B5BDB; font-weight: 800; font-size: 14px;
   padding: 10px 14px; border-radius: 10px; text-decoration: none;
 }
-.od-map { display: inline-block; margin-top: 8px; color: #0a7a44; font-weight: 700; font-size: 13.5px; text-decoration: none; }
+.od-map { display: inline-block; margin-top: 8px; color: #3B5BDB; font-weight: 700; font-size: 13.5px; text-decoration: none; }
 .od-muted { font-size: 12.5px; color: #888; margin-top: 6px; }
 .od-bill { margin-top: 10px; border-top: 1px dashed #e6e6ea; padding-top: 10px; }
 .od-bill-row { display: flex; justify-content: space-between; font-size: 13.5px; color: #444; padding: 2px 0; }
-.od-bill-row .free { color: #0a7a44; }
+.od-bill-row .free { color: #3B5BDB; }
 .od-bill-row.total { font-weight: 800; color: #111; font-size: 15px; margin-top: 6px; border-top: 1px solid #eee; padding-top: 8px; }
 .od-accept-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .od-accept {
@@ -1893,10 +1897,10 @@ body {
 .od-status-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .od-status {
   flex: 1 1 44%;
-  background: #fff; border: 1.5px solid #3B5BDB; color: #0a7a44;
+  background: #fff; border: 1.5px solid #3B5BDB; color: #3B5BDB;
   font-weight: 800; font-size: 13.5px; padding: 11px 8px; border-radius: 10px; cursor: pointer;
 }
-.od-status:active { background: #eafaf1; }
+.od-status:active { background: #eef2ff; }
 .od-status.done { border-color: #cfe9db; color: #7bbf9f; background: #f5fbf8; }
 .od-status.current { background: #3B5BDB; color: #fff; border-color: #3B5BDB; }
 .od-status:disabled { cursor: default; }
@@ -1954,7 +1958,7 @@ body {
 
 /* ── Printer picker + status ──────────────────────────────────────────────── */
 .print-sub { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
-.print-change { background: none; border: none; color: #0a7a44; font-weight: 700; font-size: 12.5px; cursor: pointer; padding: 0; }
+.print-change { background: none; border: none; color: #3B5BDB; font-weight: 700; font-size: 12.5px; cursor: pointer; padding: 0; }
 .print-saved { font-size: 11.5px; color: #888; }
 .print-msg { margin-top: 8px; font-size: 13px; font-weight: 700; color: #444; text-align: center; }
 .printer-pick {
@@ -2181,7 +2185,7 @@ body {
 .doc-photo-label strong { font-size: 14px; }
 .doc-photo-label span { font-size: 12px; color: #999; }
 .doc-add {
-  background: #eafaf1; color: #0a7a44; border: 1px dashed #3B5BDB; border-radius: 10px;
+  background: #eef2ff; color: #3B5BDB; border: 1px dashed #3B5BDB; border-radius: 10px;
   padding: 10px 14px; font-weight: 800; font-size: 13px; white-space: nowrap; cursor: pointer;
 }
 .doc-thumb { position: relative; border: none; background: none; padding: 0; cursor: pointer; }
@@ -2196,7 +2200,7 @@ body {
 .partner-main small { color: #888; font-size: 12.5px; }
 .partner-status { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; text-transform: capitalize; }
 .partner-status.pending { background: #fff2d9; color: #9a6100; }
-.partner-status.approved { background: #e3f6ec; color: #0a7a44; }
+.partner-status.approved { background: #eef2ff; color: #3B5BDB; }
 .partner-status.rejected { background: #fdeaea; color: #b3261e; }
 .partner-detail { margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px; }
 .partner-kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 3px 0; }
