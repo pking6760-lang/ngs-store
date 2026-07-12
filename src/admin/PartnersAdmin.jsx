@@ -2,20 +2,29 @@ import { useEffect, useState } from "react";
 import { usePartners } from "../lib/hooks.js";
 import * as api from "../lib/api.js";
 
-// One document photo — loads a short-lived signed URL for the private file.
+// One document photo. Loads a preview, and on tap generates a FRESH signed URL
+// so the link is never expired when the admin opens the full image.
 function DocView({ path, label }) {
   const [url, setUrl] = useState(null);
+  const [opening, setOpening] = useState(false);
   useEffect(() => {
     let alive = true;
     if (path) api.partnerDocUrl(path).then((u) => alive && setUrl(u));
     return () => { alive = false; };
   }, [path]);
   if (!path) return null;
+  async function open() {
+    setOpening(true);
+    try {
+      const fresh = await api.partnerDocUrl(path);
+      if (fresh) window.open(fresh, "_blank", "noopener");
+    } finally { setOpening(false); }
+  }
   return (
-    <a className="pdoc" href={url || undefined} target="_blank" rel="noopener noreferrer">
-      {url ? <img src={url} alt={label} /> : <div className="pdoc-loading">…</div>}
+    <button type="button" className="pdoc" onClick={open}>
+      {url ? <img src={url} alt={label} /> : <div className="pdoc-loading">{opening ? "…" : "📄"}</div>}
       <span>{label}</span>
-    </a>
+    </button>
   );
 }
 

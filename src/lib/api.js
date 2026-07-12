@@ -418,10 +418,11 @@ export async function setPartnerStatus(userId, status) {
   pingLocal("partners");
   return { ok: true };
 }
-// A short-lived signed URL to view a private document photo (admin).
+// A signed URL to view a private document photo (admin). Valid 24h; also
+// regenerated on tap so it's never stale.
 export async function partnerDocUrl(path) {
   if (!path) return null;
-  const { data, error } = await must().storage.from("partner-docs").createSignedUrl(path, 3600);
+  const { data, error } = await must().storage.from("partner-docs").createSignedUrl(path, 86400);
   if (error) return null;
   return data?.signedUrl || null;
 }
