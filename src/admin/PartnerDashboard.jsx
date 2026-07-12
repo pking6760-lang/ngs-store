@@ -332,13 +332,10 @@ function Earnings({ wallet }) {
 
 /* ── Wallet ─────────────────────────────────────────────────────────────── */
 function Wallet({ isDelivery, wallet, cfg }) {
-  const thisWeek = mondayISO(istDateISO());
-  const weekEarn = wallet.ledger.filter((l) => l.kind === "earning" && mondayISO(istParts(l.at).dateISO) === thisWeek)
-    .reduce((s, l) => s + l.amount, 0);
   const cap = cfg?.riderCashCap ?? 1000;
   const cash = wallet.cashInHand;
   const pct = Math.min(100, Math.round((cash / cap) * 100));
-  const net = weekEarn - cash;
+  const bal = wallet.balance;
 
   const kindLabel = { earning: "Order earned", cod_collected: "Cash collected", cod_deposited: "Cash deposited",
     payout: "Payout", penalty: "Penalty", slot_topup: "Slot top-up", adjustment: "Adjustment" };
@@ -346,9 +343,10 @@ function Wallet({ isDelivery, wallet, cfg }) {
   return (
     <>
       <div className="pd-wcard">
-        <div className="lbl">This week's earning</div>
-        <div className="big">{money(weekEarn)}</div>
-        <div className="note">Paid out every Monday</div>
+        <div className="lbl">Money in your wallet</div>
+        <div className="big" style={{ color: bal < 0 ? "var(--p-red-bright)" : undefined }}>{money(bal)}</div>
+        <div className="note">{bal < 0 ? "You owe the shop (cash held above your earnings)"
+          : "What the shop owes you — becomes ₹0 after your Monday payout"}</div>
       </div>
 
       {isDelivery && (
@@ -357,13 +355,6 @@ function Wallet({ isDelivery, wallet, cfg }) {
           <div className="big">{money(cash)}</div>
           <div className="pd-bar"><span style={{ width: `${pct}%` }} /></div>
           <div className="pd-bar-lbl"><span>{money(Math.max(0, cap - cash))} headroom left</span><span>Cap {money(cap)}</span></div>
-        </div>
-      )}
-
-      {isDelivery && (
-        <div className="pd-stats">
-          <div className="pd-tile"><div className="t-lbl">Net this week</div><div className="t-val">{money(net)}</div></div>
-          <div className="pd-tile"><div className="t-lbl">Payout</div><div className="t-val sm">Mon <span className="u">·</span> auto</div></div>
         </div>
       )}
 
