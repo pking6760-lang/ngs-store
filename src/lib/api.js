@@ -353,6 +353,8 @@ function mapPartner(r) {
     phone: r.phone, email: r.email, address: r.address,
     bankAccount: r.bank_account, bankIfsc: r.bank_ifsc, bankHolder: r.bank_holder,
     bankName: r.bank_name, bankBranch: r.bank_branch,
+    aadhaarNumber: r.aadhaar_number, panNumber: r.pan_number, dlNumber: r.dl_number,
+    termsAcceptedAt: r.terms_accepted_at, termsVersion: r.terms_version,
     usesEv: r.uses_ev, aadhaarFront: r.aadhaar_front, aadhaarBack: r.aadhaar_back,
     pan: r.pan, dl: r.dl, status: r.status, createdAt: r.created_at,
   };
@@ -421,6 +423,9 @@ export async function registerPartner(p) {
     email: u.user.email || p.email || null, address: p.address || null,
     bank_account: p.bankAccount || null, bank_ifsc: p.bankIfsc || null, bank_holder: p.bankHolder || null,
     bank_name: p.bankName || null, bank_branch: p.bankBranch || null,
+    aadhaar_number: p.aadhaarNumber || null, pan_number: p.panNumber || null, dl_number: p.dlNumber || null,
+    terms_accepted_at: p.termsAccepted ? new Date().toISOString() : null,
+    terms_version: p.termsAccepted ? (p.termsVersion || null) : null,
     uses_ev: !!p.usesEv, aadhaar_front: p.aadhaarFront || null, aadhaar_back: p.aadhaarBack || null,
     pan: p.pan || null, dl: p.dl || null, status: "pending",
   };

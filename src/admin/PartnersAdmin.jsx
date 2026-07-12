@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { usePartners } from "../lib/hooks.js";
 import * as api from "../lib/api.js";
+import { kycReport } from "../lib/kyc.js";
+
+function fmtDate(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  } catch { return iso; }
+}
 
 // One document photo. Loads a preview; tapping opens it full-screen INSIDE the
 // app (never navigates away, so the backend address is never shown).
@@ -100,6 +108,34 @@ export default function PartnersAdmin() {
                     {p.role === "delivery" && (
                       <div className="partner-kv"><span>Vehicle</span><span>{p.usesEv ? "Low-speed EV (no licence)" : "Needs licence"}</span></div>
                     )}
+
+                    <div className="kyc-report">
+                      <div className="kyc-report-title">ID verification</div>
+                      {kycReport(p).map((it) => (
+                        <div className={`kyc-row ${it.ok ? "ok" : "bad"}`} key={it.key}>
+                          <span className="kyc-mark">{it.ok ? "✓" : "✗"}</span>
+                          <span className="kyc-main">
+                            <strong>{it.label}</strong>
+                            <small>{it.show || "—"} · {it.ok ? it.okText : it.badText}</small>
+                          </span>
+                        </div>
+                      ))}
+                      {p.termsAcceptedAt ? (
+                        <div className="kyc-row ok">
+                          <span className="kyc-mark">✓</span>
+                          <span className="kyc-main">
+                            <strong>Terms &amp; declaration accepted</strong>
+                            <small>{fmtDate(p.termsAcceptedAt)}{p.termsVersion ? ` · v${p.termsVersion}` : ""}</small>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="kyc-row bad">
+                          <span className="kyc-mark">✗</span>
+                          <span className="kyc-main"><strong>Terms not accepted</strong>
+                            <small>Registered before the declaration was added</small></span>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="pdocs">
                       <DocView path={p.aadhaarFront} label="Aadhaar front" onOpen={setViewer} />

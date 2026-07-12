@@ -1,5 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "../lib/api.js";
+import * as kyc from "../lib/kyc.js";
+import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
+
+// A document number field with live ✓/✗ feedback once enough is typed.
+function NumField({ label, value, onChange, valid, hint, placeholder }) {
+  const touched = value && value.length > 3;
+  return (
+    <label className="preg-field">
+      <span>{label}</span>
+      <input value={value} onChange={onChange} placeholder={placeholder}
+        autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+        className={touched ? (valid ? "num-ok" : "num-bad") : ""} />
+      {touched && (
+        <em className={valid ? "num-hint ok" : "num-hint bad"}>
+          {valid ? `✓ ${hint}` : "✗ Doesn't look right — please re-check"}
+        </em>
+      )}
+    </label>
+  );
+}
 
 // A photo field — tap to pick from camera or gallery, shows a preview.
 function DocPhoto({ label, hint, file, onPick }) {
@@ -39,6 +59,10 @@ export default function PartnerRegister({ email, onDone }) {
   });
   const [usesEv, setUsesEv] = useState(false);
   const [docs, setDocs] = useState({}); // { aadhaar_front, aadhaar_back, pan, dl } → File
+  const [nums, setNums] = useState({ aadhaar: "", pan: "", dl: "" });
+  const [agreeAuth, setAgreeAuth] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   // IFSC lookup: null = idle, "loading", "invalid", or {bank, branch, city, state}
@@ -54,6 +78,13 @@ export default function PartnerRegister({ email, onDone }) {
     setForm((f) => ({ ...f, [k]: e.target.value.replace(/\D/g, "").slice(0, 18) }));
   const setIfsc = (e) =>
     setForm((f) => ({ ...f, bankIfsc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11) }));
+
+  const setAadhaarNo = (e) => setNums((n) => ({ ...n, aadhaar: kyc.formatAadhaar(e.target.value) }));
+  const setPanNo = (e) => setNums((n) => ({ ...n, pan: kyc.cleanPan(e.target.value) }));
+  const setDlNo = (e) => setNums((n) => ({ ...n, dl: kyc.cleanDl(e.target.value) }));
+  const aadhaarOk = kyc.aadhaarValid(nums.aadhaar);
+  const panOk = kyc.panValid(nums.pan);
+  const dlOk = kyc.dlValid(nums.dl);
 
   // Whenever a full 11-char IFSC is present, resolve its bank + branch live.
   useEffect(() => {
@@ -86,8 +117,12 @@ export default function PartnerRegister({ email, onDone }) {
   async function submit() {
     setError("");
     if (!docs.aadhaar_front || !docs.aadhaar_back) return setError("Add both sides of your Aadhaar card.");
+    if (!aadhaarOk) return setError("Enter a valid 12-digit Aadhaar number.");
     if (!docs.pan) return setError("Add your PAN card photo.");
+    if (!panOk) return setError("Enter a valid PAN number, e.g. ABCDE1234F.");
     if (needDL && !docs.dl) return setError("Add your driving licence, or tick the EV option below.");
+    if (needDL && !dlOk) return setError("Enter a valid driving licence number.");
+    if (!agreeAuth || !agreeTerms) return setError("Please tick both boxes to declare your details are genuine and accept the Terms & Conditions.");
     setBusy(true);
     try {
       const paths = {};
@@ -102,6 +137,9 @@ export default function PartnerRegister({ email, onDone }) {
         bankName: (bankInfo && bankInfo !== "invalid" && bankInfo !== "loading") ? bankInfo.bank : null,
         bankBranch: (bankInfo && bankInfo !== "invalid" && bankInfo !== "loading")
           ? [bankInfo.branch, bankInfo.city].filter(Boolean).join(", ") : null,
+        aadhaarNumber: kyc.cleanAadhaar(nums.aadhaar), panNumber: kyc.cleanPan(nums.pan),
+        dlNumber: needDL ? kyc.cleanDl(nums.dl) : null,
+        termsAccepted: true, termsVersion: TERMS_VERSION,
         usesEv, aadhaarFront: paths.aadhaar_front, aadhaarBack: paths.aadhaar_back,
         pan: paths.pan, dl: paths.dl || null,
       });
@@ -187,20 +225,44 @@ export default function PartnerRegister({ email, onDone }) {
 
         {step === 3 && (
           <>
-            <h2>Upload documents</h2>
-            <p className="preg-sub">Clear photos — from camera or gallery.</p>
+            <h2>Documents &amp; ID numbers</h2>
+            <p className="preg-sub">Clear photos, and type each number exactly as printed.</p>
             <DocPhoto label="Aadhaar — front" file={docs.aadhaar_front} onPick={pick("aadhaar_front")} />
             <DocPhoto label="Aadhaar — back" file={docs.aadhaar_back} onPick={pick("aadhaar_back")} />
+            <NumField label="Aadhaar number" value={nums.aadhaar} onChange={setAadhaarNo}
+              valid={aadhaarOk} hint="12 digits · verified" placeholder="1234 5678 9012" />
             <DocPhoto label="PAN card" file={docs.pan} onPick={pick("pan")} />
+            <NumField label="PAN number" value={nums.pan} onChange={setPanNo}
+              valid={panOk} hint="Valid PAN" placeholder="ABCDE1234F" />
             {isDelivery && (
               <>
                 <label className="preg-ev">
                   <input type="checkbox" checked={usesEv} onChange={(e) => setUsesEv(e.target.checked)} />
                   <span>I ride a low-speed / rental EV (no driving licence needed)</span>
                 </label>
-                {needDL && <DocPhoto label="Driving licence" file={docs.dl} onPick={pick("dl")} />}
+                {needDL && (
+                  <>
+                    <DocPhoto label="Driving licence" file={docs.dl} onPick={pick("dl")} />
+                    <NumField label="Licence number" value={nums.dl} onChange={setDlNo}
+                      valid={dlOk} hint="Valid licence" placeholder="DL0420110012345" />
+                  </>
+                )}
               </>
             )}
+
+            <div className="preg-consent">
+              <label className="preg-check">
+                <input type="checkbox" checked={agreeAuth} onChange={(e) => setAgreeAuth(e.target.checked)} />
+                <span>I declare that all details and documents I have given are <strong>genuine and belong to me</strong>, and are not fake or tampered.</span>
+              </label>
+              <label className="preg-check">
+                <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} />
+                <span>I have read and accept the{" "}
+                  <button type="button" className="terms-link" onClick={() => setShowTerms(true)}>Terms &amp; Conditions</button>.
+                </span>
+              </label>
+            </div>
+
             {error && <div className="preg-error">{error}</div>}
             <button className="preg-next" onClick={submit} disabled={busy}>
               {busy ? "Uploading…" : "Submit for approval"}
@@ -209,6 +271,8 @@ export default function PartnerRegister({ email, onDone }) {
           </>
         )}
       </div>
+
+      {showTerms && <PartnerTerms onClose={() => setShowTerms(false)} />}
     </div>
   );
 }
