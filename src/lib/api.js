@@ -321,6 +321,99 @@ export async function markNotificationsRead() {
   pingLocal("notifications");
 }
 
+/* ─── NGS Partner onboarding (KYC) ──────────────────────────────────────── */
+
+function mapPartner(r) {
+  if (!r) return null;
+  return {
+    id: r.id, userId: r.user_id, role: r.role, fullName: r.full_name,
+    phone: r.phone, email: r.email, address: r.address,
+    bankAccount: r.bank_account, bankIfsc: r.bank_ifsc, bankHolder: r.bank_holder,
+    usesEv: r.uses_ev, aadhaarFront: r.aadhaar_front, aadhaarBack: r.aadhaar_back,
+    pan: r.pan, dl: r.dl, status: r.status, createdAt: r.created_at,
+  };
+}
+
+// Downscale + JPEG-compress a photo before upload so documents stay small.
+async function compressImage(file, max = 1600, quality = 0.82) {
+  if (typeof document === "undefined") return file;
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = URL.createObjectURL(file);
+    });
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+    const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
+    return blob || file;
+  } catch { return file; }
+}
+
+// The signed-in person's own partner registration (or null if not registered).
+export async function getMyPartner() {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) return null;
+  const { data, error } = await must()
+    .from("partners").select("*").eq("user_id", u.user.id).maybeSingle();
+  if (error) throw error;
+  return mapPartner(data);
+}
+
+// Upload one KYC photo to the private bucket → returns its storage path.
+export async function uploadPartnerDoc(file, kind) {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) throw new Error("Please sign in again.");
+  const blob = await compressImage(file);
+  const path = `${u.user.id}/${kind}.jpg`;
+  const { error } = await must().storage
+    .from("partner-docs").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+  if (error) throw error;
+  return path;
+}
+
+// Submit (or resubmit) a partner registration. Starts as 'pending'.
+export async function registerPartner(p) {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) throw new Error("Please sign in again.");
+  const row = {
+    user_id: u.user.id, role: p.role, full_name: p.fullName, phone: p.phone || null,
+    email: u.user.email || p.email || null, address: p.address || null,
+    bank_account: p.bankAccount || null, bank_ifsc: p.bankIfsc || null, bank_holder: p.bankHolder || null,
+    uses_ev: !!p.usesEv, aadhaar_front: p.aadhaarFront || null, aadhaar_back: p.aadhaarBack || null,
+    pan: p.pan || null, dl: p.dl || null, status: "pending",
+  };
+  const { error } = await must().from("partners").upsert(row, { onConflict: "user_id" });
+  if (error) throw error;
+  pingLocal("partners");
+  return { ok: true };
+}
+
+// Admin: review + decide partners.
+export async function fetchPartners() {
+  const { data, error } = await must()
+    .from("partners").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapPartner);
+}
+export async function setPartnerStatus(userId, status) {
+  const { error } = await must().rpc("set_partner_status", { p_user: userId, p_status: status });
+  if (error) throw error;
+  pingLocal("partners");
+  return { ok: true };
+}
+// A short-lived signed URL to view a private document photo (admin).
+export async function partnerDocUrl(path) {
+  if (!path) return null;
+  const { data, error } = await must().storage.from("partner-docs").createSignedUrl(path, 3600);
+  if (error) return null;
+  return data?.signedUrl || null;
+}
+
 /* ─── Admin: catalog ────────────────────────────────────────────────────── */
 
 export async function upsertProduct(product) {

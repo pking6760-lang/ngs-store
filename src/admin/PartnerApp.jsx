@@ -1,31 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import AuthModal from "../components/AuthModal.jsx";
 import EmployeeApp from "./EmployeeApp.jsx";
+import PartnerRegister from "./PartnerRegister.jsx";
+import * as api from "../lib/api.js";
 
-// The NGS Partner app — a standalone app for employees (pickers & delivery
-// partners). They log in with their email (one-time code), same as customers,
-// and the store owner marks their account as "staff". Only staff/admin accounts
-// can use it; everything money-related stays out of their hands.
+function Splash({ text }) {
+  return (
+    <div className="partner-splash">
+      <span className="admin-logo">NGS</span>
+      <span className="admin-logo-sub">partner</span>
+      {text && <p style={{ marginTop: 12, color: "#cfe6d3" }}>{text}</p>}
+    </div>
+  );
+}
+
 function PartnerInner() {
   const { user, isLoggedIn, ready, logout } = useAuth();
-  const [role, setRole] = useState(() => {
+  const isAdmin = user?.role === "admin";
+  const [partner, setPartner] = useState(undefined); // undefined=loading | null=none | obj
+  const [adminRole, setAdminRole] = useState(() => {
     try { return localStorage.getItem("ngs-partner-role") || "delivery"; } catch { return "delivery"; }
   });
 
+  useEffect(() => {
+    if (!isLoggedIn || isAdmin) { setPartner(null); return; }
+    let alive = true;
+    api.getMyPartner()
+      .then((p) => { if (alive) setPartner(p); })
+      .catch(() => { if (alive) setPartner(null); });
+    return () => { alive = false; };
+  }, [isLoggedIn, isAdmin, user?.id]);
+
+  async function reload() {
+    try { setPartner(await api.getMyPartner()); } catch { setPartner(null); }
+  }
   function chooseRole(r) {
-    setRole(r);
+    setAdminRole(r);
     try { localStorage.setItem("ngs-partner-role", r); } catch { /* ignore */ }
   }
 
-  if (!ready) {
-    return (
-      <div className="partner-splash">
-        <span className="admin-logo">NGS</span>
-        <span className="admin-logo-sub">partner</span>
-      </div>
-    );
-  }
+  if (!ready) return <Splash />;
 
   if (!isLoggedIn) {
     return (
@@ -35,44 +50,56 @@ function PartnerInner() {
           <span className="admin-logo-sub">partner</span>
           <p>Picking &amp; delivery</p>
         </div>
-        <AuthModal
-          open
-          onClose={() => {}}
-          onSuccess={() => {}}
-          reason="Log in to the NGS Partner app with your email."
-        />
+        <AuthModal open onClose={() => {}} onSuccess={() => {}}
+          reason="Log in to the NGS Partner app with your email." />
       </div>
     );
   }
 
-  const staff = user?.role === "staff" || user?.role === "admin";
-  if (!staff) {
+  // Admin can use the partner app directly (covering a shift / testing).
+  if (isAdmin) {
+    return (
+      <>
+        <div className="partner-rolebar">
+          <button className={adminRole === "picker" ? "sel" : ""} onClick={() => chooseRole("picker")}>🧺 Picking</button>
+          <button className={adminRole === "delivery" ? "sel" : ""} onClick={() => chooseRole("delivery")}>🛵 Delivery</button>
+        </div>
+        <EmployeeApp role={adminRole} name={user?.name || "Admin"} onLogout={logout} />
+      </>
+    );
+  }
+
+  if (partner === undefined) return <Splash text="Loading…" />;
+
+  // Not registered yet → KYC form.
+  if (!partner) return <PartnerRegister email={user?.email} onDone={reload} />;
+
+  if (partner.status === "pending") {
     return (
       <div className="partner-notstaff">
-        <div className="empty-emoji">🚫</div>
-        <h2>Not a partner yet</h2>
-        <p>
-          Your account <strong>{user?.email}</strong> isn't set up as an NGS
-          partner. Ask the store owner to add you, then log in again.
-        </p>
+        <div className="empty-emoji">🕒</div>
+        <h2>Under review</h2>
+        <p>Thanks, <strong>{partner.fullName}</strong>! The store is reviewing your
+          documents. You'll be able to start once you're approved.</p>
         <button className="emp-logout" onClick={logout}>Log out</button>
       </div>
     );
   }
 
-  return (
-    <>
-      <div className="partner-rolebar">
-        <button className={role === "picker" ? "sel" : ""} onClick={() => chooseRole("picker")}>
-          🧺 Picking
-        </button>
-        <button className={role === "delivery" ? "sel" : ""} onClick={() => chooseRole("delivery")}>
-          🛵 Delivery
-        </button>
+  if (partner.status === "rejected") {
+    return (
+      <div className="partner-notstaff">
+        <div className="empty-emoji">⚠️</div>
+        <h2>Not approved</h2>
+        <p>Your registration wasn't approved. Please contact the store, or submit again with clearer documents.</p>
+        <button className="preg-next" style={{ maxWidth: 260 }} onClick={() => setPartner(null)}>Register again</button>
+        <button className="emp-logout" onClick={logout}>Log out</button>
       </div>
-      <EmployeeApp role={role} name={user?.name || "Partner"} onLogout={logout} />
-    </>
-  );
+    );
+  }
+
+  // Approved → their role decides the dashboard.
+  return <EmployeeApp role={partner.role} name={partner.fullName || user?.name} onLogout={logout} />;
 }
 
 export default function PartnerApp() {

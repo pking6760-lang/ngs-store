@@ -110,6 +110,10 @@ export function useCustomers() {
   return users;
 }
 
+export function usePartners() {
+  return useBackend(api.fetchPartners, ["partners"], []);
+}
+
 export function useUserNotifications(userId) {
   const [notes, setNotes] = useState([]);
   useEffect(() => {

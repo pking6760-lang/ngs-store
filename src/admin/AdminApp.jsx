@@ -5,6 +5,7 @@ import OrdersAdmin from "./OrdersAdmin.jsx";
 import CouponsAdmin from "./CouponsAdmin.jsx";
 import CustomersAdmin from "./CustomersAdmin.jsx";
 import DeliveryAdmin from "./DeliveryAdmin.jsx";
+import PartnersAdmin from "./PartnersAdmin.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
@@ -28,6 +29,7 @@ const NAV = [
   { id: "orders", label: "Orders", icon: "🧾" },
   { id: "products", label: "Products", icon: "📦" },
   { id: "customers", label: "Customers", icon: "👥" },
+  { id: "partners", label: "Partners", icon: "🧑‍🔧" },
   { id: "delivery", label: "Delivery", icon: "🚴" },
   { id: "offers", label: "Offers", icon: "🎟️" },
 ];
@@ -117,6 +119,7 @@ export default function AdminApp() {
           {view === "products" && <ProductsAdmin />}
           {view === "orders" && <OrdersAdmin />}
           {view === "customers" && <CustomersAdmin />}
+          {view === "partners" && <PartnersAdmin />}
           {view === "delivery" && <DeliveryAdmin />}
           {view === "offers" && <CouponsAdmin />}
         </div>

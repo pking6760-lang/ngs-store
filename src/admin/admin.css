@@ -1970,3 +1970,74 @@ body {
   font-weight: 800; font-size: 14px; padding: 10px; border-radius: 10px;
 }
 .partner-rolebar button.sel { background: var(--green); color: #fff; }
+
+/* ── Partner registration (KYC) ───────────────────────────────────────────── */
+.preg { min-height: 100vh; background: #f4f5f7; display: flex; flex-direction: column; }
+.preg-head {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  background: #0a3d17; color: #fff; position: sticky; top: 0; z-index: 5;
+}
+.preg-title { flex: 1; display: flex; align-items: baseline; gap: 6px; }
+.preg-step { font-size: 12px; color: #cfe6d3; font-weight: 700; }
+.preg-body { padding: 18px 16px 40px; max-width: 520px; width: 100%; margin: 0 auto; }
+.preg-body h2 { margin: 4px 0 4px; font-size: 22px; }
+.preg-h3 { margin: 18px 0 6px; font-size: 14px; color: #444; }
+.preg-sub { color: #777; margin-bottom: 16px; font-size: 14px; }
+.role-card {
+  width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+  background: #fff; border: 1.5px solid #e6e6ea; border-radius: 14px; padding: 18px; margin-bottom: 12px; cursor: pointer;
+}
+.role-card:active { border-color: #0a9155; background: #f5fbf8; }
+.role-card .role-emoji { font-size: 30px; }
+.role-card strong { display: block; font-size: 16px; }
+.role-card small { color: #888; font-size: 13px; }
+.preg-field { display: block; margin-bottom: 12px; }
+.preg-field > span { display: block; font-size: 13px; font-weight: 700; color: #444; margin-bottom: 5px; }
+.preg-field > span em { color: #999; font-weight: 500; }
+.preg-field input, .preg-field textarea {
+  width: 100%; border: 1px solid #dcdce2; border-radius: 10px; padding: 12px; font-size: 15px; background: #fff;
+}
+.preg-ev { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; font-size: 14px; color: #333; }
+.preg-ev input { margin-top: 3px; }
+.preg-next {
+  width: 100%; margin-top: 14px; background: #0a9155; color: #fff; border: none;
+  font-weight: 800; font-size: 16px; padding: 14px; border-radius: 12px; cursor: pointer;
+}
+.preg-next:disabled { opacity: 0.6; }
+.preg-error { background: #fdeaea; color: #b3261e; border-radius: 10px; padding: 10px 12px; font-size: 13.5px; margin-top: 10px; font-weight: 600; }
+.preg-note { text-align: center; color: #999; font-size: 12.5px; margin-top: 12px; }
+
+/* Document photo picker */
+.doc-photo {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #fff; border: 1px solid #e6e6ea; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+}
+.doc-photo-label { display: flex; flex-direction: column; }
+.doc-photo-label strong { font-size: 14px; }
+.doc-photo-label span { font-size: 12px; color: #999; }
+.doc-add {
+  background: #eafaf1; color: #0a7a44; border: 1px dashed #0a9155; border-radius: 10px;
+  padding: 10px 14px; font-weight: 800; font-size: 13px; white-space: nowrap; cursor: pointer;
+}
+.doc-thumb { position: relative; border: none; background: none; padding: 0; cursor: pointer; }
+.doc-thumb img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
+.doc-thumb span { position: absolute; inset: auto 0 0 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 10px; text-align: center; border-radius: 0 0 10px 10px; padding: 2px; }
+
+/* ── Partners admin ───────────────────────────────────────────────────────── */
+.partner-head { width: 100%; display: flex; align-items: center; gap: 12px; background: none; border: none; padding: 4px 0; cursor: pointer; text-align: left; }
+.partner-role { font-size: 24px; }
+.partner-main { flex: 1; display: flex; flex-direction: column; }
+.partner-main strong { font-size: 15px; }
+.partner-main small { color: #888; font-size: 12.5px; }
+.partner-status { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; text-transform: capitalize; }
+.partner-status.pending { background: #fff2d9; color: #9a6100; }
+.partner-status.approved { background: #e3f6ec; color: #0a7a44; }
+.partner-status.rejected { background: #fdeaea; color: #b3261e; }
+.partner-detail { margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px; }
+.partner-kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 3px 0; }
+.partner-kv span:first-child { color: #888; }
+.partner-kv span:last-child { font-weight: 600; text-align: right; }
+.pdocs { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.pdoc { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #555; font-size: 11px; }
+.pdoc img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
+.pdoc-loading { width: 84px; height: 84px; border-radius: 8px; background: #f0f0f2; display: flex; align-items: center; justify-content: center; color: #aaa; }
