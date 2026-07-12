@@ -144,10 +144,15 @@ export default function SmartPricing() {
             <div className="sp-item" key={p.id}>
               <div className="sp-item-main">
                 <span className="sp-item-name">{p.name}</span>
+                <span className="sp-item-trend">
+                  <Win label="1d" v={p.sold?.d1} /><Win label="3d" v={p.sold?.d3} />
+                  <Win label="1w" v={p.sold?.d7} /><Win label="2w" v={p.sold?.d14} />
+                  <Win label="1m" v={p.sold?.d30} />
+                  {p.speedTier !== "unpriced" && <span className="sp-pace">~{p.velocityScore}/mo pace</span>}
+                </span>
                 <span className="sp-item-meta">
-                  {p.units30d || 0} sold
-                  {p.cost != null && <> · cost ₹{Math.round(p.cost)}</>}
-                  {p.mrp != null && <> · MRP ₹{Math.round(p.mrp)}</>}
+                  {p.cost != null && <>cost ₹{Math.round(p.cost)} · </>}
+                  {p.mrp != null && <>MRP ₹{Math.round(p.mrp)}</>}
                 </span>
               </div>
               <div className="sp-item-price">
@@ -175,6 +180,14 @@ export default function SmartPricing() {
         </div>
       ))}
     </div>
+  );
+}
+
+function Win({ label, v }) {
+  return (
+    <span className={`sp-win ${v > 0 ? "hit" : ""}`}>
+      <b>{v ?? 0}</b><em>{label}</em>
+    </span>
   );
 }
 

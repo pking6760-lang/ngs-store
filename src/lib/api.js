@@ -59,8 +59,9 @@ function mapProduct(r) {
   return { id: r.id, name: r.name, unit: r.unit, price: num(r.price),
     mrp: num(r.mrp), icon: r.icon, image: r.image_url,
     category: r.category, stock: r.stock, active: r.active,
-    speedTier: r.speed_tier || null, units30d: r.units_30d ?? 0,
-    bait: !!r.bait, baitOverride: r.bait_override || null };
+    // Only the public `bait` flag lives on products; cost, tier and sales
+    // analytics are admin-only and merged in by fetchAdminProducts.
+    bait: !!r.bait };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color };
@@ -572,8 +573,8 @@ export async function smartReprice() {
 }
 // Owner override for the advertised "best price" strip: 'pin' | 'hide' | null.
 export async function setBaitOverride(productId, value) {
-  const { error } = await must().from("products")
-    .update({ bait_override: value }).eq("id", productId);
+  const { error } = await must().from("product_costs")
+    .upsert({ product_id: productId, bait_override: value });
   if (error) throw new Error(error.message || "Couldn't update.");
   pingLocal("products");
   return { ok: true };
@@ -660,18 +661,38 @@ export async function upsertProduct(product, cost) {
   return { ok: true };
 }
 
-// Admin: buying prices, keyed by product id (from the admin-only table).
-export async function fetchProductCosts() {
-  const { data, error } = await must().from("product_costs").select("product_id, cost");
+// Admin: private per-product data (cost + sales analytics), keyed by product id.
+export async function fetchProductPrivate() {
+  const { data, error } = await must().from("product_costs").select("*");
   if (error) throw error;
   const m = {};
-  (data || []).forEach((r) => { m[r.product_id] = num(r.cost); });
+  (data || []).forEach((r) => {
+    m[r.product_id] = {
+      cost: num(r.cost),
+      speedTier: r.speed_tier || null,
+      units30d: r.units_30d ?? 0,
+      velocityScore: r.velocity_score ?? 0,
+      sold: { d1: r.sold_1d ?? 0, d3: r.sold_3d ?? 0, d7: r.sold_7d ?? 0, d14: r.sold_14d ?? 0, d30: r.sold_30d ?? 0 },
+      baitOverride: r.bait_override || null,
+    };
+  });
   return m;
 }
-// Admin: products with their (private) cost merged in.
+// Admin: products with their private cost + analytics merged in.
 export async function fetchAdminProducts() {
-  const [prods, costs] = await Promise.all([fetchProducts(), fetchProductCosts()]);
-  return prods.map((p) => ({ ...p, cost: costs[p.id] ?? null }));
+  const [prods, priv] = await Promise.all([fetchProducts(), fetchProductPrivate()]);
+  return prods.map((p) => {
+    const x = priv[p.id] || {};
+    return {
+      ...p,
+      cost: x.cost ?? null,
+      speedTier: x.speedTier || "unpriced",
+      units30d: x.units30d ?? 0,
+      velocityScore: x.velocityScore ?? 0,
+      sold: x.sold || { d1: 0, d3: 0, d7: 0, d14: 0, d30: 0 },
+      baitOverride: x.baitOverride || null,
+    };
+  });
 }
 
 export async function deleteProduct(id) {
