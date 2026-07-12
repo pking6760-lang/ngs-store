@@ -212,6 +212,9 @@ function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus, 
 
         <div className="od-body">
           <div className="od-payline"><PaymentTag order={o} /></div>
+          {o.needsOwner && o.status !== "Delivered" && o.status !== "Cancelled" && (
+            <div className="od-needs-owner">⚠️ No delivery partner was available — this one's on you. Pack it and deliver, or wait for a partner to come online.</div>
+          )}
 
           <section className="od-section">
             <h4>Customer</h4>

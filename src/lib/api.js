@@ -100,7 +100,8 @@ function mapOrder(r) {
     payment: r.payment_method, paymentMethod: r.payment_method, paymentStatus: r.payment_status,
     razorpayPaymentId: r.razorpay_payment_id,
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
-    rating: r.rating, feedback: r.feedback,
+    rating: r.rating, feedback: r.feedback, needsOwner: !!r.needs_owner,
+    deliveryState: r.delivery_state, pickerState: r.picker_state,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
 }
 function mapProfile(r) {
