@@ -99,7 +99,11 @@ export default function PartnersAdmin() {
   const [wallets, setWallets] = useState({});
 
   const loadWallets = () => api.fetchPartnerWallets().then(setWallets).catch(() => {});
-  useEffect(() => { loadWallets(); }, [partners.length]);
+  useEffect(() => {
+    loadWallets();
+    const unsubs = ["wallet_ledger", "partner_strikes"].map((t) => api.subscribeTable(t, loadWallets));
+    return () => unsubs.forEach((u) => u && u());
+  }, [partners.length]);
 
   const shown = partners.filter((p) => (filter === "all" ? true : p.status === filter));
   const cashOnRoad = Object.values(wallets).reduce((s, w) => s + (w.cashInHand || 0), 0);

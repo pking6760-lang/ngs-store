@@ -78,10 +78,13 @@ function PartnerInner() {
   useEffect(() => {
     if (!isLoggedIn || isAdmin) { setPartner(null); return; }
     let alive = true;
-    api.getMyPartner()
+    const load = () => api.getMyPartner()
       .then((p) => { if (alive) setPartner(p); })
       .catch(() => { if (alive) setPartner(null); });
-    return () => { alive = false; };
+    load();
+    // Live: reflect approval/rejection the instant the owner decides.
+    const unsub = api.subscribeTable("partners", load);
+    return () => { alive = false; unsub && unsub(); };
   }, [isLoggedIn, isAdmin, user?.id]);
 
   async function reload() {

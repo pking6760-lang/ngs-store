@@ -51,7 +51,18 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
     ]);
     setWallet(w); setSlots(s); setCfg(c); setPresence(p);
   }, []);
-  useEffect(() => { reload(); }, [reload]);
+
+  // Live everywhere: reload the instant any of the partner's own data changes,
+  // plus a light safety poll and refetch on refocus.
+  useEffect(() => {
+    reload();
+    const unsubs = ["wallet_ledger", "partner_slots", "partner_presence", "ops_config", "partner_strikes"]
+      .map((t) => api.subscribeTable(t, reload));
+    const onVis = () => { if (document.visibilityState === "visible") reload(); };
+    document.addEventListener("visibilitychange", onVis);
+    const poll = setInterval(reload, 20000);
+    return () => { unsubs.forEach((u) => u && u()); document.removeEventListener("visibilitychange", onVis); clearInterval(poll); };
+  }, [reload]);
 
   const isDelivery = role === "delivery";
   const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload };
