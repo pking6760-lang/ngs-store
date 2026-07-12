@@ -49,14 +49,15 @@ Deno.serve(async (req) => {
     if (!uid) return json({ error: "Please sign in again." }, 401);
 
     const oRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,user_id,total,human_code,payment_status`,
+      `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,user_id,total,human_code,payment_status,rider_id`,
       { headers: sbHeaders },
     );
     const rows = await oRes.json();
     const order = Array.isArray(rows) ? rows[0] : null;
     if (!order) return json({ error: "Order not found." }, 404);
-    // The order's own customer may pay it; the store (admin) may collect any order.
-    if (order.user_id !== uid && !(await isAdmin(uid))) {
+    // The order's own customer may pay it; the assigned delivery partner may
+    // collect it at the door; the store (admin) may collect any order.
+    if (order.user_id !== uid && order.rider_id !== uid && !(await isAdmin(uid))) {
       return json({ error: "Not allowed." }, 403);
     }
     if (order.payment_status === "paid") return json({ error: "Order already paid." }, 409);
