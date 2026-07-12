@@ -2006,6 +2006,14 @@ body {
 .preg-next:disabled { opacity: 0.6; }
 .preg-error { background: #fdeaea; color: #b3261e; border-radius: 10px; padding: 10px 12px; font-size: 13.5px; margin-top: 10px; font-weight: 600; }
 .preg-note { text-align: center; color: #999; font-size: 12.5px; margin-top: 12px; }
+.preg-inline-warn { display: block; margin-top: 5px; color: #c77700; font-weight: 600; font-size: 12.5px; font-style: normal; }
+
+/* Live IFSC → bank/branch confirmation */
+.ifsc-hint { margin: -4px 0 12px; padding: 10px 12px; border-radius: 10px; font-size: 13px; color: #555; background: #f3f4f6; }
+.ifsc-hint.ok { background: #e8f6ee; color: #0a6b3e; display: flex; flex-direction: column; gap: 2px; }
+.ifsc-hint.ok strong { font-size: 14px; }
+.ifsc-hint.ok span { color: #3a7d5c; font-size: 12.5px; }
+.ifsc-hint.bad { background: #fdeaea; color: #b3261e; font-weight: 600; }
 
 /* Document photo picker */
 .doc-photo {

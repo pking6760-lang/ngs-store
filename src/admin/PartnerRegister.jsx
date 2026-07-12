@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as api from "../lib/api.js";
 
 // A photo field — tap to pick from camera or gallery, shows a preview.
@@ -35,17 +35,37 @@ export default function PartnerRegister({ email, onDone }) {
   const [role, setRole] = useState("");
   const [form, setForm] = useState({
     fullName: "", phone: "", address: "",
-    bankAccount: "", bankIfsc: "", bankHolder: "",
+    bankAccount: "", bankAccount2: "", bankIfsc: "", bankHolder: "",
   });
   const [usesEv, setUsesEv] = useState(false);
   const [docs, setDocs] = useState({}); // { aadhaar_front, aadhaar_back, pan, dl } → File
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // IFSC lookup: null = idle, "loading", "invalid", or {bank, branch, city, state}
+  const [bankInfo, setBankInfo] = useState(null);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const pick = (kind) => (file) => setDocs((d) => ({ ...d, [kind]: file }));
   const isDelivery = role === "delivery";
   const needDL = isDelivery && !usesEv;
+
+  // Digits only, 9–18 long (the range Indian bank account numbers fall in).
+  const setAccount = (k) => (e) =>
+    setForm((f) => ({ ...f, [k]: e.target.value.replace(/\D/g, "").slice(0, 18) }));
+  const setIfsc = (e) =>
+    setForm((f) => ({ ...f, bankIfsc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11) }));
+
+  // Whenever a full 11-char IFSC is present, resolve its bank + branch live.
+  useEffect(() => {
+    const code = form.bankIfsc;
+    if (!api.IFSC_RE.test(code)) { setBankInfo(code ? "invalid" : null); return; }
+    let alive = true;
+    setBankInfo("loading");
+    api.lookupIfsc(code).then((info) => {
+      if (alive) setBankInfo(info || "invalid");
+    });
+    return () => { alive = false; };
+  }, [form.bankIfsc]);
 
   function goDetails(r) { setRole(r); setError(""); setStep(2); }
 
@@ -54,7 +74,12 @@ export default function PartnerRegister({ email, onDone }) {
     if (!form.fullName.trim()) return setError("Please enter your full name.");
     if (!/^\d{10}$/.test(form.phone.replace(/\D/g, ""))) return setError("Enter a valid 10-digit phone number.");
     if (!form.address.trim()) return setError("Please enter your home address.");
-    if (!form.bankAccount.trim() || !form.bankIfsc.trim()) return setError("Please enter your bank account number and IFSC.");
+    if (form.bankAccount.length < 9) return setError("Enter a valid bank account number (9–18 digits).");
+    if (form.bankAccount !== form.bankAccount2) return setError("The two account numbers don't match. Please re-check.");
+    if (!api.IFSC_RE.test(form.bankIfsc)) return setError("Enter a valid IFSC code, e.g. SBIN0001234.");
+    if (bankInfo === "loading") return setError("Checking the IFSC code — one moment.");
+    if (!bankInfo || bankInfo === "invalid") return setError("We couldn't find that IFSC code. Please re-check it.");
+    if (!form.bankHolder.trim()) return setError("Enter the account holder's name (as printed in the passbook).");
     setStep(3);
   }
 
@@ -74,6 +99,9 @@ export default function PartnerRegister({ email, onDone }) {
         email, address: form.address.trim(),
         bankAccount: form.bankAccount.trim(), bankIfsc: form.bankIfsc.trim().toUpperCase(),
         bankHolder: form.bankHolder.trim() || form.fullName.trim(),
+        bankName: (bankInfo && bankInfo !== "invalid" && bankInfo !== "loading") ? bankInfo.bank : null,
+        bankBranch: (bankInfo && bankInfo !== "invalid" && bankInfo !== "loading")
+          ? [bankInfo.branch, bankInfo.city].filter(Boolean).join(", ") : null,
         usesEv, aadhaarFront: paths.aadhaar_front, aadhaarBack: paths.aadhaar_back,
         pan: paths.pan, dl: paths.dl || null,
       });
@@ -128,11 +156,30 @@ export default function PartnerRegister({ email, onDone }) {
               <textarea rows={2} value={form.address} onChange={set("address")} placeholder="Where you live" /></label>
             <h3 className="preg-h3">Bank details (for payment)</h3>
             <label className="preg-field"><span>Account number</span>
-              <input inputMode="numeric" value={form.bankAccount} onChange={set("bankAccount")} placeholder="Bank account number" /></label>
+              <input inputMode="numeric" type="tel" value={form.bankAccount} onChange={setAccount("bankAccount")}
+                placeholder="9–18 digits" /></label>
+            <label className="preg-field"><span>Confirm account number</span>
+              <input inputMode="numeric" type="tel" value={form.bankAccount2} onChange={setAccount("bankAccount2")}
+                placeholder="Re-enter to avoid mistakes"
+                onPaste={(e) => e.preventDefault()} />
+              {form.bankAccount2 && form.bankAccount !== form.bankAccount2 && (
+                <em className="preg-inline-warn">Doesn't match yet</em>
+              )}</label>
             <label className="preg-field"><span>IFSC code</span>
-              <input value={form.bankIfsc} onChange={set("bankIfsc")} placeholder="e.g. SBIN0001234" /></label>
-            <label className="preg-field"><span>Account holder name <em>(optional)</em></span>
-              <input value={form.bankHolder} onChange={set("bankHolder")} placeholder="If different from your name" /></label>
+              <input value={form.bankIfsc} onChange={setIfsc} autoCapitalize="characters"
+                autoCorrect="off" spellCheck={false} placeholder="e.g. SBIN0001234" /></label>
+            {bankInfo === "loading" && <div className="ifsc-hint">Checking IFSC…</div>}
+            {bankInfo === "invalid" && form.bankIfsc.length === 11 && (
+              <div className="ifsc-hint bad">⚠️ We couldn't find that IFSC code — please re-check.</div>
+            )}
+            {bankInfo && bankInfo !== "loading" && bankInfo !== "invalid" && (
+              <div className="ifsc-hint ok">
+                🏦 <strong>{bankInfo.bank}</strong>
+                <span>{[bankInfo.branch, bankInfo.city, bankInfo.state].filter(Boolean).join(", ")}</span>
+              </div>
+            )}
+            <label className="preg-field"><span>Account holder name</span>
+              <input value={form.bankHolder} onChange={set("bankHolder")} placeholder="Name exactly as in the passbook" /></label>
             {error && <div className="preg-error">{error}</div>}
             <button className="preg-next" onClick={toDocs}>Continue</button>
           </>

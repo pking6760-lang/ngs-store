@@ -93,6 +93,9 @@ export default function PartnersAdmin() {
                     <div className="partner-kv"><span>Email</span><span>{p.email || "—"}</span></div>
                     <div className="partner-kv"><span>Bank A/C</span><span>{p.bankAccount || "—"}</span></div>
                     <div className="partner-kv"><span>IFSC</span><span>{p.bankIfsc || "—"}</span></div>
+                    {p.bankName && (
+                      <div className="partner-kv"><span>Bank</span><span>{p.bankName}{p.bankBranch ? ` — ${p.bankBranch}` : ""}</span></div>
+                    )}
                     <div className="partner-kv"><span>Holder</span><span>{p.bankHolder || "—"}</span></div>
                     {p.role === "delivery" && (
                       <div className="partner-kv"><span>Vehicle</span><span>{p.usesEv ? "Low-speed EV (no licence)" : "Needs licence"}</span></div>

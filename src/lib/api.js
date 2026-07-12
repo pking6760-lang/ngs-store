@@ -323,12 +323,36 @@ export async function markNotificationsRead() {
 
 /* ─── NGS Partner onboarding (KYC) ──────────────────────────────────────── */
 
+// Resolve an IFSC code → bank name + branch using the free, public IFSC
+// directory (no key). Returns null for an unknown/invalid code so the caller
+// can reject it. IFSC format: 4 letters + '0' + 6 alphanumerics.
+export const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+export async function lookupIfsc(code) {
+  const c = String(code || "").trim().toUpperCase();
+  if (!IFSC_RE.test(c)) return null;
+  try {
+    const r = await fetch(`https://ifsc.razorpay.com/${c}`);
+    if (!r.ok) return null; // 404 = no such branch
+    const d = await r.json();
+    if (!d || !d.BANK) return null;
+    const city = d.CITY || d.CENTRE || d.DISTRICT || "";
+    return {
+      ifsc: c,
+      bank: d.BANK,
+      branch: d.BRANCH || "",
+      city,
+      state: d.STATE || "",
+    };
+  } catch { return null; }
+}
+
 function mapPartner(r) {
   if (!r) return null;
   return {
     id: r.id, userId: r.user_id, role: r.role, fullName: r.full_name,
     phone: r.phone, email: r.email, address: r.address,
     bankAccount: r.bank_account, bankIfsc: r.bank_ifsc, bankHolder: r.bank_holder,
+    bankName: r.bank_name, bankBranch: r.bank_branch,
     usesEv: r.uses_ev, aadhaarFront: r.aadhaar_front, aadhaarBack: r.aadhaar_back,
     pan: r.pan, dl: r.dl, status: r.status, createdAt: r.created_at,
   };
@@ -396,6 +420,7 @@ export async function registerPartner(p) {
     user_id: u.user.id, role: p.role, full_name: p.fullName, phone: p.phone || null,
     email: u.user.email || p.email || null, address: p.address || null,
     bank_account: p.bankAccount || null, bank_ifsc: p.bankIfsc || null, bank_holder: p.bankHolder || null,
+    bank_name: p.bankName || null, bank_branch: p.bankBranch || null,
     uses_ev: !!p.usesEv, aadhaar_front: p.aadhaarFront || null, aadhaar_back: p.aadhaarBack || null,
     pan: p.pan || null, dl: p.dl || null, status: "pending",
   };
