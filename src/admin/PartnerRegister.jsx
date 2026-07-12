@@ -264,9 +264,12 @@ export default function PartnerRegister({ email, onDone }) {
             </div>
 
             {error && <div className="preg-error">{error}</div>}
-            <button className="preg-next" onClick={submit} disabled={busy}>
+            <button className="preg-next" onClick={submit} disabled={busy || !agreeAuth || !agreeTerms}>
               {busy ? "Uploading…" : "Submit for approval"}
             </button>
+            {!busy && (!agreeAuth || !agreeTerms) && (
+              <p className="preg-note">Tick both boxes above to enable submission.</p>
+            )}
             <p className="preg-note">The store will review your details and approve you before you start.</p>
           </>
         )}

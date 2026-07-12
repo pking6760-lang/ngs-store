@@ -56,12 +56,15 @@ export default function PartnersAdmin() {
   const [openId, setOpenId] = useState(null);
   const [busy, setBusy] = useState(null);
   const [viewer, setViewer] = useState(null);
+  const [err, setErr] = useState("");
 
   const shown = partners.filter((p) => (filter === "all" ? true : p.status === filter));
 
   async function decide(p, status) {
+    setErr("");
     setBusy(p.userId + status);
     try { await api.setPartnerStatus(p.userId, status); }
+    catch (e) { setErr(e?.message || "Couldn't update this partner."); }
     finally { setBusy(null); }
   }
 
@@ -144,10 +147,18 @@ export default function PartnersAdmin() {
                       {p.dl && <DocView path={p.dl} label="Licence" onOpen={setViewer} />}
                     </div>
 
+                    {err && busy === null && <div className="preg-error" style={{ marginTop: 10 }}>{err}</div>}
                     {p.status !== "approved" && (
-                      <button className="od-accept" disabled={busy} onClick={() => decide(p, "approved")}>
-                        ✅ Approve partner
-                      </button>
+                      !p.termsAcceptedAt ? (
+                        <div className="approve-blocked">
+                          🔒 Can't approve yet — this partner hasn't accepted the Terms &amp; Conditions.
+                          They must re-open the app and complete registration (accepting the declaration) first.
+                        </div>
+                      ) : (
+                        <button className="od-accept" disabled={busy} onClick={() => decide(p, "approved")}>
+                          ✅ Approve partner
+                        </button>
+                      )
                     )}
                     {p.status !== "rejected" && (
                       <button className="od-reject" style={{ width: "100%", marginTop: 8 }} disabled={busy}
