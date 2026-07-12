@@ -232,7 +232,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
           <div className="pd-empty"><span className="emo">✅</span>No orders yet today.</div>
         ) : todays.map((l) => (
           <div className="pd-row" key={l.id}>
-            <div><div className="r-main">Order #{(l.orderId || "").slice(0, 4).toUpperCase() || "—"}</div>
+            <div><div className="r-main">Order {l.code ? `#${l.code}` : `#${(l.orderId || "").slice(0, 4).toUpperCase()}`}</div>
               <div className="r-sub">{l.note}</div></div>
             <div className="r-amt amt-pos">+{money(l.amount)}</div>
           </div>

@@ -516,12 +516,19 @@ export async function bookSlot(role, dateISO, hour) {
 export async function getMyWallet() {
   const uid = await myUid();
   if (!uid) return { balance: 0, cashInHand: 0, ledger: [] };
-  const { data, error } = await must().from("wallet_ledger")
-    .select("*").eq("partner_id", uid).order("created_at", { ascending: false });
-  if (error) throw error;
-  const ledger = (data || []).map((r) => ({
+  // Prefer the RPC that joins the real order code; fall back to the plain table.
+  let rows = null;
+  const { data: rpcRows, error: rpcErr } = await must().rpc("get_my_ledger");
+  if (!rpcErr && Array.isArray(rpcRows)) rows = rpcRows;
+  if (!rows) {
+    const { data, error } = await must().from("wallet_ledger")
+      .select("*").eq("partner_id", uid).order("created_at", { ascending: false });
+    if (error) throw error;
+    rows = data || [];
+  }
+  const ledger = rows.map((r) => ({
     id: r.id, kind: r.kind, amount: Number(r.amount), cashDelta: Number(r.cash_delta),
-    note: r.note, orderId: r.order_id, at: r.created_at,
+    note: r.note, orderId: r.order_id, code: r.code || null, at: r.at || r.created_at,
   }));
   const balance = ledger.reduce((s, l) => s + l.amount, 0);
   const cashInHand = ledger.reduce((s, l) => s + l.cashDelta, 0);
