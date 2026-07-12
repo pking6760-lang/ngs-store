@@ -52,25 +52,39 @@ function DocViewer({ doc, onClose }) {
 
 // A partner's money at a glance + the two owner actions: confirm a cash
 // deposit (clears cash-in-hand) and record a payout.
+// A clean in-app amount modal (replaces the browser prompt).
+function AmountModal({ title, hint, suggest, okLabel, onCancel, onSubmit }) {
+  const [val, setVal] = useState(suggest ? String(suggest) : "");
+  const n = Number(val);
+  return (
+    <div className="amt-modal" onClick={onCancel}>
+      <div className="amt-card" onClick={(e) => e.stopPropagation()}>
+        <h3>{title}</h3>
+        {hint && <p>{hint}</p>}
+        <input type="number" inputMode="numeric" autoFocus value={val}
+          onChange={(e) => setVal(e.target.value)} placeholder="₹ amount" />
+        <div className="amt-actions">
+          <button className="amt-cancel" onClick={onCancel}>Cancel</button>
+          <button className="amt-ok" disabled={!n || n <= 0} onClick={() => onSubmit(n)}>{okLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WalletBlock({ partner, w, onChange }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [modal, setModal] = useState(null); // 'deposit' | 'payout' | null
   const bal = w?.balance || 0, cash = w?.cashInHand || 0, strikes = w?.strikes || 0;
 
-  async function deposit() {
-    const v = Number(prompt(`Cash received from ${partner.fullName}? (they owe ₹${Math.round(cash)})`, Math.round(cash) || ""));
-    if (!v || v <= 0) return;
-    setBusy(true); setMsg("");
-    try { await api.partnerDepositCash(partner.userId, v); setMsg("✓ Deposit recorded"); await onChange(); }
-    catch (e) { setMsg(e.message); } finally { setBusy(false); }
-  }
-  async function payout() {
-    const suggested = Math.max(0, Math.round(bal));
-    const v = Number(prompt(`Pay out to ${partner.fullName}? (balance ₹${Math.round(bal)})`, suggested || ""));
-    if (!v || v <= 0) return;
-    setBusy(true); setMsg("");
-    try { await api.partnerRecordPayoutAdmin(partner.userId, v, "Weekly payout"); setMsg("✓ Payout recorded"); await onChange(); }
-    catch (e) { setMsg(e.message); } finally { setBusy(false); }
+  async function submit(kind, v) {
+    setModal(null); setBusy(true); setMsg("");
+    try {
+      if (kind === "deposit") { await api.partnerDepositCash(partner.userId, v); setMsg("✓ Deposit recorded"); }
+      else { await api.partnerRecordPayoutAdmin(partner.userId, v, "Weekly payout"); setMsg("✓ Payout recorded"); }
+      await onChange();
+    } catch (e) { setMsg(e.message); } finally { setBusy(false); }
   }
 
   return (
@@ -81,10 +95,21 @@ function WalletBlock({ partner, w, onChange }) {
         <div className="pw-stat"><span>Strikes</span><strong className={strikes >= 2 ? "neg" : ""}>{strikes}</strong></div>
       </div>
       <div className="pwallet-actions">
-        <button disabled={busy || cash <= 0} onClick={deposit}>💵 Confirm cash deposit</button>
-        <button disabled={busy || bal <= 0} onClick={payout}>💸 Record payout</button>
+        <button disabled={busy || cash <= 0} onClick={() => setModal("deposit")}>💵 Confirm cash deposit</button>
+        <button disabled={busy || bal <= 0} onClick={() => setModal("payout")}>💸 Record payout</button>
       </div>
       {msg && <div className="pwallet-msg">{msg}</div>}
+
+      {modal === "deposit" && (
+        <AmountModal title={`Cash deposit — ${partner.fullName}`} hint={`They owe the shop ₹${Math.round(cash)}.`}
+          suggest={Math.round(cash)} okLabel="Confirm" onCancel={() => setModal(null)}
+          onSubmit={(v) => submit("deposit", v)} />
+      )}
+      {modal === "payout" && (
+        <AmountModal title={`Pay out — ${partner.fullName}`} hint={`Current balance ₹${Math.round(bal)}.`}
+          suggest={Math.max(0, Math.round(bal))} okLabel="Pay out" onCancel={() => setModal(null)}
+          onSubmit={(v) => submit("payout", v)} />
+      )}
     </div>
   );
 }

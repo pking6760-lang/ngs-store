@@ -299,6 +299,8 @@ function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus, 
             )}
             {o.status === "Cancelled" ? (
               <div className="order-cancel-tag">✖ Cancelled</div>
+            ) : o.status === "Delivered" ? (
+              <div className="order-done-tag">✓ Delivered — order complete</div>
             ) : (
               <div className="od-status-btns">
                 {ORDER_STATUSES.map((s, i) => (
