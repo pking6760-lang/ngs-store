@@ -591,7 +591,7 @@ export async function getMyTask() {
   if (!t) return null;
   return {
     orderId: t.order_id, code: t.code, role: t.task_role, state: t.state,
-    isCod: t.is_cod, codAmount: t.cod_amount, location: t.location, items: t.items || [],
+    isCod: t.is_cod, paid: t.paid, codAmount: t.cod_amount, location: t.location, items: t.items || [],
   };
 }
 

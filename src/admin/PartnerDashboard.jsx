@@ -3,6 +3,7 @@ import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { initPartnerPush } from "../lib/partnerPush.js";
 import { unlockAudio, stopAlarm } from "../lib/sound.js";
+import { cleanUpiQrFromImage } from "../lib/payments.js";
 
 /* ── date helpers (IST) ─────────────────────────────────────────────────── */
 const IST = "Asia/Kolkata";
@@ -95,6 +96,17 @@ function LiveOrder({ task, busy, onAction }) {
   const isDelivery = task.role === "delivery";
   const accepted = task.state === "accepted" || task.state === "picked";
   const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+  const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
+
+  async function showQr() {
+    if (qr && qr !== "error") { setQr(null); return; }
+    setQr("loading");
+    try {
+      const { imageUrl, imageDataUrl } = await api.createOrderQr(task.orderId);
+      const clean = await cleanUpiQrFromImage(imageDataUrl).catch(() => null);
+      setQr({ url: clean || imageDataUrl || imageUrl });
+    } catch { setQr("error"); }
+  }
 
   return (
     <div className="pd-liveorder">
@@ -113,10 +125,32 @@ function LiveOrder({ task, busy, onAction }) {
           </div>
           <div className="lo-row">
             <span className="lo-lbl">Payment</span>
-            {task.isCod
-              ? <span className="lo-cod">💵 Collect {money(task.codAmount)} cash</span>
-              : <span className="lo-paid">✓ Already paid — collect nothing</span>}
+            {task.paid
+              ? <span className="lo-paid">✓ Already paid — collect nothing</span>
+              : task.isCod
+                ? <span className="lo-cod">💵 Collect {money(task.codAmount)}</span>
+                : <span className="lo-paid">✓ Prepaid</span>}
           </div>
+
+          {!task.paid && task.isCod && (
+            <>
+              <button className="lo-qr-btn" onClick={showQr}>
+                {qr && qr !== "error" ? "▲ Hide UPI QR" : "📲 Show UPI QR (customer pays now)"}
+              </button>
+              {qr === "loading" && (
+                <div className="lo-qr-wrap">
+                  <div className="qr-spin"><span>Making secure QR…</span></div>
+                </div>
+              )}
+              {qr === "error" && <div className="lo-muted" style={{ textAlign: "center" }}>Couldn't create QR. Collect cash instead.</div>}
+              {qr && qr.url && (
+                <div className="lo-qr-wrap">
+                  <div className="lo-qr"><img src={qr.url} alt="UPI QR" /></div>
+                  <p className="lo-qr-note">Scan with <strong>any UPI app</strong> to pay <strong>{money(task.codAmount)}</strong><br /><span>Confirms automatically</span></p>
+                </div>
+              )}
+            </>
+          )}
         </>
       ) : (
         <div className="lo-items">
