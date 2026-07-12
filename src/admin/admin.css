@@ -12,13 +12,19 @@ body {
   min-height: 100vh;
   background: #f4f6f5;
   max-width: 100%;
+  /* The admin app's brand accent is indigo, not the customer green. Older
+     controls (photo uploader, stock toggle, focus rings, primary buttons)
+     were written against the shared --green token, so re-point it to indigo
+     here — one override recolors every leftover control at once. */
+  --green: #3B5BDB;
+  --green-dark: #2B44A8;
 }
 
 /* ─── Sidebar ────────────────────────────────────────────── */
 .admin-sidebar {
   width: 240px;
-  background: #0a3d17;
-  color: #e8f3ea;
+  background: #1e2a63;
+  color: #e8ecfb;
   display: flex;
   flex-direction: column;
   padding: 20px 14px;
@@ -45,7 +51,7 @@ body {
 .admin-logo-sub {
   font-size: 13px;
   font-weight: 700;
-  color: #cfe6d3;
+  color: #c8d0f0;
 }
 .admin-nav {
   display: flex;
@@ -58,7 +64,7 @@ body {
   gap: 12px;
   background: none;
   border: none;
-  color: #cfe6d3;
+  color: #c8d0f0;
   font-size: 14px;
   font-weight: 600;
   padding: 12px 14px;
@@ -82,7 +88,7 @@ body {
   gap: 8px;
 }
 .admin-view-store {
-  color: #cfe6d3;
+  color: #c8d0f0;
   font-size: 13px;
   text-decoration: none;
   padding: 10px 14px;
@@ -460,7 +466,8 @@ body {
 .s-placed { background: #fdf4e3; color: #9a6b00; }
 .s-packed { background: #e6f0fb; color: #1f5fa6; }
 .s-out { background: #f3ecfb; color: #6a35a6; }
-.s-delivered { background: #e7f7e9; color: var(--green-dark); }
+/* "Delivered" keeps the universal success-green (semantic, not brand accent). */
+.s-delivered { background: #e7f7e9; color: #1b7a3d; }
 
 /* ─── Orders list ────────────────────────────────────────── */
 .orders-list {
@@ -518,7 +525,7 @@ body {
 .order-pay-tag.paid {
   background: #eef2ff;
   color: #3B5BDB;
-  border: 1px solid #b6e6cd;
+  border: 1px solid #c7d2fe;
 }
 /* Cash on delivery — amber, prominent: the rider MUST collect this much. */
 .order-pay-tag.cod {
@@ -633,7 +640,7 @@ body {
 .order-track-link {
   font-size: 11px;
   font-weight: 700;
-  background: #eaf6ec;
+  background: #eef2ff;
   color: #2B44A8;
   border-radius: 999px;
   padding: 4px 10px;
@@ -721,6 +728,13 @@ body {
   justify-content: space-between;
   padding: 18px 20px;
   border-bottom: 1px solid var(--line);
+  /* Keep the title + close button pinned while the form scrolls, so a long
+     product form never scrolls its header out of reach. */
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  z-index: 2;
 }
 .modal-head h3 {
   font-size: 17px;
@@ -767,6 +781,12 @@ body {
   gap: 10px;
   padding: 16px 20px;
   border-top: 1px solid var(--line);
+  /* Keep Save / Cancel reachable at the bottom of a long scrolling form. */
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-radius: 0 0 16px 16px;
+  z-index: 2;
 }
 /* Delete sits on the far left of the edit-product footer. */
 .delete-btn {
@@ -805,7 +825,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a3d17, #0c831f);
+  background: linear-gradient(135deg, #1e2a63, #3B5BDB);
   padding: 20px;
 }
 .login-card {
@@ -960,8 +980,8 @@ body {
 }
 .store-toggle.open {
   color: #2B44A8;
-  background: #eaf6ec;
-  border-color: #bfe6c6;
+  background: #eef2ff;
+  border-color: #c7d2fe;
 }
 .store-toggle.closed {
   color: #c0392b;
@@ -1011,7 +1031,7 @@ body {
   margin: 8px 0 4px;
 }
 .order-done-tag {
-  background: #eaf6ec;
+  background: #eef2ff;
   color: #2B44A8;
   font-weight: 800;
   font-size: 13px;
@@ -1072,8 +1092,8 @@ body {
   font-weight: 700;
 }
 .role-opt.sel {
-  border-color: #0c831f;
-  background: #eaf6ec;
+  border-color: #3B5BDB;
+  background: #eef2ff;
   color: #2B44A8;
 }
 
@@ -1098,7 +1118,7 @@ body {
   padding: 24px 22px;
   text-align: center;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 3px solid #0c831f;
+  border: 3px solid #3B5BDB;
 }
 .incoming-pulse {
   font-size: 46px;
@@ -1113,7 +1133,7 @@ body {
   font-size: 15px;
   font-weight: 900;
   letter-spacing: 3px;
-  color: #0c831f;
+  color: #3B5BDB;
   margin-top: 4px;
 }
 .incoming-id {
@@ -1159,7 +1179,7 @@ body {
   margin-top: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: #0c831f;
+  color: #3B5BDB;
   text-decoration: none;
 }
 .incoming-items {
@@ -1181,8 +1201,8 @@ body {
   position: relative;
   height: 56px;
   border-radius: 999px;
-  background: #eaf6ec;
-  border: 2px solid #bfe6c6;
+  background: #eef2ff;
+  border: 2px solid #c7d2fe;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -1194,7 +1214,7 @@ body {
   left: 0;
   top: 0;
   bottom: 0;
-  background: #b6ecc0;
+  background: #c7d2fe;
   transition: width 0.05s linear;
 }
 .slide-label {
@@ -1231,7 +1251,7 @@ body {
   flex-direction: column;
 }
 .emp-topbar {
-  background: #0c831f;
+  background: #3B5BDB;
   color: #fff;
   display: flex;
   align-items: center;
@@ -1282,7 +1302,7 @@ body {
 .emp-stat strong {
   display: block;
   font-size: 26px;
-  color: #0c831f;
+  color: #3B5BDB;
 }
 .emp-stat span {
   font-size: 12px;
@@ -1361,16 +1381,16 @@ body {
 .emp-map {
   font-size: 13px;
   font-weight: 700;
-  color: #0c831f;
+  color: #3B5BDB;
   text-decoration: none;
-  background: #eaf6ec;
+  background: #eef2ff;
   padding: 6px 12px;
   border-radius: 8px;
 }
 .emp-action {
   width: 100%;
   border: none;
-  background: #0c831f;
+  background: #3B5BDB;
   color: #fff;
   border-radius: 10px;
   padding: 14px;
@@ -1395,7 +1415,7 @@ body {
 .upload-btn {
   display: inline-block;
   border: 1px solid var(--green);
-  background: #eaf6ec;
+  background: #eef2ff;
   color: var(--green-dark, #2B44A8);
   border-radius: 10px;
   padding: 9px 14px;
@@ -1405,7 +1425,7 @@ body {
   text-align: center;
 }
 .upload-btn:hover {
-  background: #dff0e2;
+  background: #e0e7ff;
 }
 .image-remove {
   border: none;
@@ -1525,7 +1545,7 @@ body {
   justify-content: center;
   gap: 8px;
   border: 1.5px solid var(--green);
-  background: #eaf6ec;
+  background: #eef2ff;
   color: var(--green-dark, #2B44A8);
   border-radius: 12px;
   padding: 13px;
@@ -1533,7 +1553,7 @@ body {
   font-weight: 800;
 }
 .fingerprint-btn:hover {
-  background: #dff0e2;
+  background: #e0e7ff;
 }
 .fingerprint-icon {
   font-size: 18px;
@@ -1607,7 +1627,7 @@ body {
 .coupon-active {
   font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px;
 }
-.coupon-active.on { background: #eaf6ec; color: #2B44A8; }
+.coupon-active.on { background: #eef2ff; color: #2B44A8; }
 .coupon-active.off { background: #f2f2f4; color: var(--muted); }
 .coupon-del {
   border: 1px solid #f4c9c9; background: #fff; border-radius: 8px;
@@ -1738,7 +1758,7 @@ body {
 .delivery-save { display: flex; align-items: center; gap: 12px; }
 .shop-loc-set {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: #eaf6ec; border-radius: 10px; padding: 11px 13px; margin-bottom: 12px;
+  background: #eef2ff; border-radius: 10px; padding: 11px 13px; margin-bottom: 12px;
   font-size: 13px; color: #2B44A8; font-weight: 700;
 }
 .shop-loc-set small { color: var(--muted); font-weight: 500; }
@@ -1980,21 +2000,21 @@ body {
 .partner-splash, .partner-login-bg, .partner-notstaff {
   min-height: 100vh; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  background: linear-gradient(160deg, #0a3d17, #2B44A8); color: #fff; text-align: center; padding: 24px;
+  background: linear-gradient(160deg, #1e2a63, #2B44A8); color: #fff; text-align: center; padding: 24px;
 }
 .partner-login-bg { justify-content: flex-start; padding-top: 12vh; }
 .partner-login-brand { text-align: center; margin-bottom: 18px; }
 .partner-login-brand .admin-logo { font-size: 40px; }
 .partner-login-brand .admin-logo-sub { font-size: 18px; }
-.partner-login-brand p { color: #cfe6d3; margin-top: 4px; font-weight: 600; }
+.partner-login-brand p { color: #c8d0f0; margin-top: 4px; font-weight: 600; }
 .partner-notstaff h2 { margin: 10px 0 6px; }
-.partner-notstaff p { color: #d6ead9; max-width: 320px; }
+.partner-notstaff p { color: #c8d0f0; max-width: 320px; }
 .partner-notstaff .emp-logout { margin-top: 18px; }
 .partner-rolebar {
-  display: flex; gap: 8px; padding: 10px 12px; background: #0a3d17; position: sticky; top: 0; z-index: 5;
+  display: flex; gap: 8px; padding: 10px 12px; background: #1e2a63; position: sticky; top: 0; z-index: 5;
 }
 .partner-rolebar button {
-  flex: 1; background: rgba(255,255,255,0.1); color: #cfe6d3; border: none;
+  flex: 1; background: rgba(255,255,255,0.1); color: #c8d0f0; border: none;
   font-weight: 800; font-size: 14px; padding: 10px; border-radius: 10px;
 }
 .partner-rolebar button.sel { background: var(--green); color: #fff; }
@@ -2003,10 +2023,10 @@ body {
 .preg { min-height: 100vh; background: #f4f5f7; display: flex; flex-direction: column; }
 .preg-head {
   display: flex; align-items: center; gap: 10px; padding: 14px 16px;
-  background: #0a3d17; color: #fff; position: sticky; top: 0; z-index: 5;
+  background: #1e2a63; color: #fff; position: sticky; top: 0; z-index: 5;
 }
 .preg-title { flex: 1; display: flex; align-items: baseline; gap: 6px; }
-.preg-step { font-size: 12px; color: #cfe6d3; font-weight: 700; }
+.preg-step { font-size: 12px; color: #c8d0f0; font-weight: 700; }
 .preg-body { padding: 18px 16px 40px; max-width: 520px; width: 100%; margin: 0 auto; }
 .preg-body h2 { margin: 4px 0 4px; font-size: 22px; }
 .preg-h3 { margin: 18px 0 6px; font-size: 14px; color: #444; }
@@ -2054,7 +2074,7 @@ body {
 .preg-consent { margin: 18px 0 4px; border-top: 1px solid #eee; padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
 .preg-check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.45; color: #333; }
 .preg-check input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
-.terms-link { background: none; border: none; padding: 0; color: #0a7d46; font-weight: 700; text-decoration: underline; cursor: pointer; font-size: 13.5px; }
+.terms-link { background: none; border: none; padding: 0; color: #3B5BDB; font-weight: 700; text-decoration: underline; cursor: pointer; font-size: 13.5px; }
 
 /* Full-screen Terms & Conditions page */
 .terms-page { position: fixed; inset: 0; z-index: 3200; background: #fff; display: flex; flex-direction: column; }
@@ -2063,7 +2083,7 @@ body {
 .terms-bar button { background: #f0f0f2; border: 0; width: 34px; height: 34px; border-radius: 50%; font-size: 18px; cursor: pointer; }
 .terms-body { overflow-y: auto; padding: 18px 18px 60px; -webkit-overflow-scrolling: touch; }
 .terms-body h1 { font-size: 18px; line-height: 1.35; margin: 0 0 6px; }
-.terms-body h2 { font-size: 15px; margin: 20px 0 6px; color: #0a5c38; }
+.terms-body h2 { font-size: 15px; margin: 20px 0 6px; color: #2B44A8; }
 .terms-body p, .terms-body li { font-size: 13.5px; line-height: 1.6; color: #333; }
 .terms-body ul { padding-left: 20px; margin: 6px 0; }
 .terms-body li { margin-bottom: 8px; }
