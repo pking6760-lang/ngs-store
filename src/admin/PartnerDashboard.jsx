@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import * as api from "../lib/api.js";
+import { googleMapsLink } from "../lib/location.js";
 
 /* ── date helpers (IST) ─────────────────────────────────────────────────── */
 const IST = "Asia/Kolkata";
@@ -75,9 +76,82 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
   );
 }
 
+/* ── Live order card ────────────────────────────────────────────────────── */
+function LiveOrder({ task, busy, onAction }) {
+  const isDelivery = task.role === "delivery";
+  const accepted = task.state === "accepted" || task.state === "picked";
+  const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+
+  return (
+    <div className="pd-liveorder">
+      <div className="lo-head">
+        <span className="lo-live">● NEW ORDER</span>
+        <span className="lo-code">#{code}</span>
+      </div>
+
+      {isDelivery ? (
+        <>
+          <div className="lo-row">
+            <span className="lo-lbl">Deliver to</span>
+            {task.location
+              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer">📍 Navigate</a>
+              : <span className="lo-muted">Location shared at pickup</span>}
+          </div>
+          <div className="lo-row">
+            <span className="lo-lbl">Payment</span>
+            {task.isCod
+              ? <span className="lo-cod">💵 Collect {money(task.codAmount)} cash</span>
+              : <span className="lo-paid">✓ Already paid — collect nothing</span>}
+          </div>
+        </>
+      ) : (
+        <div className="lo-items">
+          <span className="lo-lbl">Pack these</span>
+          {(task.items || []).map((it, i) => (
+            <div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>
+          ))}
+        </div>
+      )}
+
+      {!accepted ? (
+        <button className="pd-btn lo-accept" disabled={busy} onClick={() => onAction(() => api.partnerAccept(task.orderId))}>
+          {busy ? "…" : "✅ Accept order"}
+        </button>
+      ) : isDelivery ? (
+        <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkDelivered(task.orderId))}>
+          {busy ? "…" : "📦 Mark delivered"}
+        </button>
+      ) : (
+        <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkPacked(task.orderId))}>
+          {busy ? "…" : "✅ Mark packed"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ── Home ───────────────────────────────────────────────────────────────── */
-function Home({ role, isDelivery, name, wallet, slots, presence, setPresence }) {
+function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, reload }) {
   const [busy, setBusy] = useState(false);
+  const [task, setTask] = useState(null);
+  const [taskBusy, setTaskBusy] = useState(false);
+
+  // Poll for the current assigned task while online.
+  useEffect(() => {
+    let alive = true;
+    const tick = () => api.getMyTask().then((t) => alive && setTask(t)).catch(() => {});
+    tick();
+    const iv = setInterval(tick, 5000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [presence.activeOrderId]);
+
+  async function taskAction(fn) {
+    setTaskBusy(true);
+    try { await fn(); const t = await api.getMyTask(); setTask(t); await reload(); }
+    catch (e) { alert(e.message || "Something went wrong."); }
+    finally { setTaskBusy(false); }
+  }
+
   const today = istDateISO();
   const earnings = wallet.ledger.filter((l) => l.kind === "earning");
   const todays = earnings.filter((l) => istParts(l.at).dateISO === today);
@@ -122,10 +196,17 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence }) 
         </div>
       </div>
 
-      {presence.isOnline && (
+      {task ? (
+        <LiveOrder task={task} busy={taskBusy} onAction={taskAction} />
+      ) : presence.isOnline ? (
         <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
           <span className="emo">📡</span>
           You're online — waiting for the next order. It'll ring here the moment one comes.
+        </div>
+      ) : (
+        <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
+          <span className="emo">🌙</span>
+          You're offline. Go online in your booked slot to start receiving orders.
         </div>
       )}
 

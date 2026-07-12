@@ -576,6 +576,18 @@ export async function partnerRecordPayoutAdmin(userId, amount, note) {
   return { ok: true };
 }
 
+// The partner's current assigned task (minimal fields, privacy-scoped).
+export async function getMyTask() {
+  const { data, error } = await must().rpc("get_my_task");
+  if (error) return null;
+  const t = Array.isArray(data) ? data[0] : data;
+  if (!t) return null;
+  return {
+    orderId: t.order_id, code: t.code, role: t.task_role, state: t.state,
+    isCod: t.is_cod, codAmount: t.cod_amount, location: t.location, items: t.items || [],
+  };
+}
+
 // Order lifecycle (used once dispatch is wired).
 export async function partnerAccept(orderId) {
   const { error } = await must().rpc("partner_accept", { p_order: orderId });

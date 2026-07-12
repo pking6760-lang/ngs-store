@@ -142,3 +142,22 @@
 
 .pd-splash { position: fixed; inset: 0; background: var(--p-bg); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 8px; color: var(--p-sec); }
+
+/* Live order card */
+.pd-liveorder { border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 12px;
+  background: radial-gradient(120% 120% at 100% 0%, rgba(255,71,87,0.18), transparent 50%),
+    linear-gradient(160deg, #1c0d10, #16161B);
+  border: 1px solid rgba(255,71,87,0.45); box-shadow: 0 0 0 1px rgba(255,71,87,0.15), 0 18px 40px -18px rgba(229,18,46,0.5); }
+.lo-head { display: flex; align-items: center; justify-content: space-between; }
+.lo-live { color: var(--p-red-bright); font-weight: 800; font-size: 12px; letter-spacing: 0.1em; }
+.lo-code { font-weight: 800; font-size: 16px; }
+.lo-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--p-line); }
+.lo-lbl { font-size: 12px; color: var(--p-sec); text-transform: uppercase; letter-spacing: 0.06em; }
+.lo-nav { background: rgba(255,255,255,0.1); color: #fff; text-decoration: none; padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+.lo-cod { color: var(--p-amber); font-weight: 800; font-size: 15px; }
+.lo-paid { color: var(--p-mint); font-weight: 700; font-size: 13px; }
+.lo-muted { color: var(--p-muted); font-size: 12px; }
+.lo-items { display: flex; flex-direction: column; gap: 6px; }
+.lo-item { display: flex; justify-content: space-between; font-size: 14px; padding: 7px 0; border-top: 1px solid var(--p-line); }
+.lo-item:first-of-type { border-top: none; }
+.lo-accept { background: linear-gradient(135deg, var(--p-red-bright), var(--p-red)) !important; }
