@@ -55,8 +55,8 @@ const num = (v) => (v == null ? v : Number(v));
 
 function mapProduct(r) {
   return { id: r.id, name: r.name, unit: r.unit, price: num(r.price),
-    mrp: num(r.mrp), icon: r.icon, image: r.image_url, category: r.category,
-    stock: r.stock, active: r.active };
+    mrp: num(r.mrp), cost: num(r.cost), icon: r.icon, image: r.image_url,
+    category: r.category, stock: r.stock, active: r.active };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color };
@@ -613,7 +613,15 @@ export async function partnerMarkDelivered(orderId) {
 /* ─── Admin: catalog ────────────────────────────────────────────────────── */
 
 export async function upsertProduct(product) {
-  const { error } = await must().from("products").upsert(product);
+  let { error } = await must().from("products").upsert(product);
+  // The `cost` column may not exist yet (it ships in migration-product-cost.sql).
+  // Until that migration is applied, save the product without cost rather than
+  // failing outright — everything else still works, and cost persists once the
+  // column is added.
+  if (error && /cost/i.test(error.message || "") && "cost" in product) {
+    const { cost, ...rest } = product;
+    ({ error } = await must().from("products").upsert(rest));
+  }
   if (error) throw error;
   pingLocal("products");
   return { ok: true };

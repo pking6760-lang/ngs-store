@@ -19,6 +19,7 @@ const EMPTY = {
   name: "",
   category: "",
   unit: "",
+  cost: "",
   price: "",
   mrp: "",
   image: "",
@@ -331,9 +332,25 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
       id: form.id || "p" + Date.now(),
       price,
       mrp: Math.max(mrp, price),
+      cost: form.cost === "" || form.cost == null ? undefined : Math.max(0, Number(form.cost) || 0),
       image: form.image || "",
       stock: form.stock === "" || form.stock == null ? undefined : Math.max(0, Number(form.stock) || 0),
     });
+  }
+
+  // Live profit + margin from cost vs selling price. Margin is on the selling
+  // price (standard retail margin) — this is the pool partners take a share of.
+  const costNum = Number(form.cost);
+  const priceNum = Number(form.price);
+  const hasMargin = form.cost !== "" && form.cost != null && priceNum > 0 && costNum >= 0;
+  const profit = hasMargin ? priceNum - costNum : 0;
+  const marginPct = hasMargin && priceNum > 0 ? (profit / priceNum) * 100 : 0;
+
+  // Set the selling price so it lands at a target margin-on-selling from cost.
+  function setMargin(pct) {
+    if (!(costNum >= 0) || form.cost === "" || form.cost == null) return;
+    const price = costNum / (1 - pct / 100);
+    update("price", String(Math.round(price)));
   }
 
   return (
@@ -398,6 +415,17 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
           </label>
 
           <label className="field">
+            <span>Cost price (₹)</span>
+            <input
+              type="number"
+              min="0"
+              value={form.cost ?? ""}
+              onChange={(e) => update("cost", e.target.value)}
+              placeholder="what you pay"
+            />
+          </label>
+
+          <label className="field">
             <span>Selling price (₹)</span>
             <input
               type="number"
@@ -417,6 +445,27 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
               onChange={(e) => update("mrp", e.target.value)}
             />
           </label>
+
+          <div className="field wide margin-box">
+            {hasMargin ? (
+              <div className={`margin-read ${profit < 0 ? "loss" : ""}`}>
+                <span className="margin-lbl">Margin</span>
+                <strong>{profit < 0 ? "–₹" : "₹"}{Math.abs(Math.round(profit))}</strong>
+                <span className="margin-pct">{marginPct.toFixed(1)}%</span>
+                {profit < 0 && <span className="margin-warn">below cost!</span>}
+              </div>
+            ) : (
+              <p className="margin-hint">Enter cost price to see your margin.</p>
+            )}
+            {form.cost !== "" && form.cost != null && costNum >= 0 && (
+              <div className="margin-quick">
+                <span>Set price for margin:</span>
+                {[12, 15, 20].map((m) => (
+                  <button key={m} type="button" onClick={() => setMargin(m)}>{m}%</button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <label className="field wide">
             <span>Product image</span>

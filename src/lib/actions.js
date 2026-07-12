@@ -15,6 +15,7 @@ const CATEGORY_COLORS = [
 function productToDb(p) {
   return { id: p.id, name: p.name, unit: p.unit || "", price: Number(p.price) || 0,
     mrp: p.mrp != null ? Number(p.mrp) : null, icon: p.icon || "",
+    cost: p.cost === "" || p.cost == null ? null : Number(p.cost),
     image_url: p.image || null, category: p.category,
     stock: p.stock === "" || p.stock == null ? null : Number(p.stock),
     active: p.active !== false };

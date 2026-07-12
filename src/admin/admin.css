@@ -704,6 +704,32 @@ body {
   background: #fff;
 }
 
+/* ─── Cost / margin readout ──────────────────────────────── */
+.margin-box { gap: 8px; }
+.margin-read {
+  display: flex; align-items: baseline; gap: 8px;
+  background: #eef7e9; border: 1px solid #d3e8bd; border-radius: 10px;
+  padding: 10px 13px;
+}
+.margin-read.loss { background: #fdeaea; border-color: #f6c9c6; }
+.margin-lbl { font-size: 12px; font-weight: 700; color: #4d7a1e; text-transform: uppercase; letter-spacing: .04em; }
+.margin-read.loss .margin-lbl { color: #b3261e; }
+.margin-read strong { font-size: 18px; color: #2f6b12; font-weight: 800; }
+.margin-read.loss strong { color: #b3261e; }
+.margin-pct { font-size: 13px; font-weight: 700; color: #4d7a1e; }
+.margin-read.loss .margin-pct { color: #b3261e; }
+.margin-warn { font-size: 11px; font-weight: 800; color: #b3261e; margin-left: auto; }
+.margin-hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.margin-quick {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  font-size: 12.5px; color: var(--muted); font-weight: 600;
+}
+.margin-quick button {
+  border: 1px solid #c7d2fe; background: #eef2ff; color: #2B44A8;
+  font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+}
+.margin-quick button:active { background: #dbe2fb; }
+
 /* ─── Barcode scan (auto-fill a product) ─────────────────── */
 .scan-field { gap: 8px; }
 .scan-btn {
