@@ -1,12 +1,17 @@
 import { useCart } from "../context/CartContext.jsx";
 import ProductThumb from "./ProductThumb.jsx";
 
+// Show scarcity urgency when stock is running low.
+const LOW_STOCK = 5;
+
 export default function ProductCard({ product, badge }) {
   const { items, add, remove } = useCart();
   const qty = items[product.id] || 0;
   const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
   const savings = product.mrp - product.price;
   const outOfStock = product.inStock === false;
+  const lowStock =
+    typeof product.stock === "number" && product.stock > 0 && product.stock <= LOW_STOCK;
 
   return (
     <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
@@ -27,10 +32,20 @@ export default function ProductCard({ product, badge }) {
           </span>
         )}
         <span className="product-delivery">⚡ 12 min</span>
+        {lowStock && !outOfStock && (
+          <span className="product-lowstock">
+            {product.hot ? "🔥 Selling fast · " : "⚡ "}Only {product.stock} left
+          </span>
+        )}
         {outOfStock && <span className="sold-out-tag">Out of stock</span>}
       </div>
       <div className="product-name">{product.name}</div>
-      <div className="product-unit">{product.unit}</div>
+      <div className="product-unit">
+        {product.unit}
+        {product.hot && !lowStock && !outOfStock && (
+          <span className="product-hot">🔥 Bestseller</span>
+        )}
+      </div>
       <div className="product-footer">
         <div className="product-price">
           <div className="price-line">

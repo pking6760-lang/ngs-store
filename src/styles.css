@@ -328,6 +328,38 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+/* Scarcity urgency ribbon across the bottom of the image. */
+.product-lowstock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  background: linear-gradient(135deg, #ff5a3c, #e01e5a);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 0 0 10px 10px;
+  animation: lowstockPulse 1.6s ease-in-out infinite;
+}
+@keyframes lowstockPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+.product-hot {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #e8590c;
+  background: #fff4e6;
+  padding: 1px 6px;
+  border-radius: 5px;
+  vertical-align: middle;
 }
 .product-emoji {
   font-size: 56px;

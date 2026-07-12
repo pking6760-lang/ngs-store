@@ -59,9 +59,9 @@ function mapProduct(r) {
   return { id: r.id, name: r.name, unit: r.unit, price: num(r.price),
     mrp: num(r.mrp), icon: r.icon, image: r.image_url,
     category: r.category, stock: r.stock, active: r.active,
-    // Only the public `bait` flag lives on products; cost, tier and sales
-    // analytics are admin-only and merged in by fetchAdminProducts.
-    bait: !!r.bait };
+    // Public merchandising flags: `bait` (best-price deal) and `hot` (selling
+    // fast). Cost, tier and the sales numbers are admin-only (fetchAdminProducts).
+    bait: !!r.bait, hot: !!r.hot };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color };

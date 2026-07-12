@@ -198,6 +198,10 @@ export default function App() {
 function HomeView({ products, categories, offer, onCategoryClick }) {
   const byCategory = (id) => products.filter((p) => p.category === id);
   const bestPrices = products.filter((p) => p.bait).slice(0, 12);
+  const almostGone = products
+    .filter((p) => typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && p.inStock !== false)
+    .sort((a, b) => a.stock - b.stock)
+    .slice(0, 12);
   return (
     <>
       {offer && offer.trim() && (
@@ -226,6 +230,17 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
           <div className="product-row">
             {bestPrices.map((p) => (
               <ProductCard key={p.id} product={p} badge="Best price" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {almostGone.length > 0 && (
+        <section className="section">
+          <h2 className="section-title">⏳ Almost Gone — hurry!</h2>
+          <div className="product-row">
+            {almostGone.map((p) => (
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>
