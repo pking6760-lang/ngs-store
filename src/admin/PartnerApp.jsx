@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
-import EmployeeApp from "./EmployeeApp.jsx";
+import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
 import * as api from "../lib/api.js";
 
@@ -104,7 +104,7 @@ function PartnerInner() {
           <button className={adminRole === "picker" ? "sel" : ""} onClick={() => chooseRole("picker")}>🧺 Picking</button>
           <button className={adminRole === "delivery" ? "sel" : ""} onClick={() => chooseRole("delivery")}>🛵 Delivery</button>
         </div>
-        <EmployeeApp role={adminRole} name={user?.name || "Admin"} onLogout={logout} />
+        <PartnerDashboard role={adminRole} name={user?.name || "Admin"} partner={null} onLogout={logout} />
       </>
     );
   }
@@ -139,7 +139,7 @@ function PartnerInner() {
   }
 
   // Approved → their role decides the dashboard.
-  return <EmployeeApp role={partner.role} name={partner.fullName || user?.name} onLogout={logout} />;
+  return <PartnerDashboard role={partner.role} name={partner.fullName || user?.name} partner={partner} onLogout={logout} />;
 }
 
 export default function PartnerApp() {

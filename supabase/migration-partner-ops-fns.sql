@@ -246,3 +246,14 @@ grant execute on function public.book_slot(text,date,int) to authenticated;
 grant execute on function public.set_online(boolean) to authenticated;
 grant execute on function public.pick_partner(text,uuid) to authenticated;
 grant execute on function public.assign_order(uuid,text,uuid) to authenticated;
+
+-- ── Slot availability counts (for the booking grid) ─────────────────────────
+create or replace function public.slot_counts(p_date date)
+  returns table(role text, start_hour int, cnt bigint)
+  language sql stable security definer set search_path = public as $$
+  select role, start_hour, count(*)
+  from public.partner_slots
+  where slot_date = p_date and status <> 'cancelled'
+  group by role, start_hour;
+$$;
+grant execute on function public.slot_counts(date) to authenticated;

@@ -457,6 +457,100 @@ export async function partnerDocUrl(path) {
   return data?.signedUrl || null;
 }
 
+/* ─── NGS Partner: live dashboard (Home/Slots/Earnings/Wallet) ───────────── */
+
+async function myUid() {
+  const { data } = await must().auth.getUser();
+  return data?.user?.id || null;
+}
+
+// The owner-controlled dials (rates, caps, hours) — the partner app reads them.
+export async function getOpsConfig() {
+  const { data, error } = await must().from("ops_config").select("*").eq("id", 1).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    handling: Number(data.handling_fee), deliveryFee: Number(data.delivery_fee),
+    freeThreshold: Number(data.free_delivery_threshold), surgeFee: Number(data.surge_fee),
+    surgeOn: !!data.surge_on, codCustomerLimit: Number(data.cod_customer_limit),
+    riderCashCap: Number(data.rider_cash_cap), pickerSlotMin: Number(data.picker_slot_min),
+    storeOpenHour: data.store_open_hour, storeCloseHour: data.store_close_hour,
+    coveragePicking: data.coverage_picking, coverageDelivery: data.coverage_delivery,
+  };
+}
+
+// Online / offline presence.
+export async function getMyPresence() {
+  const uid = await myUid();
+  if (!uid) return { isOnline: false, activeOrderId: null };
+  const { data } = await must().from("partner_presence").select("*").eq("user_id", uid).maybeSingle();
+  return { isOnline: !!data?.is_online, activeOrderId: data?.active_order_id || null };
+}
+export async function setOnline(on) {
+  const { error } = await must().rpc("set_online", { p_online: !!on });
+  if (error) throw new Error(error.message || "Couldn't update your status.");
+  return { ok: true };
+}
+
+// Slot bookings (mine) + live availability counts for the grid.
+export async function getMySlots() {
+  const { data, error } = await must().from("partner_slots")
+    .select("*").order("slot_date").order("start_hour");
+  if (error) throw error;
+  return (data || []).map((s) => ({ id: s.id, date: s.slot_date, hour: s.start_hour, role: s.role, status: s.status }));
+}
+export async function getSlotCounts(dateISO) {
+  const { data, error } = await must().rpc("slot_counts", { p_date: dateISO });
+  if (error) return {};
+  const out = {};
+  (data || []).forEach((r) => { out[`${r.role}:${r.start_hour}`] = Number(r.cnt); });
+  return out;
+}
+export async function bookSlot(role, dateISO, hour) {
+  const { error } = await must().rpc("book_slot", { p_role: role, p_date: dateISO, p_hour: hour });
+  if (error) throw new Error(error.message || "Couldn't book that slot.");
+  return { ok: true };
+}
+
+// Wallet: full ledger + derived balance and cash-in-hand.
+export async function getMyWallet() {
+  const uid = await myUid();
+  if (!uid) return { balance: 0, cashInHand: 0, ledger: [] };
+  const { data, error } = await must().from("wallet_ledger")
+    .select("*").eq("partner_id", uid).order("created_at", { ascending: false });
+  if (error) throw error;
+  const ledger = (data || []).map((r) => ({
+    id: r.id, kind: r.kind, amount: Number(r.amount), cashDelta: Number(r.cash_delta),
+    note: r.note, orderId: r.order_id, at: r.created_at,
+  }));
+  const balance = ledger.reduce((s, l) => s + l.amount, 0);
+  const cashInHand = ledger.reduce((s, l) => s + l.cashDelta, 0);
+  return { balance, cashInHand, ledger };
+}
+
+// Reliability record (strikes).
+export async function getMyStrikes() {
+  const uid = await myUid();
+  if (!uid) return [];
+  const { data } = await must().from("partner_strikes")
+    .select("*").eq("partner_id", uid).order("created_at", { ascending: false });
+  return (data || []).map((s) => ({ id: s.id, reason: s.reason, at: s.created_at }));
+}
+
+// Order lifecycle (used once dispatch is wired).
+export async function partnerAccept(orderId) {
+  const { error } = await must().rpc("partner_accept", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't accept."); return { ok: true };
+}
+export async function partnerMarkPacked(orderId) {
+  const { error } = await must().rpc("partner_mark_packed", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't mark packed."); return { ok: true };
+}
+export async function partnerMarkDelivered(orderId) {
+  const { error } = await must().rpc("partner_mark_delivered", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't mark delivered."); return { ok: true };
+}
+
 /* ─── Admin: catalog ────────────────────────────────────────────────────── */
 
 export async function upsertProduct(product) {
