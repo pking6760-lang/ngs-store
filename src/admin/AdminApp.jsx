@@ -8,6 +8,7 @@ import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import PartnersAdmin from "./PartnersAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
+import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { useSettings, useOrders, usePartners } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
 import * as api from "../lib/api.js";
@@ -127,6 +128,7 @@ function AdminHome({ name, onOpen, onLogout }) {
 
 function AdminSection({ view, onOpen }) {
   const label = TILES.find((t) => t.id === view)?.label || "";
+  const loading = useReveal(view, 320, 680);
   return (
     <div className="adm-sec">
       <header className="adm-secbar">
@@ -134,14 +136,20 @@ function AdminSection({ view, onOpen }) {
         <h1>{label}</h1>
       </header>
       <div className="adm-sec-body">
-        {view === "dashboard" && <Dashboard onNavigate={onOpen} />}
-        {view === "products" && <ProductsAdmin />}
-        {view === "orders" && <OrdersAdmin />}
-        {view === "customers" && <CustomersAdmin />}
-        {view === "partners" && <PartnersAdmin />}
-        {view === "delivery" && <DeliveryAdmin />}
-        {view === "offers" && <CouponsAdmin />}
-        {view === "settings" && <OpsSettings />}
+        {loading ? (
+          <PageLoad variant="admin" text={label} />
+        ) : (
+          <div className="fade-up">
+            {view === "dashboard" && <Dashboard onNavigate={onOpen} />}
+            {view === "products" && <ProductsAdmin />}
+            {view === "orders" && <OrdersAdmin />}
+            {view === "customers" && <CustomersAdmin />}
+            {view === "partners" && <PartnersAdmin />}
+            {view === "delivery" && <DeliveryAdmin />}
+            {view === "offers" && <CouponsAdmin />}
+            {view === "settings" && <OpsSettings />}
+          </div>
+        )}
       </div>
     </div>
   );

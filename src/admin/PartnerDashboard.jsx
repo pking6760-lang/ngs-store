@@ -4,6 +4,8 @@ import { googleMapsLink } from "../lib/location.js";
 import { initPartnerPush } from "../lib/partnerPush.js";
 import { unlockAudio, stopAlarm } from "../lib/sound.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
+import { useReveal, PageLoad } from "../components/Motion.jsx";
+import { withMinTime } from "../lib/ux.js";
 
 /* ── date helpers (IST) ─────────────────────────────────────────────────── */
 const IST = "Asia/Kolkata";
@@ -70,15 +72,22 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
 
   const isDelivery = role === "delivery";
   const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload };
+  const switching = useReveal(tab, 300, 650);
 
   return (
     <div className="pd">
       <div className="pd-scroll">
-        {tab === "home" && <Home {...shared} />}
-        {tab === "slots" && <Slots {...shared} />}
-        {tab === "earnings" && <Earnings {...shared} />}
-        {tab === "wallet" && <Wallet {...shared} />}
-        {tab === "profile" && <Profile {...shared} onLogout={onLogout} />}
+        {switching ? (
+          <PageLoad variant="partner" text={tab} />
+        ) : (
+          <div className="fade-up">
+            {tab === "home" && <Home {...shared} />}
+            {tab === "slots" && <Slots {...shared} />}
+            {tab === "earnings" && <Earnings {...shared} />}
+            {tab === "wallet" && <Wallet {...shared} />}
+            {tab === "profile" && <Profile {...shared} onLogout={onLogout} />}
+          </div>
+        )}
       </div>
       <nav className="pd-nav">
         {[["home", "Home"], ["slots", "Slots"], ["earnings", "Earnings"], ["wallet", "Wallet"], ["profile", "Profile"]].map(([k, lbl]) => (
@@ -163,15 +172,15 @@ function LiveOrder({ task, busy, onAction }) {
 
       {!accepted ? (
         <button className="pd-btn lo-accept" disabled={busy} onClick={() => onAction(() => api.partnerAccept(task.orderId))}>
-          {busy ? "…" : "✅ Accept order"}
+          {busy ? <span className="ngs-spin" /> : "✅ Accept order"}
         </button>
       ) : isDelivery ? (
         <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkDelivered(task.orderId))}>
-          {busy ? "…" : "📦 Mark delivered"}
+          {busy ? <span className="ngs-spin" /> : "📦 Mark delivered"}
         </button>
       ) : (
         <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkPacked(task.orderId))}>
-          {busy ? "…" : "✅ Mark packed"}
+          {busy ? <span className="ngs-spin" /> : "✅ Mark packed"}
         </button>
       )}
     </div>
@@ -196,7 +205,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
   async function taskAction(fn) {
     stopAlarm(); // they're handling it — silence the ring
     setTaskBusy(true);
-    try { await fn(); const t = await api.getMyTask(); setTask(t); await reload(); }
+    try { await withMinTime(fn, 700, 1500); const t = await api.getMyTask(); setTask(t); await reload(); }
     catch (e) { alert(e.message || "Something went wrong."); }
     finally { setTaskBusy(false); }
   }
@@ -211,7 +220,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
   async function toggle() {
     unlockAudio(); // prime the alarm sound on this tap (browsers need a gesture)
     setBusy(true);
-    try { await api.setOnline(!presence.isOnline); setPresence((p) => ({ ...p, isOnline: !p.isOnline })); }
+    try { await withMinTime(() => api.setOnline(!presence.isOnline), 450, 1000); setPresence((p) => ({ ...p, isOnline: !p.isOnline })); }
     catch { /* ignore */ } finally { setBusy(false); }
   }
 
@@ -224,7 +233,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
           <span className="pd-role">{isDelivery ? "🛵 Delivery partner" : "🧺 Picker"}</span>
         </div>
         <button className={`pd-toggle ${presence.isOnline ? "on" : "off"}`} disabled={busy} onClick={toggle}>
-          <span className="pd-dot" />{presence.isOnline ? "Online" : "Offline"}
+          {busy ? <span className="ngs-spin" /> : <span className="pd-dot" />}{presence.isOnline ? "Online" : "Offline"}
         </button>
       </div>
 
@@ -293,7 +302,7 @@ function Slots({ role, cfg, slots, reload }) {
 
   async function book(h) {
     setErr(""); setBusy(h);
-    try { await api.bookSlot(role, dateISO, h); await reload(); }
+    try { await withMinTime(() => api.bookSlot(role, dateISO, h), 500, 1100); await reload(); }
     catch (e) { setErr(e.message || "Couldn't book."); }
     finally { setBusy(null); }
   }

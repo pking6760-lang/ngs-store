@@ -1992,6 +1992,88 @@ input:focus-visible {
   55%, 100% { transform: translateX(120%); }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   NGS motion kit — branded loading + transitions (shared by all three apps).
+   Themed via variant classes; the spinner uses currentColor so it inherits.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Button / inline spinner */
+.ngs-spin { display: inline-block; width: 16px; height: 16px; border: 2.5px solid currentColor;
+  border-right-color: transparent; border-radius: 50%; animation: ngsspin 0.7s linear infinite; vertical-align: -3px; }
+.ngs-spin.lg { width: 30px; height: 30px; border-width: 3px; }
+@keyframes ngsspin { to { transform: rotate(360deg); } }
+
+/* Opening brand splash */
+.splash { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;
+  transition: opacity .6s ease, transform .6s ease; }
+.splash.leaving { opacity: 0; transform: scale(1.05); pointer-events: none; }
+.splash-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.splash-logo { display: flex; gap: 2px; font-weight: 900; font-size: 62px; letter-spacing: -0.02em; line-height: 1; }
+.splash-logo span { display: inline-block; opacity: 0; transform: translateY(18px) scale(.8);
+  animation: splashPop .55s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes splashPop { to { opacity: 1; transform: none; } }
+.splash-tag { font-size: 13px; letter-spacing: .22em; text-transform: uppercase; opacity: 0;
+  animation: splashFade .6s ease .45s forwards; }
+@keyframes splashFade { to { opacity: .82; } }
+.splash-bar { width: 130px; height: 4px; border-radius: 999px; overflow: hidden; margin-top: 8px; }
+.splash-bar > span { display: block; height: 100%; width: 42%; border-radius: 999px; animation: splashBar 1.05s ease-in-out infinite; }
+@keyframes splashBar { 0% { margin-left: -45%; } 100% { margin-left: 105%; } }
+.splash-customer { background: radial-gradient(120% 90% at 50% 0%, #14b16f, #067A43); color: #fff; }
+.splash-admin { background: radial-gradient(120% 90% at 50% 0%, #5877f7, #2B44A8); color: #fff; }
+.splash-partner { background: radial-gradient(120% 90% at 50% -8%, rgba(229,18,46,.4), #08080A 62%); color: #fff; }
+.splash-partner .splash-logo { color: #FF4757; }
+.splash .splash-bar { background: rgba(255,255,255,.22); }
+.splash .splash-bar > span { background: currentColor; }
+.splash-partner .splash-bar > span { background: #FF4757; }
+
+/* Page / tab transition loader */
+.pageload { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 56px 0; }
+.pageload .pl-ring { width: 38px; height: 38px; border: 3px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: ngsspin .7s linear infinite; opacity: .85; }
+.pageload .pl-txt { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .55; font-weight: 700; }
+.pageload.v-customer { color: #0AA25F; }
+.pageload.v-admin { color: #3B5BDB; }
+.pageload.v-partner { color: #FF4757; }
+.fade-up { animation: fadeUp .34s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Full-screen action overlay (processing / success) */
+.ov { position: fixed; inset: 0; z-index: 9500; display: flex; align-items: center; justify-content: center;
+  background: rgba(8,10,14,.62); backdrop-filter: blur(2px); animation: ovIn .2s ease; }
+@keyframes ovIn { from { opacity: 0; } to { opacity: 1; } }
+.ov-card { background: #fff; border-radius: 22px; padding: 30px 26px; display: flex; flex-direction: column;
+  align-items: center; gap: 12px; max-width: 300px; width: 82%; text-align: center; }
+.ov-card h3 { margin: 0; font-size: 18px; color: #16202c; }
+.ov-card p { margin: 0; font-size: 13px; color: #6b7885; }
+.ov-partner .ov-card { background: #16161B; }
+.ov-partner .ov-card h3 { color: #F4F4F6; }
+.ov-ring { width: 56px; height: 56px; border: 4px solid #e6e9ef; border-radius: 50%; position: relative; }
+.ov-ring::before { content: ""; position: absolute; inset: -4px; border: 4px solid transparent; border-radius: 50%;
+  border-top-color: var(--ov-accent, #3B5BDB); animation: ngsspin .8s linear infinite; }
+/* Success check draw */
+.ov-check { width: 72px; height: 72px; }
+.ov-check circle { fill: none; stroke: var(--ov-accent, #12a05c); stroke-width: 5; stroke-dasharray: 170;
+  stroke-dashoffset: 170; animation: ovDraw .5s ease forwards; }
+.ov-check path { fill: none; stroke: var(--ov-accent, #12a05c); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 48; stroke-dashoffset: 48; animation: ovDraw .35s ease .4s forwards; }
+@keyframes ovDraw { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo span, .splash-tag, .fade-up, .ov, .splash-bar > span { animation-duration: .01ms !important; }
+  .ngs-spin, .pl-ring, .ov-ring::before { animation-duration: 1.4s; }
+}
+
+/* Shared spinner — inherits the button/section colour via currentColor, so it
+   matches each app's theme (green customer, indigo admin, red partner). */
+.ngs-spin {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2.5px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: ngsspin 0.7s linear infinite; vertical-align: -3px;
+}
+.ngs-spin.lg { width: 26px; height: 26px; border-width: 3px; }
+@keyframes ngsspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ngs-spin { animation-duration: 1.4s; } }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }

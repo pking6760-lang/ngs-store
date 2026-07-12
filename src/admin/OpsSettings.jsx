@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as api from "../lib/api.js";
+import { withMinTime } from "../lib/ux.js";
 
 // The owner's control panel for the partner engine. Every dial the pricing +
 // payout system reads lives here.
@@ -84,7 +85,7 @@ export default function OpsSettings() {
         (g.fields || []).forEach((f) => { patch[f.key] = Number(form[f.key]); });
         (g.toggles || []).forEach((t) => { patch[t.key] = form[t.key]; });
       });
-      await api.updateOpsConfig(patch);
+      await withMinTime(() => api.updateOpsConfig(patch), 650, 1300);
       setSaved(true);
     } catch (e) { setErr(e.message || "Couldn't save."); }
     finally { setBusy(false); }
@@ -129,7 +130,7 @@ export default function OpsSettings() {
       {err && <div className="preg-error" style={{ margin: "0 0 10px" }}>{err}</div>}
       <div className="ops-save-bar">
         {saved && <span className="ops-saved">✓ Saved</span>}
-        <button className="ops-save" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save settings"}</button>
+        <button className="ops-save" disabled={busy} onClick={save}>{busy ? <><span className="ngs-spin" /> Saving…</> : "Save settings"}</button>
       </div>
     </div>
   );

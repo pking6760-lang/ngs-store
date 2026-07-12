@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { usePartners } from "../lib/hooks.js";
 import * as api from "../lib/api.js";
 import { kycReport } from "../lib/kyc.js";
+import { withMinTime } from "../lib/ux.js";
+import { ActionOverlay } from "../components/Motion.jsx";
 
 function fmtDate(iso) {
   if (!iso) return "";
@@ -81,8 +83,8 @@ function WalletBlock({ partner, w, onChange }) {
   async function submit(kind, v) {
     setModal(null); setBusy(true); setMsg("");
     try {
-      if (kind === "deposit") { await api.partnerDepositCash(partner.userId, v); setMsg("✓ Deposit recorded"); }
-      else { await api.partnerRecordPayoutAdmin(partner.userId, v, "Weekly payout"); setMsg("✓ Payout recorded"); }
+      if (kind === "deposit") { await withMinTime(() => api.partnerDepositCash(partner.userId, v), 600, 1200); setMsg("✓ Deposit recorded"); }
+      else { await withMinTime(() => api.partnerRecordPayoutAdmin(partner.userId, v, "Weekly payout"), 600, 1200); setMsg("✓ Payout recorded"); }
       await onChange();
     } catch (e) { setMsg(e.message); } finally { setBusy(false); }
   }
@@ -122,6 +124,7 @@ export default function PartnersAdmin() {
   const [viewer, setViewer] = useState(null);
   const [err, setErr] = useState("");
   const [wallets, setWallets] = useState({});
+  const [approved, setApproved] = useState(false);
 
   const loadWallets = () => api.fetchPartnerWallets().then(setWallets).catch(() => {});
   useEffect(() => {
@@ -137,7 +140,10 @@ export default function PartnersAdmin() {
   async function decide(p, status) {
     setErr("");
     setBusy(p.userId + status);
-    try { await api.setPartnerStatus(p.userId, status); }
+    try {
+      await withMinTime(() => api.setPartnerStatus(p.userId, status), 650, 1300);
+      if (status === "approved") { setApproved(true); setTimeout(() => setApproved(false), 1500); }
+    }
     catch (e) { setErr(e?.message || "Couldn't update this partner."); }
     finally { setBusy(null); }
   }
@@ -241,7 +247,7 @@ export default function PartnersAdmin() {
                         </div>
                       ) : (
                         <button className="od-accept" disabled={busy} onClick={() => decide(p, "approved")}>
-                          ✅ Approve partner
+                          {busy === p.userId + "approved" ? <span className="ngs-spin" /> : "✅ Approve partner"}
                         </button>
                       )
                     )}
@@ -260,6 +266,7 @@ export default function PartnersAdmin() {
       )}
 
       <DocViewer doc={viewer} onClose={() => setViewer(null)} />
+      {approved && <ActionOverlay variant="admin" mode="success" title="Partner approved" sub="They can start now" accent="#3B5BDB" />}
     </>
   );
 }
