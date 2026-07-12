@@ -54,9 +54,13 @@ async function invokeFn(name, body) {
 const num = (v) => (v == null ? v : Number(v));
 
 function mapProduct(r) {
+  // Note: buying price (cost) is intentionally NOT here — it lives in the
+  // admin-only product_costs table and is merged in by fetchAdminProducts only.
   return { id: r.id, name: r.name, unit: r.unit, price: num(r.price),
-    mrp: num(r.mrp), cost: num(r.cost), icon: r.icon, image: r.image_url,
-    category: r.category, stock: r.stock, active: r.active };
+    mrp: num(r.mrp), icon: r.icon, image: r.image_url,
+    category: r.category, stock: r.stock, active: r.active,
+    speedTier: r.speed_tier || null, units30d: r.units_30d ?? 0,
+    bait: !!r.bait, baitOverride: r.bait_override || null };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color };
@@ -546,6 +550,35 @@ export async function getMyStrikes() {
 }
 
 // Admin: raw ops_config for the settings editor + update.
+// ── Smart pricing (auto selling price from cost + MRP + sales velocity) ──────
+export async function getPricingConfig() {
+  const { data, error } = await must().from("pricing_config").select("*").eq("id", 1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+export async function updatePricingConfig(patch) {
+  const { error } = await must().from("pricing_config").update(patch).eq("id", 1);
+  if (error) throw new Error(error.message || "Couldn't save pricing rules.");
+  pingLocal("products");
+  return { ok: true };
+}
+// Recompute every product's tier + auto price now (admin button, and it also
+// runs on a schedule server-side).
+export async function smartReprice() {
+  const { error } = await must().rpc("smart_reprice");
+  if (error) throw new Error(error.message || "Couldn't recompute prices.");
+  pingLocal("products");
+  return { ok: true };
+}
+// Owner override for the advertised "best price" strip: 'pin' | 'hide' | null.
+export async function setBaitOverride(productId, value) {
+  const { error } = await must().from("products")
+    .update({ bait_override: value }).eq("id", productId);
+  if (error) throw new Error(error.message || "Couldn't update.");
+  pingLocal("products");
+  return { ok: true };
+}
+
 export async function getOpsConfigRaw() {
   const { data, error } = await must().from("ops_config").select("*").eq("id", 1).maybeSingle();
   if (error) throw error;
@@ -612,19 +645,33 @@ export async function partnerMarkDelivered(orderId) {
 
 /* ─── Admin: catalog ────────────────────────────────────────────────────── */
 
-export async function upsertProduct(product) {
-  let { error } = await must().from("products").upsert(product);
-  // The `cost` column may not exist yet (it ships in migration-product-cost.sql).
-  // Until that migration is applied, save the product without cost rather than
-  // failing outright — everything else still works, and cost persists once the
-  // column is added.
-  if (error && /cost/i.test(error.message || "") && "cost" in product) {
-    const { cost, ...rest } = product;
-    ({ error } = await must().from("products").upsert(rest));
-  }
+export async function upsertProduct(product, cost) {
+  const { error } = await must().from("products").upsert(product);
   if (error) throw error;
+  // Buying price is written to the admin-only side table. `undefined` means the
+  // caller didn't touch cost; null/"" clears it.
+  if (cost !== undefined) {
+    const value = cost === "" || cost == null ? null : Number(cost);
+    const { error: e2 } = await must().from("product_costs")
+      .upsert({ product_id: product.id, cost: value });
+    if (e2) throw new Error(e2.message || "Couldn't save cost price.");
+  }
   pingLocal("products");
   return { ok: true };
+}
+
+// Admin: buying prices, keyed by product id (from the admin-only table).
+export async function fetchProductCosts() {
+  const { data, error } = await must().from("product_costs").select("product_id, cost");
+  if (error) throw error;
+  const m = {};
+  (data || []).forEach((r) => { m[r.product_id] = num(r.cost); });
+  return m;
+}
+// Admin: products with their (private) cost merged in.
+export async function fetchAdminProducts() {
+  const [prods, costs] = await Promise.all([fetchProducts(), fetchProductCosts()]);
+  return prods.map((p) => ({ ...p, cost: costs[p.id] ?? null }));
 }
 
 export async function deleteProduct(id) {

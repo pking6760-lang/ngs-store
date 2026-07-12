@@ -1,5 +1,5 @@
 import { useMemo, useState, lazy, Suspense } from "react";
-import { useProducts, useCategories } from "../lib/hooks.js";
+import { useAdminProducts, useCategories } from "../lib/hooks.js";
 import AdminPortal from "./AdminPortal.jsx";
 import {
   upsertProduct,
@@ -9,6 +9,7 @@ import {
 } from "../lib/actions.js";
 import { fileToResizedDataUrl, urlToResizedDataUrl } from "../lib/image.js";
 import { lookupProductByBarcode, guessCategory } from "../lib/productLookup.js";
+import { smartReprice } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 // The scanner pulls in ZXing (~300 KB) — load it only when scanning starts so
 // the admin app itself stays light.
@@ -28,7 +29,7 @@ const EMPTY = {
 };
 
 export default function ProductsAdmin() {
-  const products = useProducts();
+  const products = useAdminProducts();
   const categories = useCategories();
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
@@ -140,9 +141,14 @@ export default function ProductsAdmin() {
             product={editing}
             categories={categories}
             onClose={() => setEditing(null)}
-            onSave={(prod) => {
-              upsertProduct(prod);
+            onSave={async (prod) => {
+              await upsertProduct(prod);
               setEditing(null);
+              // If a buying price is set, let Smart Pricing set the selling
+              // price straight away instead of waiting for the next schedule.
+              if (prod.cost !== "" && prod.cost != null && prod.mrp) {
+                try { await smartReprice(); } catch { /* schedule will catch up */ }
+              }
             }}
             onDelete={(id) => {
               deleteProduct(id);

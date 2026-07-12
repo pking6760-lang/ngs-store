@@ -293,6 +293,20 @@ button {
   flex-direction: column;
   gap: 6px;
 }
+.product-best {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  background: linear-gradient(135deg, #ff7a18, #e02f2f);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(224, 47, 47, 0.4);
+}
 .product-badge {
   position: absolute;
   top: 16px;

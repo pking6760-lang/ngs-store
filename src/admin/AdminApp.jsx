@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Dashboard from "./Dashboard.jsx";
 import ProductsAdmin from "./ProductsAdmin.jsx";
+import SmartPricing from "./SmartPricing.jsx";
 import OrdersAdmin from "./OrdersAdmin.jsx";
 import CouponsAdmin from "./CouponsAdmin.jsx";
 import CustomersAdmin from "./CustomersAdmin.jsx";
@@ -30,6 +31,7 @@ const TILES = [
   { id: "dashboard", label: "Overview", icon: "📊", tint: "#4C6EF5" },
   { id: "orders", label: "Orders", icon: "🧾", tint: "#1C7ED6" },
   { id: "products", label: "Products", icon: "📦", tint: "#F08C00" },
+  { id: "pricing", label: "Smart Pricing", icon: "🏷️", tint: "#12B886" },
   { id: "customers", label: "Customers", icon: "👥", tint: "#7048E8" },
   { id: "partners", label: "Partners", icon: "🛵", tint: "#0CA678" },
   { id: "delivery", label: "Delivery", icon: "🚴", tint: "#0C8599" },
@@ -142,6 +144,7 @@ function AdminSection({ view, onOpen }) {
           <div className="fade-up">
             {view === "dashboard" && <Dashboard onNavigate={onOpen} />}
             {view === "products" && <ProductsAdmin />}
+            {view === "pricing" && <SmartPricing />}
             {view === "orders" && <OrdersAdmin />}
             {view === "customers" && <CustomersAdmin />}
             {view === "partners" && <PartnersAdmin />}

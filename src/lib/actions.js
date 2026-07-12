@@ -15,13 +15,13 @@ const CATEGORY_COLORS = [
 function productToDb(p) {
   return { id: p.id, name: p.name, unit: p.unit || "", price: Number(p.price) || 0,
     mrp: p.mrp != null ? Number(p.mrp) : null, icon: p.icon || "",
-    cost: p.cost === "" || p.cost == null ? null : Number(p.cost),
     image_url: p.image || null, category: p.category,
     stock: p.stock === "" || p.stock == null ? null : Number(p.stock),
     active: p.active !== false };
 }
 export async function upsertProduct(p) {
-  if (BACKEND) return api.upsertProduct(productToDb(p));
+  // Cost (buying price) is stored separately in the admin-only table.
+  if (BACKEND) return api.upsertProduct(productToDb(p), p.cost);
   return store.upsertProduct(p);
 }
 export async function deleteProduct(id) {

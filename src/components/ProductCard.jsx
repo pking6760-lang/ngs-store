@@ -1,7 +1,7 @@
 import { useCart } from "../context/CartContext.jsx";
 import ProductThumb from "./ProductThumb.jsx";
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, badge }) {
   const { items, add, remove } = useCart();
   const qty = items[product.id] || 0;
   const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
@@ -18,6 +18,7 @@ export default function ProductCard({ product }) {
           fill
           radius={14}
         />
+        {badge && !outOfStock && <span className="product-best">{badge}</span>}
         {discount > 0 && !outOfStock && (
           <span className="product-badge">
             <span className="product-badge-inner">

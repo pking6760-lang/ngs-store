@@ -197,6 +197,7 @@ export default function App() {
 
 function HomeView({ products, categories, offer, onCategoryClick }) {
   const byCategory = (id) => products.filter((p) => p.category === id);
+  const bestPrices = products.filter((p) => p.bait).slice(0, 12);
   return (
     <>
       {offer && offer.trim() && (
@@ -218,6 +219,17 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
           </div>
         ))}
       </div>
+
+      {bestPrices.length > 0 && (
+        <section className="section best-prices">
+          <h2 className="section-title">🔥 Best Prices</h2>
+          <div className="product-row">
+            {bestPrices.map((p) => (
+              <ProductCard key={p.id} product={p} badge="Best price" />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <h2 className="section-title">Shop by category</h2>

@@ -52,6 +52,16 @@ export function useProducts() {
   return products;
 }
 
+// Admin-only variant: same products, but with each item's private buying price
+// (cost) merged in. Never use this in the customer app — it reads the admin
+// product_costs table.
+export function useAdminProducts() {
+  if (BACKEND) return useBackend(api.fetchAdminProducts, ["products"], []);
+  const [products, setProducts] = useState(getProducts);
+  useEffect(() => subscribe(() => setProducts(getProducts())), []);
+  return products;
+}
+
 export function useCategories() {
   if (BACKEND) return useBackend(api.fetchCategories, ["categories"], []);
   const [categories, setCategories] = useState(getCategories);
