@@ -104,7 +104,10 @@ function mapOrder(r) {
     accepted: r.accepted, member: r.member, status: r.status,
     items: (r.order_items || []).map((i) => ({ id: i.product_id, name: i.name,
       icon: i.icon, qty: i.qty, price: num(i.price) })),
-    itemTotal: num(r.item_total), discount: num(r.discount), couponCode: r.coupon_code,
+    itemTotal: num(r.item_total),
+    // r.discount is the COUPON discount; r.points_discount is the points redemption.
+    couponDiscount: num(r.discount), couponCode: r.coupon_code,
+    pointsDiscount: num(r.points_discount), pointsRedeemed: r.points_redeemed || 0,
     deliveryFee: num(r.delivery_fee), handling: num(r.handling), surgeFee: num(r.surge_fee),
     pointsEarned: r.points_earned, total: num(r.total),
     payment: r.payment_method, paymentMethod: r.payment_method, paymentStatus: r.payment_status,

@@ -139,10 +139,11 @@ export function buildReceiptBytes(order, shop) {
   // ── Bill ──
   p(line(lr("Subtotal", rs(order.itemTotal))));
   if (order.couponDiscount > 0) p(line(lr("Coupon", "-" + rs(order.couponDiscount))));
-  if (order.discount > 0) p(line(lr("Points disc", "-" + rs(order.discount))));
+  if (order.pointsDiscount > 0) p(line(lr("Points disc", "-" + rs(order.pointsDiscount))));
   if (order.deliveryFee > 0) p(line(lr("Delivery", rs(order.deliveryFee))));
   if (order.handling > 0) p(line(lr("Handling", rs(order.handling))));
   if (order.surgeFee > 0) p(line(lr("Surge", rs(order.surgeFee))));
+  if (order.walletUsed > 0) p(line(lr("NGS Wallet", "-" + rs(order.walletUsed))));
   rule();
 
   // ── Total ──

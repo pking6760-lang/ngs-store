@@ -267,12 +267,20 @@ function OrderDetail({ order, onClose, onReorder }) {
 
           <div className="order-detail-bill">
             <Row k="Item total" v={`₹${order.itemTotal}`} />
-            {order.discount > 0 && <Row k="Points discount" v={`−₹${order.discount}`} good />}
-            {order.couponDiscount > 0 && <Row k={`Coupon ${order.couponCode}`} v={`−₹${order.couponDiscount}`} good />}
+            {order.couponDiscount > 0 && <Row k={`Coupon ${order.couponCode || ""}`.trim()} v={`−₹${order.couponDiscount}`} good />}
+            {order.pointsDiscount > 0 && <Row k={`Points used${order.pointsRedeemed ? ` (${order.pointsRedeemed} pts)` : ""}`} v={`−₹${order.pointsDiscount}`} good />}
             <Row k="Delivery fee" v={order.deliveryFee ? `₹${order.deliveryFee}` : "FREE"} />
             <Row k="Handling" v={`₹${order.handling}`} />
+            {order.surgeFee > 0 && <Row k="Surge" v={`₹${order.surgeFee}`} />}
+            {order.walletUsed > 0 && <Row k="NGS Wallet" v={`−₹${order.walletUsed}`} good />}
             <Row k="Total paid" v={`₹${order.total}`} bold />
-            <div className="odb-pay">{order.payment === "upi" ? "Paid via UPI" : "Cash on delivery"}</div>
+            {order.refundedAmount > 0 && <Row k="Refunded to wallet" v={`₹${order.refundedAmount}`} good />}
+            <div className="odb-pay">
+              {order.payment === "razorpay" ? "Paid online"
+                : order.payment === "upi" ? "Paid via UPI"
+                : order.payment === "wallet" ? "Paid with NGS Wallet"
+                : "Cash on delivery"}
+            </div>
           </div>
 
           {order.status === "Delivered" && (

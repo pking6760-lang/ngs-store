@@ -40,10 +40,11 @@ export default function Receipt({ order, shop }) {
 
       <div className="rc-kv"><span>Subtotal</span><span>{money(order.itemTotal)}</span></div>
       {order.couponDiscount > 0 && <div className="rc-kv"><span>Coupon {order.couponCode || ""}</span><span>-{money(order.couponDiscount)}</span></div>}
-      {order.discount > 0 && <div className="rc-kv"><span>Points disc.</span><span>-{money(order.discount)}</span></div>}
+      {order.pointsDiscount > 0 && <div className="rc-kv"><span>Points disc.</span><span>-{money(order.pointsDiscount)}</span></div>}
       {order.deliveryFee > 0 && <div className="rc-kv"><span>Delivery</span><span>{money(order.deliveryFee)}</span></div>}
       {order.handling > 0 && <div className="rc-kv"><span>Handling</span><span>{money(order.handling)}</span></div>}
       {order.surgeFee > 0 && <div className="rc-kv"><span>Surge</span><span>{money(order.surgeFee)}</span></div>}
+      {order.walletUsed > 0 && <div className="rc-kv"><span>NGS Wallet</span><span>-{money(order.walletUsed)}</span></div>}
       <div className="rc-hr" />
 
       <div className="rc-kv rc-total"><span>TOTAL</span><span>{money(order.total)}</span></div>

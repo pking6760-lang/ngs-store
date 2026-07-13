@@ -219,10 +219,11 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
   const bill = [
     ["Items total", o.itemTotal],
     o.couponDiscount > 0 && [`Coupon (${o.couponCode})`, -o.couponDiscount],
-    o.discount > 0 && ["Points discount", -o.discount],
+    o.pointsDiscount > 0 && [`Points used${o.pointsRedeemed ? ` (${o.pointsRedeemed} pts)` : ""}`, -o.pointsDiscount],
     o.deliveryFee > 0 && ["Delivery fee", o.deliveryFee],
     o.handling > 0 && ["Handling", o.handling],
     o.surgeFee > 0 && ["Surge", o.surgeFee],
+    o.walletUsed > 0 && ["NGS Wallet used", -o.walletUsed],
   ].filter(Boolean);
 
   return (
@@ -300,6 +301,12 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                 </div>
               ))}
               <div className="od-bill-row total"><span>Total</span><span>₹{o.total}</span></div>
+              {o.refundedAmount > 0 && (
+                <div className="od-bill-row"><span>↩︎ Refunded to wallet</span><span className="free">₹{o.refundedAmount}</span></div>
+              )}
+              {o.pointsEarned > 0 && (
+                <div className="od-bill-row"><span>🎁 Points earned</span><span>{o.pointsEarned}</span></div>
+              )}
             </div>
             <button className="print-btn" onClick={() => onPrint(o)}>
               🧾 Print receipt (thermal printer)

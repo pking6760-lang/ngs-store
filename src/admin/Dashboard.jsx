@@ -38,11 +38,20 @@ export default function Dashboard({ onNavigate }) {
     const revenue = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
     // Gross product profit = (selling − buying cost) × qty over today's items
     // whose cost is known. It's a margin estimate (fees/payouts not deducted).
-    let profit = 0, sold = 0;
+    let grossMargin = 0, sold = 0;
     todaysOrders.forEach((o) => (o.items || []).forEach((it) => {
       const c = costMap[it.id];
-      if (c != null) { profit += (it.price - c) * it.qty; sold += it.price * it.qty; }
+      if (c != null) { grossMargin += (it.price - c) * it.qty; sold += it.price * it.qty; }
     }));
+    // Money the shop gives back today: points redeemed as ₹ off, coupons, and
+    // refunds to wallet. These come out of profit.
+    const rewardsGiven = todaysOrders.reduce((s, o) => s + (o.pointsDiscount || 0), 0);
+    const couponsGiven = todaysOrders.reduce((s, o) => s + (o.couponDiscount || 0), 0);
+    const refunds = todaysOrders.reduce((s, o) => s + (o.refundedAmount || 0), 0);
+    const walletUsed = todaysOrders.reduce((s, o) => s + (o.walletUsed || 0), 0);
+    // Net profit nets out the discounts the shop funds + refunds.
+    const profit = grossMargin - rewardsGiven - couponsGiven - refunds;
+    const givenBack = rewardsGiven + couponsGiven + refunds;
     // Pending = anything not yet delivered (still needs action), any day.
     const pending = orders.filter(
       (o) => o.status !== "Delivered" && o.status !== "Cancelled"
@@ -53,6 +62,11 @@ export default function Dashboard({ onNavigate }) {
       profit: Math.round(profit),
       marginPct: sold > 0 ? (profit / sold) * 100 : null,
       pending,
+      rewardsGiven: Math.round(rewardsGiven),
+      couponsGiven: Math.round(couponsGiven),
+      refunds: Math.round(refunds),
+      walletUsed: Math.round(walletUsed),
+      givenBack: Math.round(givenBack),
     };
   }, [orders, costMap]);
 
@@ -117,6 +131,19 @@ export default function Dashboard({ onNavigate }) {
         />
         <StatCard label="Pending orders" value={stats.pending} icon="⏳" tone="pink" />
       </div>
+
+      {(stats.givenBack > 0 || stats.walletUsed > 0) && (
+        <section className="panel dash-giveback">
+          <div className="panel-head"><h3>Rewards, wallet &amp; refunds · today</h3></div>
+          <div className="giveback-grid">
+            <div className="giveback-item"><span>🎁 Points redeemed</span><strong>₹{stats.rewardsGiven}</strong></div>
+            <div className="giveback-item"><span>🎟️ Coupons</span><strong>₹{stats.couponsGiven}</strong></div>
+            <div className="giveback-item"><span>👛 Wallet used</span><strong>₹{stats.walletUsed}</strong></div>
+            <div className="giveback-item"><span>↩︎ Refunds to wallet</span><strong>₹{stats.refunds}</strong></div>
+          </div>
+          <p className="dash-sub">Points &amp; coupons and refunds are already subtracted from today's profit above.</p>
+        </section>
+      )}
 
       <section className="panel">
         <div className="panel-head">

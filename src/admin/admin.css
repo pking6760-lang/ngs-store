@@ -219,6 +219,25 @@ body {
 
 /* ─── 7-day revenue trend ────────────────────────────────── */
 .dash-sub { font-size: 12.5px; font-weight: 700; color: #6b7885; }
+.giveback-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.giveback-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #f4f6f9;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #47535f;
+}
+.giveback-item strong { font-size: 15px; color: #1c2430; }
 .trend-bars { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 8px; }
 .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 6px; }
 .trend-amt { font-size: 10px; font-weight: 700; color: #6b7885; white-space: nowrap; }
