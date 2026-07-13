@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCoupons, useSettings, useCategories } from "../lib/hooks.js";
 import { upsertCoupon, deleteCoupon, updateSettings } from "../lib/actions.js";
+import Dropdown from "./Dropdown.jsx";
 
 export default function CouponsAdmin() {
   const coupons = useCoupons();
@@ -170,10 +171,15 @@ function CouponManager({ coupons, categories }) {
           onChange={(e) => set("code", e.target.value.toUpperCase())}
           placeholder="Code (e.g. NISHA10)"
         />
-        <select value={form.type} onChange={(e) => set("type", e.target.value)}>
-          <option value="percent">% off</option>
-          <option value="flat">₹ off (flat)</option>
-        </select>
+        <Dropdown
+          title="Discount type"
+          value={form.type}
+          onChange={(v) => set("type", v)}
+          options={[
+            { value: "percent", label: "% off" },
+            { value: "flat", label: "₹ off (flat)" },
+          ]}
+        />
         <input
           type="number"
           min="0"
@@ -188,17 +194,15 @@ function CouponManager({ coupons, categories }) {
           onChange={(e) => set("minOrder", e.target.value)}
           placeholder="Min order ₹ (optional)"
         />
-        <select
+        <Dropdown
+          title="Applies to"
           value={form.category}
-          onChange={(e) => set("category", e.target.value)}
-        >
-          <option value="">Any product</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              Only {c.name}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => set("category", v)}
+          options={[
+            { value: "", label: "Any product" },
+            ...categories.map((c) => ({ value: c.id, label: `Only ${c.name}` })),
+          ]}
+        />
         {error && <div className="auth-error full">{error}</div>}
         <button className="primary-btn full" type="submit">
           Add coupon

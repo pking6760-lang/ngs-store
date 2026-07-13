@@ -265,8 +265,11 @@ export async function createOrderQr(orderDbId) {
 
 // Product details lookup (name / brand / weight) for auto-filling a product.
 // Server-side: Open Food Facts, then Gemini web search for Indian brands.
-export async function lookupProductDetails(barcode, name) {
-  return invokeFn("product-lookup", { barcode: barcode || "", name: name || "" });
+export async function lookupProductDetails(barcode, name, categories) {
+  return invokeFn("product-lookup", {
+    barcode: barcode || "", name: name || "",
+    categories: Array.isArray(categories) ? categories : [],
+  });
 }
 
 // Create a Razorpay payment link for a not-yet-paid order — used for the

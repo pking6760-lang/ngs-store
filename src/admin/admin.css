@@ -409,6 +409,42 @@ body {
 }
 .search-scan-btn:active { background: #eef2ff; }
 
+/* ── Themed dropdown (replaces the OS-drawn native <select> popup) ─────────── */
+.adm-dd {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 10px;
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+  font-size: 14px; font-weight: 600; background: #fff; color: #16202c; cursor: pointer;
+  min-width: 0;
+}
+.adm-dd:active { background: #eef2ff; }
+.field .adm-dd, .adm-dd.cat-dd { width: 100%; font-weight: 400; }
+.adm-dd-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-dd-caret { color: #2B44A8; font-size: 12px; flex: none; }
+.adm-dd-overlay {
+  position: fixed; inset: 0; background: rgba(16,22,40,0.45);
+  display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 60;
+}
+.adm-dd-sheet {
+  width: 100%; max-width: 400px; max-height: 72vh; overflow: hidden;
+  background: #fff; border-radius: 18px; box-shadow: 0 24px 60px rgba(16,22,40,0.35);
+  display: flex; flex-direction: column;
+}
+.adm-dd-title {
+  padding: 16px 18px 10px; font-size: 13px; font-weight: 800; letter-spacing: .03em;
+  text-transform: uppercase; color: #8792a6;
+}
+.adm-dd-list { overflow-y: auto; padding: 6px; }
+.adm-dd-opt {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 14px; border: none; background: transparent; border-radius: 12px;
+  font-size: 15px; font-weight: 600; color: #16202c; cursor: pointer; text-align: left;
+}
+.adm-dd-opt:active { background: #eef2ff; }
+.adm-dd-opt.sel { background: #eef2ff; color: #2B44A8; }
+.adm-dd-check { color: #2B44A8; font-weight: 900; flex: none; }
+.adm-dd-opt.new { color: #2B44A8; font-weight: 800; }
+.adm-dd-opt.new .adm-dd-opt-lbl::before { content: "✨ "; }
+
 /* Who handled the order (order detail) */
 .od-handled { background: #f5f7fa; border: 1px solid #e6ebf1; border-radius: 12px; padding: 10px 12px; margin: 4px 0 12px; }
 .od-handled-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 13px; }
@@ -1863,10 +1899,11 @@ body {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px;
 }
 .coupon-form .full { grid-column: 1 / -1; }
-.coupon-form input, .coupon-form select {
+.coupon-form input, .coupon-form select, .coupon-form .adm-dd {
   width: 100%; border: 1px solid var(--line); border-radius: 10px;
   padding: 10px 12px; font-size: 14px; font-family: inherit; background: #fff;
 }
+.coupon-form .adm-dd { font-weight: 400; }
 .coupon-form input:focus, .coupon-form select:focus { outline: none; border-color: var(--green); }
 .coupon-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
 .coupon-rowc {

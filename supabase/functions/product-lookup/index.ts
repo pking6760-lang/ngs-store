@@ -100,18 +100,46 @@ async function geminiLookup(barcode: string, name: string) {
   }
 }
 
+// Smart category: fit the product into one of the store's existing categories,
+// or propose a short NEW one when none fits. Returns a category NAME; the client
+// decides whether it's new by matching it against its own list.
+async function classifyCategory(productName: string, brand: string, cats: string[]) {
+  if (!GEMINI_KEY || !productName) return "";
+  const list = cats.length ? cats.join(", ") : "(none yet)";
+  const prompt =
+    `You categorize items for an Indian grocery store, quick-commerce style (Blinkit/Zepto). ` +
+    `Product: "${brand ? brand + " " : ""}${productName}". ` +
+    `The store's existing categories are: ${list}. ` +
+    `If the product clearly fits one existing category, reply with that EXACT category name. ` +
+    `If none fits well, propose a NEW concise category name in Title Case (2-3 words), ` +
+    `e.g. "Tobacco & Cigarettes", "Pooja Needs", "Stationery", "Baby Care", "Pet Care", "Home & Kitchen". ` +
+    `Reply with ONLY compact JSON and nothing else: {"category":"the category name"}.`;
+  try {
+    const text = await geminiCall(prompt, false); // model knowledge is enough
+    if (!text) return "";
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) return "";
+    const obj = JSON.parse(m[0]);
+    return String(obj.category || "").trim();
+  } catch { return ""; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
-    const { barcode, name } = await req.json().catch(() => ({}));
-    const code = String(barcode || "").replace(/\D/g, "");
-    const typed = String(name || "").trim();
+    const body = await req.json().catch(() => ({}));
+    const code = String(body.barcode || "").replace(/\D/g, "");
+    const typed = String(body.name || "").trim();
+    const cats = Array.isArray(body.categories) ? body.categories.map(String) : [];
     if (!code && !typed) return json({ found: false, reason: "No barcode or name." });
 
     let hit = code ? await offLookup(code) : null;
     if (!hit) hit = await geminiLookup(code, typed);
     if (!hit) return json({ found: false, barcode: code, reason: "Not found — please fill it in." });
-    return json({ found: true, barcode: code, ...hit });
+
+    // Suggest the best category (existing or brand-new) for this product.
+    const category = await classifyCategory(hit.name, hit.brand || "", cats);
+    return json({ found: true, barcode: code, category, ...hit });
   } catch {
     return json({ found: false, reason: "Lookup failed — please fill it in." });
   }

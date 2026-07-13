@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useAdminProducts, useCategories } from "../lib/hooks.js";
 import AdminPortal from "./AdminPortal.jsx";
+import Dropdown from "./Dropdown.jsx";
 import {
   upsertProduct,
   deleteProduct,
@@ -9,10 +10,15 @@ import {
   deleteCategory,
 } from "../lib/actions.js";
 import { fileToResizedDataUrl } from "../lib/image.js";
-import { lookupProductByBarcode, lookupProductByName, guessCategory } from "../lib/productLookup.js";
+import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory } from "../lib/productLookup.js";
 import { smartReprice } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
+
+// Sentinel category values: NEW_CAT = create the AI-suggested category on save;
+// ADD_CAT = the "Create new category…" row that prompts for a name.
+const NEW_CAT = "__new_category__";
+const ADD_CAT = "__add_category__";
 
 const EMPTY = {
   id: "",
@@ -69,18 +75,16 @@ export default function ProductsAdmin() {
           />
           <button type="button" className="search-scan-btn" onClick={scanToSearch} title="Scan a barcode to find a product">📷</button>
         </div>
-        <select
+        <Dropdown
           className="admin-select"
+          title="Filter by category"
           value={catFilter}
-          onChange={(e) => setCatFilter(e.target.value)}
-        >
-          <option value="all">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          onChange={setCatFilter}
+          options={[
+            { value: "all", label: "All categories" },
+            ...categories.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
         <button className="ghost-btn" onClick={() => setManagingCats(true)}>
           🏷️ Categories
         </button>
@@ -299,6 +303,17 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  // Category picker: "Create new category…" prompts for a name; otherwise just
+  // select. The chosen new name is created for real on Save.
+  function onPickCategory(value) {
+    if (value === ADD_CAT) {
+      const name = (prompt("New category name") || "").trim();
+      if (name) setForm((f) => ({ ...f, category: NEW_CAT, newCategoryName: name }));
+      return;
+    }
+    update("category", value);
+  }
+
   // Open the native camera scanner. On success look the code up; on failure
   // reveal a type-it-in box so the flow never dead-ends.
   async function doScan() {
@@ -320,7 +335,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
     setScanErr("");
     update("barcode", code); // save the scanned barcode on the product
     setLookup({ busy: true, msg: `Looking up ${code}…` });
-    const res = await lookupProductByBarcode(code);
+    const res = await lookupProductByBarcode(code, categories.map((c) => c.name));
     applyLookup(res);
   }
 
@@ -330,7 +345,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
     if (q.length < 3) return;
     setScanErr("");
     setLookup({ busy: true, msg: `Searching “${q}”…` });
-    const res = await lookupProductByName(q);
+    const res = await lookupProductByName(q, categories.map((c) => c.name));
     applyLookup(res);
   }
 
@@ -339,15 +354,28 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
       setLookup({ busy: false, ok: false, msg: res.reason || "Not found — fill it in by hand." });
       return;
     }
+    // Smart category: prefer the server's classification (existing OR a brand-new
+    // proposed name); fall back to local keyword matching.
+    const smart = resolveSuggestedCategory(res.category, categories);
+    let catMsg = "";
     setForm((f) => {
       const next = { ...f };
       if (res.name) next.name = res.name;
       if (res.unit) next.unit = res.unit;
-      const cat = guessCategory(res, categories);
-      if (cat) next.category = cat;
+      if (smart?.id) {
+        next.category = smart.id;
+      } else if (smart?.newName) {
+        // No existing category fits — propose creating one; the owner confirms.
+        next.category = NEW_CAT;
+        next.newCategoryName = smart.newName;
+        catMsg = ` New category suggested: “${smart.newName}”.`;
+      } else {
+        const cat = guessCategory(res, categories);
+        if (cat) next.category = cat;
+      }
       return next;
     });
-    setLookup({ busy: false, ok: true, msg: "Got the details — add your photo, price & stock." });
+    setLookup({ busy: false, ok: true, msg: "Got the details — add your photo, price & stock." + catMsg });
   }
 
   async function pickImage(e) {
@@ -366,12 +394,28 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
     }
   }
 
-  function submit(e) {
+  const [saveBusy, setSaveBusy] = useState(false);
+
+  async function submit(e) {
     e.preventDefault();
+    if (saveBusy) return;
     const price = Number(form.price) || 0;
     const mrp = Number(form.mrp) || price;
+    let categoryId = form.category;
+    // Create the brand-new category (AI-suggested or hand-typed) on save.
+    if (categoryId === NEW_CAT) {
+      const name = (form.newCategoryName || "").trim();
+      if (!name) { setLookup({ busy: false, ok: false, msg: "Name the new category first." }); return; }
+      setSaveBusy(true);
+      const res = await addCategory({ name }, categories);
+      setSaveBusy(false);
+      if (!res.ok) { setLookup({ busy: false, ok: false, msg: res.error || "Couldn't create the category." }); return; }
+      categoryId = res.category.id;
+    }
     onSave({
       ...form,
+      category: categoryId,
+      newCategoryName: undefined,
       id: form.id || "p" + Date.now(),
       price,
       mrp: Math.max(mrp, price),
@@ -471,19 +515,24 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
             </div>
           </label>
 
-          <label className="field">
-            <span>Category</span>
-            <select
+          <div className="field">
+            <span className="field-lbl">Category</span>
+            <Dropdown
+              className="cat-dd"
+              title="Choose a category"
               value={form.category}
-              onChange={(e) => update("category", e.target.value)}
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              placeholder="Choose a category"
+              onChange={onPickCategory}
+              options={[
+                ...categories.map((c) => ({ value: c.id, label: c.name })),
+                // AI-suggested brand-new category (only while it isn't real yet).
+                ...(form.newCategoryName
+                  ? [{ value: NEW_CAT, label: `New: ${form.newCategoryName}`, kind: "new" }]
+                  : []),
+                { value: ADD_CAT, label: "Create new category…", kind: "new" },
+              ]}
+            />
+          </div>
 
           <label className="field">
             <span>Unit / size</span>
