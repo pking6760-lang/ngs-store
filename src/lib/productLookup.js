@@ -1,63 +1,38 @@
-// Look up a scanned barcode (EAN-13 / UPC-A) against the free, open product
-// databases so the admin can auto-fill a new product instead of typing it.
+// Look up product DETAILS (name / brand / weight) so the admin can auto-fill a
+// product instead of typing it. The actual lookup runs server-side in the
+// product-lookup edge function (Open Food Facts, then Gemini web search for
+// Indian local brands). No image — the shop uploads its own photo.
 //
-// We query Open Food Facts first (groceries, drinks, snacks — huge Indian
-// coverage), then Open Beauty Facts (personal care: toothpaste, soap, shampoo)
-// and finally Open Products Facts (everything else: cleaning, household). All
-// three share the same API shape and are free with no key.
-//
-// Returns { found, name, brand, unit, imageUrl, categoryTags } — imageUrl may
-// be empty, and `found` is false when the barcode isn't in any database (the
-// admin then just fills the product in by hand).
+// Returns { found, name, brand, unit, categoryTags } — `found` is false when
+// nothing could be identified (the admin then fills it in by hand).
 
-const DBS = [
-  "https://world.openfoodfacts.org",
-  "https://world.openbeautyfacts.org",
-  "https://world.openproductsfacts.org",
-];
-
-const FIELDS = "product_name,product_name_en,brands,quantity,image_url,image_front_url,categories_tags";
-
-async function queryDb(base, barcode) {
-  const url = `${base}/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`;
-  const res = await fetch(url, {
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (data.status !== 1 || !data.product) return null;
-  const p = data.product;
-  const name = (p.product_name_en || p.product_name || "").trim();
-  const brand = (p.brands || "").split(",")[0].trim();
-  // Prefer a full, brand-prefixed name so "Toothpaste" becomes "Colgate Toothpaste".
-  let fullName = name;
-  if (brand && name && !name.toLowerCase().includes(brand.toLowerCase())) {
-    fullName = `${brand} ${name}`;
-  }
-  return {
-    found: true,
-    name: fullName || name || brand,
-    brand,
-    unit: (p.quantity || "").trim(),
-    imageUrl: (p.image_front_url || p.image_url || "").trim(),
-    categoryTags: Array.isArray(p.categories_tags) ? p.categories_tags : [],
-  };
-}
+import { lookupProductDetails } from "./api.js";
 
 export async function lookupProductByBarcode(barcode) {
   const code = String(barcode || "").trim();
   if (!/^\d{6,14}$/.test(code)) {
     return { found: false, reason: "That doesn't look like a product barcode." };
   }
-  for (const base of DBS) {
-    try {
-      const hit = await queryDb(base, code);
-      if (hit) return { ...hit, barcode: code };
-    } catch {
-      // network hiccup on one DB — try the next.
-    }
+  try {
+    const res = await lookupProductDetails(code, "");
+    if (res && res.found) return res;
+    return { found: false, barcode: code, reason: res?.reason || "Not found — please fill it in." };
+  } catch {
+    return { found: false, barcode: code, reason: "Lookup failed — please fill it in." };
   }
-  return { found: false, barcode: code, reason: "Not in the product database — please fill it in." };
+}
+
+// Look up by a typed product name (no barcode) — pure web search via Gemini.
+export async function lookupProductByName(name) {
+  const q = String(name || "").trim();
+  if (q.length < 3) return { found: false, reason: "Type a bit more of the name." };
+  try {
+    const res = await lookupProductDetails("", q);
+    if (res && res.found) return res;
+    return { found: false, reason: res?.reason || "Couldn't find that — fill it in." };
+  } catch {
+    return { found: false, reason: "Lookup failed — fill it in." };
+  }
 }
 
 // Pick the closest of the store's own categories for a looked-up product, by

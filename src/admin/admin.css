@@ -832,6 +832,13 @@ body {
 .scan-status.busy { color: #2B44A8; }
 .scan-status.ok { color: #1b7a3d; }
 .scan-status.miss { color: #b45309; }
+.name-search { display: flex; gap: 8px; }
+.name-search input { flex: 1; min-width: 0; }
+.name-search-btn {
+  flex-shrink: 0; border: 1px solid #c7d2fe; background: #eef2ff; color: #2B44A8;
+  font-weight: 800; font-size: 13px; padding: 0 14px; border-radius: 10px; cursor: pointer;
+}
+.name-search-btn:disabled { opacity: 0.4; }
 .scan-manual-row { display: flex; gap: 8px; }
 .scan-manual-row input {
   flex: 1; min-width: 0; border: 1px solid #E2E8EF; border-radius: 10px;

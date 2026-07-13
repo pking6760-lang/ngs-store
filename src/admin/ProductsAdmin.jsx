@@ -7,8 +7,8 @@ import {
   addCategory,
   deleteCategory,
 } from "../lib/actions.js";
-import { fileToResizedDataUrl, urlToResizedDataUrl } from "../lib/image.js";
-import { lookupProductByBarcode, guessCategory } from "../lib/productLookup.js";
+import { fileToResizedDataUrl } from "../lib/image.js";
+import { lookupProductByBarcode, lookupProductByName, guessCategory } from "../lib/productLookup.js";
 import { smartReprice } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
@@ -299,6 +299,20 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
     setScanErr("");
     setLookup({ busy: true, msg: `Looking up ${code}…` });
     const res = await lookupProductByBarcode(code);
+    applyLookup(res);
+  }
+
+  // Search product details by the typed name (for items without a barcode).
+  async function doNameSearch() {
+    const q = (form.name || "").trim();
+    if (q.length < 3) return;
+    setScanErr("");
+    setLookup({ busy: true, msg: `Searching “${q}”…` });
+    const res = await lookupProductByName(q);
+    applyLookup(res);
+  }
+
+  function applyLookup(res) {
     if (!res.found) {
       setLookup({ busy: false, ok: false, msg: res.reason || "Not found — fill it in by hand." });
       return;
@@ -311,20 +325,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
       if (cat) next.category = cat;
       return next;
     });
-    // Pull the product photo in the background (network), then resize + store it.
-    if (res.imageUrl) {
-      setImgBusy(true);
-      try {
-        const dataUrl = await urlToResizedDataUrl(res.imageUrl);
-        update("image", dataUrl);
-      } catch {
-        // Fall back to linking the remote image if the download fails.
-        update("image", res.imageUrl);
-      } finally {
-        setImgBusy(false);
-      }
-    }
-    setLookup({ busy: false, ok: true, msg: "Filled from database — now set price & stock." });
+    setLookup({ busy: false, ok: true, msg: "Got the details — add your photo, price & stock." });
   }
 
   async function pickImage(e) {
@@ -420,12 +421,21 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
 
           <label className="field wide">
             <span>Product name</span>
-            <input
-              value={form.name}
-              onChange={(e) => update("name", e.target.value)}
-              placeholder="e.g. Fresh Banana"
-              required
-            />
+            <div className="name-search">
+              <input
+                value={form.name}
+                onChange={(e) => update("name", e.target.value)}
+                placeholder="e.g. Britannia Mom's Magic"
+                required
+              />
+              <button
+                type="button"
+                className="name-search-btn"
+                onClick={doNameSearch}
+                disabled={(form.name || "").trim().length < 3 || (lookup && lookup.busy)}
+                title="Auto-fill weight & details from the name"
+              >🔍 Find</button>
+            </div>
           </label>
 
           <label className="field">

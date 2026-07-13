@@ -258,6 +258,12 @@ export async function createOrderQr(orderDbId) {
   return invokeFn("razorpay-create-qr", { orderId: orderDbId });
 }
 
+// Product details lookup (name / brand / weight) for auto-filling a product.
+// Server-side: Open Food Facts, then Gemini web search for Indian brands.
+export async function lookupProductDetails(barcode, name) {
+  return invokeFn("product-lookup", { barcode: barcode || "", name: name || "" });
+}
+
 // Create a Razorpay payment link for a not-yet-paid order — used for the
 // "pay on this phone" button on the customer checkout (opens the secure Razorpay
 // page). Verified server-side by the payment_link.paid webhook.
