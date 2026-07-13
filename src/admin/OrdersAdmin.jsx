@@ -28,7 +28,16 @@ const SHOP = {
 export default function OrdersAdmin() {
   const orders = useOrders();
   const partners = usePartners();
-  const nameOf = (uid) => (uid ? partners.find((p) => p.userId === uid)?.fullName || "Unknown" : null);
+  // Who handled a step: a staff member (name + employee ID), or the owner
+  // ("Admin") when there's no partner. `happened` = the step actually occurred.
+  const handlerLabel = (uid, happened) => {
+    if (uid) {
+      const p = partners.find((x) => x.userId === uid);
+      if (p) return p.empCode ? `${p.fullName} · ${p.empCode}` : p.fullName;
+      return "Admin"; // a non-partner user = the owner handled it themselves
+    }
+    return happened ? "Admin" : null;
+  };
   const [filter, setFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(null);
   // Doorstep QR state (for the detail view).
@@ -150,8 +159,8 @@ export default function OrdersAdmin() {
                     <StatusPill status={o.status} />
                   </span>
                 </div>
-                {o.status === "Delivered" && o.riderId && (
-                  <div className="order-row-rider">🛵 {nameOf(o.riderId)}</div>
+                {o.status === "Delivered" && (
+                  <div className="order-row-rider">🛵 {handlerLabel(o.riderId, true)}</div>
                 )}
               </button>
             );
@@ -163,8 +172,8 @@ export default function OrdersAdmin() {
         <AdminPortal>
           <OrderDetail
             order={selected}
-            deliveredBy={nameOf(selected.riderId)}
-            packedBy={nameOf(selected.pickerId)}
+            deliveredBy={handlerLabel(selected.riderId, selected.status === "Delivered" || !!selected.deliveredAt)}
+            packedBy={handlerLabel(selected.pickerId, !!selected.packedAt || ["Packed", "Out for delivery", "Delivered"].includes(selected.status))}
             onClose={closeDetail}
             qrFor={qrFor}
             qrState={qrState}

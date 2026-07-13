@@ -127,6 +127,7 @@
 .pd-prof-kv { display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--p-line); font-size: 14px; }
 .pd-prof-kv:first-child { border-top: none; }
 .pd-prof-kv span:first-child { color: var(--p-sec); }
+.pd-emp { font-weight: 800; letter-spacing: 0.03em; color: var(--p-red-bright); font-variant-numeric: tabular-nums; }
 .pd-prof-kv span:last-child { font-weight: 600; text-align: right; max-width: 60%; }
 .pd-status-ok { color: var(--p-mint); font-weight: 700; }
 .pd-logout { width: 100%; margin-top: 8px; background: var(--p-card2); border: 1px solid var(--p-line);

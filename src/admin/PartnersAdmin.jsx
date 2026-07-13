@@ -275,7 +275,7 @@ export default function PartnersAdmin() {
                 <button className="partner-head" onClick={() => setOpenId(open ? null : p.id)}>
                   <span className="partner-role">{p.role === "picker" ? "🧺" : "🛵"}</span>
                   <span className="partner-main">
-                    <strong>{p.fullName}</strong>
+                    <strong>{p.fullName}{p.empCode && <span className="emp-badge">{p.empCode}</span>}</strong>
                     <small>{p.role === "picker" ? "Picker" : "Delivery"} · 📞 {p.phone || "—"}</small>
                   </span>
                   <span className={`partner-status ${p.status}`}>{p.status}</span>

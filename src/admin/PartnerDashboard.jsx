@@ -452,6 +452,7 @@ function Profile({ role, name, partner, onLogout }) {
           <span className="pd-role">{role === "delivery" ? "🛵 Delivery partner" : "🧺 Picker"}</span></div>
       </div>
       <div className="pd-wcard">
+        {p.empCode && <div className="pd-prof-kv"><span>Employee ID</span><span className="pd-emp">{p.empCode}</span></div>}
         <div className="pd-prof-kv"><span>Status</span><span className="pd-status-ok">✓ Approved</span></div>
         <div className="pd-prof-kv"><span>Phone</span><span>{p.phone || "—"}</span></div>
         <div className="pd-prof-kv"><span>Email</span><span>{p.email || "—"}</span></div>

@@ -108,7 +108,7 @@ function mapOrder(r) {
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback, needsOwner: !!r.needs_owner,
     deliveryState: r.delivery_state, pickerState: r.picker_state,
-    riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at,
+    riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at, packedAt: r.packed_at,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
 }
 function mapProfile(r) {
@@ -371,6 +371,7 @@ function mapPartner(r) {
     termsAcceptedAt: r.terms_accepted_at, termsVersion: r.terms_version,
     usesEv: r.uses_ev, aadhaarFront: r.aadhaar_front, aadhaarBack: r.aadhaar_back,
     pan: r.pan, dl: r.dl, status: r.status, createdAt: r.created_at,
+    empCode: r.emp_code || null,
   };
 }
 
