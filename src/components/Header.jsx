@@ -14,7 +14,7 @@ export default function Header({
 }) {
   const { totalCount } = useCart();
   const { user, isLoggedIn } = useAuth();
-  const notes = useUserNotifications(user?.id);
+  const { notes } = useUserNotifications(user?.id);
   const unread = notes.filter((n) => !n.read).length;
 
   const firstName = isLoggedIn ? user.name.split(" ")[0] : null;

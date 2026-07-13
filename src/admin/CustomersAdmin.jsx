@@ -71,7 +71,7 @@ export default function CustomersAdmin() {
 }
 
 function CustomerDetail({ customer, orders, onClose }) {
-  const notes = useUserNotifications(customer.id);
+  const { notes } = useUserNotifications(customer.id);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sent, setSent] = useState(false);

@@ -21,7 +21,7 @@ const TABS = [
 export default function AccountDrawer({ open, onClose, initialTab, onOpenCart }) {
   const { user, isLoggedIn, logout } = useAuth();
   const [tab, setTab] = useState("orders");
-  const notes = useUserNotifications(user?.id);
+  const { notes, error: notesError, reload: reloadNotes } = useUserNotifications(user?.id);
   const unread = notes.filter((n) => !n.read).length;
 
   // Jump to the requested tab whenever the drawer is opened.
@@ -91,7 +91,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
             />
           )}
           {tab === "wallet" && <WalletTab userId={user?.id} />}
-          {tab === "inbox" && <Inbox notes={notes} userId={user?.id} />}
+          {tab === "inbox" && <Inbox notes={notes} userId={user?.id} error={notesError} onRetry={reloadNotes} />}
           {tab === "rewards" && <Rewards user={user} />}
           {tab === "membership" && <Membership />}
           {tab === "profile" && <Profile />}
@@ -118,16 +118,18 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
 
 function MyOrders({ user, onReorder }) {
   // RLS-scoped fetch of only this user's own orders (not the admin all-orders path).
-  const myOrders = useMyOrders(user?.id);
+  const { orders: myOrders, loading, error, reload } = useMyOrders(user?.id);
   const [openId, setOpenId] = useState(null);
   const openOrder = myOrders.find((o) => o.id === openId) || null;
+
+  if (error) return <RetryState error="Couldn't load your orders." onRetry={reload} label="your orders" />;
 
   if (myOrders.length === 0) {
     return (
       <div className="account-empty">
         <div className="empty-emoji">📦</div>
-        <p>No orders yet</p>
-        <span>Your orders and their live status will appear here.</span>
+        <p>{loading ? "Loading your orders…" : "No orders yet"}</p>
+        {!loading && <span>Your orders and their live status will appear here.</span>}
       </div>
     );
   }
@@ -328,8 +330,19 @@ function RatingBox({ order }) {
   );
 }
 
+function RetryState({ error, onRetry, label }) {
+  return (
+    <div className="load-retry">
+      <div className="load-retry-ic">⚠️</div>
+      <p>{error || `Couldn't load ${label || "this"}.`}</p>
+      <button className="load-retry-btn" onClick={onRetry}>↻ Retry</button>
+    </div>
+  );
+}
+
 function WalletTab({ userId }) {
-  const { balance, ledger } = useWallet(userId);
+  const { balance, ledger, loading, error, reload } = useWallet(userId);
+  if (error) return <RetryState error="Couldn't load your wallet." onRetry={reload} label="your wallet" />;
   return (
     <div className="wallet-tab">
       <div className="wallet-card">
@@ -347,7 +360,9 @@ function WalletTab({ userId }) {
       </div>
 
       <h4 className="wallet-h">History</h4>
-      {ledger.length === 0 ? (
+      {loading && ledger.length === 0 ? (
+        <p className="account-empty">Loading…</p>
+      ) : ledger.length === 0 ? (
         <p className="account-empty">No wallet activity yet.</p>
       ) : (
         <div className="wallet-list">
@@ -387,12 +402,14 @@ function Row({ k, v, good, bold }) {
   );
 }
 
-function Inbox({ notes, userId }) {
+function Inbox({ notes, userId, error, onRetry }) {
   // Mark everything read once the inbox is opened.
   useEffect(() => {
     if (api.isBackendConfigured) api.markNotificationsRead().catch(() => {});
     else markUserNotificationsRead(userId);
   }, [userId]);
+
+  if (error) return <RetryState error="Couldn't load your inbox." onRetry={onRetry} label="your inbox" />;
 
   if (!notes || notes.length === 0) {
     return (

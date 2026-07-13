@@ -62,21 +62,27 @@ export function useAdminProducts() {
   return products;
 }
 
-// Customer NGS wallet: { balance, ledger }. Keyed on the signed-in user so it
-// RESETS on login/logout (never shows a previous account's balance), and only
-// ever holds the caller's own rows (also enforced by RLS).
-export function useWallet(userId) {
-  const [w, setW] = useState({ balance: 0, ledger: [] });
+// Fetch a per-signed-in-user resource with loading/error/reload, keyed on the
+// user id so it RESETS on login/logout, live-updating via realtime + poll +
+// focus. On error it surfaces the message (no silent false-empty) and offers a
+// retry. `map` transforms the fetched rows into the shape a screen renders.
+function useUserFetch(fetcher, table, userId, empty, map = (x) => x) {
+  const [data, setData] = useState(empty);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [tick, setTick] = useState(0);
+  const reload = () => setTick((t) => t + 1);
   useEffect(() => {
-    if (!BACKEND || !userId) { setW({ balance: 0, ledger: [] }); return; }
+    if (!userId) { setData(empty); setLoading(false); setError(""); return; }
     let alive = true;
+    setLoading(true);
     const load = () =>
-      api.fetchWalletLedger()
-        .then((ledger) => alive && setW({ balance: ledger.reduce((s, e) => s + e.amount, 0), ledger }))
-        .catch(() => {});
+      fetcher()
+        .then((d) => { if (alive) { setData(map(d)); setError(""); setLoading(false); } })
+        .catch((e) => { if (alive) { setError(e?.message || "Couldn't load. Please retry."); setLoading(false); } });
     load();
     const onVisible = () => { if (document.visibilityState === "visible") load(); };
-    const u1 = api.subscribeTable("customer_wallet", load);
+    const u1 = api.subscribeTable(table, load);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", load);
     const poll = setInterval(load, 30000);
@@ -86,8 +92,25 @@ export function useWallet(userId) {
       window.removeEventListener("focus", load);
       clearInterval(poll);
     };
-  }, [userId]);
-  return w;
+  }, [userId, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { data, loading, error, reload };
+}
+
+// Customer NGS wallet: { balance, ledger, loading, error, reload }. Keyed on the
+// signed-in user so it never shows a previous account's balance.
+export function useWallet(userId) {
+  const empty = { balance: 0, ledger: [] };
+  if (!BACKEND) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [w] = useState(empty);
+    return { ...w, loading: false, error: "", reload: () => {} };
+  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data, loading, error, reload } = useUserFetch(
+    api.fetchWalletLedger, "customer_wallet", userId, empty,
+    (ledger) => ({ balance: ledger.reduce((s, e) => s + e.amount, 0), ledger })
+  );
+  return { ...data, loading, error, reload };
 }
 
 export function useCategories() {
@@ -107,22 +130,22 @@ export function useOrders() {
 }
 
 // Only the signed-in customer's own orders (admin uses useOrders()).
+// { orders, loading, error, reload } — RLS-scoped to the signed-in user.
 export function useMyOrders(userId) {
-  const [orders, setOrders] = useState([]);
-  useEffect(() => {
-    if (!BACKEND) {
+  if (!BACKEND) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [orders, setOrders] = useState([]);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
       const load = () => setOrders(getOrders().filter((o) => o.userId === userId));
       load();
       return subscribe(load);
-    }
-    if (!userId) { setOrders([]); return; }
-    let alive = true;
-    const load = () => api.fetchMyOrders().then((d) => alive && setOrders(d)).catch(() => {});
-    load();
-    const u1 = api.subscribeTable("orders", load);
-    return () => { alive = false; u1 && u1(); };
-  }, [userId]);
-  return orders;
+    }, [userId]);
+    return { orders, loading: false, error: "", reload: () => {} };
+  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data, loading, error, reload } = useUserFetch(api.fetchMyOrders, "orders", userId, []);
+  return { orders: data, loading, error, reload };
 }
 
 export function useSettings() {
@@ -152,20 +175,20 @@ export function usePartners() {
   return useBackend(api.fetchPartners, ["partners"], []);
 }
 
+// { notes, loading, error, reload }.
 export function useUserNotifications(userId) {
-  const [notes, setNotes] = useState([]);
-  useEffect(() => {
-    if (!BACKEND) {
+  if (!BACKEND) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [notes, setNotes] = useState([]);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
       const load = () => setNotes(getUserNotifications(userId));
       load();
       return subscribe(load);
-    }
-    if (!userId) { setNotes([]); return; }
-    let alive = true;
-    const load = () => api.fetchMyNotifications().then((d) => alive && setNotes(d)).catch(() => {});
-    load();
-    const u1 = api.subscribeTable("notifications", load);
-    return () => { alive = false; u1 && u1(); };
-  }, [userId]);
-  return notes;
+    }, [userId]);
+    return { notes, loading: false, error: "", reload: () => {} };
+  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data, loading, error, reload } = useUserFetch(api.fetchMyNotifications, "notifications", userId, []);
+  return { notes: data, loading, error, reload };
 }

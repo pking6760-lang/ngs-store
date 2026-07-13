@@ -47,7 +47,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [payment, setPayment] = useState(RAZORPAY_ENABLED ? "razorpay" : "upi");
   const [usePoints, setUsePoints] = useState(false);
   const [useWalletCredit, setUseWalletCredit] = useState(false);
-  const wallet = useWallet();
+  const wallet = useWallet(user?.id);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCode, setAppliedCode] = useState(null);
   const [couponError, setCouponError] = useState("");
