@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useBackGuard } from "../lib/useBackGuard.js";
 import { useCustomers, useOrders, useUserNotifications } from "../lib/hooks.js";
 import { sendNotification } from "../lib/actions.js";
 import AdminPortal from "./AdminPortal.jsx";
@@ -7,6 +8,7 @@ export default function CustomersAdmin() {
   const customers = useCustomers();
   const orders = useOrders();
   const [selectedId, setSelectedId] = useState(null);
+  useBackGuard(!!selectedId, () => setSelectedId(null));
 
   // Quick per-customer stats for the list.
   const statsFor = (userId) => {

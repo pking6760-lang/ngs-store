@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { initHardwareBack } from "../lib/useBackGuard.js";
+import { toast } from "../lib/toast.js";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
@@ -74,6 +76,9 @@ function PartnerInner() {
   const [adminRole, setAdminRole] = useState(() => {
     try { return localStorage.getItem("ngs-partner-role") || "delivery"; } catch { return "delivery"; }
   });
+
+  // Hardware Back: close open layers first; double-press to exit at home.
+  useEffect(() => { initHardwareBack(() => toast("Press back again to exit")); }, []);
 
   useEffect(() => {
     if (isAdmin) { setPartner(null); return; }

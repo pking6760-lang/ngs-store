@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBackGuard } from "./lib/useBackGuard.js";
 import Header from "./components/Header.jsx";
 import ProductCard from "./components/ProductCard.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
@@ -46,6 +47,12 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const { totalCount, items } = useCart();
   const { isLoggedIn, awaitingOtp } = useAuth();
+
+  // Back button/gesture closes the open layer instead of leaving the site.
+  useBackGuard(authOpen, () => setAuthOpen(false));
+  useBackGuard(cartOpen, () => setCartOpen(false));
+  useBackGuard(accountOpen, () => setAccountOpen(false));
+  useBackGuard(!!activeCategory, () => setActiveCategory(null));
 
   // If a one-time code is still pending (e.g. the mobile browser reloaded the
   // tab while the customer was in their email app), re-open the login modal so

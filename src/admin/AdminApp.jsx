@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useBackGuard, initHardwareBack } from "../lib/useBackGuard.js";
+import { toast } from "../lib/toast.js";
 import Dashboard from "./Dashboard.jsx";
 import ProductsAdmin from "./ProductsAdmin.jsx";
 import SmartPricing from "./SmartPricing.jsx";
@@ -43,6 +45,10 @@ export default function AdminApp() {
   const [role, setRole] = useState(() => sessionStorage.getItem(ROLE_KEY) || null);
   const [name, setName] = useState(() => sessionStorage.getItem(NAME_KEY) || "");
   const [view, setView] = useState("menu");
+
+  // Hardware Back: close the open section/modal, exit only at the home menu.
+  useEffect(() => { initHardwareBack(() => toast("Press back again to exit")); }, []);
+  useBackGuard(view !== "menu", () => setView("menu"));
 
   // In backend mode, restore an existing admin session on load so a signed-in
   // admin isn't asked to log in again.

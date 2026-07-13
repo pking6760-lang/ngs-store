@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useBackGuard } from "../lib/useBackGuard.js";
 import { useAdminProducts, useCategories } from "../lib/hooks.js";
 import AdminPortal from "./AdminPortal.jsx";
 import {
@@ -34,6 +35,8 @@ export default function ProductsAdmin() {
   const [catFilter, setCatFilter] = useState("all");
   const [editing, setEditing] = useState(null); // product object or null
   const [managingCats, setManagingCats] = useState(false);
+  useBackGuard(!!editing, () => setEditing(null));
+  useBackGuard(managingCats, () => setManagingCats(false));
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useBackGuard } from "../lib/useBackGuard.js";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { initPartnerPush } from "../lib/partnerPush.js";
@@ -42,6 +43,7 @@ const IC = {
 /* ═══════════════════════════════════════════════════════════════════════ */
 export default function PartnerDashboard({ role, name, partner, onLogout }) {
   const [tab, setTab] = useState("home");
+  useBackGuard(tab !== "home", () => setTab("home"));
   const [wallet, setWallet] = useState({ balance: 0, cashInHand: 0, ledger: [] });
   const [slots, setSlots] = useState([]);
   const [cfg, setCfg] = useState(null);

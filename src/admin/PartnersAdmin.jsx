@@ -4,6 +4,7 @@ import * as api from "../lib/api.js";
 import { kycReport } from "../lib/kyc.js";
 import { withMinTime } from "../lib/ux.js";
 import { ActionOverlay } from "../components/Motion.jsx";
+import { useBackGuard } from "../lib/useBackGuard.js";
 import AdminPortal from "./AdminPortal.jsx";
 
 function fmtDate(iso) {
@@ -80,7 +81,8 @@ function AmountModal({ title, hint, suggest, okLabel, onCancel, onSubmit }) {
 function WalletBlock({ partner, w, onChange }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
-  const [modal, setModal] = useState(null); // 'deposit' | 'payout' | null
+  const [modal, setModal] = useState(null); // 'deposit' | 'payout' | 'adjust' | null
+  useBackGuard(!!modal, () => setModal(null));
   const bal = w?.balance || 0, cash = w?.cashInHand || 0, strikes = w?.strikes || 0;
 
   async function submit(kind, v) {
@@ -188,6 +190,8 @@ export default function PartnersAdmin() {
   const [wallets, setWallets] = useState({});
   const [approved, setApproved] = useState(false);
   const [view, setView] = useState("team"); // 'team' (approved) | 'requests' (pending) | 'rejected'
+  useBackGuard(view !== "team", () => { setView("team"); setOpenId(null); });
+  useBackGuard(!!viewer, () => setViewer(null));
 
   const loadWallets = () => api.fetchPartnerWallets().then(setWallets).catch(() => {});
   useEffect(() => {

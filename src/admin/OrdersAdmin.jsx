@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useBackGuard } from "../lib/useBackGuard.js";
 import { useOrders } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import {
@@ -66,10 +67,12 @@ export default function OrdersAdmin() {
     setSelectedId(null);
     setQrFor(null);
   }
+  useBackGuard(!!selectedId, closeDetail);
 
   // ── Thermal printing ──────────────────────────────────────────────────────
   const [printMsg, setPrintMsg] = useState("");
   const [picker, setPicker] = useState(null); // { order, devices } when choosing a printer
+  useBackGuard(!!picker, () => setPicker(null));
 
   async function printReceipt(order) {
     // On the web admin (or any non-app), use the browser print dialog.
