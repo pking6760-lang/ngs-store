@@ -457,6 +457,14 @@ export async function registerPartner(p) {
   return { ok: true };
 }
 
+// Partner re-accepts an updated Terms version (records renewed consent).
+export async function acceptPartnerTerms(version) {
+  const { error } = await must().rpc("partner_accept_terms", { p_version: String(version) });
+  if (error) throw new Error(error.message || "Couldn't record acceptance.");
+  pingLocal("partners");
+  return { ok: true };
+}
+
 // Admin: review + decide partners.
 export async function fetchPartners() {
   const { data, error } = await must()

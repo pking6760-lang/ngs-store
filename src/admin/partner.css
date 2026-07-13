@@ -281,5 +281,8 @@
 .terms-body h1 { color: var(--p-text) !important; }
 .terms-body h2 { color: var(--p-red-bright) !important; }
 .terms-body p, .terms-body li { color: var(--p-sec) !important; }
+.terms-updated-note { background: var(--p-card2) !important; color: var(--p-red-bright) !important; border-bottom-color: var(--p-line) !important; }
+.terms-accept-bar { background: var(--p-panel) !important; border-top-color: var(--p-line) !important; }
+.terms-accept-btn { background: var(--p-red-bright) !important; color: #fff !important; }
 .terms-meta { color: var(--p-muted) !important; }
 .terms-ack { background: var(--p-card) !important; color: var(--p-text) !important; }

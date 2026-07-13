@@ -4,7 +4,21 @@ import { toast } from "../lib/toast.js";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
+import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
 import * as api from "../lib/api.js";
+
+// Mandatory re-acceptance when the Partner Terms change (e.g. new penalty /
+// wallet-deduction clauses). Blocks the app until the partner accepts.
+function TermsReaccept({ onAccepted }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  async function accept() {
+    setBusy(true); setErr("");
+    try { await api.acceptPartnerTerms(TERMS_VERSION); onAccepted(); }
+    catch (e) { setErr(e.message || "Couldn't save. Please try again."); setBusy(false); }
+  }
+  return <PartnerTerms updated onAccept={accept} busy={busy} error={err} />;
+}
 
 // Branded "NGS Partner" email-code login (separate from the customer login).
 function PartnerLogin() {
@@ -146,6 +160,12 @@ function PartnerInner() {
         <button className="emp-logout" onClick={logout}>Log out</button>
       </div>
     );
+  }
+
+  // Approved but on an older Terms version → must re-accept the updated Terms
+  // (new earnings/penalty/wallet-deduction clauses) before continuing.
+  if (partner.termsVersion !== TERMS_VERSION) {
+    return <TermsReaccept onAccepted={reload} />;
   }
 
   // Approved → their role decides the dashboard.
