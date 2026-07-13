@@ -361,20 +361,6 @@ button {
   border-radius: 5px;
   vertical-align: middle;
 }
-.product-bulk {
-  font-size: 10.5px;
-  font-weight: 800;
-  color: #0c8168;
-  background: #e6fcf5;
-  border: 1px solid #c3f0e4;
-  border-radius: 6px;
-  padding: 4px 8px;
-  margin-bottom: 6px;
-  align-self: flex-start;
-  cursor: pointer;
-}
-.product-bulk:active { background: #d0f5ea; }
-
 /* ── Bulk pack selector (bottom sheet) ─────────────────────────── */
 .bulk-sheet-overlay {
   position: fixed; inset: 0; z-index: 500;
@@ -495,6 +481,10 @@ button {
   padding: 7px 16px;
   border-radius: 8px;
 }
+/* ADD + "N options" caption for products with pack choices. */
+.add-wrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.add-wrap .add-btn { width: 100%; }
+.add-opts { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: .01em; }
 .add-btn:hover {
   background: var(--green);
   color: #fff;

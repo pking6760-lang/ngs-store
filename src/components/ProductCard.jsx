@@ -52,11 +52,6 @@ export default function ProductCard({ product, badge }) {
           <span className="product-hot">🔥 Bestseller</span>
         )}
       </div>
-      {bulkTier && !outOfStock && (
-        <button className="product-bulk" onClick={() => setShowPacks(true)}>
-          🛒 Buy in packs & save ›
-        </button>
-      )}
       {showPacks && (
         <BulkPackSheet product={product} onClose={() => setShowPacks(false)} />
       )}
@@ -76,6 +71,13 @@ export default function ProductCard({ product, badge }) {
           <button className="add-btn out" disabled>
             Sold out
           </button>
+        ) : qty === 0 && bulkTier ? (
+          <div className="add-wrap">
+            <button className="add-btn" onClick={() => setShowPacks(true)}>
+              ADD
+            </button>
+            <span className="add-opts">{product.bulkTiers.length + 1} options</span>
+          </div>
         ) : qty === 0 ? (
           <button className="add-btn" onClick={() => add(product.id, product.stock)}>
             ADD
