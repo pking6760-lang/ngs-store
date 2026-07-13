@@ -575,6 +575,7 @@ body {
 .s-out { background: #f3ecfb; color: #6a35a6; }
 /* "Delivered" keeps the universal success-green (semantic, not brand accent). */
 .s-delivered { background: #e7f7e9; color: #1b7a3d; }
+.s-return { background: #fef3c7; color: #b45309; }
 
 /* ─── Orders list ────────────────────────────────────────── */
 .orders-list {
@@ -2193,6 +2194,10 @@ body {
 .row-paid {
   font-size: 10.5px; font-weight: 800; color: #3B5BDB;
   background: #eef2ff; border-radius: 999px; padding: 2px 7px;
+}
+.row-return {
+  font-size: 10px; font-weight: 800; color: #b45309;
+  background: #fef3c7; border-radius: 999px; padding: 2px 7px; margin-right: 4px;
 }
 
 /* ── Order detail panel ───────────────────────────────────────────────────── */

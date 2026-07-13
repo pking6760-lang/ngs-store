@@ -33,7 +33,7 @@ export default function Dashboard({ onNavigate }) {
     // "Today's" figures — computed from each order's date, so they reset to
     // zero automatically at the start of a new day.
     const todaysOrders = orders.filter(
-      (o) => isToday(o.createdAt) && o.status !== "Cancelled"
+      (o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn
     );
     const revenue = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
     // Gross product profit = (selling − buying cost) × qty over today's items
@@ -54,7 +54,7 @@ export default function Dashboard({ onNavigate }) {
     const givenBack = rewardsGiven + couponsGiven + refunds;
     // Pending = anything not yet delivered (still needs action), any day.
     const pending = orders.filter(
-      (o) => o.status !== "Delivered" && o.status !== "Cancelled"
+      (o) => o.status !== "Delivered" && o.status !== "Cancelled" && o.status !== "Returned"
     ).length;
     return {
       orders: todaysOrders.length,
@@ -76,7 +76,7 @@ export default function Dashboard({ onNavigate }) {
     const since = Date.now() - 7 * 24 * 3600 * 1000;
     const tally = {};
     orders.forEach((o) => {
-      if (o.status === "Cancelled" || new Date(o.createdAt).getTime() < since) return;
+      if (o.status === "Cancelled" || o.isReturn || new Date(o.createdAt).getTime() < since) return;
       (o.items || []).forEach((it) => {
         const t = tally[it.id] || (tally[it.id] = { id: it.id, name: it.name, icon: it.icon, qty: 0 });
         t.qty += it.qty;
@@ -98,7 +98,7 @@ export default function Dashboard({ onNavigate }) {
       days.push({ key, label: d.toLocaleDateString("en-IN", { weekday: "short" }), revenue: 0 });
     }
     orders.forEach((o) => {
-      if (o.status === "Cancelled") return;
+      if (o.status === "Cancelled" || o.isReturn) return;
       const k = new Date(o.createdAt).toDateString();
       if (k in idx) days[idx[k]].revenue += o.total || 0;
     });
@@ -328,6 +328,8 @@ export function StatusPill({ status }) {
       "Out for delivery": "s-out",
       Delivered: "s-delivered",
       Cancelled: "s-cancelled",
+      "Return requested": "s-return",
+      Returned: "s-return",
     }[status] || "s-placed";
   return <span className={`status-pill ${cls}`}>{status}</span>;
 }

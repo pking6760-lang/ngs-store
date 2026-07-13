@@ -215,6 +215,7 @@ function MyOrders({ user, onReorder }) {
 function OrderDetail({ order, onClose, onReorder }) {
   const { add } = useCart();
   const cancelled = order.status === "Cancelled";
+  const returned = order.status === "Returned" || order.status === "Return requested";
   const currentStep = ORDER_STATUSES.indexOf(order.status);
 
   function reorder() {
@@ -238,6 +239,12 @@ function OrderDetail({ order, onClose, onReorder }) {
 
           {cancelled ? (
             <div className="order-cancelled-note">✖ This order was cancelled.</div>
+          ) : returned ? (
+            <div className="order-cancelled-note">
+              {order.status === "Returned"
+                ? `↩︎ This order was returned.${order.refundedAmount > 0 ? ` ₹${order.refundedAmount} was added to your NGS Wallet.` : ""}`
+                : "↩︎ A return is being arranged — our partner will collect the items."}
+            </div>
           ) : (
             <ol className="status-steps">
               {ORDER_STATUSES.map((s, i) => (

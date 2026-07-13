@@ -7,7 +7,7 @@ import {
 } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
-import { createOrderQr, adminRefundToWallet } from "../lib/api.js";
+import { createOrderQr, adminRefundToWallet, adminCreateReturn } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import AdminPortal from "./AdminPortal.jsx";
 import Receipt from "./Receipt.jsx";
@@ -148,14 +148,16 @@ export default function OrdersAdmin() {
             return (
               <button className="order-row" key={o.id} onClick={() => setSelectedId(o.id)}>
                 <div className="order-row-top">
-                  <span className="order-row-id">#{o.id}</span>
+                  <span className="order-row-id">
+                    {o.isReturn && <span className="row-return">↩︎ RETURN</span>} #{o.id}
+                  </span>
                   <span className="order-row-total">₹{o.total}</span>
                 </div>
                 <div className="order-row-bottom">
                   <span className="order-row-time">{formatTime(o.createdAt)}</span>
                   <span className="order-row-tags">
-                    {isNew && <span className="row-new">● NEW</span>}
-                    {o.paymentStatus === "paid" && <span className="row-paid">✅ paid</span>}
+                    {isNew && !o.isReturn && <span className="row-new">● NEW</span>}
+                    {!o.isReturn && o.paymentStatus === "paid" && <span className="row-paid">✅ paid</span>}
                     <StatusPill status={o.status} />
                   </span>
                 </div>
@@ -343,7 +345,17 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
           )}
 
           <section className="od-section">
-            <h4>Update order</h4>
+            <h4>{o.isReturn ? "Return status" : "Update order"}</h4>
+            {o.isReturn ? (
+              <div className="od-role-wait">
+                {o.status === "Returned"
+                  ? "✓ Return complete — item collected, customer refunded to wallet."
+                  : o.riderId
+                    ? "🛵 A delivery partner is collecting the return…"
+                    : "🛵 Waiting for a delivery partner to collect the return…"}
+              </div>
+            ) : (
+             <>
             {o.accepted === false && o.status !== "Cancelled" && (
               <div className="od-accept-row">
                 <button className="od-accept" onClick={() => acceptOrder(o)}>✅ Accept order</button>
@@ -389,14 +401,72 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                 )}
               </div>
             )}
+             </>
+            )}
           </section>
 
+          <ReturnSection order={o} />
           <RefundSection order={o} />
         </div>
       </div>
       {/* Hidden on screen; the print stylesheet reveals only this at 58mm. */}
       <Receipt order={o} shop={SHOP} />
     </div>
+  );
+}
+
+// Start a driver-collected return for a delivered order. Dispatches a delivery
+// partner to the customer's address; on their confirmation the order total is
+// refunded to the wallet and earned points reversed — all automatic.
+function ReturnSection({ order }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
+  if (order.isReturn) return null;
+  const done = order.status === "Returned" || (order.refundedAmount || 0) > 0;
+  if (order.status !== "Delivered" && !done) return null;
+
+  async function create() {
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      await adminCreateReturn(order.dbId);
+      setMsg("Return created — a delivery partner will be sent to collect the item. The refund happens automatically once they confirm the pickup.");
+      setConfirming(false);
+    } catch (e) {
+      setErr(e.message || "Couldn't create the return.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <section className="od-section">
+      <h4>Return pickup</h4>
+      {done ? (
+        <div className="od-refunded">↩︎ Returned · ₹{(order.refundedAmount || 0).toFixed(2)} refunded to NGS Wallet</div>
+      ) : msg ? (
+        <div className="od-refund-ok">{msg}</div>
+      ) : !confirming ? (
+        <button className="od-refund-btn" onClick={() => { setConfirming(true); setErr(""); }}>
+          ↩︎ Create return — send a driver to collect
+        </button>
+      ) : (
+        <div className="od-refund-form">
+          <p className="od-muted">
+            A delivery partner will be dispatched to the customer's address to collect the item.
+            When they confirm the pickup, ₹{(order.total || 0).toFixed(2)} is refunded to the customer's
+            NGS Wallet and their earned points are reversed — automatically.
+          </p>
+          {err && <div className="auth-error">{err}</div>}
+          <div className="od-refund-actions">
+            <button className="ghost-btn" onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
+            <button className="primary-btn" onClick={create} disabled={busy}>
+              {busy ? "Creating…" : "Create return"}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

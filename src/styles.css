@@ -1193,6 +1193,8 @@ button {
 .status-packed { background: #fff4e0; color: #b26a00; }
 .status-out-for-delivery { background: #e7f0ff; color: #1a56db; }
 .status-delivered { background: #eaf6ec; color: var(--green-dark); }
+.status-cancelled { background: #fdeaea; color: #b3261e; }
+.status-returned, .status-return-requested { background: #fef3c7; color: #b45309; }
 .my-order-items {
   display: flex;
   flex-wrap: wrap;

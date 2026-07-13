@@ -114,6 +114,7 @@ function QrGlyph() {
 
 /* ── Live order card ────────────────────────────────────────────────────── */
 function LiveOrder({ task, busy, onAction }) {
+  const isReturn = !!task.isReturn;
   const isDelivery = task.role === "delivery";
   const accepted = task.state === "accepted" || task.state === "picked";
   const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
@@ -132,11 +133,30 @@ function LiveOrder({ task, busy, onAction }) {
   return (
     <div className="pd-liveorder">
       <div className="lo-head">
-        <span className="lo-live">● NEW ORDER</span>
+        <span className={`lo-live ${isReturn ? "lo-return" : ""}`}>{isReturn ? "● RETURN PICKUP" : "● NEW ORDER"}</span>
         <span className="lo-code">#{code}</span>
       </div>
 
-      {isDelivery ? (
+      {isReturn ? (
+        <>
+          <div className="lo-row">
+            <span className="lo-lbl">Collect from</span>
+            {task.location
+              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer">📍 Navigate</a>
+              : <span className="lo-muted">Address shared on accept</span>}
+          </div>
+          <div className="lo-items">
+            <span className="lo-lbl">Collect these items back</span>
+            {(task.items || []).map((it, i) => (
+              <div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>
+            ))}
+          </div>
+          <div className="lo-row">
+            <span className="lo-lbl">Payment</span>
+            <span className="lo-paid">Return — collect nothing</span>
+          </div>
+        </>
+      ) : isDelivery ? (
         <>
           <div className="lo-row">
             <span className="lo-lbl">Deliver to</span>
@@ -185,7 +205,11 @@ function LiveOrder({ task, busy, onAction }) {
 
       {!accepted ? (
         <button className="pd-btn lo-accept" disabled={busy} onClick={() => onAction(() => api.partnerAccept(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : "✅ Accept order"}
+          {busy ? <span className="ngs-spin" /> : isReturn ? "✅ Accept return" : "✅ Accept order"}
+        </button>
+      ) : isReturn ? (
+        <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkReturned(task.orderId))}>
+          {busy ? <span className="ngs-spin" /> : "↩︎ Confirm return picked up"}
         </button>
       ) : isDelivery ? (
         <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkDelivered(task.orderId))}>

@@ -115,6 +115,7 @@ function mapOrder(r) {
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback, needsOwner: !!r.needs_owner,
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
+    isReturn: !!r.is_return, returnOf: r.return_of,
     deliveryState: r.delivery_state, pickerState: r.picker_state,
     riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at, packedAt: r.packed_at,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
@@ -283,6 +284,16 @@ export async function adminRefundToWallet(orderDbId, amount, note) {
   return { ok: true };
 }
 
+// Admin: start a return for a delivered order. Creates a return task that is
+// dispatched to a delivery partner to collect the item; on confirmation the
+// order total is refunded to the customer's wallet and earned points reversed.
+export async function adminCreateReturn(orderDbId) {
+  const { data, error } = await must().rpc("admin_create_return", { p_order: orderDbId });
+  if (error) throw new Error(error.message || "Couldn't create the return.");
+  pingLocal("orders");
+  return { ok: true, returnId: data };
+}
+
 // Ask the server to create a Razorpay order for an already-placed (held) order.
 // The server reads the real total from the DB — the phone never sends an amount.
 export async function createRazorpayOrder(orderDbId) {
@@ -347,6 +358,9 @@ export async function fetchMyOrders() {
     .select("*, order_items(*)")
     // Hide online orders whose payment never completed.
     .neq("status", "Awaiting payment")
+    // Return pickups are internal logistics rows — the customer sees the parent
+    // order flip to "Returned", not the pickup task itself.
+    .eq("is_return", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);
@@ -712,6 +726,7 @@ export async function getMyTask() {
   return {
     orderId: t.order_id, code: t.code, role: t.task_role, state: t.state,
     isCod: t.is_cod, paid: t.paid, codAmount: t.cod_amount, location: t.location, items: t.items || [],
+    isReturn: !!t.is_return,
   };
 }
 
@@ -727,6 +742,10 @@ export async function partnerMarkPacked(orderId) {
 export async function partnerMarkDelivered(orderId) {
   const { error } = await must().rpc("partner_mark_delivered", { p_order: orderId });
   if (error) throw new Error(error.message || "Couldn't mark delivered."); return { ok: true };
+}
+export async function partnerMarkReturned(orderId) {
+  const { error } = await must().rpc("partner_mark_returned", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't confirm the return."); return { ok: true };
 }
 
 /* ─── Admin: catalog ────────────────────────────────────────────────────── */
