@@ -624,6 +624,20 @@ export async function partnerRecordPayoutAdmin(userId, amount, note) {
   pingLocal("wallet_ledger");
   return { ok: true };
 }
+// Admin corrections (fix mistakes / test data).
+export async function partnerClearStrikes(userId) {
+  const { error } = await must().rpc("admin_clear_strikes", { p_user: userId });
+  if (error) throw new Error(error.message || "Couldn't clear strikes.");
+  pingLocal("partner_strikes");
+  return { ok: true };
+}
+// amount is signed: positive credits the partner, negative debits them.
+export async function partnerWalletAdjust(userId, amount, note) {
+  const { error } = await must().rpc("admin_wallet_adjust", { p_user: userId, p_amount: amount, p_note: note || null });
+  if (error) throw new Error(error.message || "Couldn't adjust wallet.");
+  pingLocal("wallet_ledger");
+  return { ok: true };
+}
 
 // The partner's current assigned task (minimal fields, privacy-scoped).
 export async function getMyTask() {

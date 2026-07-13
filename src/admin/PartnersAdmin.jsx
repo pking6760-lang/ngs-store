@@ -92,6 +92,23 @@ function WalletBlock({ partner, w, onChange }) {
     } catch (e) { setMsg(e.message); } finally { setBusy(false); }
   }
 
+  async function clearStrikes() {
+    if (!confirm(`Clear all ${strikes} strike${strikes === 1 ? "" : "s"} for ${partner.fullName}?`)) return;
+    setBusy(true); setMsg("");
+    try {
+      await withMinTime(() => api.partnerClearStrikes(partner.userId), 500, 1000);
+      setMsg("✓ Strikes cleared"); await onChange();
+    } catch (e) { setMsg(e.message); } finally { setBusy(false); }
+  }
+
+  async function adjust(signed, note) {
+    setModal(null); setBusy(true); setMsg("");
+    try {
+      await withMinTime(() => api.partnerWalletAdjust(partner.userId, signed, note), 500, 1000);
+      setMsg(`✓ Balance adjusted ${signed > 0 ? "+" : "−"}₹${Math.abs(signed)}`); await onChange();
+    } catch (e) { setMsg(e.message); } finally { setBusy(false); }
+  }
+
   return (
     <div className="pwallet">
       <div className="pwallet-stats">
@@ -102,6 +119,12 @@ function WalletBlock({ partner, w, onChange }) {
       <div className="pwallet-actions">
         <button disabled={busy || cash <= 0} onClick={() => setModal("deposit")}>💵 Confirm cash deposit</button>
         <button disabled={busy || bal <= 0} onClick={() => setModal("payout")}>💸 Record payout</button>
+      </div>
+      <div className="pwallet-fix">
+        <button className="fix-btn" disabled={busy} onClick={() => setModal("adjust")}>⚖️ Adjust balance / fix mistake</button>
+        {strikes > 0 && (
+          <button className="fix-btn" disabled={busy} onClick={clearStrikes}>🧹 Reset strikes</button>
+        )}
       </div>
       {msg && <div className="pwallet-msg">{msg}</div>}
 
@@ -119,6 +142,39 @@ function WalletBlock({ partner, w, onChange }) {
             onSubmit={(v) => submit("payout", v)} />
         </AdminPortal>
       )}
+      {modal === "adjust" && (
+        <AdminPortal>
+          <AdjustModal partner={partner} bal={bal} onCancel={() => setModal(null)} onSubmit={adjust} />
+        </AdminPortal>
+      )}
+    </div>
+  );
+}
+
+// Post a manual wallet correction: Credit adds to the partner's balance,
+// Debit subtracts. Used to reverse a mistaken payout/deposit.
+function AdjustModal({ partner, bal, onCancel, onSubmit }) {
+  const [val, setVal] = useState("");
+  const [note, setNote] = useState("");
+  const amt = Math.abs(Number(val) || 0);
+  return (
+    <div className="amt-modal" onClick={onCancel}>
+      <div className="amt-card" onClick={(e) => e.stopPropagation()}>
+        <h3>Adjust balance — {partner.fullName}</h3>
+        <p>
+          Current balance ₹{Math.round(bal)}. <b>Credit</b> adds money back to the partner (e.g. to
+          reverse a wrong payout); <b>Debit</b> takes it away.
+        </p>
+        <input type="number" min="0" inputMode="numeric" value={val} autoFocus
+          onChange={(e) => setVal(e.target.value)} placeholder="₹ amount" />
+        <input value={note} onChange={(e) => setNote(e.target.value)}
+          placeholder="Reason (e.g. reverse wrong payout)" />
+        <div className="amt-actions amt-actions-3">
+          <button className="amt-cancel" onClick={onCancel}>Cancel</button>
+          <button className="amt-ok debit" disabled={amt <= 0} onClick={() => onSubmit(-amt, note)}>− Debit</button>
+          <button className="amt-ok credit" disabled={amt <= 0} onClick={() => onSubmit(amt, note)}>＋ Credit</button>
+        </div>
+      </div>
     </div>
   );
 }

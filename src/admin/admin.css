@@ -1298,6 +1298,10 @@ body {
 .amt-cancel { background: #eef1f4; color: #333; }
 .amt-ok { background: #3B5BDB; color: #fff; }
 .amt-ok:disabled { opacity: 0.5; }
+.amt-actions-3 button { font-size: 14px; padding: 12px 8px; }
+.amt-ok.credit { background: #12B886; }
+.amt-ok.debit { background: #e8590c; }
+.amt-card input + input { margin-top: 10px; }
 .status-pill.s-cancelled {
   background: #fdecec;
   color: #c0392b;
@@ -2409,6 +2413,10 @@ body {
 .pw-stat strong { font-size: 18px; color: #1a7f47; }
 .pw-stat strong.neg { color: #c0392b; }
 .pw-stat strong.warn { color: #c77700; }
+.pwallet-fix { display: flex; gap: 8px; margin-top: 8px; }
+.fix-btn { flex: 1; padding: 9px; border-radius: 10px; border: 1px dashed #cbd3dd; background: #f7f9fc;
+  color: #475060; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.fix-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .pwallet-actions { display: flex; gap: 8px; margin-top: 10px; }
 .pwallet-actions button { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #dcdce2; background: #fff;
   font-weight: 700; font-size: 13px; cursor: pointer; }
