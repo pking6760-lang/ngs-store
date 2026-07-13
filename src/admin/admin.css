@@ -328,7 +328,18 @@ body {
 }
 .cell-name {
   font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
+.cell-barcode {
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+.cell-barcode.has { color: #1b7a3d; }
+.cell-barcode.none { color: #c0863b; font-family: inherit; font-style: italic; }
 .empty-cell {
   text-align: center;
   color: var(--muted);

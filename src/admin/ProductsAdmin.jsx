@@ -17,6 +17,7 @@ const EMPTY = {
   id: "",
   name: "",
   category: "",
+  barcode: "",
   unit: "",
   cost: "",
   price: "",
@@ -113,6 +114,9 @@ export default function ProductsAdmin() {
                       {p.inStock === false && (
                         <span className="stock-tag out">Out of stock</span>
                       )}
+                      <span className={`cell-barcode ${p.barcode ? "has" : "none"}`}>
+                        {p.barcode ? `📷 ${p.barcode}` : "no barcode"}
+                      </span>
                     </span>
                   </div>
                 </td>
@@ -297,6 +301,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   // stock. Fields the DB doesn't know are left untouched.
   async function onScanned(code) {
     setScanErr("");
+    update("barcode", code); // save the scanned barcode on the product
     setLookup({ busy: true, msg: `Looking up ${code}…` });
     const res = await lookupProductByBarcode(code);
     applyLookup(res);
@@ -418,6 +423,17 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
               </p>
             )}
           </div>
+
+          <label className="field wide">
+            <span>Barcode {form.barcode ? "✓ saved" : "(scan or type)"}</span>
+            <input
+              className="mono"
+              inputMode="numeric"
+              value={form.barcode ?? ""}
+              onChange={(e) => update("barcode", e.target.value.replace(/\D/g, ""))}
+              placeholder="Scan a barcode above, or type it — saved for in-store scanning"
+            />
+          </label>
 
           <label className="field wide">
             <span>Product name</span>

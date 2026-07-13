@@ -58,7 +58,7 @@ function mapProduct(r) {
   // admin-only product_costs table and is merged in by fetchAdminProducts only.
   return { id: r.id, name: r.name, unit: r.unit, price: num(r.price),
     mrp: num(r.mrp), icon: r.icon, image: r.image_url,
-    category: r.category, stock: r.stock, active: r.active,
+    category: r.category, stock: r.stock, active: r.active, barcode: r.barcode || "",
     // Public merchandising flags: `bait` (best-price deal) and `hot` (selling
     // fast). Cost, tier and the sales numbers are admin-only (fetchAdminProducts).
     bait: !!r.bait, hot: !!r.hot,
