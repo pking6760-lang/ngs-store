@@ -33,15 +33,46 @@ Deno.serve(async (req) => {
     const clean = String(email || "").trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) return json({ error: "Enter a valid email address." }, 400);
 
+    // ── Rate limit: 60s cooldown + max 5 codes per rolling hour, per email. ──
+    // Stops inbox spam and the "resend to reset the wrong-guess counter" bypass.
+    const COOLDOWN_MS = 60 * 1000;
+    const WINDOW_MS = 60 * 60 * 1000;
+    const MAX_PER_WINDOW = 5;
+    const now = Date.now();
+    const ex = await fetch(
+      `${SUPABASE_URL}/rest/v1/partner_otps?email=eq.${encodeURIComponent(clean)}&select=last_sent_at,sends_in_window,window_start`,
+      { headers: sb },
+    );
+    const exRow = (await ex.json().catch(() => []))?.[0] ?? null;
+    let sends_in_window = 1;
+    let window_start = new Date(now).toISOString();
+    if (exRow) {
+      const last = exRow.last_sent_at ? new Date(exRow.last_sent_at).getTime() : 0;
+      if (now - last < COOLDOWN_MS) {
+        return json({ error: "Please wait a minute before requesting another code." }, 429);
+      }
+      const winStart = exRow.window_start ? new Date(exRow.window_start).getTime() : 0;
+      if (now - winStart < WINDOW_MS) {
+        if ((exRow.sends_in_window ?? 0) >= MAX_PER_WINDOW) {
+          return json({ error: "Too many codes requested. Please try again later." }, 429);
+        }
+        sends_in_window = (exRow.sends_in_window ?? 0) + 1;
+        window_start = new Date(winStart).toISOString();
+      }
+    }
+
     // 6-digit code, valid 10 minutes.
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
     const code_hash = await sha256hex(`${clean}:${code}:${PEPPER}`);
-    const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const expires_at = new Date(now + 10 * 60 * 1000).toISOString();
 
     const up = await fetch(`${SUPABASE_URL}/rest/v1/partner_otps`, {
       method: "POST",
       headers: { ...sb, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" },
-      body: JSON.stringify({ email: clean, code_hash, expires_at, attempts: 0 }),
+      body: JSON.stringify({
+        email: clean, code_hash, expires_at, attempts: 0,
+        last_sent_at: new Date(now).toISOString(), sends_in_window, window_start,
+      }),
     });
     if (!up.ok) return json({ error: "Couldn't start login. Try again." }, 500);
 
