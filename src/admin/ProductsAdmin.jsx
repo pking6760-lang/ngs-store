@@ -1,4 +1,4 @@
-import { useMemo, useState, lazy, Suspense } from "react";
+import { useMemo, useState } from "react";
 import { useAdminProducts, useCategories } from "../lib/hooks.js";
 import AdminPortal from "./AdminPortal.jsx";
 import {
@@ -10,10 +10,8 @@ import {
 import { fileToResizedDataUrl, urlToResizedDataUrl } from "../lib/image.js";
 import { lookupProductByBarcode, guessCategory } from "../lib/productLookup.js";
 import { smartReprice } from "../lib/api.js";
+import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
-// The scanner pulls in ZXing (~300 KB) — load it only when scanning starts so
-// the admin app itself stays light.
-const BarcodeScanner = lazy(() => import("./BarcodeScanner.jsx"));
 
 const EMPTY = {
   id: "",
@@ -271,18 +269,34 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   const [form, setForm] = useState(product);
   const [imgBusy, setImgBusy] = useState(false);
   const [imgError, setImgError] = useState("");
-  const [scanning, setScanning] = useState(false);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanErr, setScanErr] = useState("");
+  const [manualCode, setManualCode] = useState("");
   const [lookup, setLookup] = useState(null); // { busy, ok, msg }
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  // Open the native camera scanner. On success look the code up; on failure
+  // reveal a type-it-in box so the flow never dead-ends.
+  async function doScan() {
+    setScanErr(""); setScanBusy(true);
+    try {
+      const code = await scanBarcode();
+      if (code) await onScanned(code);
+    } catch (e) {
+      setScanErr(e.message || "Couldn't scan — type the barcode instead.");
+    } finally {
+      setScanBusy(false);
+    }
+  }
+
   // A barcode was scanned (or typed) — look it up in the open product DBs and
   // auto-fill name, size, category and photo, so the owner only sets price &
   // stock. Fields the DB doesn't know are left untouched.
   async function onScanned(code) {
-    setScanning(false);
+    setScanErr("");
     setLookup({ busy: true, msg: `Looking up ${code}…` });
     const res = await lookupProductByBarcode(code);
     if (!res.found) {
@@ -375,9 +389,27 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
 
         <div className="modal-body">
           <div className="field wide scan-field">
-            <button type="button" className="scan-btn" onClick={() => setScanning(true)}>
-              📷 Scan barcode to auto-fill
+            <button type="button" className="scan-btn" onClick={doScan} disabled={scanBusy}>
+              {scanBusy ? "Opening camera…" : "📷 Scan barcode to auto-fill"}
             </button>
+            {scanErr && (
+              <>
+                <p className="scan-status miss">{scanErr}</p>
+                <div className="scan-manual-row">
+                  <input
+                    inputMode="numeric"
+                    placeholder="Type barcode digits"
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    disabled={manualCode.replace(/\D/g, "").length < 6}
+                    onClick={() => onScanned(manualCode.replace(/\D/g, ""))}
+                  >Use</button>
+                </div>
+              </>
+            )}
             {lookup && (
               <p className={`scan-status ${lookup.busy ? "busy" : lookup.ok ? "ok" : "miss"}`}>
                 {lookup.busy && <span className="ngs-spin" aria-hidden />}
@@ -557,12 +589,6 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
           </button>
         </div>
       </form>
-
-      {scanning && (
-        <Suspense fallback={null}>
-          <BarcodeScanner onDetected={onScanned} onClose={() => setScanning(false)} />
-        </Suspense>
-      )}
     </div>
   );
 }

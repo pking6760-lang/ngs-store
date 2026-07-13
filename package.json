@@ -12,13 +12,12 @@
     "sync:android": "npm run build:app && cap sync android"
   },
   "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^6.2.0",
     "@capacitor/android": "^6.2.1",
     "@capacitor/core": "^6.2.1",
     "@capacitor/geolocation": "^6.1.1",
     "@capacitor/push-notifications": "^6.0.5",
     "@supabase/supabase-js": "^2.110.2",
-    "@zxing/browser": "^0.2.1",
-    "@zxing/library": "^0.23.0",
     "capacitor-native-biometric": "^4.2.2",
     "cordova-plugin-bluetooth-serial": "^0.4.7",
     "jsqr": "^1.4.0",
