@@ -235,9 +235,9 @@ export default function PartnersAdmin() {
               🔔 {pendingCount} partner{pendingCount === 1 ? "" : "s"} waiting for your approval — review →
             </button>
           )}
-          {pendingCount === 0 && requests.length > 0 && (
+          {pendingCount === 0 && (
             <button className="requests-link" onClick={() => setView("requests")}>
-              Requests ({requests.length}) →
+              📋 Requests — pending &amp; rejected ({requests.length}) →
             </button>
           )}
         </>
