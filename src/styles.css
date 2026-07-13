@@ -1351,8 +1351,9 @@ button {
 .upi-app-btn {
   display: block;
   text-align: center;
-  background: #5f259f;
+  background: var(--green);
   color: #fff;
+  border: none;
   border-radius: 10px;
   padding: 14px;
   font-weight: 700;
