@@ -579,7 +579,8 @@ export async function updatePricingConfig(patch) {
 // Recompute every product's tier + auto price now (admin button, and it also
 // runs on a schedule server-side).
 export async function smartReprice() {
-  const { error } = await must().rpc("smart_reprice");
+  // Admin-guarded wrapper (smart_reprice itself is locked to cron/postgres now).
+  const { error } = await must().rpc("admin_smart_reprice");
   if (error) throw new Error(error.message || "Couldn't recompute prices.");
   pingLocal("products");
   return { ok: true };
