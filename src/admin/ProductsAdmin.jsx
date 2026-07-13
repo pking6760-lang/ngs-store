@@ -42,22 +42,33 @@ export default function ProductsAdmin() {
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
       const matchCat = catFilter === "all" || p.category === catFilter;
-      const matchText = !q || p.name.toLowerCase().includes(q);
+      const matchText = !q || p.name.toLowerCase().includes(q) || (p.barcode || "").includes(q);
       return matchCat && matchText;
     });
   }, [products, search, catFilter]);
 
   const catName = (id) => categories.find((c) => c.id === id)?.name || id;
 
+  // Scan a barcode to find that product in the list.
+  async function scanToSearch() {
+    try {
+      const code = await scanBarcode();
+      if (code) setSearch(code);
+    } catch { /* camera unavailable — the text search still works */ }
+  }
+
   return (
     <>
       <div className="toolbar">
-        <input
-          className="admin-search"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="search-scan">
+          <input
+            className="admin-search"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button type="button" className="search-scan-btn" onClick={scanToSearch} title="Scan a barcode to find a product">📷</button>
+        </div>
         <select
           className="admin-select"
           value={catFilter}

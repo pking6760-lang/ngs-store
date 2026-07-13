@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
-import { useOrders } from "../lib/hooks.js";
+import { useOrders, usePartners } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import {
   updateOrderStatus, markCashReceived, acceptOrder, rejectOrder,
@@ -27,6 +27,8 @@ const SHOP = {
 
 export default function OrdersAdmin() {
   const orders = useOrders();
+  const partners = usePartners();
+  const nameOf = (uid) => (uid ? partners.find((p) => p.userId === uid)?.fullName || "Unknown" : null);
   const [filter, setFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(null);
   // Doorstep QR state (for the detail view).
@@ -148,6 +150,9 @@ export default function OrdersAdmin() {
                     <StatusPill status={o.status} />
                   </span>
                 </div>
+                {o.status === "Delivered" && o.riderId && (
+                  <div className="order-row-rider">🛵 {nameOf(o.riderId)}</div>
+                )}
               </button>
             );
           })}
@@ -158,6 +163,8 @@ export default function OrdersAdmin() {
         <AdminPortal>
           <OrderDetail
             order={selected}
+            deliveredBy={nameOf(selected.riderId)}
+            packedBy={nameOf(selected.pickerId)}
             onClose={closeDetail}
             qrFor={qrFor}
             qrState={qrState}
@@ -193,7 +200,7 @@ export default function OrdersAdmin() {
   );
 }
 
-function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
+function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
   const curIdx = ORDER_STATUSES.indexOf(o.status);
   const [statusBusy, setStatusBusy] = useState(null);
   async function doChange(s) { setStatusBusy(s); try { await changeStatus(o, s); } finally { setStatusBusy(null); } }
@@ -220,6 +227,17 @@ function OrderDetail({ order: o, onClose, qrFor, qrState, openQr, changeStatus, 
 
         <div className="od-body">
           <div className="od-payline"><PaymentTag order={o} /></div>
+          {(deliveredBy || packedBy) && (
+            <div className="od-handled">
+              {packedBy && <div className="od-handled-row"><span>🧺 Packed by</span><strong>{packedBy}</strong></div>}
+              {deliveredBy && (
+                <div className="od-handled-row">
+                  <span>🛵 Delivered by</span>
+                  <strong>{deliveredBy}{o.deliveredAt ? ` · ${formatTime(o.deliveredAt)}` : ""}</strong>
+                </div>
+              )}
+            </div>
+          )}
           {o.needsOwner && o.status !== "Delivered" && o.status !== "Cancelled" && (
             <div className="od-needs-owner">⚠️ No delivery partner was available — this one's on you. Pack it and deliver, or wait for a partner to come online.</div>
           )}

@@ -108,6 +108,7 @@ function mapOrder(r) {
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback, needsOwner: !!r.needs_owner,
     deliveryState: r.delivery_state, pickerState: r.picker_state,
+    riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
 }
 function mapProfile(r) {
