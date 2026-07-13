@@ -20,13 +20,15 @@ const TABS = [
 
 export default function AccountDrawer({ open, onClose, initialTab, onOpenCart }) {
   const { user, isLoggedIn, logout } = useAuth();
-  const [tab, setTab] = useState("orders");
+  // null = the account menu (list of sections); a tab id = that section's page.
+  const [tab, setTab] = useState(null);
   const { notes, error: notesError, reload: reloadNotes } = useUserNotifications(user?.id);
   const unread = notes.filter((n) => !n.read).length;
 
-  // Jump to the requested tab whenever the drawer is opened.
+  // Jump straight to a requested section (e.g. the bell → Inbox); otherwise
+  // land on the menu each time the drawer is opened.
   useEffect(() => {
-    if (open) setTab(initialTab || "orders");
+    if (open) setTab(initialTab || null);
   }, [open, initialTab]);
 
   function handleLogout() {
@@ -34,67 +36,81 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
     onClose();
   }
 
+  const active = TABS.find((t) => t.id === tab);
+
   return (
     <>
       <div className={`drawer-overlay ${open ? "show" : ""}`} onClick={onClose} />
       <aside className={`account-drawer ${open ? "open" : ""}`}>
         <div className="drawer-head">
-          <h2>My Account</h2>
+          {active ? (
+            <button className="back-btn small" onClick={() => setTab(null)} aria-label="Back">
+              ←
+            </button>
+          ) : null}
+          <h2>{active ? active.label : "My Account"}</h2>
           <button className="drawer-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
 
-        {isLoggedIn && (
-          <div className="account-hello">
-            <div className="account-avatar">
-              {(user.name || "?").trim().charAt(0).toUpperCase() || "?"}
-            </div>
-            <div className="account-hello-info">
-              <div className="account-name">
-                {user.name}
-                {user.member && <span className="member-chip">👑 Prime</span>}
+        {!active ? (
+          // ── Account menu ─────────────────────────────────────
+          <div className="account-menu-scroll">
+            {isLoggedIn && (
+              <div className="account-hello">
+                <div className="account-avatar">
+                  {(user.name || "?").trim().charAt(0).toUpperCase() || "?"}
+                </div>
+                <div className="account-hello-info">
+                  <div className="account-name">
+                    {user.name}
+                    {user.member && <span className="member-chip">👑 Prime</span>}
+                  </div>
+                  <div className="account-phone">+91 {user.phone}</div>
+                </div>
+                <div className="account-points">
+                  <div className="account-points-val">{user.points || 0}</div>
+                  <div className="account-points-lbl">points</div>
+                </div>
               </div>
-              <div className="account-phone">+91 {user.phone}</div>
-            </div>
-            <div className="account-points">
-              <div className="account-points-val">{user.points || 0}</div>
-              <div className="account-points-lbl">points</div>
-            </div>
+            )}
+
+            <nav className="account-menu">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  className="account-menu-row"
+                  onClick={() => setTab(t.id)}
+                >
+                  <span className="account-menu-label">{t.label}</span>
+                  {t.id === "inbox" && unread > 0 && (
+                    <span className="account-menu-badge">{unread}</span>
+                  )}
+                  <span className="account-menu-arrow">›</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        ) : (
+          // ── Section page ─────────────────────────────────────
+          <div className="account-body">
+            {tab === "orders" && (
+              <MyOrders
+                user={user}
+                onReorder={() => {
+                  onClose();
+                  onOpenCart && onOpenCart();
+                }}
+              />
+            )}
+            {tab === "wallet" && <WalletTab userId={user?.id} />}
+            {tab === "inbox" && <Inbox notes={notes} userId={user?.id} error={notesError} onRetry={reloadNotes} />}
+            {tab === "rewards" && <Rewards user={user} />}
+            {tab === "membership" && <Membership />}
+            {tab === "profile" && <Profile />}
           </div>
         )}
-
-        <div className="account-tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className={`account-tab ${tab === t.id ? "active" : ""}`}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-              {t.id === "inbox" && unread > 0 && (
-                <span className="tab-badge">{unread}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className="account-body">
-          {tab === "orders" && (
-            <MyOrders
-              user={user}
-              onReorder={() => {
-                onClose();
-                onOpenCart && onOpenCart();
-              }}
-            />
-          )}
-          {tab === "wallet" && <WalletTab userId={user?.id} />}
-          {tab === "inbox" && <Inbox notes={notes} userId={user?.id} error={notesError} onRetry={reloadNotes} />}
-          {tab === "rewards" && <Rewards user={user} />}
-          {tab === "membership" && <Membership />}
-          {tab === "profile" && <Profile />}
-        </div>
 
         <div className="account-foot">
           <nav className="legal-links">
