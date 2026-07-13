@@ -53,39 +53,48 @@ async function offLookup(barcode: string) {
   return null;
 }
 
+const GEMINI_MODEL = "gemini-flash-latest";
+
+async function geminiCall(prompt: string, useSearch: boolean) {
+  const body: Record<string, unknown> = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0 },
+  };
+  if (useSearch) body.tools = [{ google_search: {} }];
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+  );
+  if (!r.ok) return null;
+  const d = await r.json();
+  const text: string = (d?.candidates?.[0]?.content?.parts ?? [])
+    .map((p: { text?: string }) => p.text || "").join("");
+  return text || null;
+}
+
 async function geminiLookup(barcode: string, name: string) {
   if (!GEMINI_KEY) return null;
   const what = name ? `the product named "${name}"` : `the product with barcode (EAN/UPC) ${barcode}`;
   const prompt =
     `You are a product catalog assistant for an Indian grocery store (kirana). ` +
-    `Search the web to identify ${what}. It is very likely an Indian retail product ` +
+    `Identify ${what}. It is very likely an Indian retail product ` +
     `(brands such as Britannia, Parle, Parle Agro, Mother Dairy, Amul, Anand, Coca-Cola, ` +
     `Pepsi, ITC, Godrej, Tops, and similar, including cigarettes, shampoos and mehndi). ` +
     `Reply with ONLY a compact JSON object and nothing else: ` +
     `{"name":"full product name including brand and flavour/variant","brand":"brand","weight":"net weight or quantity like 100 g, 1 L, 10 pcs"}. ` +
     `If you genuinely cannot identify it, reply {"name":""}.`;
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0 },
-        }),
-      },
-    );
-    if (!r.ok) return null;
-    const d = await r.json();
-    const text: string = (d?.candidates?.[0]?.content?.parts ?? [])
-      .map((p: { text?: string }) => p.text || "").join("");
+    // Prefer live Google Search grounding; fall back to the model's own
+    // knowledge (covers the major Indian brands) when grounding isn't enabled.
+    let text = await geminiCall(prompt, true);
+    let source = "web";
+    if (!text) { text = await geminiCall(prompt, false); source = "gemini"; }
+    if (!text) return null;
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) return null;
     const obj = JSON.parse(m[0]);
     if (!obj.name) return null;
-    return { name: String(obj.name), brand: String(obj.brand || ""), unit: String(obj.weight || ""), categoryTags: [], source: "web" };
+    return { name: String(obj.name), brand: String(obj.brand || ""), unit: String(obj.weight || ""), categoryTags: [], source };
   } catch {
     return null;
   }
