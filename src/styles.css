@@ -1280,6 +1280,12 @@ button {
   border-color: var(--green);
   background: #eaf6ec;
 }
+.pay-option.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #f6f7f8;
+}
+.pay-option.disabled .pay-option-text small { color: #c0392b; }
 .pay-option input {
   accent-color: var(--green);
   width: 18px;

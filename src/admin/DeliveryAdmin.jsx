@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSettings } from "../lib/hooks.js";
 import { getShopLocations } from "../lib/store.js";
 import { updateSettings } from "../lib/actions.js";
+import { updateOpsConfig } from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink } from "../lib/location.js";
 
 export default function DeliveryAdmin() {
@@ -24,11 +25,16 @@ export default function DeliveryAdmin() {
 
   async function save() {
     try {
+      // Charges are single-sourced in ops_config (a DB trigger mirrors them into
+      // the customer `settings`), so these values always match what the customer
+      // pays and what the partner payout engine reads. Radius stays in settings.
+      await updateOpsConfig({
+        delivery_fee: Math.max(0, Number(form.deliveryFee) || 0),
+        free_delivery_threshold: Math.max(0, Number(form.freeDeliveryAbove) || 0),
+        handling_fee: Math.max(0, Number(form.handlingFee) || 0),
+        surge_fee: Math.max(0, Number(form.surgeFee) || 0),
+      });
       await updateSettings({
-        deliveryFee: Math.max(0, Number(form.deliveryFee) || 0),
-        freeDeliveryAbove: Math.max(0, Number(form.freeDeliveryAbove) || 0),
-        handlingFee: Math.max(0, Number(form.handlingFee) || 0),
-        surgeFee: Math.max(0, Number(form.surgeFee) || 0),
         maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
       });
       setSaved(true);

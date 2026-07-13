@@ -144,6 +144,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const grandTotal = netItems + deliveryFee + handling + surgeFee;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
+  // ── Cash-on-delivery cap ───────────────────────────────
+  // Above this the rider would carry too much cash, so COD is disabled and the
+  // customer must pay online. 0/blank = no cap. Enforced again on the server.
+  const COD_LIMIT = settings.codCustomerLimit ?? 1000;
+  const codBlocked = COD_LIMIT > 0 && grandTotal > COD_LIMIT;
+  // If the cart grows past the cap while COD is selected, bump them to online.
+  useEffect(() => {
+    if (codBlocked && payment === "cod") {
+      setPayment(RAZORPAY_ENABLED ? "razorpay" : "upi");
+    }
+  }, [codBlocked, payment]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Delivery area (distance to the nearest shop) ───────
   const maxKm = settings.maxDistanceKm || 0;
   const shops = getShopLocations(settings);
@@ -277,6 +289,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     // order using their typed address. The out-of-area block only applies to
     // customers who DID share location and are beyond the delivery radius.
     if (outOfArea) return; // button is disabled, but guard anyway
+    // COD is disabled above the cap, but guard anyway (server also enforces).
+    if (payment === "cod" && codBlocked) {
+      setLocError(`Cash on delivery isn't available above ₹${COD_LIMIT}. Please pay online.`);
+      return;
+    }
     setLocError("");
     // Save address + phone to the profile. Await it so the server has the phone
     // when place_order records the order (needed to call the customer).
@@ -682,12 +699,22 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   </span>
                 </label>
               )}
-              <label className={`pay-option ${payment === "cod" ? "sel" : ""}`}>
-                <input type="radio" name="pay" checked={payment === "cod"} onChange={() => setPayment("cod")} />
+              <label className={`pay-option ${payment === "cod" ? "sel" : ""} ${codBlocked ? "disabled" : ""}`}>
+                <input
+                  type="radio"
+                  name="pay"
+                  checked={payment === "cod"}
+                  disabled={codBlocked}
+                  onChange={() => !codBlocked && setPayment("cod")}
+                />
                 <span className="pay-option-icon">💵</span>
                 <span className="pay-option-text">
                   <strong>Cash on delivery</strong>
-                  <small>Pay when your order arrives</small>
+                  <small>
+                    {codBlocked
+                      ? `Not available above ₹${COD_LIMIT} — please pay online`
+                      : "Pay when your order arrives"}
+                  </small>
                 </span>
               </label>
             </div>

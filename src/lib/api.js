@@ -85,6 +85,7 @@ function mapSettings(r) {
     offerBanner: r.offer_banner, rewards: r.rewards, deliveryFee: num(r.delivery_fee),
     freeDeliveryAbove: num(r.free_delivery_above), handlingFee: num(r.handling_fee),
     surgeFee: num(r.surge_fee), maxDistanceKm: num(r.max_distance_km),
+    codCustomerLimit: num(r.cod_customer_limit),
     shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold };
 }
 function settingsToDb(p) {
