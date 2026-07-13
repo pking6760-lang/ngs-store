@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
-import { useOrders, useSettings, useUserNotifications, useWallet } from "../lib/hooks.js";
+import { useMyOrders, useSettings, useUserNotifications, useWallet } from "../lib/hooks.js";
 import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
@@ -48,7 +48,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
         {isLoggedIn && (
           <div className="account-hello">
             <div className="account-avatar">
-              {user.name.charAt(0).toUpperCase()}
+              {(user.name || "?").trim().charAt(0).toUpperCase() || "?"}
             </div>
             <div className="account-hello-info">
               <div className="account-name">
@@ -90,7 +90,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
               }}
             />
           )}
-          {tab === "wallet" && <WalletTab />}
+          {tab === "wallet" && <WalletTab userId={user?.id} />}
           {tab === "inbox" && <Inbox notes={notes} userId={user?.id} />}
           {tab === "rewards" && <Rewards user={user} />}
           {tab === "membership" && <Membership />}
@@ -117,12 +117,9 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
 }
 
 function MyOrders({ user, onReorder }) {
-  const allOrders = useOrders();
+  // RLS-scoped fetch of only this user's own orders (not the admin all-orders path).
+  const myOrders = useMyOrders(user?.id);
   const [openId, setOpenId] = useState(null);
-  const myOrders = useMemo(
-    () => allOrders.filter((o) => o.userId === user?.id),
-    [allOrders, user]
-  );
   const openOrder = myOrders.find((o) => o.id === openId) || null;
 
   if (myOrders.length === 0) {
@@ -331,8 +328,8 @@ function RatingBox({ order }) {
   );
 }
 
-function WalletTab() {
-  const { balance, ledger } = useWallet();
+function WalletTab({ userId }) {
+  const { balance, ledger } = useWallet(userId);
   return (
     <div className="wallet-tab">
       <div className="wallet-card">
@@ -515,16 +512,30 @@ function Profile() {
     address: user?.address || "",
   });
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
     setSaved(false);
+    setError("");
   }
 
-  function save(e) {
+  async function save(e) {
     e.preventDefault();
-    updateProfile(form);
-    setSaved(true);
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      // Only show "Saved" once the server actually confirms.
+      const res = await updateProfile(form);
+      if (res && res.ok === false) setError(res.error || "Couldn't save. Please try again.");
+      else setSaved(true);
+    } catch (err) {
+      setError(err?.message || "Couldn't save. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -563,9 +574,10 @@ function Profile() {
         />
       </label>
 
-      <button className="checkout-btn" type="submit">
-        Save changes
+      <button className="checkout-btn" type="submit" disabled={busy}>
+        {busy ? "Saving…" : "Save changes"}
       </button>
+      {error && <div className="auth-error">{error}</div>}
       {saved && <div className="profile-saved">✅ Saved</div>}
     </form>
   );

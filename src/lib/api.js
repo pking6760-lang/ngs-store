@@ -360,7 +360,10 @@ export async function fetchMyNotifications() {
   const { data, error } = await must()
     .from("notifications").select("*").order("created_at", { ascending: false });
   if (error) throw error;
-  return data || [];
+  // Map to the app shape (createdAt) so timestamps render in the inbox.
+  return (data || []).map((n) => ({
+    id: n.id, title: n.title, body: n.body, read: n.read, createdAt: n.created_at,
+  }));
 }
 
 export async function markNotificationsRead() {

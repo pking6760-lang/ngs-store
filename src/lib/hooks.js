@@ -62,21 +62,31 @@ export function useAdminProducts() {
   return products;
 }
 
-// Customer NGS wallet: { balance, ledger }. Balance is the sum of the ledger
-// (RLS lets a customer read only their own rows).
-export function useWallet() {
-  const empty = { balance: 0, ledger: [] };
-  if (BACKEND)
-    return useBackend(
-      async () => {
-        const ledger = await api.fetchWalletLedger();
-        return { balance: ledger.reduce((s, e) => s + e.amount, 0), ledger };
-      },
-      ["customer_wallet"],
-      empty
-    );
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const [w] = useState(empty);
+// Customer NGS wallet: { balance, ledger }. Keyed on the signed-in user so it
+// RESETS on login/logout (never shows a previous account's balance), and only
+// ever holds the caller's own rows (also enforced by RLS).
+export function useWallet(userId) {
+  const [w, setW] = useState({ balance: 0, ledger: [] });
+  useEffect(() => {
+    if (!BACKEND || !userId) { setW({ balance: 0, ledger: [] }); return; }
+    let alive = true;
+    const load = () =>
+      api.fetchWalletLedger()
+        .then((ledger) => alive && setW({ balance: ledger.reduce((s, e) => s + e.amount, 0), ledger }))
+        .catch(() => {});
+    load();
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    const u1 = api.subscribeTable("customer_wallet", load);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", load);
+    const poll = setInterval(load, 30000);
+    return () => {
+      alive = false; u1 && u1();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", load);
+      clearInterval(poll);
+    };
+  }, [userId]);
   return w;
 }
 

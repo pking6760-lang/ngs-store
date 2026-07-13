@@ -57,6 +57,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [showMap, setShowMap] = useState(false);
   const [payLink, setPayLink] = useState(null); // { url, order, count } for online QR pay
   const searchTimer = useRef();
+  const submitLock = useRef(false); // prevents double order submission
 
   const lines = Object.entries(items)
     .map(([id, qty]) => {
@@ -287,6 +288,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const cleanPhone = phone.replace(/\D/g, "");
 
   async function proceedFromCheckout() {
+    // Re-entrancy lock: block a double-tap during the (async) profile save
+    // before `placing` is set, so we never create two orders / double-debit.
+    if (submitLock.current || placing) return;
     if (!address.trim()) {
       setLocError("Please enter a delivery address.");
       return;
@@ -305,16 +309,21 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       return;
     }
     setLocError("");
-    // Save address + phone to the profile. Await it so the server has the phone
-    // when place_order records the order (needed to call the customer).
-    if (address.trim() !== user?.address || cleanPhone !== user?.phone) {
-      await updateProfile({ address: address.trim(), phone: cleanPhone });
+    submitLock.current = true;
+    try {
+      // Save address + phone to the profile. Await it so the server has the phone
+      // when place_order records the order (needed to call the customer).
+      if (address.trim() !== user?.address || cleanPhone !== user?.phone) {
+        await updateProfile({ address: address.trim(), phone: cleanPhone });
+      }
+      // Wallet covers the whole order → nothing to pay online, place it directly.
+      if (payable === 0) await placeOrder();
+      else if (payment === "razorpay") await startRazorpay();
+      else if (payment === "upi") setStep("pay");
+      else await placeOrder();
+    } finally {
+      submitLock.current = false;
     }
-    // Wallet covers the whole order → nothing to pay online, place it directly.
-    if (payable === 0) placeOrder();
-    else if (payment === "razorpay") startRazorpay();
-    else if (payment === "upi") setStep("pay");
-    else placeOrder();
   }
 
   // Verified online payment. Flow: create a HELD order on the server (real total
@@ -487,7 +496,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     onClose();
   }
 
-  const upiLink = buildUpiLink({ amount: grandTotal, note: "NGS Store order" });
+  const upiLink = buildUpiLink({ amount: payable, note: "NGS Store order" });
   const storeClosed = !settings.storeOpen;
 
   return (
@@ -536,6 +545,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 ? "✅ Paid online"
                 : placed.payment === "upi"
                 ? "Paid via UPI"
+                : placed.payment === "wallet"
+                ? "✅ Paid with NGS Wallet"
                 : "Cash on delivery"}
             </p>
             {placed.pointsEarned > 0 && (
@@ -578,7 +589,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         ) : step === "pay" ? (
           <div className="pay-step">
             <div className="pay-amount">
-              Amount to pay <strong>₹{grandTotal}</strong>
+              Amount to pay <strong>₹{payable.toFixed(2)}</strong>
               <span className="pay-fixed">🔒 Fixed amount — pre-filled for you</span>
             </div>
             <div className="upi-qr-wrap">
@@ -588,7 +599,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </p>
             </div>
             <a className="upi-app-btn" href={upiLink}>
-              📱 Open UPI app to pay ₹{grandTotal}
+              📱 Open UPI app to pay ₹{payable.toFixed(2)}
             </a>
             <div className="upi-id-row">
               <span>Or pay to UPI ID</span>
