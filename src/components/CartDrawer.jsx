@@ -580,7 +580,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </p>
             </div>
             <button className="upi-app-btn" onClick={payOnThisPhone}>
-              📱 Or pay on this phone
+              Pay with UPI app
             </button>
             <p className="upi-note">
               ⏳ Waiting for payment… this screen updates automatically the moment
