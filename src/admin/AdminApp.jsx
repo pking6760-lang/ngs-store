@@ -7,6 +7,7 @@ import SmartPricing from "./SmartPricing.jsx";
 import OrdersAdmin from "./OrdersAdmin.jsx";
 import CouponsAdmin from "./CouponsAdmin.jsx";
 import CustomersAdmin from "./CustomersAdmin.jsx";
+import FeedbackAdmin from "./FeedbackAdmin.jsx";
 import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import PartnersAdmin from "./PartnersAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
@@ -35,6 +36,7 @@ const TILES = [
   { id: "products", label: "Products", icon: "📦", tint: "#F08C00" },
   { id: "pricing", label: "Smart Pricing", icon: "🏷️", tint: "#12B886" },
   { id: "customers", label: "Customers", icon: "👥", tint: "#7048E8" },
+  { id: "feedback", label: "Feedback", icon: "⭐", tint: "#F59F00" },
   { id: "partners", label: "Partners", icon: "🛵", tint: "#0CA678" },
   { id: "delivery", label: "Delivery", icon: "🚴", tint: "#0C8599" },
   { id: "offers", label: "Offers", icon: "🎟️", tint: "#E64980" },
@@ -153,6 +155,7 @@ function AdminSection({ view, onOpen }) {
             {view === "pricing" && <SmartPricing />}
             {view === "orders" && <OrdersAdmin />}
             {view === "customers" && <CustomersAdmin />}
+            {view === "feedback" && <FeedbackAdmin />}
             {view === "partners" && <PartnersAdmin />}
             {view === "delivery" && <DeliveryAdmin />}
             {view === "offers" && <CouponsAdmin />}

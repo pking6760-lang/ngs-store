@@ -269,12 +269,24 @@ function RatingBox({ order }) {
   const [hover, setHover] = useState(0);
   const [feedback, setFeedback] = useState(order.feedback || "");
   const [done, setDone] = useState(!!order.rating);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  function submit() {
-    if (!stars) return;
-    if (api.isBackendConfigured) api.rateOrder(order.dbId, stars, feedback).catch(() => {});
-    else setOrderRating(order.id, stars, feedback);
-    setDone(true);
+  async function submit() {
+    if (!stars || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      // Only mark it saved once the server actually confirms — otherwise the
+      // rating silently fails and keeps re-prompting on the next open.
+      if (api.isBackendConfigured) await api.rateOrder(order.dbId, stars, feedback);
+      else setOrderRating(order.id, stars, feedback);
+      setDone(true);
+    } catch (e) {
+      setError(e?.message || "Couldn't save your rating. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -305,8 +317,9 @@ function RatingBox({ order }) {
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Tell us how it went (optional)"
           />
-          <button className="rating-submit" onClick={submit} disabled={!stars}>
-            Submit rating
+          {error && <p className="rating-error">{error}</p>}
+          <button className="rating-submit" onClick={submit} disabled={!stars || busy}>
+            {busy ? "Saving…" : "Submit rating"}
           </button>
         </>
       )}
