@@ -2413,6 +2413,18 @@ body {
 .pw-stat strong { font-size: 18px; color: #1a7f47; }
 .pw-stat strong.neg { color: #c0392b; }
 .pw-stat strong.warn { color: #c77700; }
+.pending-banner {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: #fff4e6; border: 1px solid #ffd8a8; color: #9a5b00;
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+  font-size: 13px; font-weight: 700;
+}
+.pending-banner:active { background: #ffe8cc; }
+.requests-link, .requests-back {
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+  background: none; border: none; color: #3B5BDB; font-weight: 700; font-size: 13.5px;
+  padding: 4px 0; margin-bottom: 10px;
+}
 .pwallet-fix { display: flex; gap: 8px; margin-top: 8px; }
 .fix-btn { flex: 1; padding: 9px; border-radius: 10px; border: 1px dashed #cbd3dd; background: #f7f9fc;
   color: #475060; font-weight: 700; font-size: 12.5px; cursor: pointer; }

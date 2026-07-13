@@ -181,13 +181,13 @@ function AdjustModal({ partner, bal, onCancel, onSubmit }) {
 
 export default function PartnersAdmin() {
   const partners = usePartners();
-  const [filter, setFilter] = useState("pending");
   const [openId, setOpenId] = useState(null);
   const [busy, setBusy] = useState(null);
   const [viewer, setViewer] = useState(null);
   const [err, setErr] = useState("");
   const [wallets, setWallets] = useState({});
   const [approved, setApproved] = useState(false);
+  const [view, setView] = useState("team"); // 'team' (approved) | 'requests' (pending + rejected)
 
   const loadWallets = () => api.fetchPartnerWallets().then(setWallets).catch(() => {});
   useEffect(() => {
@@ -196,7 +196,15 @@ export default function PartnersAdmin() {
     return () => unsubs.forEach((u) => u && u());
   }, [partners.length]);
 
-  const shown = partners.filter((p) => (filter === "all" ? true : p.status === filter));
+  const byName = (a, b) => a.fullName.localeCompare(b.fullName);
+  // Home shows your team (approved). Pending + rejected live in a separate
+  // "requests" view so they don't clutter the working list.
+  const team = partners.filter((p) => p.status === "approved").sort(byName);
+  const requests = partners
+    .filter((p) => p.status !== "approved")
+    .sort((a, b) => (a.status === "pending" ? 0 : 1) - (b.status === "pending" ? 0 : 1) || byName(a, b));
+  const pendingCount = partners.filter((p) => p.status === "pending").length;
+  const shown = view === "requests" ? requests : team;
   const cashOnRoad = Object.values(wallets).reduce((s, w) => s + (w.cashInHand || 0), 0);
   const holders = Object.values(wallets).filter((w) => (w.cashInHand || 0) > 0).length;
 
@@ -220,19 +228,31 @@ export default function PartnersAdmin() {
           <small>held by {holders} partner{holders === 1 ? "" : "s"}</small>
         </div>
       )}
-      <div className="toolbar">
-        <div className="filter-chips">
-          {["pending", "approved", "rejected", "all"].map((f) => (
-            <button key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-              {f[0].toUpperCase() + f.slice(1)}
-              {f === "pending" && partners.some((p) => p.status === "pending") ? " ●" : ""}
+      {view === "team" ? (
+        <>
+          {pendingCount > 0 && (
+            <button className="pending-banner" onClick={() => setView("requests")}>
+              🔔 {pendingCount} partner{pendingCount === 1 ? "" : "s"} waiting for your approval — review →
             </button>
-          ))}
-        </div>
-      </div>
+          )}
+          {pendingCount === 0 && requests.length > 0 && (
+            <button className="requests-link" onClick={() => setView("requests")}>
+              Requests ({requests.length}) →
+            </button>
+          )}
+        </>
+      ) : (
+        <button className="requests-back" onClick={() => { setView("team"); setOpenId(null); }}>
+          ← Back to team
+        </button>
+      )}
 
       {shown.length === 0 ? (
-        <section className="panel"><p className="panel-empty">No partners in this view.</p></section>
+        <section className="panel">
+          <p className="panel-empty">
+            {view === "requests" ? "No pending or rejected requests." : "No approved partners yet."}
+          </p>
+        </section>
       ) : (
         <div className="orders-list">
           {shown.map((p) => {
