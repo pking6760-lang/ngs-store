@@ -734,6 +734,7 @@ button {
   color: var(--muted);
   text-align: center;
 }
+.free-hint-note { display: block; font-size: 11px; opacity: 0.8; margin-top: 2px; }
 .checkout-btn {
   background: var(--green);
   color: #fff;

@@ -1820,6 +1820,7 @@ body {
   vertical-align: middle;
 }
 .stock-tag.out { background: #fdecec; color: #c0392b; }
+.stock-tag.exempt { background: #fff4e0; color: #b26a00; }
 .stock-field { margin-top: 4px; }
 .stock-toggle {
   display: inline-flex;
@@ -1846,6 +1847,7 @@ body {
 .stock-toggle.on .stock-knob::after { transform: translateX(16px); }
 .stock-toggle.on .stock-label { color: var(--green-dark, #2B44A8); }
 .stock-toggle.off .stock-label { color: #c0392b; }
+.field-note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
 
 /* ─── Offers / coupons admin ─────────────────────────────── */
 .offers-wrap { display: flex; flex-direction: column; gap: 18px; }

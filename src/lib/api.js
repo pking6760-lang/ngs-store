@@ -62,6 +62,9 @@ function mapProduct(r) {
     // Public merchandising flags: `bait` (best-price deal) and `hot` (selling
     // fast). Cost, tier and the sales numbers are admin-only (fetchAdminProducts).
     bait: !!r.bait, hot: !!r.hot,
+    // Low-margin item (milk/curd/bread): its value does NOT count toward the
+    // free-delivery threshold. Still buyable and counts toward everything else.
+    freeDeliveryExempt: !!r.free_delivery_exempt,
     bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [] };
 }
 function mapCategory(r) {

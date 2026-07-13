@@ -18,6 +18,7 @@ function productToDb(p) {
     barcode: p.barcode ? String(p.barcode).replace(/\D/g, "") || null : null,
     image_url: p.image || null, category: p.category,
     stock: p.stock === "" || p.stock == null ? null : Number(p.stock),
+    free_delivery_exempt: p.freeDeliveryExempt === true,
     active: p.active !== false };
 }
 export async function upsertProduct(p) {

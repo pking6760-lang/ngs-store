@@ -128,6 +128,9 @@ export default function ProductsAdmin() {
                       {p.inStock === false && (
                         <span className="stock-tag out">Out of stock</span>
                       )}
+                      {p.freeDeliveryExempt && (
+                        <span className="stock-tag exempt">No free-del</span>
+                      )}
                       <span className={`cell-barcode ${p.barcode ? "has" : "none"}`}>
                         {p.barcode ? `📷 ${p.barcode}` : "no barcode"}
                       </span>
@@ -595,6 +598,24 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
                 {form.inStock === false ? "Out of stock" : "In stock"}
               </span>
             </button>
+          </label>
+
+          <label className="field wide stock-field">
+            <span>Free-delivery counting</span>
+            <button
+              type="button"
+              className={`stock-toggle ${form.freeDeliveryExempt ? "off" : "on"}`}
+              onClick={() => update("freeDeliveryExempt", !form.freeDeliveryExempt)}
+            >
+              <span className="stock-knob" />
+              <span className="stock-label">
+                {form.freeDeliveryExempt ? "Excluded from ₹ minimum" : "Counts toward free delivery"}
+              </span>
+            </button>
+            <small className="field-note">
+              Turn OFF for ultra-low-margin items (milk, curd, bread) so their
+              value doesn't help unlock free delivery. Customers can still buy them.
+            </small>
           </label>
 
           <label className="field">

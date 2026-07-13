@@ -75,6 +75,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   }, [lines, setQty]);
 
   const itemTotal = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
+  // Ultra-low-margin items (milk, curd, bread) don't count toward the
+  // free-delivery minimum. They're still in the cart total — just excluded here.
+  const qualifyingTotal = lines.reduce(
+    (sum, l) => sum + (l.product.freeDeliveryExempt ? 0 : l.unit * l.qty),
+    0
+  );
   const savings = lines.reduce(
     (sum, l) => sum + (l.product.mrp - l.unit) * l.qty,
     0
@@ -125,7 +131,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const HANDLING_FEE = settings.handlingFee ?? 5;
   const SURGE_FEE = settings.surgeFee ?? 0;
   let deliveryFee =
-    itemTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
+    qualifyingTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
   let freeReason = deliveryFee === 0 && itemTotal > 0 ? "order" : null;
   if (isMember && itemTotal > 0 && deliveryFee > 0) {
     deliveryFee = 0;
@@ -974,7 +980,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {!isMember && deliveryFee > 0 && (
                 <div className="free-hint">
-                  Add ₹{FREE_DELIVERY_ABOVE - itemTotal} more for FREE delivery
+                  Add ₹{Math.max(0, FREE_DELIVERY_ABOVE - qualifyingTotal)} more for FREE delivery
+                  {itemTotal > qualifyingTotal && (
+                    <small className="free-hint-note"> (milk, curd &amp; bread don't count)</small>
+                  )}
                 </div>
               )}
               {itemTotal > 0 && (
