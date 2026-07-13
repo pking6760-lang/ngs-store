@@ -422,7 +422,10 @@ body {
 .adm-dd-caret { color: #2B44A8; font-size: 12px; flex: none; }
 .adm-dd-overlay {
   position: fixed; inset: 0; background: rgba(16,22,40,0.45);
-  display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 60;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  /* Above the product/coupon modals it's opened from (which are z-index 80+),
+     so the option sheet is never trapped behind the editor. */
+  z-index: 3300;
 }
 .adm-dd-sheet {
   width: 100%; max-width: 400px; max-height: 72vh; overflow: hidden;
