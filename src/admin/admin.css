@@ -2176,6 +2176,12 @@ body {
 .od-status.done { border-color: #cfe9db; color: #7bbf9f; background: #f5fbf8; }
 .od-status.current { background: #3B5BDB; color: #fff; border-color: #3B5BDB; }
 .od-status:disabled { cursor: default; }
+.od-role-actions { display: flex; flex-direction: column; gap: 10px; }
+.od-role-actions .od-status { flex: 1 1 100%; padding: 14px; font-size: 15px; }
+.od-role-wait {
+  background: #f5f7ff; border: 1px dashed #c3cdf5; color: #4a5680;
+  border-radius: 10px; padding: 13px; text-align: center; font-weight: 700; font-size: 13.5px;
+}
 
 /* ── Print receipt button ─────────────────────────────────────────────────── */
 .print-btn {

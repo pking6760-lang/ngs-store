@@ -211,6 +211,9 @@ export default function OrdersAdmin() {
 
 function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
   const curIdx = ORDER_STATUSES.indexOf(o.status);
+  // The owner does a track only when no staff partner is assigned to it.
+  const ownerPacks = !o.pickerId;
+  const ownerDelivers = !o.riderId;
   const [statusBusy, setStatusBusy] = useState(null);
   async function doChange(s) { setStatusBusy(s); try { await changeStatus(o, s); } finally { setStatusBusy(null); } }
   const bill = [
@@ -345,17 +348,38 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
             ) : o.status === "Delivered" ? (
               <div className="order-done-tag">✓ Delivered — order complete</div>
             ) : (
-              <div className="od-status-btns">
-                {ORDER_STATUSES.map((s, i) => (
-                  <button
-                    key={s}
-                    className={`od-status ${i < curIdx ? "done" : ""} ${i === curIdx ? "current" : ""}`}
-                    disabled={i <= curIdx || statusBusy}
-                    onClick={() => doChange(s)}
-                  >
-                    {statusBusy === s ? <span className="ngs-spin" /> : <>{i < curIdx ? "✓ " : ""}{s}</>}
-                  </button>
-                ))}
+              // Role-scoped: you only act on the track no staff partner is
+              // covering. A staff picker owns packing (picker_id set); a staff
+              // driver owns delivery (rider_id set) — those steps are theirs.
+              <div className="od-role-actions">
+                {/* Packing step (before Packed) */}
+                {curIdx < 1 && (
+                  ownerPacks ? (
+                    <button className="od-status current" disabled={!!statusBusy} onClick={() => doChange("Packed")}>
+                      {statusBusy === "Packed" ? <span className="ngs-spin" /> : "📦 Mark packed"}
+                    </button>
+                  ) : (
+                    <div className="od-role-wait">🧺 Picker is packing this order…</div>
+                  )
+                )}
+                {/* Delivery step (after Packed) */}
+                {curIdx >= 1 && (
+                  ownerDelivers ? (
+                    o.status === "Packed" ? (
+                      <button className="od-status current" disabled={!!statusBusy} onClick={() => doChange("Out for delivery")}>
+                        {statusBusy === "Out for delivery" ? <span className="ngs-spin" /> : "🛵 Out for delivery"}
+                      </button>
+                    ) : (
+                      <button className="od-status current" disabled={!!statusBusy} onClick={() => doChange("Delivered")}>
+                        {statusBusy === "Delivered" ? <span className="ngs-spin" /> : "✓ Mark delivered"}
+                      </button>
+                    )
+                  ) : (
+                    <div className="od-role-wait">
+                      🛵 {o.status === "Out for delivery" ? "Driver is on the way…" : "Waiting for the driver to pick up…"}
+                    </div>
+                  )
+                )}
               </div>
             )}
           </section>

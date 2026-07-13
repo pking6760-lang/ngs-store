@@ -13,15 +13,13 @@ export default function IncomingOrder() {
   const orders = useOrders();
   const [slide, setSlide] = useState(0); // 0..100 slide-to-accept progress
 
-  // Oldest order still waiting for a decision. Dismiss as soon as SOMEONE has
-  // taken it — the admin sliding to accept (accepted === true) OR an assigned
-  // partner accepting in the NGS Partner app (delivery/picker state 'accepted').
+  // The owner's alarm is a PACKING alarm: it fires only for a brand-new order
+  // that the owner must pack — i.e. no staff picker is on it (picker_id null).
+  // If a staff picker is handling packing, the owner isn't needed and it stays
+  // silent, even if a driver has taken the delivery. Delivery that later falls
+  // to the owner appears as buttons on the order the owner is already packing.
   const pending = orders.filter(
-    (o) =>
-      o.accepted !== true &&
-      o.status !== "Cancelled" &&
-      o.deliveryState !== "accepted" &&
-      o.pickerState !== "accepted"
+    (o) => o.accepted !== true && o.status === "Placed" && !o.pickerId
   );
   const order = pending.length ? pending[pending.length - 1] : null;
 
