@@ -102,6 +102,16 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
   );
 }
 
+/* Clean monochrome QR glyph (inherits currentColor) — replaces the emoji. */
+function QrGlyph() {
+  return (
+    <svg className="qr-glyph" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5z" />
+      <path d="M13 13h3v3h-3v-3zm5 0h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3z" />
+    </svg>
+  );
+}
+
 /* ── Live order card ────────────────────────────────────────────────────── */
 function LiveOrder({ task, busy, onAction }) {
   const isDelivery = task.role === "delivery";
@@ -143,10 +153,11 @@ function LiveOrder({ task, busy, onAction }) {
                 : <span className="lo-paid">✓ Prepaid</span>}
           </div>
 
-          {!task.paid && task.isCod && (
+          {accepted && !task.paid && task.isCod && (
             <>
               <button className="lo-qr-btn" onClick={showQr}>
-                {qr && qr !== "error" ? "▲ Hide UPI QR" : "📲 Show UPI QR (customer pays now)"}
+                <QrGlyph />
+                <span>{qr && qr !== "error" ? "Hide UPI QR" : "Show UPI QR — customer pays now"}</span>
               </button>
               {qr === "loading" && (
                 <div className="lo-qr-wrap">

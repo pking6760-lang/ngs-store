@@ -175,16 +175,19 @@
 /* Doorstep UPI QR on the rider card */
 .lo-qr-btn { width: 100%; border: 1px solid rgba(255,71,87,0.5); background: rgba(229,18,46,0.12); color: #FF4757;
   font-weight: 800; font-size: 14px; padding: 13px; border-radius: 12px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px; }
+  display: flex; align-items: center; justify-content: center; gap: 9px; }
 .lo-qr-btn:active { background: rgba(229,18,46,0.2); }
+.qr-glyph { flex: none; }
 .lo-qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 2px; }
-.lo-qr { background: #fff; padding: 12px; border-radius: 14px; }
-.lo-qr img { width: 200px; height: 200px; display: block; }
+/* White QR plate — sized to the screen so it never spills past the card. */
+.lo-qr { background: #fff; padding: 14px; border-radius: 16px; max-width: 100%;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.28); }
+.lo-qr img { width: min(220px, 58vw); height: auto; aspect-ratio: 1 / 1; display: block; }
 .lo-qr-note { text-align: center; font-size: 13px; color: var(--p-sec); margin: 0; }
 .lo-qr-note span { font-size: 11px; color: var(--p-muted); }
 
 /* Rotating "line goes around" loader that forms the QR square */
-.qr-spin { width: 200px; height: 200px; border-radius: 16px; position: relative; overflow: hidden;
+.qr-spin { width: min(220px, 58vw); aspect-ratio: 1 / 1; border-radius: 16px; position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: center; }
 .qr-spin::before { content: ""; position: absolute; inset: -60%;
   background: conic-gradient(from 0deg, transparent 0 72%, var(--p-red-bright) 88%, transparent 100%);
