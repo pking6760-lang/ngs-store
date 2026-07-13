@@ -35,16 +35,41 @@ export async function lookupProductByName(name, categoryNames) {
   }
 }
 
+const norm = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 // Resolve the server's suggested category NAME against the store's categories.
 // Returns { id } for an existing match, or { newName } to propose creating it.
 export function resolveSuggestedCategory(suggestedName, categories) {
   const s = String(suggestedName || "").trim();
   if (!s) return null;
-  const norm = (x) => x.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const target = norm(s);
   const existing = (categories || []).find((c) => norm(c.name) === target);
   if (existing) return { id: existing.id };
   return { newName: s };
+}
+
+// Offline fallback: propose a NEW category from the product name for common
+// kirana items that rarely fit the starter categories — used when the AI
+// classifier returns nothing (e.g. it's unavailable or declined tobacco).
+const NEW_CATEGORY_RULES = [
+  { needles: ["cigarette", "gold flake", "classic", "marlboro", "tobacco", "bidi", "beedi", "gutkha", "gutka", "hookah", "navy cut", "wills", "capstan", "flake"], name: "Tobacco & Cigarettes" },
+  { needles: ["agarbatti", "incense", "dhoop", "camphor", "kapoor", "pooja", "puja", "diya", "matchbox", "match box", "matches"], name: "Pooja Needs" },
+  { needles: ["pen", "pencil", "notebook", "eraser", "stapler", "sketch", "stationery", "sharpener", "geometry box"], name: "Stationery" },
+  { needles: ["diaper", "pampers", "baby wipe", "baby lotion", "cerelac"], name: "Baby Care" },
+  { needles: ["dog food", "cat food", "pedigree", "whiskas", "pet "], name: "Pet Care" },
+  { needles: ["condom", "sanitary", "sanitary pad", "tampon", "stayfree", "whisper", "nappy"], name: "Personal Hygiene" },
+  { needles: ["mosquito", "all out", "good knight", "hit spray", "cockroach", "repellent"], name: "Repellents & Fresheners" },
+];
+export function proposeNewCategory(name, categories) {
+  const hay = norm(name);
+  if (!hay) return null;
+  for (const rule of NEW_CATEGORY_RULES) {
+    if (rule.needles.some((n) => hay.includes(norm(n)))) {
+      const exists = (categories || []).find((c) => norm(c.name) === norm(rule.name));
+      return exists ? { id: exists.id } : { newName: rule.name };
+    }
+  }
+  return null;
 }
 
 // Pick the closest of the store's own categories for a looked-up product, by

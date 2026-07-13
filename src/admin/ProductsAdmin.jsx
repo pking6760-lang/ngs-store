@@ -10,7 +10,7 @@ import {
   deleteCategory,
 } from "../lib/actions.js";
 import { fileToResizedDataUrl } from "../lib/image.js";
-import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory } from "../lib/productLookup.js";
+import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory, proposeNewCategory } from "../lib/productLookup.js";
 import { smartReprice } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
@@ -350,31 +350,38 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   }
 
   function applyLookup(res) {
-    if (!res.found) {
-      setLookup({ busy: false, ok: false, msg: res.reason || "Not found — fill it in by hand." });
-      return;
-    }
-    // Smart category: prefer the server's classification (existing OR a brand-new
-    // proposed name); fall back to local keyword matching.
-    const smart = resolveSuggestedCategory(res.category, categories);
+    // Smart category: the server's classification (existing OR a proposed new
+    // name), falling back to a local keyword rule — works even when full
+    // product DETAILS weren't found (e.g. tobacco).
+    const smart =
+      resolveSuggestedCategory(res.category, categories) ||
+      proposeNewCategory(res.name || form.name, categories);
     let catMsg = "";
     setForm((f) => {
       const next = { ...f };
-      if (res.name) next.name = res.name;
-      if (res.unit) next.unit = res.unit;
+      if (res.found && res.name) next.name = res.name;
+      if (res.found && res.unit) next.unit = res.unit;
       if (smart?.id) {
         next.category = smart.id;
       } else if (smart?.newName) {
         // No existing category fits — propose creating one; the owner confirms.
         next.category = NEW_CAT;
         next.newCategoryName = smart.newName;
-        catMsg = ` New category suggested: “${smart.newName}”.`;
-      } else {
+        catMsg = ` ✨ New category suggested: “${smart.newName}”.`;
+      } else if (res.found) {
         const cat = guessCategory(res, categories);
         if (cat) next.category = cat;
       }
       return next;
     });
+    if (!res.found) {
+      setLookup({
+        busy: false,
+        ok: !!smart,
+        msg: (smart ? "Set the category below." : (res.reason || "Not found — fill it in by hand.")) + catMsg,
+      });
+      return;
+    }
     setLookup({ busy: false, ok: true, msg: "Got the details — add your photo, price & stock." + catMsg });
   }
 

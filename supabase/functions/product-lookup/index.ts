@@ -26,10 +26,18 @@ const OFF_DBS = [
 ];
 const FIELDS = "product_name,product_name_en,brands,quantity,categories_tags";
 
+// fetch with a hard timeout so a slow upstream never hangs the whole function.
+async function fetchT(url: string, opts: RequestInit = {}, ms = 7000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
+}
+
 async function offLookup(barcode: string) {
   for (const base of OFF_DBS) {
     try {
-      const r = await fetch(`${base}/api/v2/product/${barcode}.json?fields=${FIELDS}`);
+      const r = await fetchT(`${base}/api/v2/product/${barcode}.json?fields=${FIELDS}`, {}, 5000);
       if (!r.ok) continue;
       const d = await r.json();
       if (d.status === 1 && d.product) {
@@ -61,15 +69,18 @@ async function geminiCall(prompt: string, useSearch: boolean) {
     generationConfig: { temperature: 0 },
   };
   if (useSearch) body.tools = [{ google_search: {} }];
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
-  );
-  if (!r.ok) return null;
-  const d = await r.json();
-  const text: string = (d?.candidates?.[0]?.content?.parts ?? [])
-    .map((p: { text?: string }) => p.text || "").join("");
-  return text || null;
+  try {
+    const r = await fetchT(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      8000,
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    const text: string = (d?.candidates?.[0]?.content?.parts ?? [])
+      .map((p: { text?: string }) => p.text || "").join("");
+    return text || null;
+  } catch { return null; }
 }
 
 async function geminiLookup(barcode: string, name: string) {
@@ -84,11 +95,11 @@ async function geminiLookup(barcode: string, name: string) {
     `{"name":"full product name including brand and flavour/variant","brand":"brand","weight":"net weight or quantity like 100 g, 1 L, 10 pcs"}. ` +
     `If you genuinely cannot identify it, reply {"name":""}.`;
   try {
-    // Prefer live Google Search grounding; fall back to the model's own
-    // knowledge (covers the major Indian brands) when grounding isn't enabled.
-    let text = await geminiCall(prompt, true);
-    let source = "web";
-    if (!text) { text = await geminiCall(prompt, false); source = "gemini"; }
+    // Single model-knowledge call — fast, covers the major Indian brands, and
+    // conserves the (rate-limited) Gemini quota. Grounding search was slower and
+    // rate-limited without adding much, so it's no longer used here.
+    const text = await geminiCall(prompt, false);
+    const source = "gemini";
     if (!text) return null;
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) return null;
@@ -133,12 +144,21 @@ Deno.serve(async (req) => {
     const cats = Array.isArray(body.categories) ? body.categories.map(String) : [];
     if (!code && !typed) return json({ found: false, reason: "No barcode or name." });
 
+    // Classify from the typed name in parallel with the details lookup, so a
+    // name-search returns a category even if product DETAILS can't be found
+    // (e.g. tobacco, where the details lookup may come back empty).
+    const catFromTyped = typed ? classifyCategory(typed, "", cats) : Promise.resolve("");
+
     let hit = code ? await offLookup(code) : null;
     if (!hit) hit = await geminiLookup(code, typed);
-    if (!hit) return json({ found: false, barcode: code, reason: "Not found — please fill it in." });
 
-    // Suggest the best category (existing or brand-new) for this product.
-    const category = await classifyCategory(hit.name, hit.brand || "", cats);
+    let category = await catFromTyped;
+    if (!category && hit?.name) category = await classifyCategory(hit.name, hit.brand || "", cats);
+
+    if (!hit) {
+      // Details unknown, but we may still have a category suggestion for the name.
+      return json({ found: false, barcode: code, category, reason: "Couldn't find full details — fill in name & size." });
+    }
     return json({ found: true, barcode: code, category, ...hit });
   } catch {
     return json({ found: false, reason: "Lookup failed — please fill it in." });
