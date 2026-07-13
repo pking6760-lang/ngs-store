@@ -216,7 +216,12 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
   const earnings = wallet.ledger.filter((l) => l.kind === "earning");
   const todays = earnings.filter((l) => istParts(l.at).dateISO === today);
   const todayTotal = todays.reduce((s, l) => s + l.amount, 0);
-  const todaySlot = slots.find((s) => s.date === today && s.status !== "cancelled");
+  // Show the slot that's active now or coming up next today — not one that has
+  // already ended. A 2-hour slot at hour h runs until h+2.
+  const nowHourIST = parseInt(new Intl.DateTimeFormat("en-GB", { timeZone: IST, hour: "2-digit", hour12: false }).format(new Date()), 10);
+  const todaySlot = slots
+    .filter((s) => s.date === today && s.status !== "cancelled" && s.hour + 2 > nowHourIST)
+    .sort((a, b) => a.hour - b.hour)[0];
   const firstName = (name || "there").split(" ")[0];
 
   async function toggle() {
