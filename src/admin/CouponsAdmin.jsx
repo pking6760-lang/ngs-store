@@ -18,11 +18,12 @@ export default function CouponsAdmin() {
 }
 
 function RewardsSettings({ settings }) {
-  const cfg = settings.rewards || { earnPoints: 50, earnPer: 399, redeemPer: 10 };
+  const cfg = settings.rewards || {};
   const [form, setForm] = useState({
-    earnPoints: cfg.earnPoints,
-    earnPer: cfg.earnPer,
-    redeemPer: cfg.redeemPer,
+    marginPointsPerRupee: cfg.marginPointsPerRupee ?? 0.4,
+    pointsMinMarginPct: cfg.pointsMinMarginPct ?? 12,
+    redeemPer: cfg.redeemPer ?? 10,
+    maxRedeemPct: cfg.maxRedeemPct ?? 20,
   });
   const [saved, setSaved] = useState(false);
 
@@ -34,61 +35,59 @@ function RewardsSettings({ settings }) {
   function save() {
     updateSettings({
       rewards: {
-        earnPoints: Math.max(0, Number(form.earnPoints) || 0),
-        earnPer: Math.max(1, Number(form.earnPer) || 1),
+        ...cfg, // keep any legacy fields
+        marginPointsPerRupee: Math.max(0, Number(form.marginPointsPerRupee) || 0),
+        pointsMinMarginPct: Math.max(0, Number(form.pointsMinMarginPct) || 0),
         redeemPer: Math.max(1, Number(form.redeemPer) || 1),
+        maxRedeemPct: Math.min(100, Math.max(0, Number(form.maxRedeemPct) || 0)),
       },
     });
     setSaved(true);
   }
 
+  // Preview: a product with ₹50 profit → points given.
+  const previewPts = Math.floor(50 * (Number(form.marginPointsPerRupee) || 0));
+
   return (
     <section className="panel offer-card">
       <h3>Reward points</h3>
-      <p className="sub">Decide how customers earn and redeem points.</p>
+      <p className="sub">Points are earned from your PROFIT — only on items above the margin threshold — and redeemed as money.</p>
 
       <div className="rewards-rule">
-        <span>Earn</span>
-        <input
-          type="number"
-          min="0"
-          value={form.earnPoints}
-          onChange={(e) => set("earnPoints", e.target.value)}
-        />
-        <span>points for every ₹</span>
-        <input
-          type="number"
-          min="1"
-          value={form.earnPer}
-          onChange={(e) => set("earnPer", e.target.value)}
-        />
-        <span>spent.</span>
+        <span>Give</span>
+        <input type="number" min="0" step="0.1" value={form.marginPointsPerRupee}
+          onChange={(e) => set("marginPointsPerRupee", e.target.value)} />
+        <span>points per ₹1 of profit.</span>
       </div>
       <div className="rewards-rule">
-        <input
-          type="number"
-          min="1"
-          value={form.redeemPer}
-          onChange={(e) => set("redeemPer", e.target.value)}
-        />
+        <span>Only items with margin above</span>
+        <input type="number" min="0" value={form.pointsMinMarginPct}
+          onChange={(e) => set("pointsMinMarginPct", e.target.value)} />
+        <span>% earn points.</span>
+      </div>
+      <div className="rewards-rule">
+        <input type="number" min="1" value={form.redeemPer}
+          onChange={(e) => set("redeemPer", e.target.value)} />
         <span>points = ₹1 off at checkout.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Customers can pay up to</span>
+        <input type="number" min="0" max="100" value={form.maxRedeemPct}
+          onChange={(e) => set("maxRedeemPct", e.target.value)} />
+        <span>% of an order with points.</span>
       </div>
 
       <p className="rewards-preview">
-        Example: a ₹{form.earnPer || 0} order earns{" "}
-        <strong>{form.earnPoints || 0} points</strong>
-        {" "}(≈ ₹
-        {form.redeemPer ? Math.floor((form.earnPoints || 0) / form.redeemPer) : 0} back).
+        Example: a product you make <strong>₹50 profit</strong> on gives{" "}
+        <strong>{previewPts} points</strong>
+        {" "}(≈ ₹{form.redeemPer ? (previewPts / form.redeemPer).toFixed(1) : 0} back).
+        Low-margin staples (milk/curd/bread) earn nothing.
       </p>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
-        <button className="primary-btn" onClick={save}>
-          Save points rule
-        </button>
+        <button className="primary-btn" onClick={save}>Save points rule</button>
         {saved && (
-          <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>
-            ✅ Saved
-          </span>
+          <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>
         )}
       </div>
     </section>

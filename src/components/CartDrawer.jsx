@@ -94,18 +94,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const isSurge = settings.deliveryMode === "surge";
   const rewardsCfg = settings.rewards;
   const redeemPer = rewardsCfg?.redeemPer || 10;
+  const maxRedeemPct = rewardsCfg?.maxRedeemPct ?? 20;
   const availablePoints = user?.points || 0;
-  // You can't redeem more than the item total.
+  // Redeemable ₹ = the points' value, capped at maxRedeemPct% of the item total
+  // (mirrors the server, which is authoritative). Never more than the items cost.
   const maxRedeemRupees = Math.min(
     redeemableRupees(availablePoints, rewardsCfg),
+    Math.floor((itemTotal * maxRedeemPct) / 100),
     itemTotal
   );
-  // Points redemption at checkout is a demo-only feature for now; on the real
-  // backend, points still EARN on every order (server-side), and spending them
-  // will be added as a server-checked step.
-  const canRedeem = !BACKEND;
-  const discount = usePoints && isLoggedIn && canRedeem ? maxRedeemRupees : 0;
-  const pointsUsed = discount * redeemPer;
+  const canRedeem = isLoggedIn && maxRedeemRupees > 0;
+  const discount = usePoints && canRedeem ? maxRedeemRupees : 0;
+  const pointsUsed = discount * redeemPer; // points to actually spend
 
   // Per-category subtotals + a name lookup, so coupons can require a certain
   // product type or a minimum amount.
@@ -343,6 +343,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         payment: "razorpay",
         address: address.trim(),
         wallet: walletApplied,
+        redeemPoints: pointsUsed,
       });
       // Verified native UPI QR shown ON our page (scan with any app → pays
       // directly → auto-confirms via webhook). No redirect to any gateway page.
@@ -418,6 +419,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         payment: pay,
         address: address.trim(),
         wallet: walletApplied,
+        redeemPoints: pointsUsed,
       }), 900, 1800);
       setPlaced({
         // place_order returns only the order row (no joined items), so count
@@ -1065,7 +1067,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {itemTotal > 0 && (
                 <div className="earn-hint">
-                  You'll earn <strong>{pointsEarned} points</strong> on this order
+                  🎁 You'll earn reward points on this order
                 </div>
               )}
             </div>
