@@ -202,8 +202,8 @@ function OrderDetail({ order, onClose, onReorder }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="order-detail" onClick={(e) => e.stopPropagation()}>
+    <div className="order-detail-sheet">
+      <div className="order-detail">
         <div className="drawer-head">
           <button className="back-btn small" onClick={onClose} aria-label="Back">←</button>
           <h2>Order #{order.id}</h2>
