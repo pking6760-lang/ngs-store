@@ -95,13 +95,20 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
           {tab === "profile" && <Profile />}
         </div>
 
-        {isLoggedIn && (
-          <div className="account-foot">
+        <div className="account-foot">
+          <nav className="legal-links">
+            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
+            <a href="/refunds.html" target="_blank" rel="noopener noreferrer">Refunds</a>
+            <a href="/shipping.html" target="_blank" rel="noopener noreferrer">Shipping</a>
+            <a href="/contact.html" target="_blank" rel="noopener noreferrer">Contact</a>
+          </nav>
+          {isLoggedIn && (
             <button className="logout-btn" onClick={handleLogout}>
               Log out
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
     </>
   );

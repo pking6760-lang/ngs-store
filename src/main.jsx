@@ -16,3 +16,11 @@ createRoot(document.getElementById("root")).render(
     </AuthProvider>
   </StrictMode>
 );
+
+// Register the service worker so the store is installable ("Add to Home
+// Screen"). Web only — the packaged Capacitor apps use their own entry points.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => { /* non-fatal */ });
+  });
+}
