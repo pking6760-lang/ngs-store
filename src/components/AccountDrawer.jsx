@@ -10,12 +10,12 @@ import ProductThumb from "./ProductThumb.jsx";
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
-  { id: "orders", label: "My Orders", icon: "📦" },
-  { id: "wallet", label: "Wallet", icon: "💰" },
-  { id: "inbox", label: "Inbox", icon: "🔔" },
-  { id: "rewards", label: "Rewards", icon: "🎁" },
-  { id: "membership", label: "Membership", icon: "👑" },
-  { id: "profile", label: "Profile", icon: "👤" },
+  { id: "orders", label: "My Orders" },
+  { id: "wallet", label: "Wallet" },
+  { id: "inbox", label: "Inbox" },
+  { id: "rewards", label: "Rewards" },
+  { id: "membership", label: "Membership" },
+  { id: "profile", label: "Profile" },
 ];
 
 export default function AccountDrawer({ open, onClose, initialTab, onOpenCart }) {
@@ -71,7 +71,6 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
               className={`account-tab ${tab === t.id ? "active" : ""}`}
               onClick={() => setTab(t.id)}
             >
-              <span className="account-tab-icon">{t.icon}</span>
               {t.label}
               {t.id === "inbox" && unread > 0 && (
                 <span className="tab-badge">{unread}</span>
