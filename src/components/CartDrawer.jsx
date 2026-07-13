@@ -769,6 +769,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {lines.map(({ product, qty, unit }) => {
                 const nextTier = (product.bulkTiers || []).find((t) => t.q > qty);
                 const bulkOn = unit < product.price;
+                const lineMrp = Math.max(Number(product.mrp) || 0, unit);
                 return (
                 <div className="cart-line" key={product.id}>
                   <div className="cart-line-icon">
@@ -805,7 +806,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     )}
                     <div className="cart-line-price">
                       ₹{unit * qty}
-                      {bulkOn && <span className="cart-line-was">₹{product.price * qty}</span>}
+                      {lineMrp > unit && <span className="cart-line-was">₹{lineMrp * qty}</span>}
                     </div>
                     <button
                       className="line-delete"

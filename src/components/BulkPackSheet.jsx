@@ -9,6 +9,8 @@ export default function BulkPackSheet({ product, onClose }) {
   const { items, setQty } = useCart();
   const inCart = items[product.id] || 0;
   const base = Number(product.price) || 0;
+  // Compare pack prices against the MRP (the true "original"), like Blinkit/Zepto.
+  const mrp = Math.max(Number(product.mrp) || 0, base);
   const tiers = Array.isArray(product.bulkTiers) ? product.bulkTiers : [];
   const stock = typeof product.stock === "number" ? product.stock : Infinity;
   // Pack of 1 (base) plus one option per bulk tier quantity.
@@ -30,7 +32,7 @@ export default function BulkPackSheet({ product, onClose }) {
           {packs.map((q) => {
             const unit = bulkUnitPrice(product, q);
             const total = unit * q;
-            const orig = base * q;
+            const orig = mrp * q;
             const save = orig - total;
             const selected = inCart === q;
             return (
