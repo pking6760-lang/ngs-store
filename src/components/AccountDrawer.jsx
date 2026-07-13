@@ -6,6 +6,7 @@ import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../li
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
+import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
@@ -37,6 +38,11 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
   }
 
   const active = TABS.find((t) => t.id === tab);
+
+  // Back button / gesture: close the drawer at the menu, or step back from a
+  // section page to the menu — never fall through to the website home.
+  useBackGuard(open, onClose);
+  useBackGuard(open && !!active, () => setTab(null));
 
   return (
     <>
@@ -136,6 +142,8 @@ function MyOrders({ user, onReorder }) {
   const { orders: myOrders, loading, error, reload } = useMyOrders(user?.id);
   const [openId, setOpenId] = useState(null);
   const openOrder = myOrders.find((o) => o.id === openId) || null;
+  // Back button closes the order detail before the section page.
+  useBackGuard(!!openId, () => setOpenId(null));
 
   if (error) return <RetryState error="Couldn't load your orders." onRetry={reload} label="your orders" />;
 
@@ -451,7 +459,9 @@ function Inbox({ notes, userId, error, onRetry }) {
 
 function Rewards({ user }) {
   const settings = useSettings();
-  const cfg = settings.rewards || { earnPoints: 50, earnPer: 399, redeemPer: 10 };
+  const cfg = settings.rewards || {};
+  const redeemPer = cfg.redeemPer || 10;
+  const maxRedeemPct = cfg.maxRedeemPct || 20;
   const points = user?.points || 0;
   const worth = redeemableRupees(points, cfg);
   return (
@@ -465,14 +475,12 @@ function Rewards({ user }) {
       <div className="rewards-how">
         <h4>How it works</h4>
         <ul>
+          <li>Earn reward points on eligible items in every order you place.</li>
           <li>
-            🛍️ Earn <strong>{cfg.earnPoints} points</strong> for every ₹
-            {cfg.earnPer} you spend.
+            <strong>{redeemPer} points = ₹1</strong> off — redeem at checkout.
           </li>
-          <li>
-            💸 <strong>{cfg.redeemPer} points = ₹1</strong> off — redeem at checkout.
-          </li>
-          <li>♻️ Points update automatically after every delivered order.</li>
+          <li>Pay up to <strong>{maxRedeemPct}%</strong> of an order with points.</li>
+          <li>Points are added once your order is confirmed.</li>
         </ul>
       </div>
     </div>

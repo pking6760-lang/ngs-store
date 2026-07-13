@@ -319,6 +319,16 @@ export async function fetchOrderState(dbId) {
   return data; // { payment_status, status }
 }
 
+// Customer abandoned an online payment (left the QR screen without paying).
+// Cancel their still-unpaid order so any redeemed points / wallet money are
+// returned to them immediately, instead of waiting for the cleanup cron.
+export async function cancelPendingOrder(dbId) {
+  if (!dbId) return;
+  const { error } = await must().rpc("cancel_my_unpaid_order", { p_order_id: dbId });
+  if (error) throw error;
+  pingLocal("orders");
+}
+
 // Hand the Razorpay result back to the server, which verifies the signature and
 // confirms the order. Returns { ok: true } only if the payment is genuine.
 export async function verifyRazorpayPayment(payload) {

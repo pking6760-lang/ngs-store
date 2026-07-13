@@ -9,6 +9,7 @@ import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage } from "../lib/payments.js";
 import { bulkUnitPrice } from "../lib/bulk.js";
+import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import {
@@ -490,13 +491,34 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     setStep("done");
   }
 
+  // Leaving the online-payment screen without paying: cancel the still-unpaid
+  // order so it doesn't linger. Nothing was charged (points/wallet debit only
+  // at confirmation), so this is just cleanup.
+  function abandonPayQrIfAny() {
+    if (step === "payqr" && payLink?.order?.dbId) {
+      api.cancelPendingOrder(payLink.order.dbId).catch(() => {});
+    }
+  }
+
+  function leaveStep() {
+    if (step === "payqr") abandonPayQrIfAny();
+    setStep(step === "pay" || step === "payqr" ? "checkout" : "cart");
+  }
+
   function handleClose() {
+    abandonPayQrIfAny();
     setStep("cart");
     setPlaced(null);
     setPayLink(null);
     setLocError("");
     onClose();
   }
+
+  // Back button / gesture: step back through checkout → cart → close, instead
+  // of falling through to the website home.
+  useBackGuard(open, handleClose);
+  useBackGuard(open && (step === "checkout" || step === "pay" || step === "payqr"), () => setStep("cart"));
+  useBackGuard(open && (step === "pay" || step === "payqr"), leaveStep);
 
   const upiLink = buildUpiLink({ amount: payable, note: "NGS Store order" });
   const storeClosed = !settings.storeOpen;
@@ -510,7 +532,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           {step !== "cart" && step !== "done" && (
             <button
               className="back-btn small"
-              onClick={() => setStep(step === "pay" || step === "payqr" ? "checkout" : "cart")}
+              onClick={leaveStep}
               aria-label="Back"
             >
               ←
