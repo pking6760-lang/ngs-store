@@ -187,7 +187,7 @@ export default function PartnersAdmin() {
   const [err, setErr] = useState("");
   const [wallets, setWallets] = useState({});
   const [approved, setApproved] = useState(false);
-  const [view, setView] = useState("team"); // 'team' (approved) | 'requests' (pending + rejected)
+  const [view, setView] = useState("team"); // 'team' (approved) | 'requests' (pending) | 'rejected'
 
   const loadWallets = () => api.fetchPartnerWallets().then(setWallets).catch(() => {});
   useEffect(() => {
@@ -197,14 +197,12 @@ export default function PartnersAdmin() {
   }, [partners.length]);
 
   const byName = (a, b) => a.fullName.localeCompare(b.fullName);
-  // Home shows your team (approved). Pending + rejected live in a separate
-  // "requests" view so they don't clutter the working list.
+  // Home shows your team (approved). Pending (awaiting your decision) is the
+  // "Requests" list; rejected are already decided, so they get their own list.
   const team = partners.filter((p) => p.status === "approved").sort(byName);
-  const requests = partners
-    .filter((p) => p.status !== "approved")
-    .sort((a, b) => (a.status === "pending" ? 0 : 1) - (b.status === "pending" ? 0 : 1) || byName(a, b));
-  const pendingCount = partners.filter((p) => p.status === "pending").length;
-  const shown = view === "requests" ? requests : team;
+  const pending = partners.filter((p) => p.status === "pending").sort(byName);
+  const rejected = partners.filter((p) => p.status === "rejected").sort(byName);
+  const shown = view === "requests" ? pending : view === "rejected" ? rejected : team;
   const cashOnRoad = Object.values(wallets).reduce((s, w) => s + (w.cashInHand || 0), 0);
   const holders = Object.values(wallets).filter((w) => (w.cashInHand || 0) > 0).length;
 
@@ -230,16 +228,23 @@ export default function PartnersAdmin() {
       )}
       {view === "team" ? (
         <>
-          {pendingCount > 0 && (
+          {pending.length > 0 && (
             <button className="pending-banner" onClick={() => setView("requests")}>
-              🔔 {pendingCount} partner{pendingCount === 1 ? "" : "s"} waiting for your approval — review →
+              🔔 {pending.length} partner{pending.length === 1 ? "" : "s"} waiting for your approval — review →
             </button>
           )}
-          {pendingCount === 0 && (
-            <button className="requests-link" onClick={() => setView("requests")}>
-              📋 Requests — pending &amp; rejected ({requests.length}) →
-            </button>
-          )}
+          <div className="partner-nav">
+            {pending.length === 0 && (
+              <button className="requests-link" onClick={() => setView("requests")}>
+                📋 Requests ({pending.length}) →
+              </button>
+            )}
+            {rejected.length > 0 && (
+              <button className="requests-link" onClick={() => setView("rejected")}>
+                🚫 Rejected ({rejected.length}) →
+              </button>
+            )}
+          </div>
         </>
       ) : (
         <button className="requests-back" onClick={() => { setView("team"); setOpenId(null); }}>
@@ -250,7 +255,11 @@ export default function PartnersAdmin() {
       {shown.length === 0 ? (
         <section className="panel">
           <p className="panel-empty">
-            {view === "requests" ? "No pending or rejected requests." : "No approved partners yet."}
+            {view === "requests"
+              ? "No one is waiting for approval."
+              : view === "rejected"
+              ? "No rejected partners."
+              : "No approved partners yet."}
           </p>
         </section>
       ) : (
