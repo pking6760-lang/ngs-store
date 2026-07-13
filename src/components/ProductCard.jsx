@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import ProductThumb from "./ProductThumb.jsx";
 import { firstBulkTier } from "../lib/bulk.js";
+import BulkPackSheet from "./BulkPackSheet.jsx";
 
 // Show scarcity urgency when stock is running low.
 const LOW_STOCK = 5;
@@ -15,6 +17,7 @@ export default function ProductCard({ product, badge }) {
   const lowStock = hasStockLimit && product.stock > 0 && product.stock <= LOW_STOCK;
   const atMax = hasStockLimit && qty >= product.stock;
   const bulkTier = firstBulkTier(product);
+  const [showPacks, setShowPacks] = useState(false);
 
   return (
     <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
@@ -50,7 +53,12 @@ export default function ProductCard({ product, badge }) {
         )}
       </div>
       {bulkTier && !outOfStock && (
-        <div className="product-bulk">🛒 {bulkTier.q}+ at ₹{bulkTier.price} each</div>
+        <button className="product-bulk" onClick={() => setShowPacks(true)}>
+          🛒 Buy in packs & save ›
+        </button>
+      )}
+      {showPacks && (
+        <BulkPackSheet product={product} onClose={() => setShowPacks(false)} />
       )}
       <div className="product-footer">
         <div className="product-price">

@@ -366,11 +366,54 @@ button {
   font-weight: 800;
   color: #0c8168;
   background: #e6fcf5;
+  border: 1px solid #c3f0e4;
   border-radius: 6px;
-  padding: 3px 7px;
+  padding: 4px 8px;
   margin-bottom: 6px;
   align-self: flex-start;
+  cursor: pointer;
 }
+.product-bulk:active { background: #d0f5ea; }
+
+/* ── Bulk pack selector (bottom sheet) ─────────────────────────── */
+.bulk-sheet-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: bulkFade 0.2s ease;
+}
+@keyframes bulkFade { from { opacity: 0; } to { opacity: 1; } }
+.bulk-sheet {
+  background: #fff; width: 100%; max-width: 520px;
+  border-radius: 22px 22px 0 0; padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+  max-height: 82vh; overflow-y: auto;
+  animation: bulkUp 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes bulkUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.bulk-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.bulk-sheet-head h3 { font-size: 17px; font-weight: 800; line-height: 1.3; margin: 0; }
+.bulk-sheet-close {
+  border: none; background: #f0f0f2; color: #333; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer;
+}
+.bulk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bulk-card {
+  border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.bulk-card.sel { border-color: var(--green); background: #f2fbf6; }
+.bulk-card-qty { font-size: 16px; font-weight: 800; color: #16211a; }
+.bulk-card-sub { font-size: 12px; color: var(--muted); }
+.bulk-card-price { font-size: 19px; font-weight: 800; margin-top: 6px; }
+.bulk-card-was { font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: line-through; margin-left: 6px; }
+.bulk-card-per { font-size: 11.5px; font-weight: 600; color: #0c8168; }
+.bulk-card-save { color: #0c8168; }
+.bulk-card-add {
+  margin-top: 10px; border: 1.5px solid var(--green); background: #fff; color: var(--green);
+  font-weight: 800; font-size: 14px; padding: 9px; border-radius: 10px; cursor: pointer;
+}
+.bulk-card.sel .bulk-card-add { background: var(--green); color: #fff; }
+.bulk-card-add:active { transform: scale(0.97); }
 .cart-line-bulk { color: #0c8168; font-weight: 700; }
 .cart-line-nudge {
   font-size: 10.5px;
