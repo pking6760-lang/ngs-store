@@ -1,13 +1,21 @@
 import { useMemo } from "react";
-import { useProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
+import { useProducts, useAdminProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
+  const adminProducts = useAdminProducts(); // carries buying cost (admin-only)
   const orders = useOrders();
   const categories = useCategories();
   const settings = useSettings();
   const threshold = settings.lowStockThreshold ?? 5;
+
+  // Buying cost per product, for the profit figure.
+  const costMap = useMemo(() => {
+    const m = {};
+    adminProducts.forEach((p) => { if (p.cost != null) m[p.id] = p.cost; });
+    return m;
+  }, [adminProducts]);
 
   // Items that need restocking: marked out of stock, or a stock count at/below
   // the alert threshold.
@@ -28,6 +36,13 @@ export default function Dashboard({ onNavigate }) {
       (o) => isToday(o.createdAt) && o.status !== "Cancelled"
     );
     const revenue = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    // Gross product profit = (selling − buying cost) × qty over today's items
+    // whose cost is known. It's a margin estimate (fees/payouts not deducted).
+    let profit = 0, sold = 0;
+    todaysOrders.forEach((o) => (o.items || []).forEach((it) => {
+      const c = costMap[it.id];
+      if (c != null) { profit += (it.price - c) * it.qty; sold += it.price * it.qty; }
+    }));
     // Pending = anything not yet delivered (still needs action), any day.
     const pending = orders.filter(
       (o) => o.status !== "Delivered" && o.status !== "Cancelled"
@@ -35,9 +50,47 @@ export default function Dashboard({ onNavigate }) {
     return {
       orders: todaysOrders.length,
       revenue,
+      profit: Math.round(profit),
+      marginPct: sold > 0 ? (profit / sold) * 100 : null,
       pending,
     };
+  }, [orders, costMap]);
+
+  // Best sellers over the last 7 days — aggregated straight from order items,
+  // so it's always accurate regardless of the pricing schedule.
+  const bestSellers = useMemo(() => {
+    const since = Date.now() - 7 * 24 * 3600 * 1000;
+    const tally = {};
+    orders.forEach((o) => {
+      if (o.status === "Cancelled" || new Date(o.createdAt).getTime() < since) return;
+      (o.items || []).forEach((it) => {
+        const t = tally[it.id] || (tally[it.id] = { id: it.id, name: it.name, icon: it.icon, qty: 0 });
+        t.qty += it.qty;
+      });
+    });
+    return Object.values(tally).sort((a, b) => b.qty - a.qty).slice(0, 5);
   }, [orders]);
+
+  // Revenue per day for the last 7 days (oldest → today).
+  const trend = useMemo(() => {
+    const now = new Date();
+    const days = [];
+    const idx = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toDateString();
+      idx[key] = days.length;
+      days.push({ key, label: d.toLocaleDateString("en-IN", { weekday: "short" }), revenue: 0 });
+    }
+    orders.forEach((o) => {
+      if (o.status === "Cancelled") return;
+      const k = new Date(o.createdAt).toDateString();
+      if (k in idx) days[idx[k]].revenue += o.total || 0;
+    });
+    return days;
+  }, [orders]);
+  const trendMax = Math.max(1, ...trend.map((d) => d.revenue));
 
   const topCategories = useMemo(() => {
     return categories
@@ -56,8 +109,33 @@ export default function Dashboard({ onNavigate }) {
       <div className="stat-row">
         <StatCard label="Today's orders" value={stats.orders} icon="🧾" tone="blue" />
         <StatCard label="Today's revenue" value={`₹${stats.revenue}`} icon="💰" tone="amber" />
+        <StatCard
+          label={stats.marginPct != null ? `Today's profit · ${stats.marginPct.toFixed(0)}%` : "Today's profit"}
+          value={`₹${stats.profit}`}
+          icon="📈"
+          tone="green"
+        />
         <StatCard label="Pending orders" value={stats.pending} icon="⏳" tone="pink" />
       </div>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h3>Last 7 days · revenue</h3>
+          <span className="dash-sub">₹{trend.reduce((s, d) => s + d.revenue, 0)} total</span>
+        </div>
+        <div className="trend-bars">
+          {trend.map((d, i) => (
+            <div className="trend-col" key={d.key}>
+              <div className="trend-amt">{d.revenue > 0 ? `₹${d.revenue}` : ""}</div>
+              <div
+                className={`trend-bar ${i === trend.length - 1 ? "today" : ""}`}
+                style={{ height: `${Math.round((d.revenue / trendMax) * 100)}%` }}
+              />
+              <div className="trend-lbl">{d.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="panel lowstock-panel">
         <div className="panel-head">
@@ -91,6 +169,28 @@ export default function Dashboard({ onNavigate }) {
                   <span className="lowstock-tag low">{p.stock} left</span>
                 )}
               </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h3>🔥 Best sellers · 7 days</h3>
+          <button className="link-btn" onClick={() => onNavigate("pricing")}>
+            Pricing →
+          </button>
+        </div>
+        {bestSellers.length === 0 ? (
+          <p className="panel-empty">No sales in the last 7 days yet.</p>
+        ) : (
+          <div className="best-list">
+            {bestSellers.map((p, i) => (
+              <div className="best-row" key={p.id}>
+                <span className="best-rank">{i + 1}</span>
+                <span className="best-name">{p.icon ? `${p.icon} ` : ""}{p.name}</span>
+                <span className="best-qty">{p.qty} sold</span>
+              </div>
             ))}
           </div>
         )}

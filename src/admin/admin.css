@@ -190,7 +190,7 @@ body {
 /* ─── Stat cards ─────────────────────────────────────────── */
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -216,6 +216,25 @@ body {
 .stat-card.blue .stat-icon { background: #e6f0fb; }
 .stat-card.amber .stat-icon { background: #fdf4e3; }
 .stat-card.pink .stat-icon { background: #fce8ec; }
+
+/* ─── 7-day revenue trend ────────────────────────────────── */
+.dash-sub { font-size: 12.5px; font-weight: 700; color: #6b7885; }
+.trend-bars { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 8px; }
+.trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 6px; }
+.trend-amt { font-size: 10px; font-weight: 700; color: #6b7885; white-space: nowrap; }
+.trend-bar { width: 100%; max-width: 34px; min-height: 3px; background: #c7d2fe; border-radius: 6px 6px 0 0; transition: height .3s; }
+.trend-bar.today { background: #3B5BDB; }
+.trend-lbl { font-size: 11px; font-weight: 700; color: #8792a6; }
+
+/* ─── Best sellers ───────────────────────────────────────── */
+.best-list { display: flex; flex-direction: column; }
+.best-row { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-top: 1px solid #f0f2f6; }
+.best-row:first-child { border-top: none; }
+.best-rank { flex: none; width: 24px; height: 24px; border-radius: 8px; background: #eef2ff; color: #2B44A8;
+  font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.best-name { flex: 1; font-size: 14px; font-weight: 600; color: #16202c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.best-qty { flex: none; font-size: 12.5px; font-weight: 800; color: #0c8168; }
+
 .stat-value {
   font-size: 24px;
   font-weight: 800;
