@@ -33,7 +33,9 @@ export default function ProductThumb({
         className="thumb-img"
         src={image}
         alt={name}
-        style={{ ...boxStyle, objectFit: "cover" }}
+        // `contain` on white shows the whole product (no cropping) and blends
+        // seamlessly with white-background catalog photos.
+        style={{ ...boxStyle, objectFit: "contain", background: "#fff" }}
       />
     );
   }
