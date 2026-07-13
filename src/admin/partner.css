@@ -29,6 +29,11 @@
    squishing/clipping when the list grows. */
 .pd-scroll > * { flex-shrink: 0; }
 .pd-hero { flex-shrink: 0; }
+/* Tab content is wrapped in .fade-up for the page transition; that wrapper
+   swallowed the column spacing, cramping the home cards. Give it the same
+   flex-column gap the scroll container provides so the cards breathe again. */
+.pd-scroll > .fade-up { display: flex; flex-direction: column; gap: 16px; }
+.pd-scroll > .fade-up > * { flex-shrink: 0; }
 
 /* Top bar */
 .pd-top { display: flex; align-items: center; gap: 12px; }
