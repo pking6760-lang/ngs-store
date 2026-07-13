@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
-import { useOrders, useSettings, useUserNotifications } from "../lib/hooks.js";
+import { useOrders, useSettings, useUserNotifications, useWallet } from "../lib/hooks.js";
 import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
@@ -11,6 +11,7 @@ import ProductThumb from "./ProductThumb.jsx";
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
   { id: "orders", label: "My Orders", icon: "📦" },
+  { id: "wallet", label: "Wallet", icon: "💰" },
   { id: "inbox", label: "Inbox", icon: "🔔" },
   { id: "rewards", label: "Rewards", icon: "🎁" },
   { id: "membership", label: "Membership", icon: "👑" },
@@ -89,6 +90,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
               }}
             />
           )}
+          {tab === "wallet" && <WalletTab />}
           {tab === "inbox" && <Inbox notes={notes} userId={user?.id} />}
           {tab === "rewards" && <Rewards user={user} />}
           {tab === "membership" && <Membership />}
@@ -327,6 +329,56 @@ function RatingBox({ order }) {
       {done && <p className="rating-thanks">Thanks for your feedback! 💚</p>}
     </div>
   );
+}
+
+function WalletTab() {
+  const { balance, ledger } = useWallet();
+  return (
+    <div className="wallet-tab">
+      <div className="wallet-card">
+        <div className="wallet-card-lbl">NGS Wallet balance</div>
+        <div className="wallet-card-bal">₹{balance.toFixed(2)}</div>
+        <div className="wallet-card-note">Refunds land here and apply on your next order.</div>
+        <button
+          className="wallet-add-btn"
+          onClick={() =>
+            alert("Adding money to your wallet is coming soon. For now, refunds and returns are credited here automatically.")
+          }
+        >
+          + Add money
+        </button>
+      </div>
+
+      <h4 className="wallet-h">History</h4>
+      {ledger.length === 0 ? (
+        <p className="account-empty">No wallet activity yet.</p>
+      ) : (
+        <div className="wallet-list">
+          {ledger.map((e) => (
+            <div className="wallet-row" key={e.id}>
+              <div className="wallet-row-main">
+                <span className="wallet-row-note">{walletLabel(e)}</span>
+                <span className="wallet-row-date">{fmtWalletDate(e.at)}</span>
+              </div>
+              <span className={`wallet-row-amt ${e.amount >= 0 ? "cr" : "dr"}`}>
+                {e.amount >= 0 ? "+" : "−"}₹{Math.abs(e.amount).toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function walletLabel(e) {
+  if (e.note) return e.note;
+  return { refund: "Refund", topup: "Money added", spent: "Used on order", adjust: "Adjustment" }[e.kind] || e.kind;
+}
+function fmtWalletDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch { return ""; }
 }
 
 function Row({ k, v, good, bold }) {

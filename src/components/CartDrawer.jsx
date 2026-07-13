@@ -3,7 +3,7 @@ import { ActionOverlay } from "./Motion.jsx";
 import { withMinTime } from "../lib/ux.js";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useProducts, useSettings, useCategories, useCoupons } from "../lib/hooks.js";
+import { useProducts, useSettings, useCategories, useCoupons, useWallet } from "../lib/hooks.js";
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
@@ -46,6 +46,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // payments are enabled we default to them and drop the unverified QR option.
   const [payment, setPayment] = useState(RAZORPAY_ENABLED ? "razorpay" : "upi");
   const [usePoints, setUsePoints] = useState(false);
+  const [useWalletCredit, setUseWalletCredit] = useState(false);
+  const wallet = useWallet();
   const [couponInput, setCouponInput] = useState("");
   const [appliedCode, setAppliedCode] = useState(null);
   const [couponError, setCouponError] = useState("");
@@ -144,11 +146,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const grandTotal = netItems + deliveryFee + handling + surgeFee;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
+  // ── NGS Wallet (store credit) ──────────────────────────
+  // The customer can apply their wallet balance to this order. The server caps
+  // it at the balance and the total; we mirror that here for the bill display.
+  const walletBal = isLoggedIn ? Math.max(0, wallet.balance || 0) : 0;
+  const walletCap = Math.min(walletBal, grandTotal);
+  const walletApplied = useWalletCredit ? walletCap : 0;
+  const payable = Math.max(0, grandTotal - walletApplied);
+
   // ── Cash-on-delivery cap ───────────────────────────────
   // Above this the rider would carry too much cash, so COD is disabled and the
   // customer must pay online. 0/blank = no cap. Enforced again on the server.
   const COD_LIMIT = settings.codCustomerLimit ?? 1000;
-  const codBlocked = COD_LIMIT > 0 && grandTotal > COD_LIMIT;
+  const codBlocked = COD_LIMIT > 0 && payable > COD_LIMIT;
   // If the cart grows past the cap while COD is selected, bump them to online.
   useEffect(() => {
     if (codBlocked && payment === "cod") {
@@ -300,7 +310,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     if (address.trim() !== user?.address || cleanPhone !== user?.phone) {
       await updateProfile({ address: address.trim(), phone: cleanPhone });
     }
-    if (payment === "razorpay") startRazorpay();
+    // Wallet covers the whole order → nothing to pay online, place it directly.
+    if (payable === 0) placeOrder();
+    else if (payment === "razorpay") startRazorpay();
     else if (payment === "upi") setStep("pay");
     else placeOrder();
   }
@@ -321,6 +333,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         location: location ? { ...location, distanceKm: dist } : null,
         payment: "razorpay",
         address: address.trim(),
+        wallet: walletApplied,
       });
       // Verified native UPI QR shown ON our page (scan with any app → pays
       // directly → auto-confirms via webhook). No redirect to any gateway page.
@@ -386,24 +399,28 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   async function placeOrderBackend() {
     setPlacing(true);
     setPlaceError("");
+    // If the wallet covers everything, there's nothing to pay online.
+    const pay = payable === 0 ? "wallet" : payment;
     try {
       const order = await withMinTime(() => api.placeOrder({
         items: lines.map(({ product, qty }) => ({ id: product.id, qty })),
         coupon: appliedCode || null,
         location: location ? { ...location, distanceKm: dist } : null,
-        payment,
+        payment: pay,
         address: address.trim(),
+        wallet: walletApplied,
       }), 900, 1800);
       setPlaced({
         // place_order returns only the order row (no joined items), so count
         // the cart we just sent rather than order.count (which would be 0).
         total: order.total,
         count: lines.reduce((a, l) => a + l.qty, 0),
-        eta: 12, payment,
+        eta: 12, payment: pay,
         pointsEarned: order.pointsEarned, code: order.id,
       });
       clear();
       setUsePoints(false);
+      setUseWalletCredit(false);
       setAppliedCode(null);
       setStep("done");
     } catch (e) {
@@ -719,6 +736,20 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </label>
             </div>
 
+            {walletBal > 0 && (
+              <label className={`wallet-use ${useWalletCredit ? "on" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={useWalletCredit}
+                  onChange={(e) => setUseWalletCredit(e.target.checked)}
+                />
+                <span className="wallet-use-txt">
+                  <strong>💰 Use NGS Wallet</strong>
+                  <small>Balance ₹{walletBal.toFixed(2)} · applies ₹{walletCap.toFixed(2)} to this order</small>
+                </span>
+              </label>
+            )}
+
             <div className="bill compact">
               {discount > 0 && (
                 <div className="bill-row">
@@ -750,9 +781,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <span>₹{surgeFee}</span>
                 </div>
               )}
+              {walletApplied > 0 && (
+                <div className="bill-row">
+                  <span>💰 NGS Wallet</span>
+                  <span className="free">−₹{walletApplied.toFixed(2)}</span>
+                </div>
+              )}
               <div className="bill-row total">
                 <span>To pay</span>
-                <span>₹{grandTotal}</span>
+                <span>₹{payable.toFixed(2)}</span>
               </div>
             </div>
 
@@ -766,11 +803,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 ? "Placing…"
                 : outOfArea
                 ? "Outside delivery area"
+                : payable === 0
+                ? "Place order • ₹0 (Wallet)"
                 : payment === "razorpay"
-                ? `Pay ₹${grandTotal} securely`
+                ? `Pay ₹${payable.toFixed(2)} securely`
                 : payment === "upi"
-                ? `Pay ₹${grandTotal} with UPI`
-                : `Place order • ₹${grandTotal}`}
+                ? `Pay ₹${payable.toFixed(2)} with UPI`
+                : `Place order • ₹${payable.toFixed(2)}`}
             </button>
           </div>
         ) : lines.length === 0 ? (

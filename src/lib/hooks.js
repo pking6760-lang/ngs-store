@@ -62,6 +62,24 @@ export function useAdminProducts() {
   return products;
 }
 
+// Customer NGS wallet: { balance, ledger }. Balance is the sum of the ledger
+// (RLS lets a customer read only their own rows).
+export function useWallet() {
+  const empty = { balance: 0, ledger: [] };
+  if (BACKEND)
+    return useBackend(
+      async () => {
+        const ledger = await api.fetchWalletLedger();
+        return { balance: ledger.reduce((s, e) => s + e.amount, 0), ledger };
+      },
+      ["customer_wallet"],
+      empty
+    );
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [w] = useState(empty);
+  return w;
+}
+
 export function useCategories() {
   if (BACKEND) return useBackend(api.fetchCategories, ["categories"], []);
   const [categories, setCategories] = useState(getCategories);

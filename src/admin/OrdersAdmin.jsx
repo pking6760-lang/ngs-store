@@ -7,7 +7,7 @@ import {
 } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
-import { createOrderQr } from "../lib/api.js";
+import { createOrderQr, adminRefundToWallet } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import AdminPortal from "./AdminPortal.jsx";
 import Receipt from "./Receipt.jsx";
@@ -383,11 +383,72 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
               </div>
             )}
           </section>
+
+          <RefundSection order={o} />
         </div>
       </div>
       {/* Hidden on screen; the print stylesheet reveals only this at 58mm. */}
       <Receipt order={o} shop={SHOP} />
     </div>
+  );
+}
+
+// Refund / return → credits the customer's NGS wallet (store credit), never the
+// bank. The owner enters the amount (defaults to what's left to refund).
+function RefundSection({ order }) {
+  const already = order.refundedAmount || 0;
+  const remaining = Math.max(0, (order.total || 0) - already);
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState(String(remaining));
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  async function refund() {
+    const amt = Number(amount);
+    if (!(amt > 0)) { setErr("Enter an amount."); return; }
+    if (amt > remaining) { setErr(`Max ₹${remaining.toFixed(2)} left to refund.`); return; }
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      await adminRefundToWallet(order.dbId, amt, "Refund for order " + order.id);
+      setMsg(`₹${amt.toFixed(2)} added to the customer's NGS Wallet.`);
+      setOpen(false);
+    } catch (e) {
+      setErr(e.message || "Couldn't process the refund.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <section className="od-section od-refund">
+      <h4>Return &amp; refund</h4>
+      {already > 0 && (
+        <div className="od-refunded">↩︎ Refunded ₹{already.toFixed(2)} to NGS Wallet</div>
+      )}
+      {msg && <div className="od-refund-ok">{msg}</div>}
+      {remaining <= 0 ? (
+        <p className="od-muted">Fully refunded.</p>
+      ) : !open ? (
+        <button className="od-refund-btn" onClick={() => { setOpen(true); setAmount(String(remaining)); setErr(""); }}>
+          ↩︎ Refund to NGS Wallet
+        </button>
+      ) : (
+        <div className="od-refund-form">
+          <p className="od-muted">Refunds go to the customer's NGS Wallet — usable on their next order.</p>
+          <div className="od-refund-row">
+            <span>₹</span>
+            <input type="number" min="0" max={remaining} value={amount}
+              onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          {err && <div className="auth-error">{err}</div>}
+          <div className="od-refund-actions">
+            <button className="ghost-btn" onClick={() => setOpen(false)} disabled={busy}>Cancel</button>
+            <button className="primary-btn" onClick={refund} disabled={busy}>
+              {busy ? "Refunding…" : `Refund ₹${Number(amount) || 0}`}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

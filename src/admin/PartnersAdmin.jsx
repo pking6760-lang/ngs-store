@@ -59,7 +59,7 @@ function DocViewer({ doc, onClose }) {
 // A partner's money at a glance + the two owner actions: confirm a cash
 // deposit (clears cash-in-hand) and record a payout.
 // A clean in-app amount modal (replaces the browser prompt).
-function AmountModal({ title, hint, suggest, okLabel, onCancel, onSubmit }) {
+function AmountModal({ title, hint, suggest, okLabel, onCancel, onSubmit, extra }) {
   const [val, setVal] = useState(suggest ? String(suggest) : "");
   const n = Number(val);
   return (
@@ -67,6 +67,7 @@ function AmountModal({ title, hint, suggest, okLabel, onCancel, onSubmit }) {
       <div className="amt-card" onClick={(e) => e.stopPropagation()}>
         <h3>{title}</h3>
         {hint && <p>{hint}</p>}
+        {extra}
         <input type="number" inputMode="numeric" autoFocus value={val}
           onChange={(e) => setVal(e.target.value)} placeholder="₹ amount" />
         <div className="amt-actions">
@@ -74,6 +75,26 @@ function AmountModal({ title, hint, suggest, okLabel, onCancel, onSubmit }) {
           <button className="amt-ok" disabled={!n || n <= 0} onClick={() => onSubmit(n)}>{okLabel}</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// The partner's bank/UPI details, so the owner can pay them manually before
+// recording the payout. (Automated bank transfer can come later.)
+function BankDetails({ partner }) {
+  const rows = [
+    ["Account holder", partner.bankHolder],
+    ["Account no.", partner.bankAccount],
+    ["IFSC", partner.bankIfsc],
+    ["Bank", [partner.bankName, partner.bankBranch].filter(Boolean).join(" · ")],
+  ].filter(([, v]) => v);
+  if (!rows.length) return <div className="bank-box none">No bank details on file for this partner.</div>;
+  return (
+    <div className="bank-box">
+      <div className="bank-box-h">Pay to</div>
+      {rows.map(([k, v]) => (
+        <div className="bank-row" key={k}><span>{k}</span><strong>{v}</strong></div>
+      ))}
     </div>
   );
 }
@@ -139,9 +160,11 @@ function WalletBlock({ partner, w, onChange }) {
       )}
       {modal === "payout" && (
         <AdminPortal>
-          <AmountModal title={`Pay out — ${partner.fullName}`} hint={`Current balance ₹${Math.round(bal)}.`}
-            suggest={Math.max(0, Math.round(bal))} okLabel="Pay out" onCancel={() => setModal(null)}
-            onSubmit={(v) => submit("payout", v)} />
+          <AmountModal title={`Pay out — ${partner.fullName}`}
+            hint={`Balance ₹${Math.round(bal)}. Pay this to the partner (UPI/bank), then record it here to clear their wallet.`}
+            suggest={Math.max(0, Math.round(bal))} okLabel="Record payout" onCancel={() => setModal(null)}
+            onSubmit={(v) => submit("payout", v)}
+            extra={<BankDetails partner={partner} />} />
         </AdminPortal>
       )}
       {modal === "adjust" && (

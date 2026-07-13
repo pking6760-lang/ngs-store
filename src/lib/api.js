@@ -111,6 +111,7 @@ function mapOrder(r) {
     razorpayPaymentId: r.razorpay_payment_id,
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback, needsOwner: !!r.needs_owner,
+    walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
     deliveryState: r.delivery_state, pickerState: r.picker_state,
     riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at, packedAt: r.packed_at,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
@@ -235,7 +236,7 @@ export async function fetchSettings() {
 // Place an order. The phone sends only product ids + quantities (+ optional
 // coupon and location); the SERVER computes prices, discount, delivery, total
 // and points. Returns the created order row.
-export async function placeOrder({ items, coupon, location, payment, address }) {
+export async function placeOrder({ items, coupon, location, payment, address, wallet }) {
   const p_items = items.map((i) => ({ id: i.id, qty: i.qty }));
   const { data, error } = await must().rpc("place_order", {
     p_items,
@@ -243,11 +244,39 @@ export async function placeOrder({ items, coupon, location, payment, address }) 
     p_location: location || null,
     p_payment: payment || "upi",
     p_address: address || null,
+    p_wallet: Math.max(0, Number(wallet) || 0),
   });
   if (error) throw error;
   pingLocal("orders");
   pingLocal("products"); // stock changed
+  pingLocal("customer_wallet");
   return mapOrder(data);
+}
+
+// ── Customer NGS Wallet (store credit) ──────────────────────────────────────
+export async function walletBalance() {
+  const { data, error } = await must().rpc("wallet_balance");
+  if (error) throw error;
+  return Number(data) || 0;
+}
+export async function fetchWalletLedger() {
+  const { data, error } = await must()
+    .from("customer_wallet").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((r) => ({
+    id: r.id, amount: Number(r.amount), kind: r.kind, note: r.note,
+    orderId: r.order_id, at: r.created_at,
+  }));
+}
+// Admin: refund an order to the customer's NGS wallet.
+export async function adminRefundToWallet(orderDbId, amount, note) {
+  const { error } = await must().rpc("admin_refund_to_wallet", {
+    p_order: orderDbId, p_amount: Number(amount), p_note: note || null,
+  });
+  if (error) throw new Error(error.message || "Couldn't process the refund.");
+  pingLocal("orders");
+  pingLocal("customer_wallet");
+  return { ok: true };
 }
 
 // Ask the server to create a Razorpay order for an already-placed (held) order.
