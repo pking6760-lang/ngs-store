@@ -4,20 +4,28 @@ import "leaflet/dist/leaflet.css";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import * as api from "../lib/api.js";
+import ScratchCard from "./ScratchCard.jsx";
 
 // Statuses that mean an order is still on its way (worth tracking live).
 const LIVE_STATUSES = ["Placed", "Packed", "Out for delivery"];
 
+// Show the tracker for a live order, and keep it after delivery until the
+// customer has scratched their reward (so the live page doesn't vanish the
+// instant it's delivered).
 export function isLiveOrder(o) {
-  return o && LIVE_STATUSES.includes(o.status);
+  if (!o) return false;
+  if (LIVE_STATUSES.includes(o.status)) return true;
+  if (o.status === "Delivered" && !o.scratchClaimed) return true;
+  return false;
 }
 
-// Friendly one-liner + rough ETA for the current status.
+// Friendly one-liner for the current status.
 function statusLine(order) {
   switch (order.status) {
     case "Placed": return { emoji: "📝", text: "Order placed — getting it ready" };
     case "Packed": return { emoji: "🧺", text: "Packed — waiting for a delivery partner" };
     case "Out for delivery": return { emoji: "🛵", text: "On the way to you" };
+    case "Delivered": return { emoji: "🎁", text: "Delivered — scratch your reward!" };
     default: return { emoji: "📦", text: order.status };
   }
 }
@@ -32,22 +40,27 @@ function etaMinutes(order) {
 /* ── Floating pill (sits just above the cart bar on the home page) ─────────── */
 export function LiveOrderPill({ order, raised, onOpen }) {
   const { emoji, text } = statusLine(order);
+  const delivered = order.status === "Delivered";
   const eta = etaMinutes(order);
   return (
-    <button className={`live-pill ${raised ? "raised" : ""}`} onClick={onOpen}>
+    <button className={`live-pill ${raised ? "raised" : ""} ${delivered ? "reward" : ""}`} onClick={onOpen}>
       <span className="live-pill-bike" aria-hidden>{emoji}</span>
       <span className="live-pill-mid">
         <span className="live-pill-top">
           Order #{order.id}
           <span className="live-pill-dot" />
-          <span className="live-pill-live">LIVE</span>
+          <span className="live-pill-live">{delivered ? "REWARD" : "LIVE"}</span>
         </span>
         <span className="live-pill-sub">{text}</span>
       </span>
-      <span className="live-pill-eta">
-        <strong>{eta}</strong>
-        <small>min</small>
-      </span>
+      {delivered ? (
+        <span className="live-pill-gift" aria-hidden>🎁</span>
+      ) : (
+        <span className="live-pill-eta">
+          <strong>{eta}</strong>
+          <small>min</small>
+        </span>
+      )}
       <span className="live-pill-arrow">›</span>
     </button>
   );
@@ -144,10 +157,25 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     return () => { cancelAnimationFrame(rafRef.current); map.remove(); mapRef.current = null; bikeRef.current = null; };
   }, [open, canMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Real GPS wins: if the rider is streaming a fresh position, pin the bike
+  // there and keep it + the home in view. Otherwise fall back to the animation.
+  const riderFresh = rider && rider.lat != null && rider.locAt &&
+    (Date.now() - new Date(rider.locAt).getTime() < 120000);
+
   // Animate the bike along the route based on status.
   useEffect(() => {
     if (!open || !canMap || !bikeRef.current || !route.length) return;
     const bike = bikeRef.current;
+
+    if (riderFresh) {
+      bike.setLatLng([rider.lat, rider.lng]);
+      const map = mapRef.current;
+      if (map && home) {
+        map.fitBounds(L.latLngBounds([[rider.lat, rider.lng], [home.lat, home.lng]]).pad(0.4), { animate: true });
+      }
+      return; // real GPS — no fake animation
+    }
+
     // Where along the route the bike belongs for this status.
     const target =
       order.status === "Placed" ? 0.0 :
@@ -173,7 +201,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     };
     rafRef.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [open, canMap, order?.status, route]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, canMap, order?.status, route, riderFresh, rider?.lat, rider?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open || !order) return null;
   const eta = etaMinutes(order);
@@ -189,9 +217,13 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
 
       <div className="lt-body">
         <div className="lt-eta-card">
-          <div className="lt-eta-big">{order.status === "Delivered" ? "Delivered" : `Arriving in ~${eta} min`}</div>
-          <div className="lt-eta-sub">🛵 {text}</div>
+          <div className="lt-eta-big">{order.status === "Delivered" ? "Delivered 🎉" : `Arriving in ~${eta} min`}</div>
+          <div className="lt-eta-sub">{text}</div>
         </div>
+
+        {order.status === "Delivered" && (
+          <ScratchCard orderId={order.dbId} existingReward={order.scratchClaimed ? order.scratchReward : null} />
+        )}
 
         {canMap ? (
           <div className="lt-map-wrap">

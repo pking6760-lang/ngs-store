@@ -51,6 +51,7 @@ export default function App() {
   const { totalCount, items } = useCart();
   const { user, isLoggedIn, awaitingOtp } = useAuth();
   const [trackOpen, setTrackOpen] = useState(false);
+  const [trackId, setTrackId] = useState(null);
 
   // Back button/gesture closes the open layer instead of leaving the site.
   useBackGuard(authOpen, () => setAuthOpen(false));
@@ -72,8 +73,13 @@ export default function App() {
   const { orders: myOrders, reload: reloadOrders } = useMyOrders(user?.id);
   const activeOrder = useMemo(() => (myOrders || []).find(isLiveOrder) || null, [myOrders]);
   const shopLoc = getShopLocations(settings)[0] || null;
-  // Close the tracker automatically once there's nothing live to track.
-  useEffect(() => { if (!activeOrder) setTrackOpen(false); }, [activeOrder]);
+  // The sheet keeps showing the order it was opened on (by id) — even after the
+  // reward is scratched and it leaves the "active" set — until the user closes it.
+  const trackedOrder = useMemo(
+    () => (myOrders || []).find((o) => o.id === trackId) || activeOrder,
+    [myOrders, trackId, activeOrder]
+  );
+  function openTracker(o) { setTrackId(o.id); setTrackOpen(true); }
 
   function handleAccountClick() {
     if (isLoggedIn) {
@@ -175,7 +181,7 @@ export default function App() {
         <LiveOrderPill
           order={activeOrder}
           raised={totalCount > 0}
-          onOpen={() => setTrackOpen(true)}
+          onOpen={() => openTracker(activeOrder)}
         />
       )}
 
@@ -193,10 +199,10 @@ export default function App() {
       )}
 
       <LiveTrackingSheet
-        open={trackOpen}
-        order={activeOrder}
+        open={trackOpen && !!trackedOrder}
+        order={trackedOrder}
         shopLoc={shopLoc}
-        onClose={() => setTrackOpen(false)}
+        onClose={() => { setTrackOpen(false); setTrackId(null); }}
         onRefresh={reloadOrders}
       />
 

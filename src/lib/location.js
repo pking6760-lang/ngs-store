@@ -67,6 +67,37 @@ export async function getCurrentLocation() {
   return browserLocation();
 }
 
+// Continuously watch the device location and call cb({lat,lng,accuracy}) on each
+// update. Returns a Promise<function> — call it to stop watching. Used by the
+// partner app to stream a rider's live position during a delivery.
+export async function watchLocation(cb) {
+  const cap = typeof window !== "undefined" ? window.Capacitor : null;
+  const isNative = cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform();
+  if (isNative) {
+    const { Geolocation } = await import("@capacitor/geolocation");
+    let perm = await Geolocation.checkPermissions();
+    if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
+      perm = await Geolocation.requestPermissions({ permissions: ["location"] });
+    }
+    const id = await Geolocation.watchPosition({ enableHighAccuracy: true, timeout: 20000 }, (pos, err) => {
+      if (err || !pos) return;
+      const { latitude, longitude, accuracy } = pos.coords;
+      cb(shape(latitude, longitude, accuracy));
+    });
+    return () => { try { Geolocation.clearWatch({ id }); } catch { /* ignore */ } };
+  }
+  if (!("geolocation" in navigator)) return () => {};
+  const id = navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      cb(shape(latitude, longitude, accuracy));
+    },
+    () => {},
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
+  );
+  return () => navigator.geolocation.clearWatch(id);
+}
+
 // A Google Maps link that opens a pin at the given coordinates — works on the
 // web and deep-links into the Google Maps app on a phone.
 export function googleMapsLink({ lat, lng }) {

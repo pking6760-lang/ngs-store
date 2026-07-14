@@ -239,6 +239,25 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
     return () => { alive = false; clearInterval(iv); };
   }, [presence.activeOrderId]);
 
+  // Stream live GPS to the customer while on an accepted DELIVERY run, so their
+  // tracking map shows the real bike position. Stops when the task ends.
+  const streamOrderId = task && task.role === "delivery" && (task.state === "accepted" || task.state === "picked")
+    ? task.orderId : null;
+  useEffect(() => {
+    if (!streamOrderId) return;
+    let stop = null, alive = true, last = 0;
+    import("../lib/location.js").then(({ watchLocation }) => {
+      if (!alive) return;
+      watchLocation((loc) => {
+        const now = Date.now();
+        if (now - last < 8000) return; // throttle to ~1 update / 8s
+        last = now;
+        api.partnerUpdateLocation(streamOrderId, loc.lat, loc.lng).catch(() => {});
+      }).then((s) => { if (alive) stop = s; else s && s(); });
+    });
+    return () => { alive = false; if (stop) stop(); };
+  }, [streamOrderId]);
+
   async function taskAction(fn) {
     stopAlarm(); // they're handling it — silence the ring
     setTaskBusy(true);

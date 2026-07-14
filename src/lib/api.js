@@ -116,6 +116,7 @@ function mapOrder(r) {
     rating: r.rating, feedback: r.feedback, needsOwner: !!r.needs_owner,
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
     isReturn: !!r.is_return, returnOf: r.return_of,
+    scratchClaimed: !!r.scratch_claimed, scratchReward: r.scratch_reward || null,
     deliveryState: r.delivery_state, pickerState: r.picker_state,
     riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at, packedAt: r.packed_at,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
@@ -339,7 +340,26 @@ export async function fetchOrderRider(dbId) {
   if (error) return null;
   const r = Array.isArray(data) ? data[0] : data;
   if (!r || !r.name) return null;
-  return { name: r.name, phone: r.phone, deliveryState: r.delivery_state };
+  return {
+    name: r.name, phone: r.phone, deliveryState: r.delivery_state,
+    lat: r.rider_lat != null ? Number(r.rider_lat) : null,
+    lng: r.rider_lng != null ? Number(r.rider_lng) : null,
+    locAt: r.rider_loc_at || null,
+  };
+}
+
+// Rider streams their live GPS during a delivery.
+export async function partnerUpdateLocation(orderId, lat, lng) {
+  const { error } = await must().rpc("partner_update_location", { p_order: orderId, p_lat: lat, p_lng: lng });
+  if (error) throw error;
+}
+
+// Customer scratches the reward card after delivery. Returns { type, amount }.
+export async function claimScratchReward(orderId) {
+  const { data, error } = await must().rpc("claim_scratch_reward", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't claim the reward.");
+  pingLocal("orders");
+  return data; // { type, amount }
 }
 
 export async function fetchOrderState(dbId) {
