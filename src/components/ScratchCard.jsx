@@ -92,9 +92,9 @@ export default function ScratchCard({ orderId, existingReward }) {
     };
   }, [revealed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const amount = reward?.amount ?? 0;
-  const won = amount > 0;
-  const label = reward?.type === "wallet" ? `₹${amount} wallet cash` : `${amount} reward points`;
+  const pts = reward?.points ?? 0;
+  const cash = reward?.wallet ?? 0;
+  const won = pts > 0 || cash > 0;
 
   return (
     <div className="scratch">
@@ -103,9 +103,15 @@ export default function ScratchCard({ orderId, existingReward }) {
         <div className={`scratch-prize ${revealed ? "show" : ""}`}>
           {won ? (
             <>
-              <div className="scratch-prize-emoji">{reward?.type === "wallet" ? "💰" : "🎁"}</div>
-              <div className="scratch-prize-amt">{amount}</div>
-              <div className="scratch-prize-lbl">{reward?.type === "wallet" ? "₹ added to wallet" : "points added"}</div>
+              <div className="scratch-prize-emoji">{cash > 0 ? "💰" : "🎁"}</div>
+              <div className="scratch-prize-rows">
+                {cash > 0 && (
+                  <div className="scratch-prize-row"><strong>₹{cash}</strong><span>wallet cash</span></div>
+                )}
+                {pts > 0 && (
+                  <div className="scratch-prize-row"><strong>{pts}</strong><span>reward points</span></div>
+                )}
+              </div>
             </>
           ) : (
             <>
@@ -117,7 +123,11 @@ export default function ScratchCard({ orderId, existingReward }) {
         {!revealed && <canvas ref={canvasRef} className="scratch-foil" />}
       </div>
       {revealed ? (
-        <div className="scratch-done">{won ? `Added ${label} to your account 🎊` : "Better luck next time!"}</div>
+        <div className="scratch-done">
+          {won
+            ? `Added ${[cash > 0 ? `₹${cash} to your wallet` : null, pts > 0 ? `${pts} points` : null].filter(Boolean).join(" + ")} 🎊`
+            : "Better luck next time!"}
+        </div>
       ) : (
         <div className="scratch-hint">Scratch the gold panel to reveal your prize</div>
       )}

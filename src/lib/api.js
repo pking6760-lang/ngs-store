@@ -117,6 +117,7 @@ function mapOrder(r) {
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
     isReturn: !!r.is_return, returnOf: r.return_of,
     scratchClaimed: !!r.scratch_claimed, scratchReward: r.scratch_reward || null,
+    scratchPoints: r.scratch_points || 0, scratchWallet: num(r.scratch_wallet),
     deliveryState: r.delivery_state, pickerState: r.picker_state,
     riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at, packedAt: r.packed_at,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };

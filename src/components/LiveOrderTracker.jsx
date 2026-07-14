@@ -289,7 +289,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           ))}
         </div>
 
-        {delivered && (
+        {delivered && (order.scratchClaimed || order.scratchPoints > 0 || order.scratchWallet > 0) && (
           <ScratchCard orderId={order.dbId} existingReward={order.scratchClaimed ? order.scratchReward : null} />
         )}
 

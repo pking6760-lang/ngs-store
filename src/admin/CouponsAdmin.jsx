@@ -12,8 +12,88 @@ export default function CouponsAdmin() {
     <div className="offers-wrap">
       <OfferBanner settings={settings} />
       <RewardsSettings settings={settings} />
+      <ScratchSettings settings={settings} />
       <CouponManager coupons={coupons} categories={categories} />
     </div>
+  );
+}
+
+function ScratchSettings({ settings }) {
+  const cfg = settings.rewards?.scratch || {};
+  const [form, setForm] = useState({
+    enabled: cfg.enabled ?? true,
+    pointsSharePct: cfg.pointsSharePct ?? 30,
+    highMarginRupees: cfg.highMarginRupees ?? 20,
+    walletCutPct: cfg.walletCutPct ?? 10,
+    walletMaxRupees: cfg.walletMaxRupees ?? 8,
+    minOrder: cfg.minOrder ?? 0,
+  });
+  const [saved, setSaved] = useState(false);
+  const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
+
+  function save() {
+    updateSettings({
+      rewards: {
+        ...(settings.rewards || {}),
+        scratch: {
+          enabled: !!form.enabled,
+          pointsSharePct: Math.min(100, Math.max(0, Number(form.pointsSharePct) || 0)),
+          highMarginRupees: Math.max(0, Number(form.highMarginRupees) || 0),
+          walletCutPct: Math.min(100, Math.max(0, Number(form.walletCutPct) || 0)),
+          walletMaxRupees: Math.max(0, Number(form.walletMaxRupees) || 0),
+          minOrder: Math.max(0, Number(form.minOrder) || 0),
+        },
+      },
+    });
+    setSaved(true);
+  }
+
+  return (
+    <section className="panel offer-card">
+      <h3>Scratch card reward</h3>
+      <p className="sub">After delivery the customer scratches a card. The reward comes out of the margin you already made — never a loss.</p>
+
+      <label className="preg-ev" style={{ marginBottom: 6 }}>
+        <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
+        <span>Show a scratch card after delivery</span>
+      </label>
+
+      <div className="rewards-rule">
+        <span>Hold</span>
+        <input type="number" min="0" max="100" value={form.pointsSharePct} onChange={(e) => set("pointsSharePct", e.target.value)} />
+        <span>% of the points a customer earns for the scratch card (the rest is given right away).</span>
+      </div>
+
+      <p className="sub" style={{ marginTop: 10, marginBottom: 4, fontWeight: 700 }}>Wallet cash from high-margin items</p>
+      <div className="rewards-rule">
+        <span>An item counts as high-margin when you make over ₹</span>
+        <input type="number" min="0" value={form.highMarginRupees} onChange={(e) => set("highMarginRupees", e.target.value)} />
+        <span>profit on it.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Give back</span>
+        <input type="number" min="0" max="100" value={form.walletCutPct} onChange={(e) => set("walletCutPct", e.target.value)} />
+        <span>% of that margin as wallet cash, up to ₹</span>
+        <input type="number" min="0" value={form.walletMaxRupees} onChange={(e) => set("walletMaxRupees", e.target.value)} />
+        <span>per order.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Only orders of at least ₹</span>
+        <input type="number" min="0" value={form.minOrder} onChange={(e) => set("minOrder", e.target.value)} />
+        <span>get a scratch card.</span>
+      </div>
+
+      <p className="rewards-preview">
+        Example: a customer buys an item you make <strong>₹{Math.max(form.highMarginRupees, 40)} profit</strong> on →
+        scratch gives about <strong>₹{Math.min(Math.round(Math.max(form.highMarginRupees, 40) * (Number(form.walletCutPct) || 0) / 100), Number(form.walletMaxRupees) || 0)}</strong> wallet cash
+        plus <strong>{form.pointsSharePct}%</strong> of the order's points.
+      </p>
+
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
+        <button className="primary-btn" onClick={save}>Save scratch rule</button>
+        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
+      </div>
+    </section>
   );
 }
 

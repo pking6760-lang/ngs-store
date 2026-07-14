@@ -7,6 +7,7 @@ import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import ScratchCard from "./ScratchCard.jsx";
 import ProductThumb from "./ProductThumb.jsx";
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
@@ -289,6 +290,10 @@ function OrderDetail({ order, onClose, onReorder }) {
                 : "Cash on delivery"}
             </div>
           </div>
+
+          {order.status === "Delivered" && !order.scratchClaimed && (order.scratchPoints > 0 || order.scratchWallet > 0) && (
+            <ScratchCard orderId={order.dbId} existingReward={null} />
+          )}
 
           {order.status === "Delivered" && (
             <RatingBox order={order} />
