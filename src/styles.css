@@ -3235,6 +3235,39 @@ body {
   border-radius: 12px; padding: 10px 14px;
 }
 
+/* Refer & earn */
+.refer-panel { display: flex; flex-direction: column; gap: 16px; }
+.refer-hero { text-align: center; padding: 18px 12px; border-radius: 16px;
+  background: linear-gradient(135deg, #eef3ff, #f6efff); }
+.refer-hero-emoji { font-size: 40px; }
+.refer-hero h3 { margin: 6px 0 4px; font-size: 19px; }
+.refer-hero p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.refer-code-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.refer-code-label { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.refer-code {
+  font-size: 24px; font-weight: 900; letter-spacing: 2px; padding: 10px 22px;
+  border: 2px dashed var(--green, #3B5BDB); border-radius: 12px; background: #fff;
+  color: var(--green-dark, #2B44A8); cursor: pointer;
+}
+.refer-share { width: 100%; }
+.refer-copied { font-size: 12px; color: #2f9e44; font-weight: 700; }
+.refer-stats { display: flex; gap: 12px; }
+.refer-stats > div { flex: 1; text-align: center; background: #f7f9fc; border-radius: 12px; padding: 12px; }
+.refer-stats strong { display: block; font-size: 20px; }
+.refer-stats span { font-size: 12px; color: var(--muted); }
+.refer-enter { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 14px; }
+.refer-enter-label { font-size: 13px; font-weight: 700; }
+.refer-enter-row { display: flex; gap: 8px; }
+.refer-enter-row input {
+  flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  font-size: 15px; text-transform: uppercase; font-weight: 700;
+}
+.refer-fine { font-size: 11px; color: var(--muted); }
+.refer-ok { font-size: 13px; color: #2f9e44; font-weight: 700; }
+.refer-err { font-size: 13px; color: #e03131; font-weight: 700; }
+.refer-used { text-align: center; font-size: 13px; color: #2f9e44; font-weight: 700;
+  background: #ebfbee; border-radius: 10px; padding: 10px; }
+
 .prime-benefits {
   background: var(--card, #fff); border: 1px solid var(--line); border-radius: 16px;
   padding: 6px 16px; margin-top: 14px;

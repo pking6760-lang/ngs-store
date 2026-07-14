@@ -17,6 +17,7 @@ const TABS = [
   { id: "wallet", label: "Wallet" },
   { id: "inbox", label: "Inbox" },
   { id: "rewards", label: "Rewards" },
+  { id: "refer", label: "Refer & earn" },
   { id: "membership", label: "Membership" },
   { id: "profile", label: "Profile" },
 ];
@@ -115,6 +116,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
             {tab === "wallet" && <WalletTab userId={user?.id} />}
             {tab === "inbox" && <Inbox notes={notes} userId={user?.id} error={notesError} onRetry={reloadNotes} />}
             {tab === "rewards" && <Rewards user={user} />}
+            {tab === "refer" && <Referral user={user} />}
             {tab === "membership" && <Membership />}
             {tab === "profile" && <Profile />}
           </div>
@@ -506,6 +508,97 @@ function Rewards({ user }) {
           <li>Points are added once your order is confirmed.</li>
         </ul>
       </div>
+    </div>
+  );
+}
+
+function Referral({ user }) {
+  const [stats, setStats] = useState(null);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null); // { ok, text }
+  const [copied, setCopied] = useState(false);
+
+  async function load() {
+    try { setStats(await api.myReferralStats()); } catch { /* keep prior */ }
+  }
+  useEffect(() => { load(); }, [user?.id]);
+
+  const shareText =
+    stats?.code &&
+    `Shop daily essentials on NGS — use my code ${stats.code} and we both get ₹${stats.amount} off. 🛒`;
+
+  async function share() {
+    if (!stats?.code) return;
+    try {
+      if (navigator.share) await navigator.share({ text: shareText });
+      else { await navigator.clipboard.writeText(shareText); setCopied(true); setTimeout(() => setCopied(false), 1800); }
+    } catch { /* user dismissed */ }
+  }
+  async function copyCode() {
+    try { await navigator.clipboard.writeText(stats.code); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* no clipboard */ }
+  }
+
+  async function submitCode(e) {
+    e.preventDefault();
+    if (!code.trim() || busy) return;
+    setBusy(true); setMsg(null);
+    try {
+      const r = await api.applyReferral(code.trim().toUpperCase());
+      setMsg({ ok: true, text: `✅ Code applied! You'll get ₹${r.reward} after your first order.` });
+      setCode("");
+      load();
+    } catch (e2) {
+      setMsg({ ok: false, text: e2.message });
+    } finally { setBusy(false); }
+  }
+
+  const amount = stats?.amount ?? 30;
+  const isNew = !stats?.usedCode && (user?.orderCount ?? 0) === 0;
+
+  return (
+    <div className="refer-panel">
+      <div className="refer-hero">
+        <div className="refer-hero-emoji">🎁</div>
+        <h3>Refer a friend, both get ₹{amount}</h3>
+        <p>Share your code. When your friend places their first order, you both get ₹{amount} in your NGS Wallet.</p>
+      </div>
+
+      <div className="refer-code-box">
+        <span className="refer-code-label">Your code</span>
+        <button className="refer-code" onClick={copyCode}>{stats?.code || "…"}</button>
+        <button className="primary-btn refer-share" onClick={share}>Share code</button>
+        {copied && <span className="refer-copied">Copied ✓</span>}
+      </div>
+
+      {stats && (
+        <div className="refer-stats">
+          <div><strong>{stats.joined}</strong><span>friends joined</span></div>
+          <div><strong>₹{Math.round(stats.earned || 0)}</strong><span>earned so far</span></div>
+        </div>
+      )}
+
+      {isNew && (
+        <form className="refer-enter" onSubmit={submitCode}>
+          <span className="refer-enter-label">Have a friend's code?</span>
+          <div className="refer-enter-row">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="e.g. NGS1043"
+              maxLength={16}
+            />
+            <button className="primary-btn" type="submit" disabled={busy}>
+              {busy ? "…" : "Apply"}
+            </button>
+          </div>
+          <small className="refer-fine">Only before your first order.</small>
+          {msg && <div className={msg.ok ? "refer-ok" : "refer-err"}>{msg.text}</div>}
+        </form>
+      )}
+      {stats?.usedCode && (
+        <div className="refer-used">✅ You've already used a friend's code — enjoy!</div>
+      )}
     </div>
   );
 }

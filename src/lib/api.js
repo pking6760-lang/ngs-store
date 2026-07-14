@@ -442,6 +442,21 @@ export async function rateOrderRider(orderId, rating) {
   return { ok: true };
 }
 
+// Referral: a new customer applies a friend's code (before their first order).
+export async function applyReferral(code) {
+  const { data, error } = await must().rpc("apply_referral", { p_code: code });
+  if (error) throw new Error(error.message || "Couldn't apply that code.");
+  pingLocal("profiles");
+  return data;
+}
+
+// Referral: my share code + how many friends joined / how much I've earned.
+export async function myReferralStats() {
+  const { data, error } = await must().rpc("my_referral_stats");
+  if (error) throw new Error(error.message || "Couldn't load referral info.");
+  return data;
+}
+
 // Customer joins / renews NGS Prime, paying the fee from their wallet.
 export async function joinMembership() {
   const { data, error } = await must().rpc("join_membership");
