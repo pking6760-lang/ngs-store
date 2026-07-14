@@ -6,7 +6,7 @@ import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../li
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
-import { cleanUpiQrFromImage } from "../lib/payments.js";
+import { cleanUpiQrFromImage, loadRazorpay } from "../lib/payments.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ScratchCard from "./ScratchCard.jsx";
 import ProductThumb from "./ProductThumb.jsx";
@@ -558,18 +558,9 @@ function Membership() {
             <p className="member-since">Valid until {formatDate(user.memberUntil)}</p>
           )}
         </div>
-        {err && <div className="auth-error">{err}</div>}
-        <div className="member-pay-row">
-          <button className="checkout-btn" onClick={() => setPayQr(true)} disabled={busy}>
-            Renew by UPI / QR · ₹{price}
-          </button>
-          {enoughWallet && (
-            <button className="ghost-btn full" onClick={joinWithWallet} disabled={busy}>
-              {busy ? "Renewing…" : `Renew from Wallet · ₹${price}`}
-            </button>
-          )}
-        </div>
-        <p className="member-note">Renewing adds {days} more days.</p>
+        <p className="member-note">
+          You're all set. You can renew here once your membership ends on {formatDate(user.memberUntil)}.
+        </p>
       </div>
     );
   }
@@ -615,6 +606,7 @@ function Membership() {
 // UPI/QR membership payment — creates a membership order, shows its Razorpay UPI
 // QR, and polls until the webhook confirms payment, then activates.
 function MembershipQrPay({ price, onPaid, onCancel }) {
+  const { user } = useAuth();
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
   const [order, setOrder] = useState(null);
   const [err, setErr] = useState("");
@@ -649,6 +641,36 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
     return () => { alive = false; clearInterval(iv); };
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Open the UPI apps directly (GPay / PhonePe / Paytm / any UPI) on this phone.
+  async function payOnThisPhone() {
+    if (!order) return;
+    setErr("");
+    try {
+      const rp = await api.createRazorpayOrder(order.dbId);
+      const Razorpay = await loadRazorpay();
+      const rzp = new Razorpay({
+        key: rp.keyId, order_id: rp.orderId, amount: rp.amount, currency: rp.currency || "INR",
+        name: "NGS Nisha General Store", description: "NGS Prime membership",
+        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
+        theme: { color: "#0a9155" },
+        handler: async (resp) => {
+          try {
+            await api.verifyRazorpayPayment({
+              orderId: order.dbId,
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+            });
+          } catch { /* the polling effect / webhook still confirms it */ }
+        },
+      });
+      rzp.on("payment.failed", (r) => setErr(r?.error?.description || "Payment failed. Please try again."));
+      rzp.open();
+    } catch (e) {
+      setErr(e.message || "Couldn't open the payment. Please try again.");
+    }
+  }
+
   return (
     <div className="mem-qr">
       <div className="mem-qr-amt">Pay ₹{price} to join NGS Prime<span>🔒 Secured by Razorpay</span></div>
@@ -656,8 +678,11 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
         <div className="auth-error">{err}</div>
       ) : qr && qr.url ? (
         <>
+          <button className="checkout-btn" onClick={payOnThisPhone}>Pay with a UPI app on this phone</button>
+          <div className="mem-qr-or">— or scan the QR —</div>
           <div className="mem-qr-wrap"><img className="mem-qr-img" src={qr.url} alt="UPI payment QR" /></div>
-          <p className="member-note">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM). Your membership activates automatically the moment you pay.</p>
+          <p className="member-note">Open GPay, PhonePe, Paytm or any UPI app. Your membership activates automatically the moment you pay.</p>
+          {err && <div className="auth-error">{err}</div>}
         </>
       ) : (
         <div className="mem-qr-loading">Creating a secure QR…</div>

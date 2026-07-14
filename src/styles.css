@@ -3127,3 +3127,4 @@ body {
 .mem-qr-img { width: min(240px, 70vw); height: auto; display: block; }
 .mem-qr-loading { color: var(--muted); font-weight: 600; padding: 30px; }
 .ghost-btn.full { width: 100%; }
+.mem-qr-or { font-size: 12px; color: var(--muted); font-weight: 600; margin: 2px 0; }
