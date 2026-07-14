@@ -3129,50 +3129,87 @@ body {
 .ghost-btn.full { width: 100%; }
 .mem-qr-or { font-size: 12px; color: var(--muted); font-weight: 600; margin: 2px 0; }
 
-/* ─── NGS Prime membership — premium ─────────────────────────────────────── */
-.prime-hero {
+/* ─── NGS Prime membership — metal credit card ───────────────────────────── */
+.prime-card {
   position: relative; overflow: hidden;
-  border-radius: 20px; padding: 22px 20px 20px;
+  aspect-ratio: 1.586 / 1;                 /* real bank-card ratio */
+  border-radius: 18px; padding: 18px 20px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  color: #f4ead0;
   background:
-    radial-gradient(120% 90% at 100% 0%, rgba(232,195,107,0.22), transparent 55%),
-    linear-gradient(150deg, #0e3324 0%, #0a2018 55%, #06120c 100%);
-  color: #fff;
-  box-shadow: 0 20px 40px -22px rgba(6,18,12,0.9), inset 0 0 0 1px rgba(232,195,107,0.22);
+    linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 40%),
+    repeating-linear-gradient(115deg, #1a1c22 0px, #23262d 2px, #1a1c22 4px),
+    linear-gradient(150deg, #2b2f38 0%, #16181d 55%, #0c0d10 100%);
+  box-shadow:
+    0 26px 48px -24px rgba(0,0,0,0.85),
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 0 0 1px rgba(232,195,107,0.20);
 }
-.prime-sheen {
-  position: absolute; top: -60%; left: -20%; width: 60%; height: 220%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent);
-  transform: rotate(18deg); pointer-events: none;
-  animation: primeSheen 6s ease-in-out infinite;
+.prime-card.on {                            /* active member — champagne-gold metal */
+  color: #241d09;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0) 42%),
+    repeating-linear-gradient(115deg, #d9b45a 0px, #f0d896 2px, #d9b45a 4px),
+    linear-gradient(150deg, #f4dd98 0%, #d9b45a 55%, #b8933f 100%);
+  box-shadow:
+    0 26px 48px -22px rgba(160,120,40,0.7),
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 0 0 0 1px rgba(120,90,30,0.35);
 }
-@keyframes primeSheen { 0%,70%,100% { left: -30%; opacity: 0; } 30% { left: 120%; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .prime-sheen { animation: none; display: none; } }
-.prime-top { display: flex; align-items: center; gap: 11px; }
-.prime-crest {
-  width: 40px; height: 40px; border-radius: 12px; flex: none;
-  display: flex; align-items: center; justify-content: center;
-  color: #16120a;
-  background: linear-gradient(140deg, #f4dd98, #d9b45a);
-  box-shadow: 0 4px 12px -4px rgba(217,180,90,0.7);
+.pc-brush {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+  background: radial-gradient(120% 80% at 15% 0%, rgba(255,255,255,0.14), transparent 55%);
 }
-.prime-word { font-size: 20px; font-weight: 800; letter-spacing: 0.14em; }
-.prime-word b { color: #eecb78; font-weight: 900; }
-.prime-badge {
-  margin-left: auto; font-size: 10.5px; font-weight: 900; letter-spacing: 0.08em;
-  color: #16120a; background: linear-gradient(140deg, #f4dd98, #d9b45a);
-  padding: 4px 10px; border-radius: 999px;
+.pc-shine {
+  position: absolute; top: -60%; left: -30%; width: 55%; height: 220%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+  transform: rotate(19deg); pointer-events: none;
+  animation: pcShine 6.5s ease-in-out infinite;
 }
-.prime-tagline { font-size: 13px; color: rgba(255,255,255,0.72); margin-top: 12px; }
-.prime-price { display: flex; align-items: baseline; gap: 4px; margin-top: 8px; }
-.prime-price .pp-cur { font-size: 20px; font-weight: 800; color: #eecb78; }
-.prime-price .pp-amt { font-size: 40px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; }
-.prime-price .pp-per { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 600; margin-left: 6px; }
-.prime-valid { display: flex; flex-direction: column; margin-top: 14px; }
-.prime-valid span { font-size: 12px; color: rgba(255,255,255,0.65); }
-.prime-valid strong { font-size: 17px; font-weight: 800; }
-.prime-meter { height: 7px; border-radius: 999px; background: rgba(255,255,255,0.14); margin-top: 12px; overflow: hidden; }
+@keyframes pcShine { 0%,72%,100% { left: -40%; opacity: 0; } 32% { left: 120%; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pc-shine { animation: none; display: none; } }
+.pc-row { position: relative; display: flex; align-items: center; justify-content: space-between; }
+.pc-brand { font-size: 17px; font-weight: 800; letter-spacing: 0.16em; text-shadow: 0 1px 1px rgba(0,0,0,0.35); }
+.prime-card.on .pc-brand { text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+.pc-brand b { color: #eecb78; font-weight: 900; margin-left: 3px; }
+.prime-card.on .pc-brand b { color: #4a3610; }
+.pc-wave { opacity: 0.85; display: flex; }
+.pc-chip {
+  position: relative; width: 44px; height: 33px; border-radius: 7px; margin: 2px 0;
+  background: linear-gradient(135deg, #f4dd98, #c69b45);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column; justify-content: space-evenly; padding: 5px 6px;
+}
+.pc-chip i { display: block; height: 1.5px; background: rgba(70,50,15,0.55); border-radius: 2px; }
+.pc-chip::before {
+  content: ""; position: absolute; top: 6px; bottom: 6px; left: 50%;
+  width: 1.5px; background: rgba(70,50,15,0.55); transform: translateX(-50%);
+}
+.pc-foot { align-items: flex-end; }
+.pc-holder, .pc-thru { display: flex; flex-direction: column; gap: 2px; }
+.pc-thru { align-items: flex-end; }
+.pc-lbl { font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.62; font-weight: 700; }
+.pc-name { font-size: 14px; font-weight: 800; letter-spacing: 0.06em; }
+.pc-val { font-size: 14px; font-weight: 800; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
+
+.prime-offer {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 14px; padding: 14px 16px; border-radius: 15px;
+  background: var(--green-tint, #eaf7ee); border: 1px solid rgba(31,142,58,0.18);
+}
+.prime-offer-lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--green-dark, #1a7a34); }
+.prime-price { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+.prime-price s { font-size: 16px; color: var(--muted); font-weight: 600; }
+.prime-price .pp-amt { font-size: 30px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; color: var(--ink, #1c2430); }
+.prime-price .pp-per { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.prime-save {
+  flex: none; font-size: 12px; font-weight: 900; letter-spacing: 0.03em;
+  color: #fff; background: linear-gradient(140deg, #22a24a, #178a3a);
+  padding: 7px 11px; border-radius: 999px; box-shadow: 0 6px 14px -6px rgba(23,138,58,0.7);
+}
+.prime-meter { height: 7px; border-radius: 999px; background: var(--line, #e6ebf0); margin-top: 14px; overflow: hidden; }
 .prime-meter > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f4dd98, #d9b45a); }
-.prime-left { font-size: 11.5px; color: rgba(255,255,255,0.7); font-weight: 700; margin-top: 6px; }
+.prime-left { font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 7px; text-align: center; }
 
 .prime-benefits {
   background: var(--card, #fff); border: 1px solid var(--line); border-radius: 16px;
@@ -3203,3 +3240,37 @@ body {
 /* Polished QR pay screen */
 .mem-qr-amt { font-weight: 800; font-size: 17px; }
 .mem-qr .checkout-btn { width: 100%; }
+
+/* Checkout upsell — tick to add NGS Prime to this order */
+.prime-addon {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  margin: 12px 0; padding: 13px 14px; border-radius: 15px; cursor: pointer;
+  background: linear-gradient(135deg, #fbf6e8, #fff);
+  border: 1.5px solid rgba(217,180,90,0.5);
+  box-shadow: 0 8px 20px -14px rgba(160,120,40,0.5);
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.prime-addon.on {
+  background: linear-gradient(135deg, #fdf3d8, #fff8ea);
+  border-color: #d9b45a;
+  box-shadow: 0 10px 22px -12px rgba(160,120,40,0.7), inset 0 0 0 1px rgba(217,180,90,0.35);
+}
+.prime-addon-tick {
+  width: 24px; height: 24px; flex: none; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #cdb47a; color: #fff; background: #fff;
+  transition: background .15s, border-color .15s;
+}
+.prime-addon-tick.on { background: linear-gradient(140deg, #e8c86e, #c99a3f); border-color: #c99a3f; }
+.prime-addon-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.prime-addon-title { font-size: 14px; font-weight: 700; color: var(--ink, #1c2430); display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.prime-addon-title b { color: #9a6b16; font-weight: 900; }
+.prime-addon-badge {
+  font-size: 9.5px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #16120a; background: linear-gradient(140deg, #f4dd98, #d9b45a);
+  padding: 3px 7px; border-radius: 999px;
+}
+.prime-addon-sub { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.prime-addon-price { display: flex; flex-direction: column; align-items: flex-end; flex: none; line-height: 1.1; }
+.prime-addon-price s { font-size: 11px; color: var(--muted); font-weight: 600; }
+.prime-addon-price b { font-size: 17px; font-weight: 900; color: #9a6b16; }

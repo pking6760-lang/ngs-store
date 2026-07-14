@@ -48,6 +48,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [payment, setPayment] = useState(RAZORPAY_ENABLED ? "razorpay" : "upi");
   const [usePoints, setUsePoints] = useState(false);
   const [useWalletCredit, setUseWalletCredit] = useState(false);
+  const [addMembership, setAddMembership] = useState(false); // buy NGS Prime with this order
   const wallet = useWallet(user?.id);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCode, setAppliedCode] = useState(null);
@@ -145,7 +146,21 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
   // Surge / bad-weather premium — applies to everyone while surge mode is on.
   const surgeFee = isSurge && itemTotal > 0 ? SURGE_FEE : 0;
-  const grandTotal = netItems + deliveryFee + handling + surgeFee;
+
+  // ── NGS Prime — buy the membership along with this order ──
+  const memPlan = settings.rewards?.membership || {};
+  const memEnabled = memPlan.enabled ?? true;
+  const memPrice = memPlan.price ?? 99;
+  const memMrp = memPlan.mrp ?? 199;
+  // Offered only to signed-in non-members, on a real order, when enabled.
+  const canJoinPrime = BACKEND && isLoggedIn && memEnabled && !isMember && lines.length > 0;
+  const memberFee = addMembership && canJoinPrime ? memPrice : 0;
+  // Drop the tick if it stops being offered (member joined, cart emptied, etc.).
+  useEffect(() => {
+    if (addMembership && !canJoinPrime) setAddMembership(false);
+  }, [addMembership, canJoinPrime]);
+
+  const grandTotal = netItems + deliveryFee + handling + surgeFee + memberFee;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
   // ── NGS Wallet (store credit) ──────────────────────────
@@ -209,6 +224,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           });
           clear();
           setUsePoints(false);
+          setUseWalletCredit(false);
+          setAddMembership(false);
           setAppliedCode(null);
           setPayLink(null);
           setStep("done");
@@ -345,6 +362,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         address: address.trim(),
         wallet: walletApplied,
         redeemPoints: pointsUsed,
+        membership: memberFee > 0,
       });
       // Verified native UPI QR shown ON our page (scan with any app → pays
       // directly → auto-confirms via webhook). No redirect to any gateway page.
@@ -421,6 +439,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         address: address.trim(),
         wallet: walletApplied,
         redeemPoints: pointsUsed,
+        membership: memberFee > 0,
       }), 900, 1800);
       setPlaced({
         // place_order returns only the order row (no joined items), so count
@@ -433,6 +452,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       clear();
       setUsePoints(false);
       setUseWalletCredit(false);
+      setAddMembership(false);
       setAppliedCode(null);
       setStep("done");
     } catch (e) {
@@ -785,6 +805,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </label>
             )}
 
+            {canJoinPrime && (
+              <PrimeAddon price={memPrice} mrp={memMrp} checked={addMembership}
+                onToggle={() => setAddMembership((v) => !v)} />
+            )}
+
             <div className="bill compact">
               {discount > 0 && (
                 <div className="bill-row">
@@ -814,6 +839,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="bill-row">
                   <span>🌧️ Surge charge</span>
                   <span>₹{surgeFee}</span>
+                </div>
+              )}
+              {memberFee > 0 && (
+                <div className="bill-row">
+                  <span>NGS Prime membership</span>
+                  <span>₹{memberFee}</span>
                 </div>
               )}
               {walletApplied > 0 && (
@@ -1034,6 +1065,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
             <AddonSuggestions lines={lines} onAdd={add} />
 
+            {canJoinPrime && (
+              <PrimeAddon price={memPrice} mrp={memMrp} checked={addMembership}
+                onToggle={() => setAddMembership((v) => !v)} />
+            )}
+
             <div className="bill">
               <h4>Bill details</h4>
               <div className="bill-row">
@@ -1072,6 +1108,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="bill-row">
                   <span>🌧️ Surge charge <small>(bad weather / peak)</small></span>
                   <span>₹{surgeFee}</span>
+                </div>
+              )}
+              {memberFee > 0 && (
+                <div className="bill-row">
+                  <span>NGS Prime membership</span>
+                  <span>₹{memberFee}</span>
                 </div>
               )}
               <div className="bill-row total">
@@ -1150,5 +1192,36 @@ function AddonSuggestions({ lines, onAdd }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// Checkout upsell — a tick to add NGS Prime to this order. Shows the crossed
+// original price so the deal reads as a saving. Toggling it flows the fee into
+// the bill/total; the server activates the plan when the order is confirmed.
+function PrimeAddon({ price, mrp, checked, onToggle }) {
+  return (
+    <button
+      type="button"
+      className={`prime-addon ${checked ? "on" : ""}`}
+      onClick={onToggle}
+      aria-pressed={checked}
+    >
+      <span className={`prime-addon-tick ${checked ? "on" : ""}`} aria-hidden="true">
+        {checked ? (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+        ) : null}
+      </span>
+      <span className="prime-addon-body">
+        <span className="prime-addon-title">
+          Add <b>NGS Prime</b> to this order
+          <span className="prime-addon-badge">FREE delivery</span>
+        </span>
+        <span className="prime-addon-sub">Free delivery &amp; member deals for 30 days</span>
+      </span>
+      <span className="prime-addon-price">
+        {mrp > price && <s>₹{mrp}</s>}
+        <b>₹{price}</b>
+      </span>
+    </button>
   );
 }

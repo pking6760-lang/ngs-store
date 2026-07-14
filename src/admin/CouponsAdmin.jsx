@@ -24,6 +24,7 @@ function MembershipSettings({ settings }) {
   const [form, setForm] = useState({
     enabled: cfg.enabled ?? true,
     price: cfg.price ?? 99,
+    mrp: cfg.mrp ?? 199,
     days: cfg.days ?? 30,
   });
   const [saved, setSaved] = useState(false);
@@ -36,6 +37,7 @@ function MembershipSettings({ settings }) {
         membership: {
           enabled: !!form.enabled,
           price: Math.max(0, Number(form.price) || 0),
+          mrp: Math.max(0, Number(form.mrp) || 0),
           days: Math.max(1, Number(form.days) || 1),
         },
       },
@@ -57,6 +59,11 @@ function MembershipSettings({ settings }) {
         <span>for</span>
         <input type="number" min="1" value={form.days} onChange={(e) => set("days", e.target.value)} />
         <span>days.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Show original price ₹</span>
+        <input type="number" min="0" value={form.mrp} onChange={(e) => set("mrp", e.target.value)} />
+        <span>crossed out (₹{form.mrp} → ₹{form.price}).</span>
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
         <button className="primary-btn" onClick={save}>Save membership</button>

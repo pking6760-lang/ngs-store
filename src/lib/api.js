@@ -116,6 +116,7 @@ function mapOrder(r) {
     rating: r.rating, feedback: r.feedback, riderRating: r.rider_rating || 0, needsOwner: !!r.needs_owner,
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
     isReturn: !!r.is_return, returnOf: r.return_of, isMembership: !!r.is_membership,
+    membershipFee: num(r.membership_fee), membershipDays: r.membership_days || 0,
     scratchClaimed: !!r.scratch_claimed, scratchReward: r.scratch_reward || null,
     scratchPoints: r.scratch_points || 0, scratchWallet: num(r.scratch_wallet),
     deliveryState: r.delivery_state, pickerState: r.picker_state,
@@ -250,7 +251,7 @@ export async function fetchSettings() {
 // Place an order. The phone sends only product ids + quantities (+ optional
 // coupon and location); the SERVER computes prices, discount, delivery, total
 // and points. Returns the created order row.
-export async function placeOrder({ items, coupon, location, payment, address, wallet, redeemPoints }) {
+export async function placeOrder({ items, coupon, location, payment, address, wallet, redeemPoints, membership }) {
   const p_items = items.map((i) => ({ id: i.id, qty: i.qty }));
   const { data, error } = await must().rpc("place_order", {
     p_items,
@@ -260,6 +261,7 @@ export async function placeOrder({ items, coupon, location, payment, address, wa
     p_address: address || null,
     p_wallet: Math.max(0, Number(wallet) || 0),
     p_redeem_points: Math.max(0, Math.floor(Number(redeemPoints) || 0)),
+    p_membership: !!membership,
   });
   if (error) throw error;
   pingLocal("orders");

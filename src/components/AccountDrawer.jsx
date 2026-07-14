@@ -281,6 +281,7 @@ function OrderDetail({ order, onClose, onReorder }) {
             <Row k="Delivery fee" v={order.deliveryFee ? `₹${order.deliveryFee}` : "FREE"} />
             <Row k="Handling" v={`₹${order.handling}`} />
             {order.surgeFee > 0 && <Row k="Surge" v={`₹${order.surgeFee}`} />}
+            {order.membershipFee > 0 && <Row k="NGS Prime membership" v={`₹${order.membershipFee}`} />}
             {order.walletUsed > 0 && <Row k="NGS Wallet" v={`−₹${order.walletUsed}`} good />}
             <Row k="Total paid" v={`₹${order.total}`} bold />
             {order.refundedAmount > 0 && <Row k="Refunded to wallet" v={`₹${order.refundedAmount}`} good />}
@@ -514,6 +515,7 @@ function Membership() {
   const { balance } = useWallet(user?.id);
   const plan = settings.rewards?.membership || {};
   const price = plan.price ?? MEMBERSHIP.price;
+  const mrp = plan.mrp ?? 199;
   const days = plan.days ?? 30;
   const isMember = user?.member;
   const enoughWallet = (balance || 0) >= price;
@@ -546,23 +548,10 @@ function Membership() {
     const pct = Math.max(6, Math.min(100, Math.round((daysLeft / (days || 30)) * 100)));
     return (
       <div className="membership-panel">
-        <div className="prime-hero active">
-          <div className="prime-sheen" />
-          <div className="prime-top">
-            <span className="prime-crest"><MIcon d={PIC.crown} /></span>
-            <span className="prime-word">NGS <b>PRIME</b></span>
-            <span className="prime-badge">ACTIVE</span>
-          </div>
-          <div className="prime-valid">
-            <span>Valid until</span>
-            <strong>{formatDate(user.memberUntil)}</strong>
-          </div>
-          <div className="prime-meter"><span style={{ width: `${pct}%` }} /></div>
-          <div className="prime-left">{daysLeft} day{daysLeft === 1 ? "" : "s"} left</div>
-        </div>
-
+        <PrimeCard name={user.name} until={user.memberUntil} active />
+        <div className="prime-meter"><span style={{ width: `${pct}%` }} /></div>
+        <div className="prime-left">{daysLeft} day{daysLeft === 1 ? "" : "s"} left on your membership</div>
         <PrimeBenefits benefits={MEMBERSHIP.benefits} />
-
         <p className="prime-fine">You can renew here once your membership ends.</p>
       </div>
     );
@@ -570,17 +559,18 @@ function Membership() {
 
   return (
     <div className="membership-panel">
-      <div className="prime-hero">
-        <div className="prime-sheen" />
-        <div className="prime-top">
-          <span className="prime-crest"><MIcon d={PIC.crown} /></span>
-          <span className="prime-word">NGS <b>PRIME</b></span>
+      <PrimeCard name={user?.name} until={null} />
+
+      <div className="prime-offer">
+        <div className="prime-offer-l">
+          <div className="prime-offer-lbl">Limited-time price</div>
+          <div className="prime-price">
+            <s>₹{mrp}</s>
+            <span className="pp-amt">₹{price}</span>
+            <span className="pp-per">/ {days} days</span>
+          </div>
         </div>
-        <div className="prime-tagline">Free delivery &amp; member-only perks</div>
-        <div className="prime-price">
-          <span className="pp-cur">₹</span><span className="pp-amt">{price}</span>
-          <span className="pp-per">for {days} days</span>
-        </div>
+        {mrp > price && <span className="prime-save">SAVE ₹{mrp - price}</span>}
       </div>
 
       <PrimeBenefits benefits={MEMBERSHIP.benefits} />
@@ -602,6 +592,36 @@ function Membership() {
   );
 }
 
+// A premium metal-card face — the membership rendered like a real credit card.
+function cardThru(until) {
+  if (!until) return "••/••";
+  const d = new Date(until);
+  return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`;
+}
+function PrimeCard({ name, until, active }) {
+  return (
+    <div className={`prime-card ${active ? "on" : ""}`}>
+      <div className="pc-brush" />
+      <div className="pc-shine" />
+      <div className="pc-row pc-head">
+        <span className="pc-brand">NGS<b>PRIME</b></span>
+        <span className="pc-wave"><MIcon d={PIC.wave} size={22} /></span>
+      </div>
+      <div className="pc-chip"><i /><i /><i /></div>
+      <div className="pc-row pc-foot">
+        <div className="pc-holder">
+          <span className="pc-lbl">Member</span>
+          <span className="pc-name">{(name || "Your Name").toUpperCase()}</span>
+        </div>
+        <div className="pc-thru">
+          <span className="pc-lbl">Valid thru</span>
+          <span className="pc-val">{cardThru(until)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* Premium icons for the membership screens (no emoji). */
 const PIC = {
   crown: <path d="M3 8l4.5 3L12 5l4.5 6L21 8l-1.8 10.2A1 1 0 0 1 18.2 19H5.8a1 1 0 0 1-1-.8L3 8z" />,
@@ -609,6 +629,7 @@ const PIC = {
   truck: <><path d="M3 6h11v9H3zM14 9h4l3 3v3h-7" /><circle cx="7" cy="18" r="1.6" /><circle cx="17.5" cy="18" r="1.6" /></>,
   bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />,
   tag: <><path d="M20 12l-8 8-9-9V4h7l10 10-1 1z" /><circle cx="7.5" cy="7.5" r="1.2" /></>,
+  wave: <><path d="M8.5 8.5a5 5 0 0 1 0 7" /><path d="M11.5 6a9 9 0 0 1 0 12" /><path d="M5.5 11a2 2 0 0 1 0 2" /></>,
 };
 function MIcon({ d, size = 20 }) {
   return (
