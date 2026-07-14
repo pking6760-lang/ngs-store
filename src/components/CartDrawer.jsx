@@ -8,14 +8,13 @@ import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "..
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage } from "../lib/payments.js";
-import { bulkUnitPrice, unitPriceFor } from "../lib/bulk.js";
+import { tierUnitPrice } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import {
   pointsForSpend,
   redeemableRupees,
-  welcomeDiscountFor,
 } from "../lib/rewards.js";
 
 // Persist the delivery address + phone the customer typed, so a page refresh
@@ -62,12 +61,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const searchTimer = useRef();
   const submitLock = useRef(false); // prevents double order submission
 
-  const memberPricing = !!user?.member; // Prime pricing applies to members
   const lines = Object.entries(items)
     .map(([id, qty]) => {
       const product = products.find((p) => p.id === id);
       if (!product) return null;
-      return { product, qty, unit: unitPriceFor(product, qty, memberPricing) };
+      // Tier price: the discount lives in the price itself (mirrors the server).
+      return { product, qty, unit: tierUnitPrice(product, qty, user, settings.rewards) };
     })
     .filter(Boolean);
 
@@ -132,12 +131,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   const netItems = Math.max(0, itemTotal - discount - couponDiscount);
 
-  // New-customer welcome discount (tapers with order count). Members count from
-  // when they joined Prime; everyone else from when they joined the app.
-  const lifeCount = isMember ? (user?.memberOrderCount || 0) : (user?.orderCount || 0);
-  const welcomeDiscount = welcomeDiscountFor(itemTotal, netItems, lifeCount, isMember, rewardsCfg, user?.membershipCount);
-  const afterWelcome = Math.max(0, netItems - welcomeDiscount);
-
   // ── Delivery fee (admin-controlled, with membership + surge rules) ──
   const DELIVERY_FEE = settings.deliveryFee ?? 25;
   const FREE_DELIVERY_ABOVE = settings.freeDeliveryAbove ?? 199;
@@ -169,7 +162,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     if (addMembership && !canJoinPrime) setAddMembership(false);
   }, [addMembership, canJoinPrime]);
 
-  const grandTotal = afterWelcome + deliveryFee + handling + surgeFee + memberFee;
+  const grandTotal = netItems + deliveryFee + handling + surgeFee + memberFee;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
   // ── NGS Wallet (store credit) ──────────────────────────
@@ -832,12 +825,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <span className="free">−₹{couponDiscount}</span>
                 </div>
               )}
-              {welcomeDiscount > 0 && (
-                <div className="bill-row">
-                  <span>🏷️ Extra discount</span>
-                  <span className="free">−₹{welcomeDiscount}</span>
-                </div>
-              )}
               <div className="bill-row">
                 <span>Delivery fee</span>
                 <span>
@@ -1101,12 +1088,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="bill-row">
                   <span>Coupon ({appliedCode})</span>
                   <span className="free">−₹{couponDiscount}</span>
-                </div>
-              )}
-              {welcomeDiscount > 0 && (
-                <div className="bill-row">
-                  <span>🏷️ Extra discount</span>
-                  <span className="free">−₹{welcomeDiscount}</span>
                 </div>
               )}
               <div className="bill-row">

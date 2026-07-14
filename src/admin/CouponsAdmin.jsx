@@ -14,33 +14,35 @@ export default function CouponsAdmin() {
       <RewardsSettings settings={settings} />
       <ScratchSettings settings={settings} />
       <MembershipSettings settings={settings} />
-      <MemberPricingSettings settings={settings} />
       <LifecycleSettings settings={settings} />
       <CouponManager coupons={coupons} categories={categories} />
     </div>
   );
 }
 
-// New-customer honeymoon: generous first orders that taper to a non-zero floor.
-// Applies to everyone; Prime always gets the stronger curve.
+// Member honeymoon + tiered pricing. New Prime gets the deepest prices; Renewal
+// a middle deal; Normal the smallest. After each tier's order limit the price
+// rises little-by-little to its settled level, and points/scratch switch to the
+// 5-order surprise bag. Defaults are pre-balanced — change only if you're sure.
 function LifecycleSettings({ settings }) {
   const cfg = settings.rewards?.lifecycle || {};
-  const m = cfg.member || {};
-  const fp = cfg.floorPct || {};
+  const W = cfg.windows || {};
+  const P = cfg.pricing || {};
   const [form, setForm] = useState({
     enabled: cfg.enabled ?? true,
-    welcomeOrders: cfg.welcomeOrders ?? 5,
+    w_normal: W.normal ?? 6, w_prime: W.prime ?? 10, w_renew: W.renew ?? 7,
     taperOrders: cfg.taperOrders ?? 15,
     shopFloorRupees: cfg.shopFloorRupees ?? 6,
     shopFloorPct: cfg.shopFloorPct ?? 3,
-    normalPct: cfg.normalPct ?? 55,
-    renewalPct: cfg.renewalPct ?? 30,
-    m_boost: m.pointsBoost ?? 2.5, m_disc: m.discPct ?? 12, m_discMax: m.discMax ?? 60,
-    fl_normal: fp.normal ?? 3, fl_prime: fp.prime ?? 8,
+    deepMarginPct: P.deepMarginPct ?? 7,
+    pr_s: P.prime?.start ?? 0, pr_e: P.prime?.end ?? 40,
+    rn_s: P.renew?.start ?? 12, rn_e: P.renew?.end ?? 32,
+    no_s: P.normal?.start ?? 44, no_e: P.normal?.end ?? 64,
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
   const num = (v) => Math.max(0, Number(v) || 0);
+  const pct = (v) => Math.min(100, num(v));
 
   function save() {
     updateSettings({
@@ -49,14 +51,22 @@ function LifecycleSettings({ settings }) {
         lifecycle: {
           ...(settings.rewards?.lifecycle || {}),
           enabled: !!form.enabled,
-          welcomeOrders: Math.max(0, Math.round(num(form.welcomeOrders))),
           taperOrders: Math.max(1, Math.round(num(form.taperOrders))),
           shopFloorRupees: num(form.shopFloorRupees),
           shopFloorPct: num(form.shopFloorPct),
-          normalPct: Math.min(100, num(form.normalPct)),
-          renewalPct: Math.min(100, num(form.renewalPct)),
-          member: { pointsBoost: num(form.m_boost), discPct: num(form.m_disc), discMax: num(form.m_discMax) },
-          floorPct: { normal: Math.min(100, num(form.fl_normal)), prime: Math.min(100, num(form.fl_prime)) },
+          windows: {
+            normal: Math.max(0, Math.round(num(form.w_normal))),
+            prime: Math.max(0, Math.round(num(form.w_prime))),
+            renew: Math.max(0, Math.round(num(form.w_renew))),
+          },
+          pricing: {
+            ...(cfg.pricing || {}),
+            enabled: true,
+            deepMarginPct: num(form.deepMarginPct),
+            prime: { start: pct(form.pr_s), end: pct(form.pr_e) },
+            renew: { start: pct(form.rn_s), end: pct(form.rn_e) },
+            normal: { start: pct(form.no_s), end: pct(form.no_e) },
+          },
         },
       },
     });
@@ -65,127 +75,66 @@ function LifecycleSettings({ settings }) {
 
   return (
     <section className="panel offer-card">
-      <h3>New-member rewards (honeymoon)</h3>
+      <h3>Member pricing &amp; honeymoon</h3>
       <p className="sub">
-        A new member gets boosted points/wallet + a welcome discount for their first orders, tapering
-        little by little to a permanent floor (never zero). Set the <b>Prime</b> perk once; a <b>Normal</b>
-        member (hasn't bought membership) automatically gets a share of it. A new Prime member's own fee
-        funds their honeymoon, so they always come out ahead — and every giveaway is capped by real profit.
+        Each member type sees its own price between your buying price and the MRP —
+        <b> New Prime deepest, Renewal middle, Normal smallest</b> — and after their
+        order limit it rises gently to the settled level. 0% = the deepest price
+        (cost + minimum margin), 100% = MRP. Prices are fixed per tier (never random);
+        points &amp; scratch carry the surprises. No item ever sells below cost.
       </p>
       <label className="preg-ev" style={{ marginBottom: 6 }}>
         <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
-        <span>Turn on new-member boost</span>
+        <span>Turn on member pricing &amp; honeymoon</span>
       </label>
       <div className="rewards-rule">
-        <span>Full boost for first</span>
-        <input type="number" min="0" value={form.welcomeOrders} onChange={(e) => set("welcomeOrders", e.target.value)} />
-        <span>orders, then taper over</span>
+        <span>Order limit: Normal</span>
+        <input type="number" min="0" value={form.w_normal} onChange={(e) => set("w_normal", e.target.value)} />
+        <span>· New Prime</span>
+        <input type="number" min="0" value={form.w_prime} onChange={(e) => set("w_prime", e.target.value)} />
+        <span>· Renewal</span>
+        <input type="number" min="0" value={form.w_renew} onChange={(e) => set("w_renew", e.target.value)} />
+        <span>orders, then ease over</span>
         <input type="number" min="1" value={form.taperOrders} onChange={(e) => set("taperOrders", e.target.value)} />
         <span>orders.</span>
       </div>
       <div className="rewards-rule">
-        <span>Always keep at least ₹</span>
+        <span>Deepest price = cost +</span>
+        <input type="number" min="0" value={form.deepMarginPct} onChange={(e) => set("deepMarginPct", e.target.value)} />
+        <span>% margin · always keep ≥ ₹</span>
         <input type="number" min="0" value={form.shopFloorRupees} onChange={(e) => set("shopFloorRupees", e.target.value)} />
         <span>or</span>
         <input type="number" min="0" value={form.shopFloorPct} onChange={(e) => set("shopFloorPct", e.target.value)} />
         <span>% profit per order.</span>
       </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Peak perk (a new member starts at 100% of this)</p>
+      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Price position (0% deepest → 100% MRP): start → settled</p>
       <div className="rewards-rule">
-        <span>Prime points/wallet ×</span>
-        <input type="number" step="0.1" value={form.m_boost} onChange={(e) => set("m_boost", e.target.value)} />
-        <span>· discount</span>
-        <input type="number" value={form.m_disc} onChange={(e) => set("m_disc", e.target.value)} />
-        <span>% · max ₹</span>
-        <input type="number" value={form.m_discMax} onChange={(e) => set("m_discMax", e.target.value)} />
-      </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Start level (% of peak — only a NEW Prime member gets 100%)</p>
-      <div className="rewards-rule">
-        <span>New Prime 100% · Normal</span>
-        <input type="number" min="0" max="100" value={form.normalPct} onChange={(e) => set("normalPct", e.target.value)} />
+        <span>New Prime</span>
+        <input type="number" min="0" max="100" value={form.pr_s} onChange={(e) => set("pr_s", e.target.value)} />
+        <span>→</span>
+        <input type="number" min="0" max="100" value={form.pr_e} onChange={(e) => set("pr_e", e.target.value)} />
         <span>% · Renewal</span>
-        <input type="number" min="0" max="100" value={form.renewalPct} onChange={(e) => set("renewalPct", e.target.value)} />
-        <span>% (a limited hike).</span>
-      </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Settles to (% of peak — never zero)</p>
-      <div className="rewards-rule">
-        <span>Normal</span>
-        <input type="number" min="0" max="100" value={form.fl_normal} onChange={(e) => set("fl_normal", e.target.value)} />
-        <span>% · Prime (incl. after renewal)</span>
-        <input type="number" min="0" max="100" value={form.fl_prime} onChange={(e) => set("fl_prime", e.target.value)} />
+        <input type="number" min="0" max="100" value={form.rn_s} onChange={(e) => set("rn_s", e.target.value)} />
+        <span>→</span>
+        <input type="number" min="0" max="100" value={form.rn_e} onChange={(e) => set("rn_e", e.target.value)} />
+        <span>% · Normal</span>
+        <input type="number" min="0" max="100" value={form.no_s} onChange={(e) => set("no_s", e.target.value)} />
+        <span>→</span>
+        <input type="number" min="0" max="100" value={form.no_e} onChange={(e) => set("no_e", e.target.value)} />
         <span>%.</span>
       </div>
+      <p className="sub" style={{ marginTop: 8 }}>
+        After the limit, points &amp; scratch run the 5-order surprise mix automatically
+        (Normal: 3 low · 1 mid · 1 high — Prime: 2 low · 2 mid · 1 high).
+      </p>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 8 }}>
-        <button className="primary-btn" onClick={save}>Save new-member rewards</button>
+        <button className="primary-btn" onClick={save}>Save member pricing</button>
         {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
       </div>
     </section>
   );
 }
 
-// NGS Prime member pricing — the two invisible modes. These dials feed
-// smart_reprice(), which reshuffles every product's member factor each cycle.
-function MemberPricingSettings({ settings }) {
-  const cfg = settings.rewards?.member || {};
-  const [form, setForm] = useState({
-    enabled: cfg.enabled ?? true,
-    markupPct: cfg.markupPct ?? 6,
-    dipMax: cfg.dipMax ?? 3,
-    modeASharePct: cfg.modeASharePct ?? 55,
-    rewardBackPct: cfg.rewardBackPct ?? 60,
-  });
-  const [saved, setSaved] = useState(false);
-  const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
-
-  function save() {
-    updateSettings({
-      rewards: {
-        ...(settings.rewards || {}),
-        member: {
-          enabled: !!form.enabled,
-          markupPct: Math.min(50, Math.max(0, Number(form.markupPct) || 0)),
-          dipMax: Math.min(50, Math.max(0, Number(form.dipMax) || 0)),
-          modeASharePct: Math.min(100, Math.max(0, Number(form.modeASharePct) || 0)),
-          rewardBackPct: Math.min(100, Math.max(0, Number(form.rewardBackPct) || 0)),
-        },
-      },
-    });
-    setSaved(true);
-  }
-
-  return (
-    <section className="panel offer-card">
-      <h3>Prime member pricing</h3>
-      <p className="sub">
-        Members see only their own price, so it just feels like good deals. Some items are marked up a little
-        (60% of the extra comes back to them as points/wallet, the rest funds their free delivery); others are
-        a little cheaper with normal rewards. Reshuffles automatically every few hours — nothing is given from your pocket.
-      </p>
-      <label className="preg-ev" style={{ marginBottom: 6 }}>
-        <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
-        <span>Turn on member pricing</span>
-      </label>
-      <div className="rewards-rule">
-        <span>Mark up (max)</span>
-        <input type="number" min="0" max="50" value={form.markupPct} onChange={(e) => set("markupPct", e.target.value)} />
-        <span>% · discount up to</span>
-        <input type="number" min="0" max="50" value={form.dipMax} onChange={(e) => set("dipMax", e.target.value)} />
-        <span>%.</span>
-      </div>
-      <div className="rewards-rule">
-        <span>Mark up on</span>
-        <input type="number" min="0" max="100" value={form.modeASharePct} onChange={(e) => set("modeASharePct", e.target.value)} />
-        <span>% of items · give back</span>
-        <input type="number" min="0" max="100" value={form.rewardBackPct} onChange={(e) => set("rewardBackPct", e.target.value)} />
-        <span>% of the extra.</span>
-      </div>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
-        <button className="primary-btn" onClick={save}>Save member pricing</button>
-        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved · applies at next reprice</span>}
-      </div>
-    </section>
-  );
-}
 
 function MembershipSettings({ settings }) {
   const cfg = settings.rewards?.membership || {};

@@ -65,11 +65,10 @@ function mapProduct(r) {
     // Low-margin item (milk/curd/bread): its value does NOT count toward the
     // free-delivery threshold. Still buyable and counts toward everything else.
     freeDeliveryExempt: !!r.free_delivery_exempt,
-    // NGS Prime member pricing: a per-product multiplier + the reward channel.
-    // Members are charged min(round(baseUnit × factor), MRP). Public + harmless
-    // (no cost leak); the customer only ever sees their own member price.
-    memberFactor: r.member_factor != null ? Number(r.member_factor) : 1,
-    memberBonusKind: r.member_bonus_kind || null,
+    // Tiered member pricing: the public deep anchor (cost + minimum margin).
+    // The shopper's price sits between this and the MRP per their tier — the
+    // client mirrors the server exactly (see tierUnitPrice in bulk.js).
+    memberPriceFloor: r.member_price_floor != null ? Number(r.member_price_floor) : null,
     bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [] };
 }
 function mapCategory(r) {

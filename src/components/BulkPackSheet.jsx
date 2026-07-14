@@ -1,7 +1,8 @@
 import { createPortal } from "react-dom";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { unitPriceFor } from "../lib/bulk.js";
+import { useSettings } from "../lib/hooks.js";
+import { tierUnitPrice } from "../lib/bulk.js";
 
 // Pack selector (Zepto/Blinkit style) — a bottom sheet listing pack sizes for a
 // product that has bulk pricing. No product image, just "Pack of N", the price,
@@ -9,7 +10,7 @@ import { unitPriceFor } from "../lib/bulk.js";
 export default function BulkPackSheet({ product, onClose }) {
   const { items, setQty } = useCart();
   const { user } = useAuth();
-  const isMember = !!user?.member;
+  const settings = useSettings();
   const inCart = items[product.id] || 0;
   const base = Number(product.price) || 0;
   // Compare pack prices against the MRP (the true "original"), like Blinkit/Zepto.
@@ -33,7 +34,7 @@ export default function BulkPackSheet({ product, onClose }) {
         </div>
         <div className="bulk-grid">
           {packs.map((q) => {
-            const unit = unitPriceFor(product, q, isMember);
+            const unit = tierUnitPrice(product, q, user, settings.rewards);
             const total = unit * q;
             const orig = mrp * q;
             const save = orig - total;

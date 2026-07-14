@@ -13,18 +13,38 @@ export function bulkUnitPrice(product, qty) {
   return unit;
 }
 
-// The per-unit price the shopper actually pays, accounting for NGS Prime member
-// pricing. For a member we apply the product's member factor to the bulk unit
-// price and clamp to MRP — this MUST mirror place_order() in
-// migration-member-pricing.sql so the price shown equals the price charged.
-// A non-member (or a neutral product) just gets the normal bulk unit price.
-export function unitPriceFor(product, qty, isMember) {
-  const base = bulkUnitPrice(product, qty);
-  const factor = Number(product?.memberFactor) || 1;
-  if (!isMember || factor === 1) return base;
+// Tiered member pricing — the per-unit price this shopper actually pays.
+// Every priced product has a public "deep anchor" (memberPriceFloor = cost + a
+// minimum margin). The shopper's price sits between the anchor and the MRP at a
+// per-tier position that rises after their honeymoon window:
+//   New Prime deepest, Renewed Prime middle, Normal member smallest.
+// Always the better of this and the bulk/shelf price; guests get the shelf price.
+// MUST mirror member_tier_unit() + place_order() in migration-tier-pricing.sql
+// so the price shown always equals the price charged.
+export function tierUnitPrice(product, qty, user, rewardsCfg) {
+  const bulk = bulkUnitPrice(product, qty);
+  const L = rewardsCfg?.lifecycle;
+  const P = L?.pricing;
+  if (!user || !L || L.enabled === false || !P || P.enabled === false) return bulk;
+  const fl = Number(product?.memberPriceFloor) || 0;
   const mrp = Number(product?.mrp) || 0;
-  const adj = Math.round(base * factor);
-  return mrp > 0 ? Math.min(adj, mrp) : adj;
+  if (!fl || !mrp || mrp <= fl) return bulk;
+
+  const isMember = !!user.member;
+  const tier = !isMember ? "normal" : (Number(user.membershipCount) || 1) >= 2 ? "renew" : "prime";
+  const T = P[tier] || {};
+  const start = T.start ?? (tier === "prime" ? 0 : tier === "renew" ? 12 : 44);
+  const end = T.end ?? (tier === "prime" ? 40 : tier === "renew" ? 32 : 64);
+  const win = (L.windows || {})[tier] ?? (tier === "prime" ? 10 : tier === "renew" ? 7 : 6);
+  const taper = Math.max(L.taperOrders ?? 15, 1);
+  const n = (isMember ? user.memberOrderCount || 0 : user.orderCount || 0) + 1;
+  let frac;
+  if (n <= win) frac = 0;
+  else if (n <= win + taper) frac = (n - win) / taper;
+  else frac = 1;
+  const pct = start + (end - start) * frac;
+  const tierP = Math.min(mrp, Math.max(fl, Math.round(fl + ((mrp - fl) * pct) / 100)));
+  return Math.min(bulk, tierP);
 }
 
 // Line subtotal at the correct bulk unit price.

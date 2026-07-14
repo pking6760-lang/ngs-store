@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useSettings } from "../lib/hooks.js";
 import ProductThumb from "./ProductThumb.jsx";
-import { firstBulkTier, unitPriceFor } from "../lib/bulk.js";
+import { firstBulkTier, tierUnitPrice } from "../lib/bulk.js";
 import BulkPackSheet from "./BulkPackSheet.jsx";
 
 // Show scarcity urgency when stock is running low.
@@ -11,9 +12,10 @@ const LOW_STOCK = 5;
 export default function ProductCard({ product, badge }) {
   const { items, add, remove } = useCart();
   const { user } = useAuth();
+  const settings = useSettings();
   const qty = items[product.id] || 0;
-  // The price this shopper actually pays (NGS Prime members see their price).
-  const price = unitPriceFor(product, 1, !!user?.member);
+  // The price this shopper actually pays (their member tier's price).
+  const price = tierUnitPrice(product, 1, user, settings.rewards);
   const discount = product.mrp > 0 ? Math.round(((product.mrp - price) / product.mrp) * 100) : 0;
   const savings = product.mrp - price;
   const hasStockLimit = typeof product.stock === "number";
