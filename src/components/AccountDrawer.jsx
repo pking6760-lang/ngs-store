@@ -541,64 +541,97 @@ function Membership() {
   }
 
   if (isMember) {
+    const until = user.memberUntil ? new Date(user.memberUntil) : null;
+    const daysLeft = until ? Math.max(0, Math.ceil((until.getTime() - Date.now()) / 86400000)) : 0;
+    const pct = Math.max(6, Math.min(100, Math.round((daysLeft / (days || 30)) * 100)));
     return (
       <div className="membership-panel">
-        <div className="member-card active">
-          <div className="member-card-top">
-            <span className="member-crown">👑</span>
-            <span className="member-title">{MEMBERSHIP.name}</span>
-            <span className="member-active-tag">ACTIVE</span>
+        <div className="prime-hero active">
+          <div className="prime-sheen" />
+          <div className="prime-top">
+            <span className="prime-crest"><MIcon d={PIC.crown} /></span>
+            <span className="prime-word">NGS <b>PRIME</b></span>
+            <span className="prime-badge">ACTIVE</span>
           </div>
-          <ul className="member-benefits">
-            {MEMBERSHIP.benefits.map((b) => (
-              <li key={b}>✅ {b}</li>
-            ))}
-          </ul>
-          {user.memberUntil && (
-            <p className="member-since">Valid until {formatDate(user.memberUntil)}</p>
-          )}
+          <div className="prime-valid">
+            <span>Valid until</span>
+            <strong>{formatDate(user.memberUntil)}</strong>
+          </div>
+          <div className="prime-meter"><span style={{ width: `${pct}%` }} /></div>
+          <div className="prime-left">{daysLeft} day{daysLeft === 1 ? "" : "s"} left</div>
         </div>
-        <p className="member-note">
-          You're all set. You can renew here once your membership ends on {formatDate(user.memberUntil)}.
-        </p>
+
+        <PrimeBenefits benefits={MEMBERSHIP.benefits} />
+
+        <p className="prime-fine">You can renew here once your membership ends.</p>
       </div>
     );
   }
 
   return (
     <div className="membership-panel">
-      <div className="member-card">
-        <div className="member-card-top">
-          <span className="member-crown">👑</span>
-          <span className="member-title">{MEMBERSHIP.name}</span>
+      <div className="prime-hero">
+        <div className="prime-sheen" />
+        <div className="prime-top">
+          <span className="prime-crest"><MIcon d={PIC.crown} /></span>
+          <span className="prime-word">NGS <b>PRIME</b></span>
         </div>
-        <div className="member-price">
-          ₹{price}
-          <small>for {days} days</small>
-        </div>
-        <ul className="member-benefits">
-          {MEMBERSHIP.benefits.map((b) => (
-            <li key={b}>✅ {b}</li>
-          ))}
-        </ul>
-        {err && <div className="auth-error">{err}</div>}
-        <div className="member-pay-row">
-          <button className="checkout-btn" onClick={() => setPayQr(true)} disabled={busy}>
-            Pay by UPI / QR · ₹{price}
-          </button>
-          <button
-            className="ghost-btn full"
-            onClick={enoughWallet ? joinWithWallet : undefined}
-            disabled={busy || !enoughWallet}
-            title={enoughWallet ? "" : "Not enough wallet balance"}
-          >
-            {busy ? "Joining…" : enoughWallet ? `Pay from Wallet · ₹${price}` : `Wallet: ₹${balance || 0} (not enough)`}
-          </button>
+        <div className="prime-tagline">Free delivery &amp; member-only perks</div>
+        <div className="prime-price">
+          <span className="pp-cur">₹</span><span className="pp-amt">{price}</span>
+          <span className="pp-per">for {days} days</span>
         </div>
       </div>
-      <p className="member-note">
-        Pay by UPI/QR from any app, or use your NGS Wallet balance. It activates automatically the moment you pay.
-      </p>
+
+      <PrimeBenefits benefits={MEMBERSHIP.benefits} />
+
+      {err && <div className="auth-error">{err}</div>}
+
+      <button className="prime-cta" onClick={() => setPayQr(true)} disabled={busy}>
+        <MIcon d={PIC.bolt} size={17} /> Get NGS Prime · ₹{price}
+      </button>
+      <button
+        className="prime-cta ghost"
+        onClick={enoughWallet ? joinWithWallet : undefined}
+        disabled={busy || !enoughWallet}
+      >
+        {busy ? "Joining…" : enoughWallet ? `Pay from Wallet · ₹${price}` : `Wallet ₹${balance || 0} — not enough`}
+      </button>
+      <p className="prime-fine">Pay by any UPI app or your NGS Wallet · activates instantly.</p>
+    </div>
+  );
+}
+
+/* Premium icons for the membership screens (no emoji). */
+const PIC = {
+  crown: <path d="M3 8l4.5 3L12 5l4.5 6L21 8l-1.8 10.2A1 1 0 0 1 18.2 19H5.8a1 1 0 0 1-1-.8L3 8z" />,
+  check: <path d="M20 6 9 17l-5-5" />,
+  truck: <><path d="M3 6h11v9H3zM14 9h4l3 3v3h-7" /><circle cx="7" cy="18" r="1.6" /><circle cx="17.5" cy="18" r="1.6" /></>,
+  bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />,
+  tag: <><path d="M20 12l-8 8-9-9V4h7l10 10-1 1z" /><circle cx="7.5" cy="7.5" r="1.2" /></>,
+};
+function MIcon({ d, size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+  );
+}
+function benefitIcon(text) {
+  const t = text.toLowerCase();
+  if (t.includes("deliver")) return PIC.truck;
+  if (t.includes("priorit") || t.includes("fast")) return PIC.bolt;
+  if (t.includes("offer") || t.includes("deal") || t.includes("member-only")) return PIC.tag;
+  return PIC.check;
+}
+function PrimeBenefits({ benefits }) {
+  return (
+    <div className="prime-benefits">
+      {benefits.map((b) => (
+        <div className="prime-benefit" key={b}>
+          <span className="pb-ic"><MIcon d={benefitIcon(b)} size={17} /></span>
+          <span className="pb-txt">{b}</span>
+        </div>
+      ))}
     </div>
   );
 }
