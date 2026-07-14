@@ -115,3 +115,15 @@ export async function sendNotification({ userId, title, body }) {
   }
   return store.sendNotification({ userId, title, body });
 }
+
+// Send the same notification to every customer at once.
+export async function broadcastNotification({ title, body }) {
+  if (!title?.trim()) return { ok: false, error: "Missing details." };
+  if (BACKEND) {
+    try {
+      const r = await api.broadcastNotification(title.trim(), body);
+      return { ok: true, count: r.count };
+    } catch (e) { return { ok: false, error: e.message }; }
+  }
+  return store.broadcastNotification({ title, body });
+}

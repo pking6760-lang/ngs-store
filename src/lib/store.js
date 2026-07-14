@@ -301,6 +301,21 @@ export function sendNotification({ userId, title, body }) {
   return { ok: true };
 }
 
+export function broadcastNotification({ title, body }) {
+  if (!title?.trim()) return { ok: false, error: "Missing details." };
+  const now = new Date().toISOString();
+  const notes = getUsers().map((u) => ({
+    id: "n" + Math.random().toString(36).slice(2, 9),
+    userId: u.id,
+    title: title.trim(),
+    body: (body || "").trim(),
+    createdAt: now,
+    read: false,
+  }));
+  write(NOTIFICATIONS_KEY, [...notes, ...getNotifications()]);
+  return { ok: true, count: notes.length };
+}
+
 // Mark a customer's notifications as read (called when they open their inbox).
 export function markUserNotificationsRead(userId) {
   if (!userId) return;

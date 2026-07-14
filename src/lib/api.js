@@ -1066,6 +1066,18 @@ export async function sendNotification({ userId, title, body }) {
   return { ok: true };
 }
 
+// Broadcast to every customer's inbox via the admin-only RPC. Returns the
+// number of customers that received it.
+export async function broadcastNotification(title, body) {
+  const { data, error } = await must().rpc("broadcast_notification", {
+    p_title: title,
+    p_body: body || "",
+  });
+  if (error) throw error;
+  pingLocal("notifications");
+  return { ok: true, count: data ?? 0 };
+}
+
 /* ─── Change notifications ──────────────────────────────────────────────────
    Two ways a screen learns data changed:
    1. LOCAL bus — a write on THIS device immediately tells every hook here to
