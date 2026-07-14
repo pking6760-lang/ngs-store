@@ -43,7 +43,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [accountTab, setAccountTab] = useState("orders");
+  const [accountTab, setAccountTab] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const { totalCount, items } = useCart();
   const { isLoggedIn, awaitingOtp } = useAuth();
@@ -66,7 +66,7 @@ export default function App() {
 
   function handleAccountClick() {
     if (isLoggedIn) {
-      setAccountTab("orders");
+      setAccountTab(null); // land on the account menu, not straight into orders
       setAccountOpen(true);
     } else setAuthOpen(true);
   }
