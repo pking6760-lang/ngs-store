@@ -386,6 +386,9 @@ export default function PartnersAdmin() {
                       {p.dl && <DocView path={p.dl} label="Licence" onOpen={setViewer} />}
                     </div>
                     {p.livenessVideoPath && <LivenessLink path={p.livenessVideoPath} />}
+                    {!p.selfiePath && (
+                      <div className="pno-selfie">No live selfie on file — this partner registered before face verification was added.</div>
+                    )}
 
                     {p.status === "approved" && (
                       <WalletBlock partner={p} w={wallets[p.userId]} onChange={loadWallets} />

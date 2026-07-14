@@ -2688,3 +2688,4 @@ body {
   border-radius: 10px; padding: 10px; font-weight: 700; font-size: 13px; color: #1c2430;
 }
 .pliveness-btn:disabled { opacity: 0.5; }
+.pno-selfie { margin-top: 8px; font-size: 12px; color: #8a93a0; font-weight: 600; }
