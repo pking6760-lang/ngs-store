@@ -5,6 +5,24 @@ import { ORDER_STATUSES } from "../lib/store.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import * as api from "../lib/api.js";
 import ScratchCard from "./ScratchCard.jsx";
+import ProductThumb from "./ProductThumb.jsx";
+
+/* Clean line icons (no emoji) for a professional delivery-app feel. */
+const Icon = {
+  phone: <path d="M6.6 10.8a15.9 15.9 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .58 3.6 1 1 0 0 1-.24 1z" />,
+  scooter: <><circle cx="6" cy="17" r="2.4"/><circle cx="17" cy="17" r="2.4"/><path d="M6 17h7l3-6h3M13 11l-2-5H8M16 17h-3"/></>,
+  check: <path d="M20 6 9 17l-5-5" />,
+  store: <path d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3M4 9l1 11h14l1-11M4 9h16" />,
+  home: <path d="M3 11l9-8 9 8M5 10v10h14V10" />,
+  clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
+  shield: <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />,
+};
+function Svg({ d, size = 18, sw = 2 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+  );
+}
 
 // Statuses that mean an order is still on its way (worth tracking live).
 const LIVE_STATUSES = ["Placed", "Packed", "Out for delivery"];
@@ -145,11 +163,13 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     const line = L.polyline(route, { color: "#0AA25F", weight: 5, opacity: 0.85, dashArray: "1 10", lineCap: "round" }).addTo(map);
     map.fitBounds(line.getBounds().pad(0.35));
 
-    const pin = (emoji, cls) => L.divIcon({ className: "", html: `<div class="lt-marker ${cls}">${emoji}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] });
-    L.marker([shop.lat, shop.lng], { icon: pin("🏪", "lt-shop") }).addTo(map);
-    L.marker([home.lat, home.lng], { icon: pin("🏠", "lt-home") }).addTo(map);
+    const pinSvg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+    const pin = (svg, cls) => L.divIcon({ className: "", html: `<div class="lt-marker ${cls}">${svg}</div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
+    L.marker([shop.lat, shop.lng], { icon: pin(pinSvg('<path d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3M4 9l1 11h14l1-11M4 9h16"/>'), "lt-shop") }).addTo(map);
+    L.marker([home.lat, home.lng], { icon: pin(pinSvg('<path d="M3 11l9-8 9 8M5 10v10h14V10"/>'), "lt-home") }).addTo(map);
 
-    const bike = L.marker(route[0], { icon: L.divIcon({ className: "", html: `<div class="lt-bike">🛵</div>`, iconSize: [40, 40], iconAnchor: [20, 20] }), zIndexOffset: 1000 }).addTo(map);
+    const bikeSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.4"/><circle cx="17" cy="17" r="2.4"/><path d="M6 17h7l3-6h3M13 11l-2-5H8M16 17h-3"/></svg>`;
+    const bike = L.marker(route[0], { icon: L.divIcon({ className: "", html: `<div class="lt-bike">${bikeSvg}</div>`, iconSize: [44, 44], iconAnchor: [22, 22] }), zIndexOffset: 1000 }).addTo(map);
     bikeRef.current = bike;
     mapRef.current = map;
     setTimeout(() => map.invalidateSize(), 150);
@@ -205,7 +225,13 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
 
   if (!open || !order) return null;
   const eta = etaMinutes(order);
+  const delivered = order.status === "Delivered";
   const { text } = statusLine(order);
+  const firstName = rider?.name ? rider.name.split(" ")[0] : "";
+  const itemCount = (order.items || []).reduce((s, it) => s + it.qty, 0);
+  const payLabel = order.payment === "razorpay" ? "Paid online"
+    : order.payment === "upi" ? "Paid via UPI"
+    : order.payment === "wallet" ? "Paid with NGS Wallet" : "Cash on delivery";
 
   return (
     <div className="lt-sheet">
@@ -216,79 +242,127 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
       </div>
 
       <div className="lt-body">
-        <div className="lt-eta-card">
-          <div className="lt-eta-big">{order.status === "Delivered" ? "Delivered 🎉" : `Arriving in ~${eta} min`}</div>
-          <div className="lt-eta-sub">{text}</div>
+        {/* Hero ETA */}
+        <div className={`lt-hero ${delivered ? "done" : ""}`}>
+          <div className="lt-hero-ico"><Svg d={delivered ? Icon.check : Icon.scooter} size={22} /></div>
+          <div className="lt-hero-txt">
+            <div className="lt-hero-eta">{delivered ? "Delivered" : `${eta} min`}</div>
+            <div className="lt-hero-sub">{delivered ? "Order delivered — enjoy!" : text}</div>
+          </div>
         </div>
 
-        {order.status === "Delivered" && (
+        {/* Segmented progress */}
+        <div className="lt-progress">
+          {ORDER_STATUSES.map((s, i) => (
+            <span key={s} className={`lt-progress-seg ${i <= currentStep ? "on" : ""}`} />
+          ))}
+        </div>
+
+        {delivered && (
           <ScratchCard orderId={order.dbId} existingReward={order.scratchClaimed ? order.scratchReward : null} />
         )}
 
+        {/* Map */}
         {canMap ? (
           <div className="lt-map-wrap">
             <div ref={mapEl} className="lt-map" />
-            <button
-              className={`lt-refresh ${refreshing ? "spin" : ""}`}
-              onClick={refresh}
-              aria-label="Refresh"
-              title="Refresh"
-            >
-              ⟳
-            </button>
+            <button className={`lt-refresh ${refreshing ? "spin" : ""}`} onClick={refresh} aria-label="Refresh" title="Refresh">⟳</button>
+            {riderFresh && <div className="lt-live-tag"><span className="lt-live-dot" /> Live</div>}
           </div>
         ) : (
           <div className="lt-nomap">
-            🗺️ Live map appears once your delivery location is shared. Your order status is below.
+            <Svg d={Icon.home} size={26} />
+            <p>Live map appears once your delivery location is shared.</p>
             <button className="lt-nomap-refresh" onClick={refresh} disabled={refreshing}>
-              {refreshing ? "Refreshing…" : "⟳ Refresh"}
+              {refreshing ? "Refreshing…" : "Refresh"}
             </button>
           </div>
         )}
 
-        {rider && (
+        {/* Driver card */}
+        {rider && !delivered && (
           <div className="lt-driver">
-            <div className="lt-driver-av">{(rider.name || "?").trim().charAt(0).toUpperCase() || "🛵"}</div>
+            <div className="lt-driver-av">
+              <span>{(rider.name || "?").trim().charAt(0).toUpperCase() || "R"}</span>
+              <span className="lt-driver-badge"><Svg d={Icon.scooter} size={12} sw={2.4} /></span>
+            </div>
             <div className="lt-driver-mid">
-              <div className="lt-driver-name">{rider.name}</div>
+              <div className="lt-driver-name">
+                {rider.name}
+                <span className="lt-driver-verified"><Svg d={Icon.shield} size={13} sw={2.2} /></span>
+              </div>
+              <div className="lt-driver-role">Your delivery partner</div>
               <div className="lt-driver-msg">
                 {order.status === "Out for delivery"
-                  ? `Hi, I'm ${rider.name.split(" ")[0]} 👋 I've picked up your order and I'm on the way!`
-                  : `${rider.name.split(" ")[0]} will bring your order.`}
+                  ? `"Hi, I'm ${firstName}. I've picked up your order and I'm on my way!"`
+                  : `${firstName} will bring your order.`}
               </div>
             </div>
             {rider.phone && (
               <a className="lt-driver-call" href={`tel:+91${rider.phone}`} aria-label={`Call ${rider.name}`}>
-                📞
+                <Svg d={Icon.phone} size={20} />
               </a>
             )}
           </div>
         )}
 
-        <ol className="status-steps lt-steps">
-          {ORDER_STATUSES.map((s, i) => (
-            <li key={s} className={`step ${i < currentStep ? "done" : ""} ${i === currentStep ? "current" : ""}`}>
-              <span className="step-dot" />
-              <span className="step-label">{s}</span>
-            </li>
-          ))}
-        </ol>
+        {/* Timeline */}
+        <div className="lt-card">
+          <div className="lt-card-title">Order status</div>
+          <ol className="lt-timeline">
+            {ORDER_STATUSES.map((s, i) => (
+              <li key={s} className={`lt-tl ${i < currentStep ? "done" : ""} ${i === currentStep ? "current" : ""}`}>
+                <span className="lt-tl-mark">{i < currentStep || (delivered && i === currentStep) ? <Svg d={Icon.check} size={13} sw={2.6} /> : <span className="lt-tl-dot" />}</span>
+                <span className="lt-tl-label">{s}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
 
-        <div className="lt-summary">
-          <div className="lt-summary-head">
-            <span>Order #{order.id}</span>
-            <span className="lt-summary-total">₹{order.total}</span>
+        {/* Order summary + full bill */}
+        <div className="lt-card">
+          <div className="lt-card-title">
+            Order summary
+            <span className="lt-card-sub">#{order.id} · {itemCount} item{itemCount > 1 ? "s" : ""}</span>
           </div>
-          <div className="lt-summary-items">
+          <div className="lt-items">
             {(order.items || []).map((it) => (
-              <div className="lt-summary-item" key={it.id}>
-                <span>{it.name} × {it.qty}</span>
-                <span>₹{it.price * it.qty}</span>
+              <div className="lt-item" key={it.id}>
+                <ProductThumb image={it.image} name={it.name} category={it.category} size={40} radius={10} />
+                <div className="lt-item-mid">
+                  <div className="lt-item-name">{it.name}</div>
+                  <div className="lt-item-qty">Qty {it.qty} × ₹{it.price}</div>
+                </div>
+                <div className="lt-item-amt">₹{it.price * it.qty}</div>
               </div>
             ))}
           </div>
+
+          <div className="lt-bill">
+            <BillRow k="Item total" v={`₹${order.itemTotal}`} />
+            {order.couponDiscount > 0 && <BillRow k={`Coupon ${order.couponCode || ""}`.trim()} v={`− ₹${order.couponDiscount}`} good />}
+            {order.pointsDiscount > 0 && <BillRow k={`Points used${order.pointsRedeemed ? ` (${order.pointsRedeemed} pts)` : ""}`} v={`− ₹${order.pointsDiscount}`} good />}
+            <BillRow k="Delivery fee" v={order.deliveryFee ? `₹${order.deliveryFee}` : "FREE"} free={!order.deliveryFee} />
+            {order.handling > 0 && <BillRow k="Handling charge" v={`₹${order.handling}`} />}
+            {order.surgeFee > 0 && <BillRow k="Surge fee" v={`₹${order.surgeFee}`} />}
+            {order.walletUsed > 0 && <BillRow k="NGS Wallet" v={`− ₹${order.walletUsed}`} good />}
+            <div className="lt-bill-total">
+              <span>Total paid</span>
+              <span>₹{order.total}</span>
+            </div>
+            <div className="lt-pay"><Svg d={Icon.shield} size={13} /> {payLabel}</div>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BillRow({ k, v, good, free }) {
+  return (
+    <div className="lt-bill-row">
+      <span>{k}</span>
+      <span className={good ? "good" : free ? "free" : ""}>{v}</span>
     </div>
   );
 }
