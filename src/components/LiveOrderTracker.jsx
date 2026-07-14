@@ -87,6 +87,17 @@ export function LiveOrderPill({ order, raised, onOpen }) {
   );
 }
 
+// Normalise a location that may be an object OR a JSON string (jsonb quirks).
+function parseLatLng(o) {
+  if (!o) return null;
+  let v = o;
+  if (typeof v === "string") { try { v = JSON.parse(v); } catch { return null; } }
+  if (v.lat == null || v.lng == null) return null;
+  const lat = Number(v.lat), lng = Number(v.lng);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  return { lat, lng };
+}
+
 /* ── Curved route sampling (shop → home) for a road-like path ──────────────── */
 function routePoints(shop, home, n = 40) {
   // Quadratic bezier with a perpendicular bow so it reads like a route, not a
@@ -145,40 +156,51 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     }
   }, [loadRider, onRefresh]);
 
-  const home = order?.location && order.location.lat != null
-    ? { lat: Number(order.location.lat), lng: Number(order.location.lng) }
-    : null;
-  const shop = shopLoc && shopLoc.lat != null
-    ? { lat: Number(shopLoc.lat), lng: Number(shopLoc.lng) }
-    : null;
-  const canMap = !!(home && shop);
+  const home = parseLatLng(order?.location);
+  const shop = parseLatLng(shopLoc);
+  // A map shows whenever we know where the order is going. Shop + route + bike
+  // are added when the shop location is known too.
+  const canMap = !!home;
+  const hasRoute = !!(home && shop);
 
-  const route = useMemo(() => (canMap ? routePoints(shop, home) : []), [canMap, shop?.lat, shop?.lng, home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const route = useMemo(() => (hasRoute ? routePoints(shop, home) : []), [hasRoute, shop?.lat, shop?.lng, home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentStep = order ? ORDER_STATUSES.indexOf(order.status) : -1;
 
   // Build the map once when the sheet opens.
   useEffect(() => {
     if (!open || !canMap || !mapEl.current) return;
-    const map = L.map(mapEl.current, { zoomControl: false, attributionControl: false, dragging: true });
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+    let map;
+    try {
+      map = L.map(mapEl.current, { zoomControl: false, attributionControl: false, dragging: true });
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
-    const line = L.polyline(route, { color: "#0AA25F", weight: 5, opacity: 0.85, dashArray: "1 10", lineCap: "round" }).addTo(map);
-    map.fitBounds(line.getBounds().pad(0.35));
+      const pinSvg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+      const pin = (svg, cls) => L.divIcon({ className: "", html: `<div class="lt-marker ${cls}">${svg}</div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
+      const bikeSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.4"/><circle cx="17" cy="17" r="2.4"/><path d="M6 17h7l3-6h3M13 11l-2-5H8M16 17h-3"/></svg>`;
+      const bikeIcon = L.divIcon({ className: "", html: `<div class="lt-bike">${bikeSvg}</div>`, iconSize: [44, 44], iconAnchor: [22, 22] });
 
-    const pinSvg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
-    const pin = (svg, cls) => L.divIcon({ className: "", html: `<div class="lt-marker ${cls}">${svg}</div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
-    L.marker([shop.lat, shop.lng], { icon: pin(pinSvg('<path d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3M4 9l1 11h14l1-11M4 9h16"/>'), "lt-shop") }).addTo(map);
-    L.marker([home.lat, home.lng], { icon: pin(pinSvg('<path d="M3 11l9-8 9 8M5 10v10h14V10"/>'), "lt-home") }).addTo(map);
+      L.marker([home.lat, home.lng], { icon: pin(pinSvg('<path d="M3 11l9-8 9 8M5 10v10h14V10"/>'), "lt-home") }).addTo(map);
 
-    const bikeSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.4"/><circle cx="17" cy="17" r="2.4"/><path d="M6 17h7l3-6h3M13 11l-2-5H8M16 17h-3"/></svg>`;
-    const bike = L.marker(route[0], { icon: L.divIcon({ className: "", html: `<div class="lt-bike">${bikeSvg}</div>`, iconSize: [44, 44], iconAnchor: [22, 22] }), zIndexOffset: 1000 }).addTo(map);
-    bikeRef.current = bike;
-    mapRef.current = map;
-    setTimeout(() => map.invalidateSize(), 150);
+      if (hasRoute && route.length) {
+        const line = L.polyline(route, { color: "#0AA25F", weight: 5, opacity: 0.85, dashArray: "1 10", lineCap: "round" }).addTo(map);
+        L.marker([shop.lat, shop.lng], { icon: pin(pinSvg('<path d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3M4 9l1 11h14l1-11M4 9h16"/>'), "lt-shop") }).addTo(map);
+        const bike = L.marker(route[0], { icon: bikeIcon, zIndexOffset: 1000 }).addTo(map);
+        bikeRef.current = bike;
+        map.fitBounds(line.getBounds().pad(0.45), { maxZoom: 16 });
+      } else {
+        const bike = L.marker([home.lat, home.lng], { icon: bikeIcon, zIndexOffset: 1000 }).addTo(map);
+        bikeRef.current = bike;
+        map.setView([home.lat, home.lng], 16);
+      }
 
-    return () => { cancelAnimationFrame(rafRef.current); map.remove(); mapRef.current = null; bikeRef.current = null; };
-  }, [open, canMap]); // eslint-disable-line react-hooks/exhaustive-deps
+      mapRef.current = map;
+      const fix = () => { try { map.invalidateSize(); } catch { /* ignore */ } };
+      [120, 400, 900].forEach((ms) => setTimeout(fix, ms));
+    } catch { /* leaflet failed — the sheet still shows everything else */ }
+
+    return () => { cancelAnimationFrame(rafRef.current); try { map && map.remove(); } catch { /* ignore */ } mapRef.current = null; bikeRef.current = null; };
+  }, [open, canMap, hasRoute]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Real GPS wins: if the rider is streaming a fresh position, pin the bike
   // there and keep it + the home in view. Otherwise fall back to the animation.
@@ -187,17 +209,19 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
 
   // Animate the bike along the route based on status.
   useEffect(() => {
-    if (!open || !canMap || !bikeRef.current || !route.length) return;
+    if (!open || !canMap || !bikeRef.current) return;
     const bike = bikeRef.current;
 
     if (riderFresh) {
       bike.setLatLng([rider.lat, rider.lng]);
       const map = mapRef.current;
       if (map && home) {
-        map.fitBounds(L.latLngBounds([[rider.lat, rider.lng], [home.lat, home.lng]]).pad(0.4), { animate: true });
+        map.fitBounds(L.latLngBounds([[rider.lat, rider.lng], [home.lat, home.lng]]).pad(0.4), { animate: true, maxZoom: 16 });
       }
       return; // real GPS — no fake animation
     }
+
+    if (!route.length) return; // no shop route to animate along — bike sits at home
 
     // Where along the route the bike belongs for this status.
     const target =
