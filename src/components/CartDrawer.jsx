@@ -8,7 +8,7 @@ import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "..
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage } from "../lib/payments.js";
-import { bulkUnitPrice } from "../lib/bulk.js";
+import { bulkUnitPrice, unitPriceFor } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
@@ -61,11 +61,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const searchTimer = useRef();
   const submitLock = useRef(false); // prevents double order submission
 
+  const memberPricing = !!user?.member; // Prime pricing applies to members
   const lines = Object.entries(items)
     .map(([id, qty]) => {
       const product = products.find((p) => p.id === id);
       if (!product) return null;
-      return { product, qty, unit: bulkUnitPrice(product, qty) };
+      return { product, qty, unit: unitPriceFor(product, qty, memberPricing) };
     })
     .filter(Boolean);
 
@@ -143,7 +144,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     freeReason = "member";
   }
 
-  const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
+  // Members pay no handling charge (part of the Prime bundle).
+  const handling = itemTotal === 0 || isMember ? 0 : HANDLING_FEE;
   // Surge / bad-weather premium — applies to everyone while surge mode is on.
   const surgeFee = isSurge && itemTotal > 0 ? SURGE_FEE : 0;
 
@@ -1102,7 +1104,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               <div className="bill-row">
                 <span>Handling charge</span>
-                <span>₹{handling}</span>
+                <span>{handling === 0 && isMember ? <span className="free">FREE · Prime</span> : `₹${handling}`}</span>
               </div>
               {surgeFee > 0 && (
                 <div className="bill-row">

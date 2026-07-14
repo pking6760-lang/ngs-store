@@ -8,7 +8,7 @@ import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useMyOrders } from "./lib/hooks.js";
-import { bulkUnitPrice } from "./lib/bulk.js";
+import { bulkUnitPrice, unitPriceFor } from "./lib/bulk.js";
 import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import { shop } from "./data/shop.js";
@@ -106,13 +106,14 @@ export default function App() {
     return sortProducts(matched, sort);
   }, [query, products, categories, sort]);
 
+  const memberPricing = !!user?.member;
   const cartValue = useMemo(() => {
     return Object.entries(items).reduce((sum, [id, qty]) => {
       const p = products.find((x) => x.id === id);
-      // Use the same bulk-tier price the cart charges, so the bar total matches.
-      return sum + (p ? bulkUnitPrice(p, qty) * qty : 0);
+      // Use the same member/bulk price the cart charges, so the bar total matches.
+      return sum + (p ? unitPriceFor(p, qty, memberPricing) * qty : 0);
     }, 0);
-  }, [items, products]);
+  }, [items, products, memberPricing]);
 
   function goHome() {
     setActiveCategory(null);

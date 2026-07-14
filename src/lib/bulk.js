@@ -13,6 +13,20 @@ export function bulkUnitPrice(product, qty) {
   return unit;
 }
 
+// The per-unit price the shopper actually pays, accounting for NGS Prime member
+// pricing. For a member we apply the product's member factor to the bulk unit
+// price and clamp to MRP — this MUST mirror place_order() in
+// migration-member-pricing.sql so the price shown equals the price charged.
+// A non-member (or a neutral product) just gets the normal bulk unit price.
+export function unitPriceFor(product, qty, isMember) {
+  const base = bulkUnitPrice(product, qty);
+  const factor = Number(product?.memberFactor) || 1;
+  if (!isMember || factor === 1) return base;
+  const mrp = Number(product?.mrp) || 0;
+  const adj = Math.round(base * factor);
+  return mrp > 0 ? Math.min(adj, mrp) : adj;
+}
+
 // Line subtotal at the correct bulk unit price.
 export function bulkLineTotal(product, qty) {
   return bulkUnitPrice(product, qty) * qty;

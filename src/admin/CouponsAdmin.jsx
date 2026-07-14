@@ -14,8 +14,73 @@ export default function CouponsAdmin() {
       <RewardsSettings settings={settings} />
       <ScratchSettings settings={settings} />
       <MembershipSettings settings={settings} />
+      <MemberPricingSettings settings={settings} />
       <CouponManager coupons={coupons} categories={categories} />
     </div>
+  );
+}
+
+// NGS Prime member pricing — the two invisible modes. These dials feed
+// smart_reprice(), which reshuffles every product's member factor each cycle.
+function MemberPricingSettings({ settings }) {
+  const cfg = settings.rewards?.member || {};
+  const [form, setForm] = useState({
+    enabled: cfg.enabled ?? true,
+    markupPct: cfg.markupPct ?? 6,
+    dipMax: cfg.dipMax ?? 3,
+    modeASharePct: cfg.modeASharePct ?? 55,
+    rewardBackPct: cfg.rewardBackPct ?? 60,
+  });
+  const [saved, setSaved] = useState(false);
+  const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
+
+  function save() {
+    updateSettings({
+      rewards: {
+        ...(settings.rewards || {}),
+        member: {
+          enabled: !!form.enabled,
+          markupPct: Math.min(50, Math.max(0, Number(form.markupPct) || 0)),
+          dipMax: Math.min(50, Math.max(0, Number(form.dipMax) || 0)),
+          modeASharePct: Math.min(100, Math.max(0, Number(form.modeASharePct) || 0)),
+          rewardBackPct: Math.min(100, Math.max(0, Number(form.rewardBackPct) || 0)),
+        },
+      },
+    });
+    setSaved(true);
+  }
+
+  return (
+    <section className="panel offer-card">
+      <h3>Prime member pricing</h3>
+      <p className="sub">
+        Members see only their own price, so it just feels like good deals. Some items are marked up a little
+        (60% of the extra comes back to them as points/wallet, the rest funds their free delivery); others are
+        a little cheaper with normal rewards. Reshuffles automatically every few hours — nothing is given from your pocket.
+      </p>
+      <label className="preg-ev" style={{ marginBottom: 6 }}>
+        <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
+        <span>Turn on member pricing</span>
+      </label>
+      <div className="rewards-rule">
+        <span>Mark up (max)</span>
+        <input type="number" min="0" max="50" value={form.markupPct} onChange={(e) => set("markupPct", e.target.value)} />
+        <span>% · discount up to</span>
+        <input type="number" min="0" max="50" value={form.dipMax} onChange={(e) => set("dipMax", e.target.value)} />
+        <span>%.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Mark up on</span>
+        <input type="number" min="0" max="100" value={form.modeASharePct} onChange={(e) => set("modeASharePct", e.target.value)} />
+        <span>% of items · give back</span>
+        <input type="number" min="0" max="100" value={form.rewardBackPct} onChange={(e) => set("rewardBackPct", e.target.value)} />
+        <span>% of the extra.</span>
+      </div>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
+        <button className="primary-btn" onClick={save}>Save member pricing</button>
+        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved · applies at next reprice</span>}
+      </div>
+    </section>
   );
 }
 
