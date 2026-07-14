@@ -25,9 +25,10 @@ const GROUPS = [
   },
   {
     title: "Delivery partner payout",
-    note: "Flat, predictable pay: a base per delivery + distance beyond the free radius + a peak (rain/night) bonus.",
+    note: "Flat, predictable pay: a base per delivery + distance beyond the free radius + a peak (rain/night) bonus. Members pay no delivery/handling, so their orders use the lower member base (distance + peak still apply).",
     fields: [
       { key: "rider_base", label: "Base per delivery (₹)" },
+      { key: "rider_member_base", label: "Base for Prime member deliveries (₹)" },
       { key: "rider_free_km", label: "Free distance (km)", step: "0.1" },
       { key: "rider_per_km", label: "₹ per km beyond that" },
       { key: "peak_bonus", label: "Peak bonus when surge is on (₹)" },
