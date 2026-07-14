@@ -65,6 +65,16 @@ export default function LivenessCapture({ onComplete, onCancel }) {
 
   useEffect(() => () => stopEverything(), [stopEverything]);
 
+  // Attach the live stream to the <video> once it's on screen (the element only
+  // mounts in the running/processing phases, so this can't be done in start()).
+  useEffect(() => {
+    const v = videoRef.current;
+    if ((phase === "running" || phase === "processing") && v && streamRef.current && v.srcObject !== streamRef.current) {
+      v.srcObject = streamRef.current;
+      v.play().catch(() => {});
+    }
+  }, [phase]);
+
   // Continuous motion sampling (frame differencing on a tiny grayscale canvas).
   const sampleLoop = useCallback(() => {
     const v = videoRef.current;
@@ -97,10 +107,8 @@ export default function LivenessCapture({ onComplete, onCancel }) {
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
-      }
+      // The <video> only mounts once we enter the "running" phase, so the
+      // stream is attached to it by the effect below (not here).
       // Record the session.
       chunksRef.current = [];
       const mime = ["video/webm;codecs=vp8", "video/webm", "video/mp4"].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
@@ -202,7 +210,7 @@ export default function LivenessCapture({ onComplete, onCancel }) {
       {(phase === "running" || phase === "processing") && (
         <div className="live-kyc-stage">
           <div className="live-kyc-cam">
-            <video ref={videoRef} playsInline muted className="live-kyc-video" />
+            <video ref={videoRef} autoPlay playsInline muted className="live-kyc-video" />
             <div className="live-kyc-ring" />
           </div>
           {phase === "running" ? (
