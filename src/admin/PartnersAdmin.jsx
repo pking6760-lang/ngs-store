@@ -40,6 +40,38 @@ function DocView({ path, label, onOpen }) {
   );
 }
 
+// The liveness motion video — opens in an in-app player so the reviewer can
+// confirm the partner followed the live, randomised prompts.
+function LivenessLink({ path }) {
+  const [url, setUrl] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function play() {
+    setBusy(true);
+    try { const u = await api.partnerDocUrl(path); if (u) { setUrl(u); setOpen(true); } }
+    finally { setBusy(false); }
+  }
+  return (
+    <>
+      <button type="button" className="pliveness-btn" onClick={play} disabled={busy}>
+        {busy ? "Loading…" : "▶ Play liveness video"}
+      </button>
+      {open && url && (
+        <AdminPortal>
+          <div className="doc-viewer" onClick={() => setOpen(false)}>
+            <div className="doc-viewer-bar">
+              <span>Liveness video</span>
+              <button onClick={() => setOpen(false)} aria-label="Close">✕</button>
+            </div>
+            <video src={url} controls autoPlay playsInline onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: 12 }} />
+          </div>
+        </AdminPortal>
+      )}
+    </>
+  );
+}
+
 // Full-screen in-app image viewer.
 function DocViewer({ doc, onClose }) {
   if (!doc) return null;
@@ -347,11 +379,13 @@ export default function PartnersAdmin() {
                     </div>
 
                     <div className="pdocs">
+                      {p.selfiePath && <DocView path={p.selfiePath} label="Live selfie" onOpen={setViewer} />}
                       <DocView path={p.aadhaarFront} label="Aadhaar front" onOpen={setViewer} />
                       <DocView path={p.aadhaarBack} label="Aadhaar back" onOpen={setViewer} />
                       <DocView path={p.pan} label="PAN" onOpen={setViewer} />
                       {p.dl && <DocView path={p.dl} label="Licence" onOpen={setViewer} />}
                     </div>
+                    {p.livenessVideoPath && <LivenessLink path={p.livenessVideoPath} />}
 
                     {p.status === "approved" && (
                       <WalletBlock partner={p} w={wallets[p.userId]} onChange={loadWallets} />

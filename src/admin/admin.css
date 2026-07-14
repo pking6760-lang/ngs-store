@@ -2683,3 +2683,8 @@ body {
 .bank-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
 .bank-row span { color: #6b7885; }
 .bank-row strong { color: #16202c; font-weight: 700; text-align: right; word-break: break-all; }
+.pliveness-btn {
+  margin-top: 10px; width: 100%; border: 1px solid var(--line, #dde3ea); background: #f4f6f9;
+  border-radius: 10px; padding: 10px; font-weight: 700; font-size: 13px; color: #1c2430;
+}
+.pliveness-btn:disabled { opacity: 0.5; }

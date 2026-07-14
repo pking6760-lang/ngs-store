@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../lib/api.js";
 import * as kyc from "../lib/kyc.js";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
+import LivenessCapture from "./LivenessCapture.jsx";
 
 // A document number field with live ✓/✗ feedback once enough is typed.
 function NumField({ label, value, onChange, valid, hint, placeholder }) {
@@ -63,6 +64,8 @@ export default function PartnerRegister({ email, onDone }) {
   const [agreeAuth, setAgreeAuth] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [selfie, setSelfie] = useState(null); // { photoBlob, videoBlob, photoUrl }
+  const [showLive, setShowLive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   // IFSC lookup: null = idle, "loading", "invalid", or {bank, branch, city, state}
@@ -122,6 +125,7 @@ export default function PartnerRegister({ email, onDone }) {
     if (!panOk) return setError("Enter a valid PAN number, e.g. ABCDE1234F.");
     if (needDL && !docs.dl) return setError("Add your driving licence, or tick the EV option below.");
     if (needDL && !dlOk) return setError("Enter a valid driving licence number.");
+    if (!selfie) return setError("Please complete the live selfie verification.");
     if (!agreeAuth || !agreeTerms) return setError("Please tick both boxes to declare your details are genuine and accept the Terms & Conditions.");
     setBusy(true);
     try {
@@ -129,7 +133,13 @@ export default function PartnerRegister({ email, onDone }) {
       for (const kind of Object.keys(docs)) {
         if (docs[kind]) paths[kind] = await api.uploadPartnerDoc(docs[kind], kind);
       }
+      const selfiePath = await api.uploadPartnerMedia(selfie.photoBlob, "selfie");
+      let livenessPath = null;
+      try {
+        if (selfie.videoBlob) livenessPath = await api.uploadPartnerMedia(selfie.videoBlob, "liveness");
+      } catch { /* video is best-effort; the selfie + liveness gate already passed */ }
       await api.registerPartner({
+        selfie: selfiePath, livenessVideo: livenessPath,
         role, fullName: form.fullName.trim(), phone: form.phone.replace(/\D/g, ""),
         email, address: form.address.trim(),
         bankAccount: form.bankAccount.trim(), bankIfsc: form.bankIfsc.trim().toUpperCase(),
@@ -250,6 +260,24 @@ export default function PartnerRegister({ email, onDone }) {
               </>
             )}
 
+            <div className="preg-selfie">
+              <div className="preg-selfie-head">
+                <strong>Live selfie verification</strong>
+                <span>A quick face check with live motion — confirms it's really you.</span>
+              </div>
+              {selfie ? (
+                <div className="preg-selfie-done">
+                  <img src={selfie.photoUrl} alt="Your selfie" />
+                  <div className="preg-selfie-ok">✓ Face verified</div>
+                  <button type="button" className="preg-selfie-redo" onClick={() => setShowLive(true)}>Retake</button>
+                </div>
+              ) : (
+                <button type="button" className="preg-selfie-btn" onClick={() => setShowLive(true)}>
+                  📷 Start live selfie
+                </button>
+              )}
+            </div>
+
             <div className="preg-consent">
               <label className="preg-check">
                 <input type="checkbox" checked={agreeAuth} onChange={(e) => setAgreeAuth(e.target.checked)} />
@@ -264,11 +292,13 @@ export default function PartnerRegister({ email, onDone }) {
             </div>
 
             {error && <div className="preg-error">{error}</div>}
-            <button className="preg-next" onClick={submit} disabled={busy || !agreeAuth || !agreeTerms}>
+            <button className="preg-next" onClick={submit} disabled={busy || !agreeAuth || !agreeTerms || !selfie}>
               {busy ? "Uploading…" : "Submit for approval"}
             </button>
-            {!busy && (!agreeAuth || !agreeTerms) && (
-              <p className="preg-note">Tick both boxes above to enable submission.</p>
+            {!busy && (!agreeAuth || !agreeTerms || !selfie) && (
+              <p className="preg-note">
+                {!selfie ? "Complete the live selfie, then " : ""}tick both boxes above to enable submission.
+              </p>
             )}
             <p className="preg-note">The store will review your details and approve you before you start.</p>
           </>
@@ -276,6 +306,19 @@ export default function PartnerRegister({ email, onDone }) {
       </div>
 
       {showTerms && <PartnerTerms onClose={() => setShowTerms(false)} />}
+      {showLive && (
+        <div className="live-kyc-overlay">
+          <LivenessCapture
+            onCancel={() => setShowLive(false)}
+            onComplete={({ photoBlob, videoBlob }) => {
+              if (selfie?.photoUrl) URL.revokeObjectURL(selfie.photoUrl);
+              setSelfie({ photoBlob, videoBlob, photoUrl: URL.createObjectURL(photoBlob) });
+              setShowLive(false);
+              setError("");
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -481,7 +481,8 @@ function mapPartner(r) {
     aadhaarNumber: r.aadhaar_number, panNumber: r.pan_number, dlNumber: r.dl_number,
     termsAcceptedAt: r.terms_accepted_at, termsVersion: r.terms_version,
     usesEv: r.uses_ev, aadhaarFront: r.aadhaar_front, aadhaarBack: r.aadhaar_back,
-    pan: r.pan, dl: r.dl, status: r.status, createdAt: r.created_at,
+    pan: r.pan, dl: r.dl, selfiePath: r.selfie_path, livenessVideoPath: r.liveness_video_path,
+    status: r.status, createdAt: r.created_at,
     empCode: r.emp_code || null,
   };
 }
@@ -540,6 +541,26 @@ export async function uploadPartnerDoc(file, kind) {
   return path;
 }
 
+// Upload a liveness selfie (jpeg) or its motion video (webm/mp4) to the private
+// KYC bucket → returns the storage path.
+export async function uploadPartnerMedia(blob, kind) {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) throw new Error("Please sign in again.");
+  const isVideo = (blob.type || "").startsWith("video");
+  let out = blob, ext = "jpg", contentType = "image/jpeg";
+  if (isVideo) {
+    ext = (blob.type || "").includes("mp4") ? "mp4" : "webm";
+    contentType = blob.type || "video/webm";
+  } else {
+    out = await compressImage(blob);
+  }
+  const path = `${u.user.id}/${kind}.${ext}`;
+  const { error } = await must().storage
+    .from("partner-docs").upload(path, out, { upsert: true, contentType });
+  if (error) throw error;
+  return path;
+}
+
 // Submit (or resubmit) a partner registration. Starts as 'pending'.
 export async function registerPartner(p) {
   const { data: u } = await must().auth.getUser();
@@ -553,7 +574,9 @@ export async function registerPartner(p) {
     terms_accepted_at: p.termsAccepted ? new Date().toISOString() : null,
     terms_version: p.termsAccepted ? (p.termsVersion || null) : null,
     uses_ev: !!p.usesEv, aadhaar_front: p.aadhaarFront || null, aadhaar_back: p.aadhaarBack || null,
-    pan: p.pan || null, dl: p.dl || null, status: "pending",
+    pan: p.pan || null, dl: p.dl || null,
+    selfie_path: p.selfie || null, liveness_video_path: p.livenessVideo || null,
+    status: "pending",
   };
   const { error } = await must().from("partners").upsert(row, { onConflict: "user_id" });
   if (error) throw error;
