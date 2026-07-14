@@ -27,13 +27,16 @@ function Svg({ d, size = 18, sw = 2 }) {
 // Statuses that mean an order is still on its way (worth tracking live).
 const LIVE_STATUSES = ["Placed", "Packed", "Out for delivery"];
 
-// Show the tracker for a live order, and keep it after delivery until the
-// customer has scratched their reward (so the live page doesn't vanish the
-// instant it's delivered).
+// Show the tracker for a live order, and keep it lingering for ~15 minutes
+// after delivery (so the customer can scratch the reward + leave feedback)
+// before it quietly disappears.
+const POST_DELIVERY_MS = 15 * 60 * 1000;
 export function isLiveOrder(o) {
   if (!o) return false;
   if (LIVE_STATUSES.includes(o.status)) return true;
-  if (o.status === "Delivered" && !o.scratchClaimed) return true;
+  if (o.status === "Delivered" && o.deliveredAt) {
+    return Date.now() - new Date(o.deliveredAt).getTime() < POST_DELIVERY_MS;
+  }
   return false;
 }
 
@@ -262,6 +265,8 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           <ScratchCard orderId={order.dbId} existingReward={order.scratchClaimed ? order.scratchReward : null} />
         )}
 
+        {delivered && <LiveFeedback order={order} riderName={rider?.name} />}
+
         {/* Map */}
         {canMap ? (
           <div className="lt-map-wrap">
@@ -363,6 +368,80 @@ function BillRow({ k, v, good, free }) {
     <div className="lt-bill-row">
       <span>{k}</span>
       <span className={good ? "good" : free ? "free" : ""}>{v}</span>
+    </div>
+  );
+}
+
+function Stars({ value, onChange }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="lt-stars" onMouseLeave={() => setHover(0)}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          className={n <= (hover || value) ? "on" : ""}
+          onClick={() => onChange(n)}
+          onMouseEnter={() => setHover(n)}
+          aria-label={`${n} star${n > 1 ? "s" : ""}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function LiveFeedback({ order, riderName }) {
+  const [driver, setDriver] = useState(order.riderRating || 0);
+  const [appR, setAppR] = useState(order.rating || 0);
+  const [comment, setComment] = useState(order.feedback || "");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(!!(order.rating || order.riderRating));
+
+  async function submit() {
+    if (busy || (!driver && !appR)) return;
+    setBusy(true);
+    try {
+      if (driver) await api.rateOrderRider(order.dbId, driver);
+      if (appR) await api.rateOrder(order.dbId, appR, comment);
+      setDone(true);
+    } catch { /* keep the form so they can retry */ }
+    finally { setBusy(false); }
+  }
+
+  if (done) {
+    return (
+      <div className="lt-card lt-fb-done">
+        <Svg d={Icon.check} size={18} sw={2.6} />
+        Thanks for your feedback!
+      </div>
+    );
+  }
+
+  return (
+    <div className="lt-card">
+      <div className="lt-card-title">Rate your order</div>
+      <div className="lt-fb-block">
+        <div className="lt-fb-lbl">
+          <Svg d={Icon.scooter} size={16} /> Delivery partner{riderName ? ` · ${riderName.split(" ")[0]}` : ""}
+        </div>
+        <Stars value={driver} onChange={setDriver} />
+      </div>
+      <div className="lt-fb-block">
+        <div className="lt-fb-lbl"><Svg d={Icon.shield} size={16} /> Your experience with NGS</div>
+        <Stars value={appR} onChange={setAppR} />
+        <textarea
+          className="lt-fb-text"
+          placeholder="Tell us what went well or what we can improve (optional)"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={2}
+        />
+      </div>
+      <button className="lt-fb-submit" onClick={submit} disabled={busy || (!driver && !appR)}>
+        {busy ? "Submitting…" : "Submit feedback"}
+      </button>
     </div>
   );
 }

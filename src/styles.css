@@ -805,6 +805,33 @@ button {
   font-size: 12.5px; font-weight: 700; color: var(--green-dark);
   background: var(--green-tint); border-radius: 8px; padding: 8px 10px;
 }
+
+/* Feedback */
+.lt-fb-block { margin-bottom: 14px; }
+.lt-fb-lbl {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13.5px; font-weight: 700; color: #3a4654; margin-bottom: 6px;
+}
+.lt-stars { display: flex; gap: 6px; }
+.lt-stars button {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 30px; line-height: 1; color: #d8dee6; transition: transform 0.1s, color 0.1s;
+}
+.lt-stars button.on { color: #f5b301; }
+.lt-stars button:active { transform: scale(1.2); }
+.lt-fb-text {
+  width: 100%; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font-size: 13.5px; font-family: inherit; resize: vertical; box-sizing: border-box;
+}
+.lt-fb-submit {
+  width: 100%; background: var(--green); color: #fff; border: none; border-radius: 12px;
+  padding: 13px; font-weight: 800; font-size: 14.5px; margin-top: 2px;
+}
+.lt-fb-submit:disabled { opacity: 0.5; }
+.lt-fb-done {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: var(--green-dark); font-weight: 800; font-size: 14.5px;
+}
 .cart-bar-left {
   display: flex;
   align-items: center;

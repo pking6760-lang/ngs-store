@@ -113,7 +113,7 @@ function mapOrder(r) {
     payment: r.payment_method, paymentMethod: r.payment_method, paymentStatus: r.payment_status,
     razorpayPaymentId: r.razorpay_payment_id,
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
-    rating: r.rating, feedback: r.feedback, needsOwner: !!r.needs_owner,
+    rating: r.rating, feedback: r.feedback, riderRating: r.rider_rating || 0, needsOwner: !!r.needs_owner,
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
     isReturn: !!r.is_return, returnOf: r.return_of,
     scratchClaimed: !!r.scratch_claimed, scratchReward: r.scratch_reward || null,
@@ -406,6 +406,14 @@ export async function rateOrder(orderId, rating, feedback) {
   const { error } = await must().rpc("rate_order", {
     p_order: orderId, p_rating: rating, p_feedback: feedback || "",
   });
+  if (error) throw error;
+  pingLocal("orders");
+  return { ok: true };
+}
+
+// Customer rates the delivery partner for a delivered order.
+export async function rateOrderRider(orderId, rating) {
+  const { error } = await must().rpc("rate_order_rider", { p_order: orderId, p_rating: rating });
   if (error) throw error;
   pingLocal("orders");
   return { ok: true };
