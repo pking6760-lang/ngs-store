@@ -8,6 +8,7 @@ import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories } from "./lib/hooks.js";
+import { bulkUnitPrice } from "./lib/bulk.js";
 import { shop } from "./data/shop.js";
 
 const banners = [
@@ -92,7 +93,8 @@ export default function App() {
   const cartValue = useMemo(() => {
     return Object.entries(items).reduce((sum, [id, qty]) => {
       const p = products.find((x) => x.id === id);
-      return sum + (p ? p.price * qty : 0);
+      // Use the same bulk-tier price the cart charges, so the bar total matches.
+      return sum + (p ? bulkUnitPrice(p, qty) * qty : 0);
     }, 0);
   }, [items, products]);
 
