@@ -31,6 +31,8 @@ function LifecycleSettings({ settings }) {
     enabled: cfg.enabled ?? true,
     welcomeOrders: cfg.welcomeOrders ?? 5,
     taperOrders: cfg.taperOrders ?? 15,
+    shopFloorRupees: cfg.shopFloorRupees ?? 6,
+    shopFloorPct: cfg.shopFloorPct ?? 3,
     m_boost: m.pointsBoost ?? 2.0, m_floor: m.pointsFloor ?? 1.3, m_disc: m.discPct ?? 10, m_discFloor: m.discFloorPct ?? 2, m_discMax: m.discMax ?? 50,
     n_boost: n.pointsBoost ?? 1.5, n_floor: n.pointsFloor ?? 1.0, n_disc: n.discPct ?? 6, n_discFloor: n.discFloorPct ?? 0, n_discMax: n.discMax ?? 30,
   });
@@ -46,6 +48,8 @@ function LifecycleSettings({ settings }) {
           enabled: !!form.enabled,
           welcomeOrders: Math.max(0, Math.round(num(form.welcomeOrders))),
           taperOrders: Math.max(1, Math.round(num(form.taperOrders))),
+          shopFloorRupees: num(form.shopFloorRupees),
+          shopFloorPct: num(form.shopFloorPct),
           member:    { pointsBoost: num(form.m_boost), pointsFloor: num(form.m_floor), discPct: num(form.m_disc), discFloorPct: num(form.m_discFloor), discMax: num(form.m_discMax) },
           nonmember: { pointsBoost: num(form.n_boost), pointsFloor: num(form.n_floor), discPct: num(form.n_disc), discFloorPct: num(form.n_discFloor), discMax: num(form.n_discMax) },
         },
@@ -72,6 +76,13 @@ function LifecycleSettings({ settings }) {
         <span>orders, then taper over</span>
         <input type="number" min="1" value={form.taperOrders} onChange={(e) => set("taperOrders", e.target.value)} />
         <span>orders.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Always keep at least ₹</span>
+        <input type="number" min="0" value={form.shopFloorRupees} onChange={(e) => set("shopFloorRupees", e.target.value)} />
+        <span>or</span>
+        <input type="number" min="0" value={form.shopFloorPct} onChange={(e) => set("shopFloorPct", e.target.value)} />
+        <span>% profit per order (points/wallet boost is capped by this).</span>
       </div>
       <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Prime members</p>
       <div className="rewards-rule">
