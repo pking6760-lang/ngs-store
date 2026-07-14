@@ -432,6 +432,11 @@ function ReturnSection({ order }) {
   const returned = order.status === "Returned";
   if (order.status !== "Delivered" && !returned) return null;
 
+  // Returns are only allowed within 24h of delivery.
+  const RETURN_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const deliveredAt = order.deliveredAt || order.createdAt;
+  const windowClosed = deliveredAt && (Date.now() - new Date(deliveredAt).getTime() > RETURN_WINDOW_MS);
+
   const selectedQty = (it) => pick[it.id] ?? 0;
   const setQty = (id, q, max) => setPick((p) => ({ ...p, [id]: Math.max(0, Math.min(max, q)) }));
   const items = order.items || [];
@@ -458,6 +463,8 @@ function ReturnSection({ order }) {
       <h4>Return pickup</h4>
       {returned ? (
         <div className="od-refunded">↩︎ Returned · ₹{(order.refundedAmount || 0).toFixed(2)} refunded to NGS Wallet</div>
+      ) : windowClosed ? (
+        <p className="od-muted">⌛ The 24-hour return window has passed — this order can no longer be returned.</p>
       ) : (
         <>
           {(order.refundedAmount || 0) > 0 && (
