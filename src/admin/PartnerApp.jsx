@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { initHardwareBack } from "../lib/useBackGuard.js";
 import { toast } from "../lib/toast.js";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
+import LivenessCapture from "./LivenessCapture.jsx";
 import * as api from "../lib/api.js";
 
 // Mandatory re-acceptance when the Partner Terms change (e.g. new penalty /
@@ -168,8 +169,107 @@ function PartnerInner() {
     return <TermsReaccept onAccepted={reload} />;
   }
 
+  // The store asked this partner to (re)submit specific KYC items → capture
+  // only those, keeping the rest of their approved details untouched.
+  if (partner.kycRequests && partner.kycRequests.length > 0) {
+    return <KycReverify items={partner.kycRequests} onDone={reload} />;
+  }
+
   // Approved → their role decides the dashboard.
   return <PartnerDashboard role={partner.role} name={partner.fullName || user?.name} partner={partner} onLogout={logout} />;
+}
+
+// Item labels shared by the partner + admin re-KYC flows.
+const KYC_ITEMS = {
+  selfie: "Live selfie",
+  aadhaar_front: "Aadhaar — front",
+  aadhaar_back: "Aadhaar — back",
+  pan: "PAN card",
+  dl: "Driving licence",
+};
+
+// General re-verification: the store requested one or more KYC items. Complete
+// them one at a time — a live face check for the selfie, a photo for documents
+// — without redoing the whole registration.
+function KycReverify({ items, onDone }) {
+  const [live, setLive] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [err, setErr] = useState("");
+  const fileRef = useRef(null);
+  const [pendingDoc, setPendingDoc] = useState(null);
+  // What's still outstanding (server updates on reload, but track locally too).
+  const [done, setDone] = useState([]);
+  const remaining = items.filter((i) => !done.includes(i));
+
+  async function submitSelfie({ photoBlob, videoBlob }) {
+    setLive(false); setBusy("selfie"); setErr("");
+    try { await api.partnerSubmitSelfie(photoBlob, videoBlob); setDone((d) => [...d, "selfie"]); }
+    catch (e) { setErr(e.message || "Couldn't submit."); }
+    finally { setBusy(""); }
+  }
+
+  function pickDoc(item) { setPendingDoc(item); setErr(""); setTimeout(() => fileRef.current?.click(), 0); }
+  async function onFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !pendingDoc) return;
+    setBusy(pendingDoc);
+    try { await api.partnerSubmitDoc(pendingDoc, file); setDone((d) => [...d, pendingDoc]); }
+    catch (e2) { setErr(e2.message || "Couldn't upload."); }
+    finally { setBusy(""); setPendingDoc(null); }
+  }
+
+  if (live) {
+    return (
+      <div className="live-kyc-overlay">
+        <LivenessCapture onCancel={() => setLive(false)} onComplete={submitSelfie} />
+      </div>
+    );
+  }
+
+  if (remaining.length === 0) {
+    return (
+      <div className="partner-notstaff">
+        <div className="empty-emoji">✅</div>
+        <h2>All done</h2>
+        <p>Thanks — your verification has been submitted.</p>
+        <button className="pd-btn" onClick={onDone}>Continue</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="kyc-reverify">
+      <div className="kyc-reverify-ico">🔒</div>
+      <h2>Verification needed</h2>
+      <p>The store needs you to complete the item{remaining.length > 1 ? "s" : ""} below to keep your account active. The rest of your details stay as they are.</p>
+      {err && <div className="preg-error">{err}</div>}
+      <div className="kyc-reverify-list">
+        {items.map((item) => {
+          const isDone = done.includes(item);
+          const loading = busy === item;
+          return (
+            <div className={`kyc-req-row ${isDone ? "done" : ""}`} key={item}>
+              <span className="kyc-req-name">{KYC_ITEMS[item] || item}</span>
+              {isDone ? (
+                <span className="kyc-req-ok">✓ Done</span>
+              ) : item === "selfie" ? (
+                <button className="kyc-req-btn" onClick={() => setLive(true)} disabled={!!busy}>
+                  {loading ? "…" : "Take selfie"}
+                </button>
+              ) : (
+                <button className="kyc-req-btn" onClick={() => pickDoc(item)} disabled={!!busy}>
+                  {loading ? "Uploading…" : "Add photo"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={onFile} />
+      {remaining.length === 0 && <button className="pd-btn" onClick={onDone}>Continue</button>}
+    </div>
+  );
 }
 
 export default function PartnerApp() {

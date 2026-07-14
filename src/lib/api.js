@@ -482,6 +482,7 @@ function mapPartner(r) {
     termsAcceptedAt: r.terms_accepted_at, termsVersion: r.terms_version,
     usesEv: r.uses_ev, aadhaarFront: r.aadhaar_front, aadhaarBack: r.aadhaar_back,
     pan: r.pan, dl: r.dl, selfiePath: r.selfie_path, livenessVideoPath: r.liveness_video_path,
+    kycRequests: Array.isArray(r.kyc_requests) ? r.kyc_requests : [],
     status: r.status, createdAt: r.created_at,
     empCode: r.emp_code || null,
   };
@@ -559,6 +560,34 @@ export async function uploadPartnerMedia(blob, kind) {
     .from("partner-docs").upload(path, out, { upsert: true, contentType });
   if (error) throw error;
   return path;
+}
+
+// Admin: ask a partner to (re)submit specific KYC items (e.g. ["selfie"]).
+export async function adminRequestKyc(userId, items) {
+  const { error } = await must().rpc("admin_request_kyc", { p_user_id: userId, p_items: items });
+  if (error) throw new Error(error.message || "Couldn't send the request.");
+  pingLocal("partners");
+  return { ok: true };
+}
+
+// Partner: submit ONE requested item. Selfie takes the live photo + video;
+// document items take a photo file.
+export async function partnerSubmitSelfie(selfieBlob, videoBlob) {
+  const selfiePath = await uploadPartnerMedia(selfieBlob, "selfie");
+  let videoPath = null;
+  try { if (videoBlob) videoPath = await uploadPartnerMedia(videoBlob, "liveness"); } catch { /* best-effort */ }
+  const { error } = await must().rpc("partner_submit_kyc_item", { p_item: "selfie", p_path: selfiePath, p_extra: videoPath });
+  if (error) throw new Error(error.message || "Couldn't submit your selfie.");
+  pingLocal("partners");
+  return { ok: true };
+}
+
+export async function partnerSubmitDoc(item, file) {
+  const path = await uploadPartnerDoc(file, item);
+  const { error } = await must().rpc("partner_submit_kyc_item", { p_item: item, p_path: path, p_extra: null });
+  if (error) throw new Error(error.message || "Couldn't submit your document.");
+  pingLocal("partners");
+  return { ok: true };
 }
 
 // Submit (or resubmit) a partner registration. Starts as 'pending'.

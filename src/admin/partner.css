@@ -343,3 +343,18 @@
 .live-kyc-actions .ghost-btn { flex: 1; background: none; border: 1px solid var(--p-line); color: #fff; border-radius: 12px; padding: 13px; font-weight: 700; }
 .live-kyc-actions .pd-btn { flex: 1; }
 .live-kyc-err { background: #2a1414; color: #ff9b9b; border-radius: 12px; padding: 14px 16px; font-size: 14px; font-weight: 600; line-height: 1.5; max-width: 340px; }
+
+/* Re-KYC (partner) */
+.kyc-reverify { padding: 40px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--p-text); }
+.kyc-reverify-ico { font-size: 46px; }
+.kyc-reverify h2 { font-size: 22px; font-weight: 800; margin: 4px 0 0; }
+.kyc-reverify p { font-size: 14px; color: var(--p-sec); line-height: 1.5; max-width: 340px; }
+.kyc-reverify-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.kyc-req-row { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--p-card); border: 1px solid var(--p-line); border-radius: 14px; padding: 14px 16px; }
+.kyc-req-row.done { border-color: var(--p-mint); }
+.kyc-req-name { font-weight: 700; font-size: 14.5px; }
+.kyc-req-ok { color: var(--p-mint); font-weight: 800; font-size: 13.5px; }
+.kyc-req-btn { background: linear-gradient(135deg, var(--p-red), var(--p-red-deep)); color: #fff; border: none;
+  border-radius: 10px; padding: 9px 16px; font-weight: 800; font-size: 13px; }
+.kyc-req-btn:disabled { opacity: 0.5; }

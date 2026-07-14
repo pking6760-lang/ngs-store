@@ -72,6 +72,69 @@ function LivenessLink({ path }) {
   );
 }
 
+// Ask a partner to (re)submit specific KYC items — used whenever a new
+// requirement is added (e.g. the live selfie) so an already-approved partner
+// only completes the missing piece, not the whole form again.
+const REKYC_ITEMS = [
+  { key: "selfie", label: "Live selfie" },
+  { key: "aadhaar_front", label: "Aadhaar front" },
+  { key: "aadhaar_back", label: "Aadhaar back" },
+  { key: "pan", label: "PAN card" },
+  { key: "dl", label: "Driving licence" },
+];
+const REKYC_LABEL = Object.fromEntries(REKYC_ITEMS.map((i) => [i.key, i.label]));
+
+function ReKycRequest({ partner }) {
+  const outstanding = partner.kycRequests || [];
+  const [open, setOpen] = useState(false);
+  const [sel, setSel] = useState(() => (!partner.selfiePath ? ["selfie"] : []));
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const toggle = (k) => setSel((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+
+  async function send(items) {
+    setBusy(true); setMsg("");
+    try {
+      await api.adminRequestKyc(partner.userId, items);
+      setMsg(items.length ? "Request sent — the partner will be asked on their next app open." : "Request cleared.");
+      setOpen(false);
+    } catch (e) { setMsg(e.message || "Couldn't send."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="rekyc">
+      {outstanding.length > 0 && (
+        <div className="rekyc-pending">
+          <span>⏳ Waiting for: <strong>{outstanding.map((k) => REKYC_LABEL[k] || k).join(", ")}</strong></span>
+          <button className="rekyc-cancel" disabled={busy} onClick={() => send([])}>Cancel</button>
+        </div>
+      )}
+      {msg && <div className="rekyc-msg">{msg}</div>}
+      {!open ? (
+        <button className="rekyc-btn" onClick={() => setOpen(true)}>🔄 Request re-verification (KYC)</button>
+      ) : (
+        <div className="rekyc-form">
+          <p className="rekyc-hint">Pick what the partner should re-submit. They complete only these — the rest of their KYC stays.</p>
+          {REKYC_ITEMS.map((it) => (
+            <label className="rekyc-check" key={it.key}>
+              <input type="checkbox" checked={sel.includes(it.key)} onChange={() => toggle(it.key)} />
+              <span>{it.label}</span>
+            </label>
+          ))}
+          <div className="rekyc-actions">
+            <button className="ghost-btn" onClick={() => setOpen(false)} disabled={busy}>Cancel</button>
+            <button className="primary-btn" disabled={busy || sel.length === 0} onClick={() => send(sel)}>
+              {busy ? "Sending…" : `Ask partner (${sel.length})`}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Full-screen in-app image viewer.
 function DocViewer({ doc, onClose }) {
   if (!doc) return null;
@@ -413,6 +476,7 @@ export default function PartnersAdmin() {
                         ✖ {p.status === "approved" ? "Revoke access" : "Reject"}
                       </button>
                     )}
+                    <ReKycRequest partner={p} />
                   </div>
                 )}
               </div>
