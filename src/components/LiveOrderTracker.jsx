@@ -173,7 +173,11 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     let map;
     try {
       map = L.map(mapEl.current, { zoomControl: false, attributionControl: false, dragging: true });
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+      // Carto's free basemap — app-friendly (unlike OSM's public server which
+      // blocks bulk/app usage and returns blank tiles).
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png", {
+        maxZoom: 19, subdomains: "abcd",
+      }).addTo(map);
 
       const pinSvg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
       const pin = (svg, cls) => L.divIcon({ className: "", html: `<div class="lt-marker ${cls}">${svg}</div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
