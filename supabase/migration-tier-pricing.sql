@@ -343,7 +343,10 @@ begin
     end if;
   end if;
 
-  if coalesce(p_membership, false) then
+  -- Membership add-on requires PREPAYMENT (online or wallet). COD is collected at
+  -- delivery, so activating at placement would let someone place a COD order with
+  -- membership and then refuse delivery = free Prime. Block it for COD.
+  if coalesce(p_membership, false) and lower(coalesce(p_payment, '')) <> 'cod' then
     v_cfg_mem := coalesce(v_rewards->'membership', '{}'::jsonb);
     v_member_until := v_profile.member_until;
     if coalesce((v_cfg_mem->>'enabled')::boolean, true)
