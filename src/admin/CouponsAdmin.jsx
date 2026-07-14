@@ -35,7 +35,7 @@ function LifecycleSettings({ settings }) {
     shopFloorPct: cfg.shopFloorPct ?? 3,
     normalPct: cfg.normalPct ?? 55,
     m_boost: m.pointsBoost ?? 2.5, m_disc: m.discPct ?? 12, m_discMax: m.discMax ?? 60,
-    fl_normal: fp.normal ?? 3, fl_prime: fp.prime ?? 8, fl_renew: fp.renew ?? 15,
+    fl_normal: fp.normal ?? 3, fl_prime: fp.prime ?? 8, fl_renew: fp.renew ?? 8,
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };

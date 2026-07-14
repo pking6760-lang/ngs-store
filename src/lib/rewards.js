@@ -56,7 +56,7 @@ export function lifecycleFor(orderCount, isMember, cfg, membershipCount = 1) {
     discMax = Math.round(discMax * npct);
     floorFrac = (fp.normal ?? 3) / 100;
   } else if ((Number(membershipCount) || 1) >= 2) {
-    floorFrac = (fp.renew ?? 15) / 100; // renewed member: higher floor (loyalty)
+    floorFrac = (fp.renew ?? fp.prime ?? 8) / 100; // renewal: fresh honeymoon → lowest Prime floor
   } else {
     floorFrac = (fp.prime ?? 8) / 100; // first-time Prime
   }

@@ -17,7 +17,7 @@ update public.profiles set membership_count = 1 where is_member and membership_c
 update public.settings
    set rewards = jsonb_set(rewards, '{lifecycle,floorPct}',
        coalesce(rewards->'lifecycle'->'floorPct',
-                '{"normal":3,"prime":8,"renew":15}'::jsonb))
+                '{"normal":3,"prime":8,"renew":8}'::jsonb))
  where id = 1;
 
 -- Activation: reset the member honeymoon counter AND count the membership (so the
@@ -177,7 +177,10 @@ begin
       v_disc_max := round(v_disc_max * v_npct);
       v_floor_frac := coalesce((v_life->'floorPct'->>'normal')::numeric, 3) / 100.0;
     elsif coalesce(v_profile.membership_count, 1) >= 2 then
-      v_floor_frac := coalesce((v_life->'floorPct'->>'renew')::numeric, 15) / 100.0;   -- renewed member: higher floor
+      -- Renewal re-triggers a fresh honeymoon (member counter reset on activation)
+      -- and settles back to the lowest Prime floor.
+      v_floor_frac := coalesce((v_life->'floorPct'->>'renew')::numeric,
+                               (v_life->'floorPct'->>'prime')::numeric, 8) / 100.0;
     else
       v_floor_frac := coalesce((v_life->'floorPct'->>'prime')::numeric, 8) / 100.0;    -- first-time Prime
     end if;
