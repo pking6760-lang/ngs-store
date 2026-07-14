@@ -284,11 +284,16 @@ export async function adminRefundToWallet(orderDbId, amount, note) {
   return { ok: true };
 }
 
-// Admin: start a return for a delivered order. Creates a return task that is
-// dispatched to a delivery partner to collect the item; on confirmation the
-// order total is refunded to the customer's wallet and earned points reversed.
-export async function adminCreateReturn(orderDbId) {
-  const { data, error } = await must().rpc("admin_create_return", { p_order: orderDbId });
+// Admin: start a return for a delivered order. Optionally pass a subset of
+// items to return: [{ id, qty }]. Omit (or pass null) to return everything.
+// A return task is dispatched to a delivery partner to collect the items; on
+// confirmation the goods value is refunded to the customer's wallet and earned
+// points reversed (proportionally for a partial return).
+export async function adminCreateReturn(orderDbId, items = null) {
+  const { data, error } = await must().rpc("admin_create_return", {
+    p_order: orderDbId,
+    p_items: items && items.length ? items : null,
+  });
   if (error) throw new Error(error.message || "Couldn't create the return.");
   pingLocal("orders");
   return { ok: true, returnId: data };

@@ -423,16 +423,30 @@ function ReturnSection({ order }) {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [confirming, setConfirming] = useState(false);
+  // qty to return per item id (defaults to the full ordered qty).
+  const [pick, setPick] = useState(() =>
+    Object.fromEntries((order.items || []).map((it) => [it.id, it.qty]))
+  );
 
   if (order.isReturn) return null;
-  const done = order.status === "Returned" || (order.refundedAmount || 0) > 0;
-  if (order.status !== "Delivered" && !done) return null;
+  const returned = order.status === "Returned";
+  if (order.status !== "Delivered" && !returned) return null;
+
+  const selectedQty = (it) => pick[it.id] ?? 0;
+  const setQty = (id, q, max) => setPick((p) => ({ ...p, [id]: Math.max(0, Math.min(max, q)) }));
+  const items = order.items || [];
+  const totalPicked = items.reduce((s, it) => s + selectedQty(it), 0);
+  const refundEstimate = items.reduce((s, it) => s + selectedQty(it) * it.price, 0);
+  const allSelected = items.every((it) => selectedQty(it) === it.qty);
 
   async function create() {
+    const picks = items.filter((it) => selectedQty(it) > 0).map((it) => ({ id: it.id, qty: selectedQty(it) }));
+    if (!picks.length) { setErr("Select at least one item to return."); return; }
     setBusy(true); setErr(""); setMsg("");
     try {
-      await adminCreateReturn(order.dbId);
-      setMsg("Return created — a delivery partner will be sent to collect the item. The refund happens automatically once they confirm the pickup.");
+      // Send null when the whole order is selected → refunds fees too.
+      await adminCreateReturn(order.dbId, allSelected ? null : picks);
+      setMsg("Return created — a delivery partner will be sent to collect the item(s). The refund happens automatically once they confirm the pickup.");
       setConfirming(false);
     } catch (e) {
       setErr(e.message || "Couldn't create the return.");
@@ -442,29 +456,52 @@ function ReturnSection({ order }) {
   return (
     <section className="od-section">
       <h4>Return pickup</h4>
-      {done ? (
+      {returned ? (
         <div className="od-refunded">↩︎ Returned · ₹{(order.refundedAmount || 0).toFixed(2)} refunded to NGS Wallet</div>
-      ) : msg ? (
-        <div className="od-refund-ok">{msg}</div>
-      ) : !confirming ? (
-        <button className="od-refund-btn" onClick={() => { setConfirming(true); setErr(""); }}>
-          ↩︎ Create return — send a driver to collect
-        </button>
       ) : (
-        <div className="od-refund-form">
-          <p className="od-muted">
-            A delivery partner will be dispatched to the customer's address to collect the item.
-            When they confirm the pickup, ₹{(order.total || 0).toFixed(2)} is refunded to the customer's
-            NGS Wallet and their earned points are reversed — automatically.
-          </p>
-          {err && <div className="auth-error">{err}</div>}
-          <div className="od-refund-actions">
-            <button className="ghost-btn" onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
-            <button className="primary-btn" onClick={create} disabled={busy}>
-              {busy ? "Creating…" : "Create return"}
+        <>
+          {(order.refundedAmount || 0) > 0 && (
+            <div className="od-refunded" style={{ marginBottom: 8 }}>
+              ↩︎ ₹{(order.refundedAmount || 0).toFixed(2)} already refunded (partial return)
+            </div>
+          )}
+          {msg ? (
+            <div className="od-refund-ok">{msg}</div>
+          ) : !confirming ? (
+            <button className="od-refund-btn" onClick={() => { setConfirming(true); setErr(""); }}>
+              ↩︎ Create return — send a driver to collect
             </button>
-          </div>
-        </div>
+          ) : (
+            <div className="od-refund-form">
+              <p className="od-muted">Choose what's coming back. Reduce the quantity to return only some.</p>
+              <div className="od-return-items">
+                {items.map((it) => (
+                  <div className="od-return-item" key={it.id}>
+                    <span className="od-return-name">{it.name}</span>
+                    <div className="od-qty-step">
+                      <button type="button" onClick={() => setQty(it.id, selectedQty(it) - 1, it.qty)} disabled={selectedQty(it) <= 0}>−</button>
+                      <span>{selectedQty(it)} / {it.qty}</span>
+                      <button type="button" onClick={() => setQty(it.id, selectedQty(it) + 1, it.qty)} disabled={selectedQty(it) >= it.qty}>+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="od-muted">
+                {allSelected
+                  ? `Full return — ₹${(order.total || 0).toFixed(2)} (incl. fees) refunded to the customer's NGS Wallet.`
+                  : `Partial return — about ₹${refundEstimate.toFixed(2)} (goods value) refunded to the customer's NGS Wallet.`}
+                {" "}Earned points are reversed{allSelected ? "" : " in proportion"}. A driver is dispatched to collect the item(s).
+              </p>
+              {err && <div className="auth-error">{err}</div>}
+              <div className="od-refund-actions">
+                <button className="ghost-btn" onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
+                <button className="primary-btn" onClick={create} disabled={busy || totalPicked === 0}>
+                  {busy ? "Creating…" : "Create return"}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -473,6 +510,9 @@ function ReturnSection({ order }) {
 // Refund / return → credits the customer's NGS wallet (store credit), never the
 // bank. The owner enters the amount (defaults to what's left to refund).
 function RefundSection({ order }) {
+  // A fully-returned order is already settled through the return flow — no
+  // separate manual refund (avoids double-refunding).
+  if (order.isReturn || order.status === "Returned") return null;
   const already = order.refundedAmount || 0;
   const remaining = Math.max(0, (order.total || 0) - already);
   const [open, setOpen] = useState(false);
