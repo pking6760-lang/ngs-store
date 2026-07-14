@@ -1085,6 +1085,15 @@ export async function sendNotification({ userId, title, body }) {
   return { ok: true };
 }
 
+// Win-back: nudge customers who haven't ordered in `days` with their favourite
+// item. Admin-only. Returns how many were nudged.
+export async function sendWinback(days) {
+  const { data, error } = await must().rpc("send_winback", { p_days: days });
+  if (error) throw error;
+  pingLocal("notifications");
+  return { ok: true, count: data ?? 0 };
+}
+
 // Broadcast to every customer's inbox via the admin-only RPC. Returns the
 // number of customers that received it.
 export async function broadcastNotification(title, body) {

@@ -2081,6 +2081,10 @@ body {
 }
 .pick-item:hover { border-color: var(--green); background: #f4f6ff; }
 .pick-empty { color: var(--muted); font-size: 13px; padding: 6px 2px; }
+.winback-box { display: flex; flex-direction: column; gap: 10px; }
+.winback-note { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.5; }
+.winback-days { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.winback-days input { width: 72px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 15px; text-align: center; }
 .notify-history { display: flex; flex-direction: column; gap: 8px; }
 .notify-item { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 .notify-item-title { font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }

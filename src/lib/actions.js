@@ -117,6 +117,15 @@ export async function sendNotification({ userId, title, body }) {
   return store.sendNotification({ userId, title, body });
 }
 
+// Nudge lapsed customers with their favourite item (admin-only).
+export async function sendWinback({ days }) {
+  if (!BACKEND) return { ok: false, error: "Not available in demo mode." };
+  try {
+    const r = await api.sendWinback(Number(days) || 14);
+    return { ok: true, count: r.count };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
 // Send the same notification to every customer at once.
 export async function broadcastNotification({ title, body }) {
   if (!title?.trim()) return { ok: false, error: "Missing details." };

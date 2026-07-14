@@ -1,17 +1,18 @@
 import { useMemo, useState } from "react";
 import { useCustomers } from "../lib/hooks.js";
-import { sendNotification, broadcastNotification } from "../lib/actions.js";
+import { sendNotification, broadcastNotification, sendWinback } from "../lib/actions.js";
 
 // Admin "Notify" screen — send a push to the customer inbox, either to EVERY
 // customer at once or to one specific customer. The message lands in the bell /
 // inbox on the customer app (ngsstore.in).
 export default function NotifyAdmin() {
   const customers = useCustomers();
-  const [audience, setAudience] = useState("all"); // 'all' | 'one'
+  const [audience, setAudience] = useState("all"); // 'all' | 'one' | 'winback'
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [query, setQuery] = useState("");
   const [pick, setPick] = useState(null); // selected customer for 'one'
+  const [days, setDays] = useState(14); // lapse window for win-back
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null); // { ok, msg }
 
@@ -29,7 +30,9 @@ export default function NotifyAdmin() {
   }, [customers, query]);
 
   const canSend =
-    title.trim().length > 0 && (audience === "all" || !!pick) && !busy;
+    audience === "winback"
+      ? Number(days) > 0 && !busy
+      : title.trim().length > 0 && (audience === "all" || !!pick) && !busy;
 
   async function send(e) {
     e.preventDefault();
@@ -39,18 +42,19 @@ export default function NotifyAdmin() {
     let r;
     if (audience === "all") {
       r = await broadcastNotification({ title, body });
+    } else if (audience === "winback") {
+      r = await sendWinback({ days });
     } else {
       r = await sendNotification({ userId: pick.id, title, body });
     }
     setBusy(false);
     if (r.ok) {
-      const who =
-        audience === "all"
-          ? `all customers${typeof r.count === "number" ? ` (${r.count})` : ""}`
-          : pick.name || "customer";
+      let who;
+      if (audience === "all") who = `all customers${typeof r.count === "number" ? ` (${r.count})` : ""}`;
+      else if (audience === "winback") who = `${r.count ?? 0} lapsed customer${r.count === 1 ? "" : "s"}`;
+      else who = pick.name || "customer";
       setResult({ ok: true, msg: `✅ Sent to ${who}` });
-      setTitle("");
-      setBody("");
+      if (audience !== "winback") { setTitle(""); setBody(""); }
       if (audience === "one") {
         setPick(null);
         setQuery("");
@@ -88,6 +92,16 @@ export default function NotifyAdmin() {
           }}
         >
           👤 One customer
+        </button>
+        <button
+          type="button"
+          className={`seg ${audience === "winback" ? "seg-on" : ""}`}
+          onClick={() => {
+            setAudience("winback");
+            setResult(null);
+          }}
+        >
+          💤 Win-back
         </button>
       </div>
 
@@ -143,22 +157,43 @@ export default function NotifyAdmin() {
           </div>
         )}
 
-        <input
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            setResult(null);
-          }}
-          placeholder="Title — e.g. 🎉 Weekend sale is live!"
-          maxLength={120}
-        />
-        <textarea
-          rows={3}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Message (optional) — e.g. Flat 20% off fruits today. Use code NISHA20."
-          maxLength={500}
-        />
+        {audience === "winback" ? (
+          <div className="winback-box">
+            <p className="winback-note">
+              Sends each lapsed customer a personalized nudge naming <strong>their
+              favourite item</strong> — automatically. No message to write.
+            </p>
+            <label className="winback-days">
+              <span>Haven't ordered in</span>
+              <input
+                type="number"
+                min="1"
+                value={days}
+                onChange={(e) => { setDays(e.target.value); setResult(null); }}
+              />
+              <span>+ days</span>
+            </label>
+          </div>
+        ) : (
+          <>
+            <input
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setResult(null);
+              }}
+              placeholder="Title — e.g. 🎉 Weekend sale is live!"
+              maxLength={120}
+            />
+            <textarea
+              rows={3}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Message (optional) — e.g. Flat 20% off fruits today. Use code NISHA20."
+              maxLength={500}
+            />
+          </>
+        )}
 
         <div className="notify-actions">
           <button className="primary-btn" type="submit" disabled={!canSend}>
@@ -166,6 +201,8 @@ export default function NotifyAdmin() {
               ? "Sending…"
               : audience === "all"
               ? "Send to all customers"
+              : audience === "winback"
+              ? "Send win-back nudges"
               : `Send to ${pick ? pick.name?.split(" ")[0] || "customer" : "customer"}`}
           </button>
           {result && (
