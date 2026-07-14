@@ -105,7 +105,9 @@ export default function AdminApp() {
 function AdminHome({ name, onOpen, onLogout }) {
   const orders = useOrders();
   const partners = usePartners();
-  const activeOrders = orders.filter((o) => o.status !== "Delivered" && o.status !== "Cancelled").length;
+  const activeOrders = orders.filter(
+    (o) => o.status !== "Delivered" && o.status !== "Cancelled" && o.status !== "Returned"
+  ).length;
   const pendingPartners = partners.filter((p) => p.status === "pending").length;
   const badge = { orders: activeOrders, partners: pendingPartners };
 
