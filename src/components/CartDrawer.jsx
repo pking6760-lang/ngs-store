@@ -177,8 +177,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // Above this the rider would carry too much cash, so COD is disabled and the
   // customer must pay online. 0/blank = no cap. Enforced again on the server.
   const COD_LIMIT = settings.codCustomerLimit ?? 1000;
-  const codBlocked = COD_LIMIT > 0 && payable > COD_LIMIT;
-  // If the cart grows past the cap while COD is selected, bump them to online.
+  // COD is unavailable above the cash cap, OR when buying NGS Prime with the order
+  // (membership must be prepaid — it activates on payment, not on cash delivery).
+  const codBlocked = (COD_LIMIT > 0 && payable > COD_LIMIT) || memberFee > 0;
+  // If COD becomes unavailable while it's selected, bump them to online.
   useEffect(() => {
     if (codBlocked && payment === "cod") {
       setPayment(RAZORPAY_ENABLED ? "razorpay" : "upi");
@@ -785,7 +787,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <span className="pay-option-text">
                   <strong>Cash on delivery</strong>
                   <small>
-                    {codBlocked
+                    {memberFee > 0
+                      ? "Not available with NGS Prime — please pay online"
+                      : codBlocked
                       ? `Not available above ₹${COD_LIMIT} — please pay online`
                       : "Pay when your order arrives"}
                   </small>
