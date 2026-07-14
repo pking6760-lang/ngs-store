@@ -26,6 +26,7 @@ export default function CouponsAdmin() {
 function LifecycleSettings({ settings }) {
   const cfg = settings.rewards?.lifecycle || {};
   const m = cfg.member || {};
+  const fp = cfg.floorPct || {};
   const [form, setForm] = useState({
     enabled: cfg.enabled ?? true,
     welcomeOrders: cfg.welcomeOrders ?? 5,
@@ -33,7 +34,8 @@ function LifecycleSettings({ settings }) {
     shopFloorRupees: cfg.shopFloorRupees ?? 6,
     shopFloorPct: cfg.shopFloorPct ?? 3,
     normalPct: cfg.normalPct ?? 55,
-    m_boost: m.pointsBoost ?? 2.5, m_floor: m.pointsFloor ?? 1.3, m_disc: m.discPct ?? 12, m_discFloor: m.discFloorPct ?? 2, m_discMax: m.discMax ?? 60,
+    m_boost: m.pointsBoost ?? 2.5, m_disc: m.discPct ?? 12, m_discMax: m.discMax ?? 60,
+    fl_normal: fp.normal ?? 3, fl_prime: fp.prime ?? 8, fl_renew: fp.renew ?? 15,
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
@@ -51,7 +53,8 @@ function LifecycleSettings({ settings }) {
           shopFloorRupees: num(form.shopFloorRupees),
           shopFloorPct: num(form.shopFloorPct),
           normalPct: Math.min(100, num(form.normalPct)),
-          member: { pointsBoost: num(form.m_boost), pointsFloor: num(form.m_floor), discPct: num(form.m_disc), discFloorPct: num(form.m_discFloor), discMax: num(form.m_discMax) },
+          member: { pointsBoost: num(form.m_boost), discPct: num(form.m_disc), discMax: num(form.m_discMax) },
+          floorPct: { normal: Math.min(100, num(form.fl_normal)), prime: Math.min(100, num(form.fl_prime)), renew: Math.min(100, num(form.fl_renew)) },
         },
       },
     });
@@ -85,26 +88,29 @@ function LifecycleSettings({ settings }) {
         <input type="number" min="0" value={form.shopFloorPct} onChange={(e) => set("shopFloorPct", e.target.value)} />
         <span>% profit per order.</span>
       </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Prime member (the highest perk)</p>
+      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Peak perk (a new member starts at 100% of this)</p>
       <div className="rewards-rule">
-        <span>Points/wallet ×</span>
+        <span>Prime points/wallet ×</span>
         <input type="number" step="0.1" value={form.m_boost} onChange={(e) => set("m_boost", e.target.value)} />
-        <span>→ floor ×</span>
-        <input type="number" step="0.1" value={form.m_floor} onChange={(e) => set("m_floor", e.target.value)} />
-      </div>
-      <div className="rewards-rule">
-        <span>Discount</span>
+        <span>· discount</span>
         <input type="number" value={form.m_disc} onChange={(e) => set("m_disc", e.target.value)} />
-        <span>% → floor</span>
-        <input type="number" value={form.m_discFloor} onChange={(e) => set("m_discFloor", e.target.value)} />
         <span>% · max ₹</span>
         <input type="number" value={form.m_discMax} onChange={(e) => set("m_discMax", e.target.value)} />
       </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Normal member</p>
       <div className="rewards-rule">
-        <span>Gets</span>
+        <span>Normal member gets</span>
         <input type="number" min="0" max="100" value={form.normalPct} onChange={(e) => set("normalPct", e.target.value)} />
-        <span>% of the Prime perk (50–60% recommended).</span>
+        <span>% of the Prime peak (50–60% recommended).</span>
+      </div>
+      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Settles to (% of the peak — never zero)</p>
+      <div className="rewards-rule">
+        <span>Normal</span>
+        <input type="number" min="0" max="100" value={form.fl_normal} onChange={(e) => set("fl_normal", e.target.value)} />
+        <span>% · New Prime</span>
+        <input type="number" min="0" max="100" value={form.fl_prime} onChange={(e) => set("fl_prime", e.target.value)} />
+        <span>% · Renewed Prime</span>
+        <input type="number" min="0" max="100" value={form.fl_renew} onChange={(e) => set("fl_renew", e.target.value)} />
+        <span>%.</span>
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 8 }}>
         <button className="primary-btn" onClick={save}>Save new-member rewards</button>

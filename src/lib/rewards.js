@@ -35,42 +35,43 @@ export function pointsForRupees(rupees, cfg) {
 // New-customer lifecycle: a boost that tapers with order count to a non-zero
 // floor. Mirrors place_order() in migration-customer-lifecycle.sql so the client
 // shows exactly the welcome discount the server charges. `cfg` is settings.rewards.
-export function lifecycleFor(orderCount, isMember, cfg) {
+export function lifecycleFor(orderCount, isMember, cfg, membershipCount = 1) {
   const L = cfg?.lifecycle;
   if (!L || L.enabled === false) return { mult: 1, discPct: 0, discMax: 0 };
   const n = (Number(orderCount) || 0) + 1; // this is their n-th order
   const welcomeOrders = L.welcomeOrders ?? 5;
   const taperOrders = Math.max(L.taperOrders ?? 15, 1);
-  // Prime is the master perk; a Normal member gets normalPct% of it.
+  // Prime is the master (peak) perk; a Normal member gets normalPct% of it.
   const P = L.member || {};
   let boost = P.pointsBoost ?? 2.5;
-  let floor = P.pointsFloor ?? 1.3;
   let discPct = P.discPct ?? 12;
-  let discFloor = P.discFloorPct ?? 2;
   let discMax = P.discMax ?? 60;
+  // Floor = the % of the peak the perk decays to; differs by tier.
+  const fp = L.floorPct || {};
+  let floorFrac;
   if (!isMember) {
     const npct = (L.normalPct ?? 55) / 100;
     boost = 1 + (boost - 1) * npct;
-    floor = 1 + (floor - 1) * npct;
     discPct = discPct * npct;
-    discFloor = discFloor * npct;
     discMax = Math.round(discMax * npct);
+    floorFrac = (fp.normal ?? 3) / 100;
+  } else if ((Number(membershipCount) || 1) >= 2) {
+    floorFrac = (fp.renew ?? 15) / 100; // renewed member: higher floor (loyalty)
+  } else {
+    floorFrac = (fp.prime ?? 8) / 100; // first-time Prime
   }
   let frac;
   if (n <= welcomeOrders) frac = 0;
   else if (n <= welcomeOrders + taperOrders) frac = (n - welcomeOrders) / taperOrders;
   else frac = 1;
-  return {
-    mult: boost - (boost - floor) * frac,
-    discPct: discPct - (discPct - discFloor) * frac,
-    discMax,
-  };
+  const perk = 1 - (1 - floorFrac) * frac; // 100% at welcome → floor% settled
+  return { mult: 1 + (boost - 1) * perk, discPct: discPct * perk, discMax };
 }
 
 // The welcome discount in ₹ for this order, capped in ₹ and by what's left after
 // coupon + points (mirrors the server cap). `net` = item total − coupon − points.
-export function welcomeDiscountFor(itemTotal, net, orderCount, isMember, cfg) {
-  const { discPct, discMax } = lifecycleFor(orderCount, isMember, cfg);
+export function welcomeDiscountFor(itemTotal, net, orderCount, isMember, cfg, membershipCount = 1) {
+  const { discPct, discMax } = lifecycleFor(orderCount, isMember, cfg, membershipCount);
   if (!(discPct > 0) || !(itemTotal > 0)) return 0;
   return Math.max(0, Math.min(Math.round((itemTotal * discPct) / 100), discMax, Math.max(0, net)));
 }

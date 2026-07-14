@@ -135,7 +135,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // New-customer welcome discount (tapers with order count). Members count from
   // when they joined Prime; everyone else from when they joined the app.
   const lifeCount = isMember ? (user?.memberOrderCount || 0) : (user?.orderCount || 0);
-  const welcomeDiscount = welcomeDiscountFor(itemTotal, netItems, lifeCount, isMember, rewardsCfg);
+  const welcomeDiscount = welcomeDiscountFor(itemTotal, netItems, lifeCount, isMember, rewardsCfg, user?.membershipCount);
   const afterWelcome = Math.max(0, netItems - welcomeDiscount);
 
   // ── Delivery fee (admin-controlled, with membership + surge rules) ──
