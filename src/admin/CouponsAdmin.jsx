@@ -26,15 +26,14 @@ export default function CouponsAdmin() {
 function LifecycleSettings({ settings }) {
   const cfg = settings.rewards?.lifecycle || {};
   const m = cfg.member || {};
-  const n = cfg.nonmember || {};
   const [form, setForm] = useState({
     enabled: cfg.enabled ?? true,
     welcomeOrders: cfg.welcomeOrders ?? 5,
     taperOrders: cfg.taperOrders ?? 15,
     shopFloorRupees: cfg.shopFloorRupees ?? 6,
     shopFloorPct: cfg.shopFloorPct ?? 3,
-    m_boost: m.pointsBoost ?? 2.0, m_floor: m.pointsFloor ?? 1.3, m_disc: m.discPct ?? 10, m_discFloor: m.discFloorPct ?? 2, m_discMax: m.discMax ?? 50,
-    n_boost: n.pointsBoost ?? 1.5, n_floor: n.pointsFloor ?? 1.0, n_disc: n.discPct ?? 6, n_discFloor: n.discFloorPct ?? 0, n_discMax: n.discMax ?? 30,
+    normalPct: cfg.normalPct ?? 55,
+    m_boost: m.pointsBoost ?? 2.5, m_floor: m.pointsFloor ?? 1.3, m_disc: m.discPct ?? 12, m_discFloor: m.discFloorPct ?? 2, m_discMax: m.discMax ?? 60,
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
@@ -45,13 +44,14 @@ function LifecycleSettings({ settings }) {
       rewards: {
         ...(settings.rewards || {}),
         lifecycle: {
+          ...(settings.rewards?.lifecycle || {}),
           enabled: !!form.enabled,
           welcomeOrders: Math.max(0, Math.round(num(form.welcomeOrders))),
           taperOrders: Math.max(1, Math.round(num(form.taperOrders))),
           shopFloorRupees: num(form.shopFloorRupees),
           shopFloorPct: num(form.shopFloorPct),
-          member:    { pointsBoost: num(form.m_boost), pointsFloor: num(form.m_floor), discPct: num(form.m_disc), discFloorPct: num(form.m_discFloor), discMax: num(form.m_discMax) },
-          nonmember: { pointsBoost: num(form.n_boost), pointsFloor: num(form.n_floor), discPct: num(form.n_disc), discFloorPct: num(form.n_discFloor), discMax: num(form.n_discMax) },
+          normalPct: Math.min(100, num(form.normalPct)),
+          member: { pointsBoost: num(form.m_boost), pointsFloor: num(form.m_floor), discPct: num(form.m_disc), discFloorPct: num(form.m_discFloor), discMax: num(form.m_discMax) },
         },
       },
     });
@@ -60,15 +60,16 @@ function LifecycleSettings({ settings }) {
 
   return (
     <section className="panel offer-card">
-      <h3>New-customer rewards (decay)</h3>
+      <h3>New-member rewards (honeymoon)</h3>
       <p className="sub">
-        New customers get boosted points/wallet + a welcome discount for their first orders, then it
-        tapers little by little to a permanent floor (never zero). Points/wallet keep the lasting floor;
-        the discount fades fastest. Prime always gets the stronger curve.
+        A new member gets boosted points/wallet + a welcome discount for their first orders, tapering
+        little by little to a permanent floor (never zero). Set the <b>Prime</b> perk once; a <b>Normal</b>
+        member (hasn't bought membership) automatically gets a share of it. A new Prime member's own fee
+        funds their honeymoon, so they always come out ahead — and every giveaway is capped by real profit.
       </p>
       <label className="preg-ev" style={{ marginBottom: 6 }}>
         <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
-        <span>Turn on new-customer boost</span>
+        <span>Turn on new-member boost</span>
       </label>
       <div className="rewards-rule">
         <span>Full boost for first</span>
@@ -82,9 +83,9 @@ function LifecycleSettings({ settings }) {
         <input type="number" min="0" value={form.shopFloorRupees} onChange={(e) => set("shopFloorRupees", e.target.value)} />
         <span>or</span>
         <input type="number" min="0" value={form.shopFloorPct} onChange={(e) => set("shopFloorPct", e.target.value)} />
-        <span>% profit per order (points/wallet boost is capped by this).</span>
+        <span>% profit per order.</span>
       </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Prime members</p>
+      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Prime member (the highest perk)</p>
       <div className="rewards-rule">
         <span>Points/wallet ×</span>
         <input type="number" step="0.1" value={form.m_boost} onChange={(e) => set("m_boost", e.target.value)} />
@@ -99,23 +100,14 @@ function LifecycleSettings({ settings }) {
         <span>% · max ₹</span>
         <input type="number" value={form.m_discMax} onChange={(e) => set("m_discMax", e.target.value)} />
       </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Non-members</p>
+      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Normal member</p>
       <div className="rewards-rule">
-        <span>Points/wallet ×</span>
-        <input type="number" step="0.1" value={form.n_boost} onChange={(e) => set("n_boost", e.target.value)} />
-        <span>→ floor ×</span>
-        <input type="number" step="0.1" value={form.n_floor} onChange={(e) => set("n_floor", e.target.value)} />
-      </div>
-      <div className="rewards-rule">
-        <span>Discount</span>
-        <input type="number" value={form.n_disc} onChange={(e) => set("n_disc", e.target.value)} />
-        <span>% → floor</span>
-        <input type="number" value={form.n_discFloor} onChange={(e) => set("n_discFloor", e.target.value)} />
-        <span>% · max ₹</span>
-        <input type="number" value={form.n_discMax} onChange={(e) => set("n_discMax", e.target.value)} />
+        <span>Gets</span>
+        <input type="number" min="0" max="100" value={form.normalPct} onChange={(e) => set("normalPct", e.target.value)} />
+        <span>% of the Prime perk (50–60% recommended).</span>
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 8 }}>
-        <button className="primary-btn" onClick={save}>Save new-customer rewards</button>
+        <button className="primary-btn" onClick={save}>Save new-member rewards</button>
         {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
       </div>
     </section>

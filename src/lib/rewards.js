@@ -41,11 +41,21 @@ export function lifecycleFor(orderCount, isMember, cfg) {
   const n = (Number(orderCount) || 0) + 1; // this is their n-th order
   const welcomeOrders = L.welcomeOrders ?? 5;
   const taperOrders = Math.max(L.taperOrders ?? 15, 1);
-  const t = (isMember ? L.member : L.nonmember) || {};
-  const boost = t.pointsBoost ?? (isMember ? 2.0 : 1.5);
-  const floor = t.pointsFloor ?? (isMember ? 1.3 : 1.0);
-  const discPct = t.discPct ?? (isMember ? 10 : 6);
-  const discFloor = t.discFloorPct ?? (isMember ? 2 : 0);
+  // Prime is the master perk; a Normal member gets normalPct% of it.
+  const P = L.member || {};
+  let boost = P.pointsBoost ?? 2.5;
+  let floor = P.pointsFloor ?? 1.3;
+  let discPct = P.discPct ?? 12;
+  let discFloor = P.discFloorPct ?? 2;
+  let discMax = P.discMax ?? 60;
+  if (!isMember) {
+    const npct = (L.normalPct ?? 55) / 100;
+    boost = 1 + (boost - 1) * npct;
+    floor = 1 + (floor - 1) * npct;
+    discPct = discPct * npct;
+    discFloor = discFloor * npct;
+    discMax = Math.round(discMax * npct);
+  }
   let frac;
   if (n <= welcomeOrders) frac = 0;
   else if (n <= welcomeOrders + taperOrders) frac = (n - welcomeOrders) / taperOrders;
@@ -53,7 +63,7 @@ export function lifecycleFor(orderCount, isMember, cfg) {
   return {
     mult: boost - (boost - floor) * frac,
     discPct: discPct - (discPct - discFloor) * frac,
-    discMax: t.discMax ?? (isMember ? 50 : 30),
+    discMax,
   };
 }
 
