@@ -76,6 +76,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
                     {user.member && <span className="member-chip">👑 Prime</span>}
                   </div>
                   <div className="account-phone">+91 {user.phone}</div>
+                  {user.customerCode && <div className="account-cid">Customer ID · {user.customerCode}</div>}
                 </div>
                 <div className="account-points">
                   <div className="account-points-val">{user.points || 0}</div>
@@ -278,6 +279,7 @@ function OrderDetail({ order, onClose, onReorder }) {
             <Row k="Item total" v={`₹${order.itemTotal}`} />
             {order.couponDiscount > 0 && <Row k={`Coupon ${order.couponCode || ""}`.trim()} v={`−₹${order.couponDiscount}`} good />}
             {order.pointsDiscount > 0 && <Row k={`Points used${order.pointsRedeemed ? ` (${order.pointsRedeemed} pts)` : ""}`} v={`−₹${order.pointsDiscount}`} good />}
+            {order.welcomeDiscount > 0 && <Row k="Welcome offer" v={`−₹${order.welcomeDiscount}`} good />}
             <Row k="Delivery fee" v={order.deliveryFee ? `₹${order.deliveryFee}` : "FREE"} />
             <Row k="Handling" v={`₹${order.handling}`} />
             {order.surgeFee > 0 && <Row k="Surge" v={`₹${order.surgeFee}`} />}

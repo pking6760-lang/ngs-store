@@ -122,6 +122,7 @@ function mapOrder(r) {
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
     isReturn: !!r.is_return, returnOf: r.return_of, isMembership: !!r.is_membership,
     membershipFee: num(r.membership_fee), membershipDays: r.membership_days || 0,
+    welcomeDiscount: num(r.welcome_discount),
     scratchClaimed: !!r.scratch_claimed, scratchReward: r.scratch_reward || null,
     scratchPoints: r.scratch_points || 0, scratchWallet: num(r.scratch_wallet),
     deliveryState: r.delivery_state, pickerState: r.picker_state,
@@ -132,6 +133,7 @@ function mapProfile(r) {
   if (!r) return null;
   return { id: r.id, name: r.name, phone: r.phone, email: r.email,
     address: r.address, points: r.points, member: r.is_member,
+    customerCode: r.customer_code || null, orderCount: r.order_count || 0,
     memberSince: r.member_since, memberUntil: r.member_until, role: r.role, createdAt: r.created_at };
 }
 
