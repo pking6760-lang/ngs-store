@@ -681,7 +681,8 @@ button {
 
 .lt-map-wrap {
   position: relative;
-  height: 300px; flex: none; border-radius: 18px; overflow: hidden;
+  height: 300px; min-height: 300px; flex: 0 0 300px;
+  border-radius: 18px; overflow: hidden;
   box-shadow: var(--shadow-md); border: 1px solid var(--line);
   background: #e6ebe8;
 }
