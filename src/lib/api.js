@@ -134,6 +134,7 @@ function mapProfile(r) {
   return { id: r.id, name: r.name, phone: r.phone, email: r.email,
     address: r.address, points: r.points, member: r.is_member,
     customerCode: r.customer_code || null, orderCount: r.order_count || 0,
+    memberOrderCount: r.member_order_count || 0,
     memberSince: r.member_since, memberUntil: r.member_until, role: r.role, createdAt: r.created_at };
 }
 
