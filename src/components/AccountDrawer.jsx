@@ -76,7 +76,6 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
                     {user.member && <span className="member-chip">👑 Prime</span>}
                   </div>
                   <div className="account-phone">+91 {user.phone}</div>
-                  {user.customerCode && <div className="account-cid">Customer ID · {user.customerCode}</div>}
                 </div>
                 <div className="account-points">
                   <div className="account-points-val">{user.points || 0}</div>
