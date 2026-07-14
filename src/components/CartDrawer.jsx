@@ -1135,11 +1135,26 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {savings > 0 && (
                 <div className="savings-pill">You save ₹{savings} on this order 🎉</div>
               )}
-              {!isMember && deliveryFee > 0 && (
-                <div className="free-hint">
-                  Add ₹{Math.max(0, FREE_DELIVERY_ABOVE - qualifyingTotal)} more for FREE delivery
-                  {itemTotal > qualifyingTotal && (
-                    <small className="free-hint-note"> (milk, curd &amp; bread don't count)</small>
+              {!isMember && itemTotal > 0 && (
+                <div className="free-progress">
+                  <div className="free-progress-top">
+                    {qualifyingTotal >= FREE_DELIVERY_ABOVE ? (
+                      <span className="free-progress-done">🎉 FREE delivery unlocked!</span>
+                    ) : (
+                      <span>
+                        Add <strong>₹{Math.max(0, FREE_DELIVERY_ABOVE - qualifyingTotal)}</strong> more for FREE delivery
+                      </span>
+                    )}
+                  </div>
+                  <div className="free-progress-bar">
+                    <span
+                      style={{
+                        width: `${Math.min(100, Math.round((qualifyingTotal / FREE_DELIVERY_ABOVE) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  {itemTotal > qualifyingTotal && qualifyingTotal < FREE_DELIVERY_ABOVE && (
+                    <small className="free-hint-note">milk, curd &amp; bread don't count toward this</small>
                   )}
                 </div>
               )}
