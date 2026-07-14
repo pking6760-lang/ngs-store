@@ -65,6 +65,8 @@ function mapProduct(r) {
     // Low-margin item (milk/curd/bread): its value does NOT count toward the
     // free-delivery threshold. Still buyable and counts toward everything else.
     freeDeliveryExempt: !!r.free_delivery_exempt,
+    // Thin-margin staple: no member discount, no points, no scratch reward.
+    noRewards: !!r.no_rewards,
     // Tiered member pricing: the public deep anchor (cost + minimum margin).
     // The shopper's price sits between this and the MRP per their tier — the
     // client mirrors the server exactly (see tierUnitPrice in bulk.js).

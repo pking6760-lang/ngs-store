@@ -32,6 +32,7 @@ const EMPTY = {
   image: "",
   inStock: true,
   stock: "",
+  noRewards: false,
 };
 
 export default function ProductsAdmin() {
@@ -671,6 +672,25 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
             <small className="field-note">
               Turn OFF for ultra-low-margin items (milk, curd, bread) so their
               value doesn't help unlock free delivery. Customers can still buy them.
+            </small>
+          </label>
+
+          <label className="field wide stock-field">
+            <span>Thin margin (rewards)</span>
+            <button
+              type="button"
+              className={`stock-toggle ${form.noRewards ? "off" : "on"}`}
+              onClick={() => update("noRewards", !form.noRewards)}
+            >
+              <span className="stock-knob" />
+              <span className="stock-label">
+                {form.noRewards ? "No discount / points / reward" : "Earns member price + rewards"}
+              </span>
+            </button>
+            <small className="field-note">
+              Turn ON for zero-margin staples. Everyone pays the normal price
+              (no member discount), and the item earns no points and no scratch
+              reward. Still fully buyable.
             </small>
           </label>
 
