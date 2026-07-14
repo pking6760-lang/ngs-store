@@ -1065,7 +1065,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
             </div>
 
-            <AddonSuggestions lines={lines} onAdd={add} />
+            <AddonSuggestions lines={lines} onAdd={add} user={user} rewardsCfg={settings.rewards} />
 
             {canJoinPrime && (
               <PrimeAddon price={memPrice} mrp={memMrp} checked={addMembership}
@@ -1170,28 +1170,32 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
 // "Add something extra" — high-margin add-ons the customer can tap into the cart
 // right before checkout. Ranked by our margin server-side (cost stays private).
-function AddonSuggestions({ lines, onAdd }) {
+function AddonSuggestions({ lines, onAdd, user, rewardsCfg }) {
   const [items, setItems] = useState([]);
   const ids = lines.map((l) => l.product.id).sort().join(",");
   useEffect(() => {
     let alive = true;
     const exclude = ids ? ids.split(",") : [];
-    api.fetchAddonSuggestions(exclude, 8).then((s) => { if (alive) setItems(s); }).catch(() => {});
+    // Ask for a few extra so we still show ~10 after any client-side gaps.
+    api.fetchAddonSuggestions(exclude, 12).then((s) => { if (alive) setItems(s); }).catch(() => {});
     return () => { alive = false; };
   }, [ids]);
   if (!items.length) return null;
   return (
     <div className="addons">
-      <div className="addons-head">🛒 Add something extra</div>
+      <div className="addons-head">🛒 You might also want</div>
       <div className="addons-row">
-        {items.map((p) => (
-          <div className="addon-card" key={p.id}>
-            <ProductThumb image={p.image} name={p.name} category={p.category} size={56} radius={10} />
-            <div className="addon-name">{p.name}</div>
-            <div className="addon-price">₹{p.price}{p.mrp > p.price ? <s>₹{p.mrp}</s> : null}</div>
-            <button className="addon-add" onClick={() => onAdd(p.id)}>ADD</button>
-          </div>
-        ))}
+        {items.map((p) => {
+          const price = tierUnitPrice(p, 1, user, rewardsCfg); // this shopper's price
+          return (
+            <div className="addon-card" key={p.id}>
+              <ProductThumb image={p.image} name={p.name} category={p.category} size={56} radius={10} />
+              <div className="addon-name">{p.name}</div>
+              <div className="addon-price">₹{price}{p.mrp > price ? <s>₹{p.mrp}</s> : null}</div>
+              <button className="addon-add" onClick={() => onAdd(p.id)}>ADD</button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
