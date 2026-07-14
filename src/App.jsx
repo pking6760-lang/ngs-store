@@ -7,8 +7,10 @@ import AccountDrawer from "./components/AccountDrawer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
-import { useProducts, useSettings, useCategories } from "./lib/hooks.js";
+import { useProducts, useSettings, useCategories, useMyOrders } from "./lib/hooks.js";
 import { bulkUnitPrice } from "./lib/bulk.js";
+import { getShopLocations } from "./lib/store.js";
+import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import { shop } from "./data/shop.js";
 
 const banners = [
@@ -47,7 +49,8 @@ export default function App() {
   const [accountTab, setAccountTab] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const { totalCount, items } = useCart();
-  const { isLoggedIn, awaitingOtp } = useAuth();
+  const { user, isLoggedIn, awaitingOtp } = useAuth();
+  const [trackOpen, setTrackOpen] = useState(false);
 
   // Back button/gesture closes the open layer instead of leaving the site.
   useBackGuard(authOpen, () => setAuthOpen(false));
@@ -64,6 +67,13 @@ export default function App() {
   const products = useProducts();
   const settings = useSettings();
   const categories = useCategories();
+
+  // The customer's current live order (if any) → floating tracker on the home page.
+  const { orders: myOrders } = useMyOrders(user?.id);
+  const activeOrder = useMemo(() => (myOrders || []).find(isLiveOrder) || null, [myOrders]);
+  const shopLoc = getShopLocations(settings)[0] || null;
+  // Close the tracker automatically once there's nothing live to track.
+  useEffect(() => { if (!activeOrder) setTrackOpen(false); }, [activeOrder]);
 
   function handleAccountClick() {
     if (isLoggedIn) {
@@ -160,6 +170,15 @@ export default function App() {
         )}
       </main>
 
+      {/* Live order tracker — floats just above the cart bar total */}
+      {activeOrder && !cartOpen && !trackOpen && (
+        <LiveOrderPill
+          order={activeOrder}
+          raised={totalCount > 0}
+          onOpen={() => setTrackOpen(true)}
+        />
+      )}
+
       {/* Sticky bottom cart bar (mobile-friendly) */}
       {totalCount > 0 && !cartOpen && (
         <button className="cart-bar" onClick={() => setCartOpen(true)}>
@@ -172,6 +191,13 @@ export default function App() {
           </span>
         </button>
       )}
+
+      <LiveTrackingSheet
+        open={trackOpen}
+        order={activeOrder}
+        shopLoc={shopLoc}
+        onClose={() => setTrackOpen(false)}
+      />
 
       <CartDrawer
         open={cartOpen}
