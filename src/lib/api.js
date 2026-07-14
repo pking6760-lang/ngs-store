@@ -124,6 +124,8 @@ function mapOrder(r) {
     isReturn: !!r.is_return, returnOf: r.return_of, isMembership: !!r.is_membership,
     membershipFee: num(r.membership_fee), membershipDays: r.membership_days || 0,
     welcomeDiscount: num(r.welcome_discount),
+    // Prime savings meter: what this member saved vs the normal price.
+    memberSavings: num(r.member_savings),
     scratchClaimed: !!r.scratch_claimed, scratchReward: r.scratch_reward || null,
     scratchPoints: r.scratch_points || 0, scratchWallet: num(r.scratch_wallet),
     deliveryState: r.delivery_state, pickerState: r.picker_state,

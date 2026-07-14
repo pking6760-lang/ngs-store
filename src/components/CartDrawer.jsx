@@ -452,6 +452,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         count: lines.reduce((a, l) => a + l.qty, 0),
         eta: 12, payment: pay,
         pointsEarned: order.pointsEarned, code: order.id,
+        memberSavings: order.memberSavings || 0,
       });
       clear();
       setUsePoints(false);
@@ -597,6 +598,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 ? "✅ Paid with NGS Wallet"
                 : "Cash on delivery"}
             </p>
+            {placed.memberSavings > 0 && (
+              <p className="success-savings">
+                💎 You saved <strong>₹{Math.round(placed.memberSavings)}</strong> with NGS Prime
+              </p>
+            )}
             {placed.pointsEarned > 0 && (
               <p className="success-points">
                 🎁 You earned <strong>{placed.pointsEarned} points</strong>

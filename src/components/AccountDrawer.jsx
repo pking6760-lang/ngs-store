@@ -514,6 +514,14 @@ function Membership() {
   const { user, joinMembership, applyRewards } = useAuth();
   const settings = useSettings();
   const { balance } = useWallet(user?.id);
+  const { orders: myOrders } = useMyOrders(user?.id);
+  const now = new Date();
+  const savedThisMonth = (myOrders || [])
+    .filter((o) => {
+      const d = new Date(o.createdAt);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    })
+    .reduce((s, o) => s + (o.memberSavings || 0), 0);
   const plan = settings.rewards?.membership || {};
   const price = plan.price ?? MEMBERSHIP.price;
   const mrp = plan.mrp ?? 199;
@@ -552,6 +560,11 @@ function Membership() {
         <PrimeCard name={user.name} until={user.memberUntil} active />
         <div className="prime-meter"><span style={{ width: `${pct}%` }} /></div>
         <div className="prime-left">{daysLeft} day{daysLeft === 1 ? "" : "s"} left on your membership</div>
+        {savedThisMonth > 0 && (
+          <div className="prime-saved">
+            💎 You’ve saved <strong>₹{Math.round(savedThisMonth)}</strong> this month with Prime
+          </div>
+        )}
         <PrimeBenefits benefits={MEMBERSHIP.benefits} />
         <p className="prime-fine">You can renew here once your membership ends.</p>
       </div>

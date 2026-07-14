@@ -1937,6 +1937,15 @@ button {
   color: var(--green-dark);
   font-weight: 700;
 }
+.success-savings {
+  font-size: 14px;
+  font-weight: 800;
+  color: #9a7b1e;
+  background: linear-gradient(90deg, #fdf4e3, #fae9c6);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: inline-block;
+}
 .my-order-points {
   display: flex;
   gap: 10px;
@@ -3210,6 +3219,11 @@ body {
 .prime-meter { height: 7px; border-radius: 999px; background: var(--line, #e6ebf0); margin-top: 14px; overflow: hidden; }
 .prime-meter > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f4dd98, #d9b45a); }
 .prime-left { font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 7px; text-align: center; }
+.prime-saved {
+  margin-top: 12px; text-align: center; font-size: 14px; font-weight: 800;
+  color: #9a7b1e; background: linear-gradient(90deg, #fdf4e3, #fae9c6);
+  border-radius: 12px; padding: 10px 14px;
+}
 
 .prime-benefits {
   background: var(--card, #fff); border: 1px solid var(--line); border-radius: 16px;
