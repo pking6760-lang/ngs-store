@@ -6,6 +6,7 @@ import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../li
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
+import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ScratchCard from "./ScratchCard.jsx";
 import ProductThumb from "./ProductThumb.jsx";
@@ -508,21 +509,35 @@ function Rewards({ user }) {
 }
 
 function Membership() {
-  const { user, joinMembership } = useAuth();
+  const { user, joinMembership, applyRewards } = useAuth();
   const settings = useSettings();
   const { balance } = useWallet(user?.id);
   const plan = settings.rewards?.membership || {};
   const price = plan.price ?? MEMBERSHIP.price;
   const days = plan.days ?? 30;
   const isMember = user?.member;
+  const enoughWallet = (balance || 0) >= price;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [payQr, setPayQr] = useState(false);
 
-  async function join() {
+  async function joinWithWallet() {
     setBusy(true); setErr("");
     const res = await joinMembership();
     if (!res.ok) setErr(res.error || "Couldn't join.");
     setBusy(false);
+  }
+
+  if (payQr) {
+    return (
+      <div className="membership-panel">
+        <MembershipQrPay
+          price={price}
+          onPaid={async () => { await applyRewards(); setPayQr(false); }}
+          onCancel={() => setPayQr(false)}
+        />
+      </div>
+    );
   }
 
   if (isMember) {
@@ -544,13 +559,17 @@ function Membership() {
           )}
         </div>
         {err && <div className="auth-error">{err}</div>}
-        <button className="checkout-btn" onClick={join} disabled={busy}>
-          {busy ? "Renewing…" : `Renew ₹${price} · +${days} days`}
-        </button>
-        <p className="member-note">
-          Free delivery applies on normal days. During surge (rain / peak),
-          standard delivery charges apply.
-        </p>
+        <div className="member-pay-row">
+          <button className="checkout-btn" onClick={() => setPayQr(true)} disabled={busy}>
+            Renew by UPI / QR · ₹{price}
+          </button>
+          {enoughWallet && (
+            <button className="ghost-btn full" onClick={joinWithWallet} disabled={busy}>
+              {busy ? "Renewing…" : `Renew from Wallet · ₹${price}`}
+            </button>
+          )}
+        </div>
+        <p className="member-note">Renewing adds {days} more days.</p>
       </div>
     );
   }
@@ -572,14 +591,78 @@ function Membership() {
           ))}
         </ul>
         {err && <div className="auth-error">{err}</div>}
-        <button className="checkout-btn" onClick={join} disabled={busy}>
-          {busy ? "Joining…" : `Join with NGS Wallet · ₹${price}`}
-        </button>
+        <div className="member-pay-row">
+          <button className="checkout-btn" onClick={() => setPayQr(true)} disabled={busy}>
+            Pay by UPI / QR · ₹{price}
+          </button>
+          <button
+            className="ghost-btn full"
+            onClick={enoughWallet ? joinWithWallet : undefined}
+            disabled={busy || !enoughWallet}
+            title={enoughWallet ? "" : "Not enough wallet balance"}
+          >
+            {busy ? "Joining…" : enoughWallet ? `Pay from Wallet · ₹${price}` : `Wallet: ₹${balance || 0} (not enough)`}
+          </button>
+        </div>
       </div>
       <p className="member-note">
-        Paid from your NGS Wallet (balance ₹{balance || 0}). No wallet balance?
-        Pay ₹{price} at the shop and we'll activate it for you.
+        Pay by UPI/QR from any app, or use your NGS Wallet balance. It activates automatically the moment you pay.
       </p>
+    </div>
+  );
+}
+
+// UPI/QR membership payment — creates a membership order, shows its Razorpay UPI
+// QR, and polls until the webhook confirms payment, then activates.
+function MembershipQrPay({ price, onPaid, onCancel }) {
+  const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
+  const [order, setOrder] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    setQr("loading");
+    (async () => {
+      try {
+        const o = await api.createMembershipOrder();
+        if (!alive) return;
+        setOrder(o);
+        const { imageUrl, imageDataUrl } = await api.createOrderQr(o.dbId);
+        const clean = await cleanUpiQrFromImage(imageDataUrl).catch(() => null);
+        if (alive) setQr({ url: clean || imageDataUrl || imageUrl });
+      } catch (e) {
+        if (alive) { setErr(e.message || "Couldn't start the payment."); setQr("error"); }
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!order) return;
+    let alive = true;
+    const iv = setInterval(async () => {
+      try {
+        const st = await api.fetchOrderState(order.dbId);
+        if (alive && st?.payment_status === "paid") { clearInterval(iv); onPaid(); }
+      } catch { /* keep polling */ }
+    }, 3000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="mem-qr">
+      <div className="mem-qr-amt">Pay ₹{price} to join NGS Prime<span>🔒 Secured by Razorpay</span></div>
+      {qr === "error" ? (
+        <div className="auth-error">{err}</div>
+      ) : qr && qr.url ? (
+        <>
+          <div className="mem-qr-wrap"><img className="mem-qr-img" src={qr.url} alt="UPI payment QR" /></div>
+          <p className="member-note">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM). Your membership activates automatically the moment you pay.</p>
+        </>
+      ) : (
+        <div className="mem-qr-loading">Creating a secure QR…</div>
+      )}
+      <button className="ghost-btn full" onClick={onCancel}>Cancel</button>
     </div>
   );
 }

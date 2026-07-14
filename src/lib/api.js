@@ -115,7 +115,7 @@ function mapOrder(r) {
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback, riderRating: r.rider_rating || 0, needsOwner: !!r.needs_owner,
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
-    isReturn: !!r.is_return, returnOf: r.return_of,
+    isReturn: !!r.is_return, returnOf: r.return_of, isMembership: !!r.is_membership,
     scratchClaimed: !!r.scratch_claimed, scratchReward: r.scratch_reward || null,
     scratchPoints: r.scratch_points || 0, scratchWallet: num(r.scratch_wallet),
     deliveryState: r.delivery_state, pickerState: r.picker_state,
@@ -406,6 +406,7 @@ export async function fetchMyOrders() {
     // Return pickups are internal logistics rows — the customer sees the parent
     // order flip to "Returned", not the pickup task itself.
     .eq("is_return", false)
+    .eq("is_membership", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);
@@ -435,6 +436,14 @@ export async function joinMembership() {
   pingLocal("profiles");
   pingLocal("customer_wallet");
   return data;
+}
+
+// Create a membership purchase that runs through the normal Razorpay QR flow.
+export async function createMembershipOrder() {
+  const { data, error } = await must().rpc("create_membership_order");
+  if (error) throw new Error(error.message || "Couldn't start the payment.");
+  const row = Array.isArray(data) ? data[0] : data;
+  return mapOrder(row);
 }
 
 // Admin activates membership for a customer who paid at the shop.
@@ -975,6 +984,8 @@ export async function fetchAllOrders() {
     .from("orders").select("*, order_items(*)")
     // Never surface an online order to the shop until its payment is confirmed.
     .neq("status", "Awaiting payment")
+    // Membership purchases aren't fulfillment orders — keep them out of the ops list.
+    .eq("is_membership", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);

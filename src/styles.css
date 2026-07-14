@@ -3115,3 +3115,15 @@ body {
   width: 100%; border: 1px solid var(--green); background: var(--green-tint); color: var(--green-dark);
   border-radius: 8px; padding: 6px; font-weight: 800; font-size: 12.5px; letter-spacing: 0.03em;
 }
+
+/* Membership pay options + UPI QR */
+.member-pay-row { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.member-pay-row .ghost-btn.full { width: 100%; background: #fff; border: 1px solid var(--line); color: var(--ink, #1c2430); border-radius: 12px; padding: 12px; font-weight: 700; }
+.member-pay-row .ghost-btn.full:disabled { opacity: 0.55; }
+.mem-qr { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.mem-qr-amt { font-weight: 800; font-size: 16px; display: flex; flex-direction: column; gap: 3px; }
+.mem-qr-amt span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.mem-qr-wrap { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.mem-qr-img { width: min(240px, 70vw); height: auto; display: block; }
+.mem-qr-loading { color: var(--muted); font-weight: 600; padding: 30px; }
+.ghost-btn.full { width: 100%; }
