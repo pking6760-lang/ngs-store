@@ -69,7 +69,7 @@ export default function App() {
   const categories = useCategories();
 
   // The customer's current live order (if any) → floating tracker on the home page.
-  const { orders: myOrders } = useMyOrders(user?.id);
+  const { orders: myOrders, reload: reloadOrders } = useMyOrders(user?.id);
   const activeOrder = useMemo(() => (myOrders || []).find(isLiveOrder) || null, [myOrders]);
   const shopLoc = getShopLocations(settings)[0] || null;
   // Close the tracker automatically once there's nothing live to track.
@@ -197,6 +197,7 @@ export default function App() {
         order={activeOrder}
         shopLoc={shopLoc}
         onClose={() => setTrackOpen(false)}
+        onRefresh={reloadOrders}
       />
 
       <CartDrawer

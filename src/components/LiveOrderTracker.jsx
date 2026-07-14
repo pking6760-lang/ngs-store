@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import * as api from "../lib/api.js";
 
 // Statuses that mean an order is still on its way (worth tracking live).
 const LIVE_STATUSES = ["Placed", "Packed", "Out for delivery"];
@@ -74,13 +75,41 @@ function routePoints(shop, home, n = 40) {
 }
 
 /* ── Full-screen live tracking sheet ──────────────────────────────────────── */
-export function LiveTrackingSheet({ open, order, shopLoc, onClose }) {
+export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) {
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const bikeRef = useRef(null);
   const rafRef = useRef(null);
+  const [rider, setRider] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useBackGuard(open, onClose);
+
+  // Pull the assigned rider (name + phone) for the driver card.
+  const loadRider = useCallback(() => {
+    if (!order?.dbId) { setRider(null); return; }
+    api.fetchOrderRider(order.dbId).then(setRider).catch(() => setRider(null));
+  }, [order?.dbId]);
+
+  useEffect(() => {
+    if (!open) return;
+    loadRider();
+    const iv = setInterval(loadRider, 15000); // keep the driver card fresh
+    return () => clearInterval(iv);
+  }, [open, loadRider]);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      loadRider();
+      if (onRefresh) await onRefresh();
+      // Re-fit the map to the current route.
+      const map = mapRef.current;
+      if (map) { map.invalidateSize(); }
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
+  }, [loadRider, onRefresh]);
 
   const home = order?.location && order.location.lat != null
     ? { lat: Number(order.location.lat), lng: Number(order.location.lng) }
@@ -167,10 +196,40 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose }) {
         {canMap ? (
           <div className="lt-map-wrap">
             <div ref={mapEl} className="lt-map" />
+            <button
+              className={`lt-refresh ${refreshing ? "spin" : ""}`}
+              onClick={refresh}
+              aria-label="Refresh"
+              title="Refresh"
+            >
+              ⟳
+            </button>
           </div>
         ) : (
           <div className="lt-nomap">
             🗺️ Live map appears once your delivery location is shared. Your order status is below.
+            <button className="lt-nomap-refresh" onClick={refresh} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "⟳ Refresh"}
+            </button>
+          </div>
+        )}
+
+        {rider && (
+          <div className="lt-driver">
+            <div className="lt-driver-av">{(rider.name || "?").trim().charAt(0).toUpperCase() || "🛵"}</div>
+            <div className="lt-driver-mid">
+              <div className="lt-driver-name">{rider.name}</div>
+              <div className="lt-driver-msg">
+                {order.status === "Out for delivery"
+                  ? `Hi, I'm ${rider.name.split(" ")[0]} 👋 I've picked up your order and I'm on the way!`
+                  : `${rider.name.split(" ")[0]} will bring your order.`}
+              </div>
+            </div>
+            {rider.phone && (
+              <a className="lt-driver-call" href={`tel:+91${rider.phone}`} aria-label={`Call ${rider.name}`}>
+                📞
+              </a>
+            )}
           </div>
         )}
 

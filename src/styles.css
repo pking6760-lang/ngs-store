@@ -636,10 +636,46 @@ button {
 .lt-eta-big { font-size: 22px; font-weight: 900; }
 .lt-eta-sub { font-size: 14px; font-weight: 600; opacity: 0.9; margin-top: 4px; }
 .lt-map-wrap {
+  position: relative;
   height: 300px; border-radius: 16px; overflow: hidden;
   box-shadow: var(--shadow-md); border: 1px solid var(--line);
 }
 .lt-map { width: 100%; height: 100%; }
+.lt-refresh {
+  position: absolute; top: 12px; right: 12px; z-index: 500;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #fff; border: none; color: var(--green-dark);
+  font-size: 22px; font-weight: 800; line-height: 1;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.lt-refresh.spin { animation: ltspin 0.6s linear infinite; }
+@keyframes ltspin { to { transform: rotate(360deg); } }
+.lt-nomap-refresh {
+  display: block; margin: 12px auto 0; background: var(--green); color: #fff;
+  border: none; border-radius: 10px; padding: 9px 18px; font-weight: 700; font-size: 13px;
+}
+
+/* Driver card */
+.lt-driver {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border-radius: 16px; padding: 14px 16px;
+  border: 1px solid var(--line);
+}
+.lt-driver-av {
+  flex: none; width: 46px; height: 46px; border-radius: 50%;
+  background: var(--green); color: #fff; font-weight: 800; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+.lt-driver-mid { flex: 1; min-width: 0; }
+.lt-driver-name { font-weight: 800; font-size: 15px; }
+.lt-driver-msg { font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px; line-height: 1.35; }
+.lt-driver-call {
+  flex: none; width: 46px; height: 46px; border-radius: 50%;
+  background: var(--green-tint); color: var(--green-dark); font-size: 20px;
+  display: flex; align-items: center; justify-content: center; text-decoration: none;
+  border: 1px solid var(--green);
+}
 .lt-nomap {
   background: #fff; border: 1px dashed var(--line); border-radius: 16px;
   padding: 22px; text-align: center; color: var(--muted); font-size: 13.5px; font-weight: 600;

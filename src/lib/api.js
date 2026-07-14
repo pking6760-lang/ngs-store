@@ -331,6 +331,17 @@ export async function createCollectionLink(orderDbId) {
 // Read the live payment/status of one of the customer's own orders. Used to
 // confirm success via the webhook when the in-page Razorpay callback doesn't
 // fire (common with async UPI). RLS lets a customer read only their own order.
+// Customer-facing: the delivery partner assigned to MY order (name + phone),
+// for the live tracking screen. Returns null until a rider is assigned.
+export async function fetchOrderRider(dbId) {
+  if (!dbId) return null;
+  const { data, error } = await must().rpc("get_order_rider", { p_order: dbId });
+  if (error) return null;
+  const r = Array.isArray(data) ? data[0] : data;
+  if (!r || !r.name) return null;
+  return { name: r.name, phone: r.phone, deliveryState: r.delivery_state };
+}
+
 export async function fetchOrderState(dbId) {
   const { data, error } = await must()
     .from("orders").select("payment_status,status").eq("id", dbId).single();
