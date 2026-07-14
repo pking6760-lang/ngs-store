@@ -834,7 +834,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {welcomeDiscount > 0 && (
                 <div className="bill-row">
-                  <span>✨ Welcome offer</span>
+                  <span>🏷️ Extra discount</span>
                   <span className="free">−₹{welcomeDiscount}</span>
                 </div>
               )}
@@ -1105,7 +1105,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {welcomeDiscount > 0 && (
                 <div className="bill-row">
-                  <span>✨ Welcome offer</span>
+                  <span>🏷️ Extra discount</span>
                   <span className="free">−₹{welcomeDiscount}</span>
                 </div>
               )}

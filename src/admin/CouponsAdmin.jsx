@@ -34,8 +34,9 @@ function LifecycleSettings({ settings }) {
     shopFloorRupees: cfg.shopFloorRupees ?? 6,
     shopFloorPct: cfg.shopFloorPct ?? 3,
     normalPct: cfg.normalPct ?? 55,
+    renewalPct: cfg.renewalPct ?? 30,
     m_boost: m.pointsBoost ?? 2.5, m_disc: m.discPct ?? 12, m_discMax: m.discMax ?? 60,
-    fl_normal: fp.normal ?? 3, fl_prime: fp.prime ?? 8, fl_renew: fp.renew ?? 8,
+    fl_normal: fp.normal ?? 3, fl_prime: fp.prime ?? 8,
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
@@ -53,8 +54,9 @@ function LifecycleSettings({ settings }) {
           shopFloorRupees: num(form.shopFloorRupees),
           shopFloorPct: num(form.shopFloorPct),
           normalPct: Math.min(100, num(form.normalPct)),
+          renewalPct: Math.min(100, num(form.renewalPct)),
           member: { pointsBoost: num(form.m_boost), discPct: num(form.m_disc), discMax: num(form.m_discMax) },
-          floorPct: { normal: Math.min(100, num(form.fl_normal)), prime: Math.min(100, num(form.fl_prime)), renew: Math.min(100, num(form.fl_renew)) },
+          floorPct: { normal: Math.min(100, num(form.fl_normal)), prime: Math.min(100, num(form.fl_prime)) },
         },
       },
     });
@@ -97,19 +99,20 @@ function LifecycleSettings({ settings }) {
         <span>% · max ₹</span>
         <input type="number" value={form.m_discMax} onChange={(e) => set("m_discMax", e.target.value)} />
       </div>
+      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Start level (% of peak — only a NEW Prime member gets 100%)</p>
       <div className="rewards-rule">
-        <span>Normal member gets</span>
+        <span>New Prime 100% · Normal</span>
         <input type="number" min="0" max="100" value={form.normalPct} onChange={(e) => set("normalPct", e.target.value)} />
-        <span>% of the Prime peak (50–60% recommended).</span>
+        <span>% · Renewal</span>
+        <input type="number" min="0" max="100" value={form.renewalPct} onChange={(e) => set("renewalPct", e.target.value)} />
+        <span>% (a limited hike).</span>
       </div>
-      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Settles to (% of the peak — never zero)</p>
+      <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Settles to (% of peak — never zero)</p>
       <div className="rewards-rule">
         <span>Normal</span>
         <input type="number" min="0" max="100" value={form.fl_normal} onChange={(e) => set("fl_normal", e.target.value)} />
-        <span>% · New Prime</span>
+        <span>% · Prime (incl. after renewal)</span>
         <input type="number" min="0" max="100" value={form.fl_prime} onChange={(e) => set("fl_prime", e.target.value)} />
-        <span>% · Renewed Prime</span>
-        <input type="number" min="0" max="100" value={form.fl_renew} onChange={(e) => set("fl_renew", e.target.value)} />
         <span>%.</span>
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 8 }}>

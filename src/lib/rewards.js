@@ -41,31 +41,31 @@ export function lifecycleFor(orderCount, isMember, cfg, membershipCount = 1) {
   const n = (Number(orderCount) || 0) + 1; // this is their n-th order
   const welcomeOrders = L.welcomeOrders ?? 5;
   const taperOrders = Math.max(L.taperOrders ?? 15, 1);
-  // Prime is the master (peak) perk; a Normal member gets normalPct% of it.
+  // Full (100%) Prime peak perk. Each state has its own START level; only a
+  // first-time Prime member starts at 100%. All decay to a floor.
   const P = L.member || {};
-  let boost = P.pointsBoost ?? 2.5;
-  let discPct = P.discPct ?? 12;
+  const boost = P.pointsBoost ?? 2.5;
+  const discPctPeak = P.discPct ?? 12;
   let discMax = P.discMax ?? 60;
-  // Floor = the % of the peak the perk decays to; differs by tier.
   const fp = L.floorPct || {};
-  let floorFrac;
+  let startFrac, floorFrac;
   if (!isMember) {
-    const npct = (L.normalPct ?? 55) / 100;
-    boost = 1 + (boost - 1) * npct;
-    discPct = discPct * npct;
-    discMax = Math.round(discMax * npct);
+    startFrac = (L.normalPct ?? 55) / 100;
     floorFrac = (fp.normal ?? 3) / 100;
   } else if ((Number(membershipCount) || 1) >= 2) {
-    floorFrac = (fp.renew ?? fp.prime ?? 8) / 100; // renewal: fresh honeymoon → lowest Prime floor
+    startFrac = (L.renewalPct ?? 30) / 100; // renewal: a limited hike, not 100%
+    floorFrac = (fp.prime ?? 8) / 100;
   } else {
-    floorFrac = (fp.prime ?? 8) / 100; // first-time Prime
+    startFrac = 1.0; // NEW Prime = 100%
+    floorFrac = (fp.prime ?? 8) / 100;
   }
+  discMax = Math.round(discMax * startFrac);
   let frac;
   if (n <= welcomeOrders) frac = 0;
   else if (n <= welcomeOrders + taperOrders) frac = (n - welcomeOrders) / taperOrders;
   else frac = 1;
-  const perk = 1 - (1 - floorFrac) * frac; // 100% at welcome → floor% settled
-  return { mult: 1 + (boost - 1) * perk, discPct: discPct * perk, discMax };
+  const perk = startFrac - (startFrac - floorFrac) * frac; // start% → floor%
+  return { mult: 1 + (boost - 1) * perk, discPct: discPctPeak * perk, discMax };
 }
 
 // The welcome discount in ₹ for this order, capped in ₹ and by what's left after
