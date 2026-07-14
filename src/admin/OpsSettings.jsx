@@ -25,21 +25,18 @@ const GROUPS = [
   },
   {
     title: "Delivery partner payout",
-    note: "Share of the order pool, then a gentler share above the break — no ceiling.",
+    note: "Flat, predictable pay: a base per delivery + distance beyond the free radius + a peak (rain/night) bonus.",
     fields: [
-      { key: "rider_tier1_pct", label: "Share up to break (e.g. 0.40)", step: "0.01" },
-      { key: "rider_tier2_pct", label: "Share above break (e.g. 0.20)", step: "0.01" },
-      { key: "rider_taper_break", label: "Break point (₹ pool)" },
-      { key: "rider_floor", label: "Minimum per delivery (₹)" },
+      { key: "rider_base", label: "Base per delivery (₹)" },
+      { key: "rider_free_km", label: "Free distance (km)", step: "0.1" },
+      { key: "rider_per_km", label: "₹ per km beyond that" },
+      { key: "peak_bonus", label: "Peak bonus when surge is on (₹)" },
     ],
   },
   {
     title: "Picker payout",
     fields: [
-      { key: "picker_tier1_pct", label: "Share up to break (e.g. 0.20)", step: "0.01" },
-      { key: "picker_tier2_pct", label: "Share above break (e.g. 0.10)", step: "0.01" },
-      { key: "picker_taper_break", label: "Break point (₹ pool)" },
-      { key: "picker_slot_min", label: "Slot minimum top-up (₹)" },
+      { key: "picker_pack_fee", label: "Flat fee per order packed (₹)" },
     ],
   },
   {

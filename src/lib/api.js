@@ -126,7 +126,7 @@ function mapProfile(r) {
   if (!r) return null;
   return { id: r.id, name: r.name, phone: r.phone, email: r.email,
     address: r.address, points: r.points, member: r.is_member,
-    memberSince: r.member_since, role: r.role, createdAt: r.created_at };
+    memberSince: r.member_since, memberUntil: r.member_until, role: r.role, createdAt: r.created_at };
 }
 
 /* ─── Auth (email OTP) ──────────────────────────────────────────────────── */
@@ -209,6 +209,14 @@ export async function updateMyProfile(patch) {
 }
 
 /* ─── Catalog / settings (public read) ──────────────────────────────────── */
+
+// High-margin "add something extra" suggestions for the cart. Cost/margin is
+// computed server-side; only public product fields come back.
+export async function fetchAddonSuggestions(excludeIds = [], limit = 8) {
+  const { data, error } = await must().rpc("suggest_addons", { p_exclude: excludeIds, p_limit: limit });
+  if (error) return [];
+  return (data || []).map(mapProduct);
+}
 
 export async function fetchProducts() {
   const { data, error } = await must()
@@ -417,6 +425,23 @@ export async function rateOrderRider(orderId, rating) {
   const { error } = await must().rpc("rate_order_rider", { p_order: orderId, p_rating: rating });
   if (error) throw error;
   pingLocal("orders");
+  return { ok: true };
+}
+
+// Customer joins / renews NGS Prime, paying the fee from their wallet.
+export async function joinMembership() {
+  const { data, error } = await must().rpc("join_membership");
+  if (error) throw new Error(error.message || "Couldn't join. Please try again.");
+  pingLocal("profiles");
+  pingLocal("customer_wallet");
+  return data;
+}
+
+// Admin activates membership for a customer who paid at the shop.
+export async function adminGrantMembership(userId, days = 30) {
+  const { error } = await must().rpc("admin_grant_membership", { p_user_id: userId, p_days: days });
+  if (error) throw new Error(error.message || "Couldn't activate membership.");
+  pingLocal("profiles");
   return { ok: true };
 }
 

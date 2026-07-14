@@ -13,8 +13,56 @@ export default function CouponsAdmin() {
       <OfferBanner settings={settings} />
       <RewardsSettings settings={settings} />
       <ScratchSettings settings={settings} />
+      <MembershipSettings settings={settings} />
       <CouponManager coupons={coupons} categories={categories} />
     </div>
+  );
+}
+
+function MembershipSettings({ settings }) {
+  const cfg = settings.rewards?.membership || {};
+  const [form, setForm] = useState({
+    enabled: cfg.enabled ?? true,
+    price: cfg.price ?? 99,
+    days: cfg.days ?? 30,
+  });
+  const [saved, setSaved] = useState(false);
+  const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
+
+  function save() {
+    updateSettings({
+      rewards: {
+        ...(settings.rewards || {}),
+        membership: {
+          enabled: !!form.enabled,
+          price: Math.max(0, Number(form.price) || 0),
+          days: Math.max(1, Number(form.days) || 1),
+        },
+      },
+    });
+    setSaved(true);
+  }
+
+  return (
+    <section className="panel offer-card">
+      <h3>NGS Prime membership</h3>
+      <p className="sub">Customers pay from their NGS Wallet to join. Members get free delivery on normal days. (We'll add more perks next.)</p>
+      <label className="preg-ev" style={{ marginBottom: 6 }}>
+        <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
+        <span>Offer membership to customers</span>
+      </label>
+      <div className="rewards-rule">
+        <span>Price ₹</span>
+        <input type="number" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} />
+        <span>for</span>
+        <input type="number" min="1" value={form.days} onChange={(e) => set("days", e.target.value)} />
+        <span>days.</span>
+      </div>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
+        <button className="primary-btn" onClick={save}>Save membership</button>
+        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
+      </div>
+    </section>
   );
 }
 

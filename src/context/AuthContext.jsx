@@ -120,9 +120,13 @@ function BackendAuth({ children }) {
     // Points are granted/spent by the server; just re-read the balance.
     async applyRewards() { await refresh(); },
 
-    // Membership is activated by the store (admin) on the server.
-    joinMembership() {
-      return { ok: false, error: "Membership is activated by the store." };
+    // Join / renew NGS Prime — paid from the customer's wallet, server-side.
+    async joinMembership() {
+      try {
+        await api.joinMembership();
+        await refresh();
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
     },
   }), [user, ready, pendingEmail]);
 

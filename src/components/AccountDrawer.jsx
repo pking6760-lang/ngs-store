@@ -509,7 +509,21 @@ function Rewards({ user }) {
 
 function Membership() {
   const { user, joinMembership } = useAuth();
+  const settings = useSettings();
+  const { balance } = useWallet(user?.id);
+  const plan = settings.rewards?.membership || {};
+  const price = plan.price ?? MEMBERSHIP.price;
+  const days = plan.days ?? 30;
   const isMember = user?.member;
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function join() {
+    setBusy(true); setErr("");
+    const res = await joinMembership();
+    if (!res.ok) setErr(res.error || "Couldn't join.");
+    setBusy(false);
+  }
 
   if (isMember) {
     return (
@@ -525,10 +539,14 @@ function Membership() {
               <li key={b}>✅ {b}</li>
             ))}
           </ul>
-          <p className="member-since">
-            Member since {formatDate(user.memberSince)}
-          </p>
+          {user.memberUntil && (
+            <p className="member-since">Valid until {formatDate(user.memberUntil)}</p>
+          )}
         </div>
+        {err && <div className="auth-error">{err}</div>}
+        <button className="checkout-btn" onClick={join} disabled={busy}>
+          {busy ? "Renewing…" : `Renew ₹${price} · +${days} days`}
+        </button>
         <p className="member-note">
           Free delivery applies on normal days. During surge (rain / peak),
           standard delivery charges apply.
@@ -545,20 +563,22 @@ function Membership() {
           <span className="member-title">{MEMBERSHIP.name}</span>
         </div>
         <div className="member-price">
-          ₹{MEMBERSHIP.price}
-          <small>one-time (demo)</small>
+          ₹{price}
+          <small>for {days} days</small>
         </div>
         <ul className="member-benefits">
           {MEMBERSHIP.benefits.map((b) => (
             <li key={b}>✅ {b}</li>
           ))}
         </ul>
-        <button className="checkout-btn" onClick={joinMembership}>
-          Join {MEMBERSHIP.name}
+        {err && <div className="auth-error">{err}</div>}
+        <button className="checkout-btn" onClick={join} disabled={busy}>
+          {busy ? "Joining…" : `Join with NGS Wallet · ₹${price}`}
         </button>
       </div>
       <p className="member-note">
-        Demo: joining is instant. A real setup collects ₹{MEMBERSHIP.price} via UPI.
+        Paid from your NGS Wallet (balance ₹{balance || 0}). No wallet balance?
+        Pay ₹{price} at the shop and we'll activate it for you.
       </p>
     </div>
   );
