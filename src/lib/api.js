@@ -220,6 +220,53 @@ export async function updateMyProfile(patch) {
   return { ok: true };
 }
 
+/* ─── Saved addresses (Home / Work / Other) ─────────────────────────────── */
+
+function mapAddress(a) {
+  return { id: a.id, label: a.label, address: a.full_address, location: a.location, isDefault: !!a.is_default };
+}
+
+export async function fetchMyAddresses() {
+  const { data, error } = await must()
+    .from("customer_addresses").select("*")
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapAddress);
+}
+
+export async function addAddress({ label, address, location = null, makeDefault = true }) {
+  const { data, error } = await must().rpc("add_address", {
+    p_label: label, p_address: address, p_location: location, p_make_default: makeDefault,
+  });
+  if (error) throw new Error(error.message || "Couldn't save the address.");
+  pingLocal("profiles");
+  return mapAddress(Array.isArray(data) ? data[0] : data);
+}
+
+export async function updateAddress(id, { label, address, location = null }) {
+  const { data, error } = await must().rpc("update_address", {
+    p_id: id, p_label: label, p_address: address, p_location: location,
+  });
+  if (error) throw new Error(error.message || "Couldn't update the address.");
+  pingLocal("profiles");
+  return mapAddress(Array.isArray(data) ? data[0] : data);
+}
+
+export async function setDefaultAddress(id) {
+  const { error } = await must().rpc("set_default_address", { p_id: id });
+  if (error) throw new Error(error.message || "Couldn't set the address.");
+  pingLocal("profiles");
+  return { ok: true };
+}
+
+export async function deleteAddress(id) {
+  const { error } = await must().rpc("delete_address", { p_id: id });
+  if (error) throw new Error(error.message || "Couldn't delete the address.");
+  pingLocal("profiles");
+  return { ok: true };
+}
+
 /* ─── Catalog / settings (public read) ──────────────────────────────────── */
 
 // High-margin "add something extra" suggestions for the cart. Cost/margin is

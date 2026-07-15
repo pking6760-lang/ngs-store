@@ -12,6 +12,7 @@ import { tierUnitPrice } from "./lib/bulk.js";
 import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import CategoryIcon from "./components/CategoryIcon.jsx";
+import AddressSheet from "./components/AddressSheet.jsx";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -59,6 +60,7 @@ export default function App() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountTab, setAccountTab] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [addressOpen, setAddressOpen] = useState(false);
   const { totalCount, items } = useCart();
   const { user, isLoggedIn, awaitingOtp } = useAuth();
   const [trackOpen, setTrackOpen] = useState(false);
@@ -109,6 +111,11 @@ export default function App() {
     setAccountOpen(true);
   }
 
+  function openAddress() {
+    if (isLoggedIn) setAddressOpen(true);
+    else setAuthOpen(true);
+  }
+
   const searching = query.trim().length > 0;
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -145,6 +152,7 @@ export default function App() {
         onAccountClick={handleAccountClick}
         onBellClick={handleBellClick}
         onWalletClick={openWallet}
+        onAddressClick={openAddress}
       />
 
       {!settings.storeOpen && (
@@ -238,6 +246,8 @@ export default function App() {
         onClose={() => setAccountOpen(false)}
         onOpenCart={() => setCartOpen(true)}
       />
+
+      <AddressSheet open={addressOpen} onClose={() => setAddressOpen(false)} />
 
       <AuthModal
         open={authOpen}

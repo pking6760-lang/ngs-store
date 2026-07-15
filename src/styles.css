@@ -49,14 +49,17 @@ button {
   backdrop-filter: saturate(180%) blur(8px);
   border-bottom: 1px solid var(--line);
 }
-.header-inner {
+/* Quick-commerce header: row1 brand+actions · row2 location+wallet · row3 search */
+.header-top {
   max-width: var(--max);
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 12px 20px;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 16px 8px;
 }
+.header-icons { display: flex; align-items: center; gap: 10px; }
 .logo {
   background: none;
   border: none;
@@ -97,78 +100,34 @@ button {
   margin-top: 3px;
   letter-spacing: 0.02em;
 }
-.location {
-  min-width: 180px;
-  line-height: 1.3;
-}
-/* Delivery / location strip under the search (mobile q-commerce cue).
-   Shown only on mobile; desktop uses the inline .location block. */
-.delivery-bar {
-  display: none;
-  width: 100%;
+/* Row 2 — delivery ETA + address (tap → manage) + wallet chip */
+.header-locrow {
+  max-width: var(--max);
+  margin: 0 auto;
+  display: flex;
   align-items: center;
-  padding: 9px 16px 2px;
+  gap: 10px;
+  padding: 0 16px 9px;
 }
-@media (max-width: 900px) {
-  .delivery-bar { display: flex; }
-}
-.db-main {
+.header-loc {
   flex: 1; min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border: none;
-  background: transparent;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  border: none; background: transparent; padding: 0; text-align: left; cursor: pointer;
 }
-.db-bolt {
-  width: 26px;
-  height: 26px;
-  flex: 0 0 auto;
-  border-radius: 8px;
-  background: var(--green, #0a9155);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.hl-bolt {
+  width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px;
+  background: linear-gradient(140deg, var(--green), var(--green-dark)); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 10px -3px rgba(10, 145, 85, 0.4);
 }
-.db-text {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
-.db-text strong { color: var(--green-dark, #056b3c); }
-.db-addr {
-  font-weight: 500;
-  font-size: 12px;
-  color: #667;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.db-chevron { margin-left: auto; color: #8a95a1; font-size: 12px; flex: 0 0 auto; }
-.location-time {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--ink);
-}
-.location-addr {
-  font-size: 12px;
-  color: #3a3a3a;
-  max-width: 220px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.chevron {
-  color: var(--muted);
-}
+.hl-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hl-eta { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.01em; line-height: 1; }
+.hl-addr { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.hl-addr-txt { font-size: 14px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-caret { color: var(--muted); font-size: 12px; flex: 0 0 auto; }
+
+/* Row 3 — search */
+.header-searchrow { max-width: var(--max); margin: 0 auto; padding: 0 16px 10px; }
 .search-wrap {
   flex: 1;
   position: relative;
@@ -503,6 +462,81 @@ button {
 .wtop .checkout-btn:disabled { opacity: 0.5; }
 .wtop .mem-qr { margin-top: 8px; }
 .wtop .ghost-btn.full { margin-top: 8px; }
+
+/* ─── Address management sheet ──────────────────────────────────────────── */
+.addr-sheet {
+  position: relative; background: #fff; width: 100%; max-width: 520px;
+  border-radius: 24px 24px 0 0; max-height: 90vh; overflow-y: auto;
+  animation: bulkUp 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.addr-head {
+  position: sticky; top: 0; z-index: 2; background: #fff;
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--line);
+}
+.addr-head h3 { flex: 1; margin: 0; font-size: 17px; font-weight: 850; }
+.addr-back, .addr-x {
+  width: 32px; height: 32px; flex: none; border-radius: 50%; border: none;
+  background: var(--bg-soft); color: var(--muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.addr-body { padding: 16px 18px calc(24px + env(safe-area-inset-bottom)); }
+
+.addr-add {
+  width: 100%; display: flex; align-items: center; gap: 11px;
+  border: 1.5px dashed rgba(31,142,58,0.4); background: var(--green-tint);
+  border-radius: 14px; padding: 14px 16px; cursor: pointer;
+  font-size: 14.5px; font-weight: 800; color: var(--green-dark);
+}
+.addr-add-ic { width: 30px; height: 30px; flex: none; border-radius: 9px; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; }
+.addr-empty { text-align: center; color: var(--muted); padding: 24px 10px; font-size: 13.5px; }
+
+.addr-list { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.addr-list-lbl { font-size: 11.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.addr-card {
+  display: flex; align-items: stretch; border: 1px solid var(--line);
+  border-radius: 14px; overflow: hidden; background: #fff; box-shadow: var(--shadow-sm);
+}
+.addr-card.on { border-color: var(--green); box-shadow: 0 0 0 1px var(--green), var(--shadow-sm); }
+.addr-card-main { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 12px; padding: 13px 14px; background: none; border: none; text-align: left; cursor: pointer; }
+.addr-card-ic { width: 34px; height: 34px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--green-tint); color: var(--green-dark); margin-top: 1px; }
+.addr-card.on .addr-card-ic { background: var(--green); color: #fff; }
+.addr-card-txt { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.addr-card-name { font-size: 14.5px; font-weight: 800; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.addr-badge { font-size: 10px; font-weight: 800; color: var(--green-dark); background: var(--green-tint); border: 1px solid rgba(31,142,58,0.25); border-radius: 999px; padding: 2px 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+.addr-card-line { font-size: 12.5px; color: var(--muted); font-weight: 500; line-height: 1.45; }
+.addr-card-check { flex: none; align-self: center; color: var(--green); }
+.addr-card-actions { display: flex; flex-direction: column; border-left: 1px solid var(--line); }
+.addr-card-actions button { flex: 1; width: 44px; border: none; background: #fff; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.addr-card-actions button:first-child { border-bottom: 1px solid var(--line); }
+.addr-card-actions button:hover { background: var(--bg-soft); color: var(--ink); }
+
+/* Add / edit form */
+.addr-form-lbl { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 9px; }
+.addr-chips { display: flex; gap: 9px; margin-bottom: 16px; }
+.addr-chip {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1.5px solid var(--line); background: #fff; border-radius: 12px; padding: 11px 8px;
+  font-size: 13.5px; font-weight: 800; color: var(--muted); cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+.addr-chip.on { border-color: var(--green); background: var(--green-tint); color: var(--green-dark); }
+.addr-pin {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  border: 1px solid var(--line); background: var(--bg-soft); border-radius: 13px;
+  padding: 12px 14px; cursor: pointer; margin-bottom: 16px;
+}
+.addr-pin-ic { width: 34px; height: 34px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #fff; color: var(--green-dark); box-shadow: var(--shadow-sm); }
+.addr-pin strong { display: block; font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.addr-pin small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.addr-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.addr-field span { font-size: 12px; font-weight: 800; color: var(--muted); }
+.addr-field textarea {
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  font-size: 14px; font-family: inherit; width: 100%; resize: vertical; background: #fff;
+}
+.addr-field textarea:focus { outline: none; border-color: var(--green); }
+.addr-body .checkout-btn { width: 100%; }
 .pd-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; }
 .pd-hero-img {
   position: relative; width: 96px; height: 96px; flex: 0 0 auto;
@@ -2571,21 +2605,16 @@ input:focus-visible {
   letter-spacing: 0.01em;
 }
 
-/* ─── Wallet balance chip (top-bar chrome, not a card) ──────────────────── */
-.header-wallet, .db-wallet {
+/* ─── Wallet balance chip (rides on the right of the location row) ───────── */
+.hl-wallet {
   display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
   border: 1px solid rgba(10,145,85,0.22); background: var(--green-tint, #e9f7ee);
   color: var(--green-dark, #0a7a44); font-weight: 800; cursor: pointer;
   font-variant-numeric: tabular-nums;
+  font-size: 13px; padding: 7px 12px; border-radius: 999px;
 }
-.header-wallet svg, .db-wallet svg { flex: 0 0 auto; }
-/* Desktop: a chip in the header action row (delivery bar is hidden ≥900px). */
-.header-wallet { font-size: 13px; padding: 8px 12px; border-radius: 999px; }
-.header-wallet:hover { background: #ddf0e4; }
-@media (max-width: 900px) { .header-wallet { display: none; } }
-/* Mobile: the chip rides on the right of the delivery bar. */
-.db-wallet { font-size: 13px; padding: 6px 11px; border-radius: 999px; margin-left: 8px; }
-.db-wallet:active { background: #ddf0e4; }
+.hl-wallet svg { flex: 0 0 auto; }
+.hl-wallet:hover { background: #ddf0e4; }
 
 /* ─── Section headers ─── */
 .section-title {
