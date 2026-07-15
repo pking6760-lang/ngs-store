@@ -104,8 +104,11 @@ async function geminiLookup(barcode: string, name: string) {
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) return null;
     const obj = JSON.parse(m[0]);
-    if (!obj.name) return null;
-    return { name: String(obj.name), brand: String(obj.brand || ""), unit: String(obj.weight || ""), categoryTags: [], source };
+    const nm = String(obj.name || "");
+    // A real product name has letters. If the model couldn't identify the item
+    // and echoed the barcode/digits back, treat it as not found.
+    if (!nm || !/[a-z]/i.test(nm)) return null;
+    return { name: nm, brand: String(obj.brand || ""), unit: String(obj.weight || ""), categoryTags: [], source };
   } catch {
     return null;
   }

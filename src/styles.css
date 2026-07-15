@@ -115,10 +115,9 @@ button {
   border: none; background: transparent; padding: 0; text-align: left; cursor: pointer;
 }
 .hl-bolt {
-  width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px;
-  background: linear-gradient(140deg, var(--green), var(--green-dark)); color: #fff;
+  width: 26px; height: 26px; flex: 0 0 auto; border-radius: 8px;
+  background: var(--green-tint, #e9f7ee); color: var(--green-dark, #0a7a44);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 10px -3px rgba(10, 145, 85, 0.4);
 }
 .hl-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hl-eta { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.01em; line-height: 1; }

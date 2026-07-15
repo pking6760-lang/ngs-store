@@ -8,6 +8,11 @@
 
 import { lookupProductDetails } from "./api.js";
 
+// A real product name always has letters. Some lookups (e.g. an AI that can't
+// identify the item) echo the barcode or digits back as the "name" — reject
+// those so the barcode number never lands in the Product name field.
+const hasRealName = (n) => /[a-z]/i.test(String(n || ""));
+
 export async function lookupProductByBarcode(barcode, categoryNames) {
   const code = String(barcode || "").trim();
   if (!/^\d{6,14}$/.test(code)) {
@@ -15,8 +20,15 @@ export async function lookupProductByBarcode(barcode, categoryNames) {
   }
   try {
     const res = await lookupProductDetails(code, "", categoryNames);
-    if (res && res.found) return res;
-    return { found: false, barcode: code, reason: res?.reason || "Not found — please fill it in." };
+    if (res && res.found && hasRealName(res.name)) return res;
+    // Details weren't usable (or the "name" was just the barcode). Keep any
+    // category suggestion, but make the owner type the name.
+    return {
+      found: false,
+      barcode: code,
+      category: res?.category,
+      reason: res?.found ? "Couldn't read the name — please type it." : (res?.reason || "Not found — please fill it in."),
+    };
   } catch {
     return { found: false, barcode: code, reason: "Lookup failed — please fill it in." };
   }
@@ -28,8 +40,8 @@ export async function lookupProductByName(name, categoryNames) {
   if (q.length < 3) return { found: false, reason: "Type a bit more of the name." };
   try {
     const res = await lookupProductDetails("", q, categoryNames);
-    if (res && res.found) return res;
-    return { found: false, reason: res?.reason || "Couldn't find that — fill it in." };
+    if (res && res.found && hasRealName(res.name)) return res;
+    return { found: false, category: res?.category, reason: res?.reason || "Couldn't find that — fill it in." };
   } catch {
     return { found: false, reason: "Lookup failed — fill it in." };
   }
