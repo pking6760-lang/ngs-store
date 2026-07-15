@@ -133,8 +133,9 @@ button {
   border-color: var(--green);
 }
 .search-icon {
-  font-size: 14px;
-  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  color: #8a949d;
 }
 .search-input {
   flex: 1;
@@ -157,7 +158,8 @@ button {
   font-weight: 700;
 }
 .cart-icon {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ─── Layout ─────────────────────────────────────────────── */
@@ -236,6 +238,13 @@ button {
 .banner-emoji {
   font-size: 48px;
 }
+.banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+}
+.banner-icon svg { display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18)); }
 
 /* ─── Category grid ──────────────────────────────────────── */
 .category-grid {
@@ -1197,7 +1206,8 @@ button {
   background: rgba(255, 255, 255, 0.85);
 }
 .account-icon {
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ─── Modal (auth) ───────────────────────────────────────── */
@@ -1742,6 +1752,10 @@ button {
   font-size: 13px;
   font-weight: 700;
   padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 .store-closed-note {
   background: #fdecec;
@@ -2474,7 +2488,7 @@ input:focus-visible {
   animation: sheen 3.6s ease-in-out 0.6s infinite;
 }
 .cart-bar:active { transform: scale(0.99); }
-.cart-bar-icon { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2)); }
+.cart-bar-icon { display: inline-flex; align-items: center; }
 
 @keyframes sheen {
   0% { transform: translateX(-120%); }

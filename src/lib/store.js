@@ -335,7 +335,7 @@ const DEFAULT_SETTINGS = {
   storeOpen: true,
   deliveryMode: "normal",
   // A promotional line shown across the top of the customer home page.
-  offerBanner: "🎉 Welcome to Nisha General Store — daily essentials delivered fast!",
+  offerBanner: "Welcome to Nisha General Store — daily essentials, delivered fast.",
   // Reward points rule (editable from admin → Offers → Reward points).
   rewards: { earnPoints: 50, earnPer: 399, redeemPer: 10 },
   // Delivery rules (editable from admin → Delivery).

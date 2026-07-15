@@ -13,12 +13,18 @@ import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import { shop } from "./data/shop.js";
 
+const svgProps = {
+  width: 66, height: 66, viewBox: "0 0 24 24", fill: "none",
+  stroke: "currentColor", strokeWidth: 1.35, strokeLinecap: "round", strokeLinejoin: "round",
+};
 const banners = [
   {
     id: "b1",
     title: "Free delivery over ₹199",
     subtitle: "On daily essentials, every order",
-    emoji: "🚴",
+    icon: (
+      <svg {...svgProps}><path d="M1 4h12v11H1zM13 8h4l4 4v3h-8" /><circle cx="5.5" cy="18" r="1.7" /><circle cx="16.5" cy="18" r="1.7" /></svg>
+    ),
     grad: "linear-gradient(135deg, #0a9155, #056b3c)",
     fg: "#ffffff",
   },
@@ -26,7 +32,9 @@ const banners = [
     id: "b2",
     title: "Up to 40% off snacks",
     subtitle: "Stock up for the week",
-    emoji: "🍿",
+    icon: (
+      <svg {...svgProps}><path d="M20.6 13.6 13 21.2a2 2 0 0 1-2.8 0L3 14V4a1 1 0 0 1 1-1h7l8.6 8.6a2 2 0 0 1 0 2z" /><circle cx="7.5" cy="7.5" r="1.4" /></svg>
+    ),
     grad: "linear-gradient(135deg, #f6c445, #e39a00)",
     fg: "#3a2a00",
   },
@@ -34,7 +42,9 @@ const banners = [
     id: "b3",
     title: "Groceries in 12 minutes",
     subtitle: "Fresh stock, delivered fast",
-    emoji: "🛍️",
+    icon: (
+      <svg {...svgProps}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+    ),
     grad: "linear-gradient(135deg, #2f6fb0, #16406e)",
     fg: "#ffffff",
   },
@@ -132,7 +142,8 @@ export default function App() {
 
       {!settings.storeOpen && (
         <div className="store-closed-banner">
-          🔴 Store is currently closed — you can browse, but ordering is paused.
+          <span className="status-dot closed" aria-hidden="true" />
+          Store is currently closed — you can browse, but ordering is paused.
         </div>
       )}
 
@@ -189,7 +200,9 @@ export default function App() {
       {totalCount > 0 && !cartOpen && (
         <button className="cart-bar" onClick={() => setCartOpen(true)}>
           <span className="cart-bar-left">
-            <span className="cart-bar-icon">🛒</span>
+            <span className="cart-bar-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.5 3h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6" /></svg>
+            </span>
             {totalCount} item{totalCount > 1 ? "s" : ""}
           </span>
           <span className="cart-bar-right">
@@ -230,7 +243,7 @@ export default function App() {
 
       <footer className="footer">
         <p className="footer-name">{shop.name}</p>
-        <p className="footer-note">📍 {shop.address}</p>
+        <p className="footer-note">{shop.address}</p>
         <p className="footer-note">Groceries &amp; daily essentials, delivered fast.</p>
       </footer>
     </div>
@@ -261,14 +274,14 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
               <h3>{b.title}</h3>
               <p>{b.subtitle}</p>
             </div>
-            <div className="banner-emoji">{b.emoji}</div>
+            <div className="banner-icon">{b.icon}</div>
           </div>
         ))}
       </div>
 
       {bestPrices.length > 0 && (
         <section className="section best-prices">
-          <h2 className="section-title">🔥 Best Prices</h2>
+          <h2 className="section-title">Best Prices</h2>
           <div className="product-row">
             {bestPrices.map((p) => (
               <ProductCard key={p.id} product={p} badge="Best price" />
@@ -279,7 +292,7 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
 
       {almostGone.length > 0 && (
         <section className="section">
-          <h2 className="section-title">⏳ Almost Gone — hurry!</h2>
+          <h2 className="section-title">Almost Gone</h2>
           <div className="product-row">
             {almostGone.map((p) => (
               <ProductCard key={p.id} product={p} />
