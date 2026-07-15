@@ -519,6 +519,15 @@ function Profile({ role, name, partner, onLogout }) {
         <div className="pd-prof-kv"><span>Account</span><span>{p.bankAccount || "—"}</span></div>
         <div className="pd-prof-kv"><span>Terms</span><span>{p.termsAcceptedAt ? "✓ Accepted" : "—"}</span></div>
       </div>
+      <a
+        className="pd-support"
+        href={`mailto:ngscustomersupport@gmail.com?subject=${encodeURIComponent(
+          `NGS Partner help — ${name || "Partner"}${p.empCode ? ` (${p.empCode})` : ""}`
+        )}`}
+      >
+        <span className="pd-support-title">Need help? Contact NGS support</span>
+        <span className="pd-support-mail">ngscustomersupport@gmail.com</span>
+      </a>
       <button className="pd-logout" onClick={onLogout}>Log out</button>
     </>
   );

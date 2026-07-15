@@ -133,6 +133,12 @@
 .pd-logout { width: 100%; margin-top: 8px; background: var(--p-card2); border: 1px solid var(--p-line);
   color: var(--p-red-bright); font-weight: 700; padding: 14px; border-radius: 14px; font-size: 15px; cursor: pointer; }
 
+.pd-support { display: flex; flex-direction: column; gap: 3px; width: 100%; margin-top: 12px;
+  background: var(--p-card2); border: 1px solid var(--p-line); border-radius: 14px; padding: 14px;
+  text-decoration: none; }
+.pd-support-title { color: var(--p-text, #fff); font-weight: 700; font-size: 14.5px; }
+.pd-support-mail { color: var(--p-red-bright); font-weight: 600; font-size: 13px; }
+
 .pd-btn { display: block; width: 100%; text-align: center; border: none; cursor: pointer;
   background: linear-gradient(135deg, var(--p-red), var(--p-red-deep)); color: #fff; font-weight: 800; font-size: 15px;
   padding: 14px; border-radius: 14px; box-shadow: 0 12px 30px -12px rgba(229,18,46,0.8); }
