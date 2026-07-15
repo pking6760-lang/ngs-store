@@ -37,8 +37,8 @@ function LifecycleSettings({ settings }) {
     shopFloorPct: cfg.shopFloorPct ?? 3,
     deepMarginPct: P.deepMarginPct ?? 7,
     maxDiscountPct: P.maxDiscountPct ?? 20,
-    pr_s: P.prime?.start ?? 25, pr_e: P.prime?.end ?? 50,
-    rn_s: P.renew?.start ?? 25, rn_e: P.renew?.end ?? 50,
+    pr_s: P.prime?.start ?? 25, pr_e: P.prime?.end ?? 75,
+    rn_s: P.renew?.start ?? 50, rn_e: P.renew?.end ?? 75,
     no_s: P.normal?.start ?? 75, no_e: P.normal?.end ?? 100,
   });
   const [saved, setSaved] = useState(false);

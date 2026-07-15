@@ -1,19 +1,22 @@
--- Membership pricing model (profit-tuned) — with bulk/quantity discounts ON.
+-- Membership + bulk pricing (profit-tuned, tier-distinct).
 --
--- Guest / non-member: MRP for a single unit, but "buy N, save X" volume discounts
--- apply to everyone (buy 2 → 4% off, 3 → 8%, 4 → 12%, all bounded by the floor).
--- Members additionally get their tier price; each buyer is charged the LOWER of
--- (their member tier price, the bulk quantity price) — so nobody ever overpays.
+-- Four buyer states each get a DIFFERENT single-unit price, and bulk ("buy N,
+-- save X") deepens the discount for everyone — each buyer is charged the LOWER of
+-- their member tier price and the bulk price (place_order + client both do this,
+-- so charged == shown). Everything stays bounded by the cost floor (never a loss).
 --
---   • Shelf single-unit price = MRP.
---   • Bulk tiers = build_bulk_tiers(MRP, floor, cfg)  (config: pricing_config.bulk_*).
---   • floor = greatest(cost + deepMarginPct%, MRP − maxDiscountPct%)  — never below cost.
---   • Member tier price = floor + (MRP − floor) × position%.
---     Positions (settings.rewards.lifecycle.pricing), with maxDiscountPct = 20:
---       Prime 1st / renew : 25% → 50%  = 15% off (new) → 10% off (settled)
---       Normal            : 75% → 100% =  5% off (new) →  0% off / MRP (settled)
+--   Single-unit tier prices (maxDiscountPct = 20, so floor = 80% of MRP):
+--     New Prime   : pos 25→75  = 15% off (new) → 5% off (after limit)
+--     Renewed     : pos 50→75  = 10% off (new) → 5% off (after limit)
+--     Normal      : pos 75→100 =  5% off (new) → 0% off / MRP (after limit)
+--     Guest       : MRP
+--   Bulk (off MRP, capped at bulkMaxDiscountPct = 25%, cost-protected):
+--     buy 2 → 8% off, 3 → 16% off, 4 → 24% off (build_bulk_tiers collapses ties,
+--     so cheap items naturally get fewer packs).
+--   Example (MRP ₹20, cost ₹12): single Prime ₹17 · Renew ₹18 · Normal ₹19 · Guest ₹20;
+--   at qty 4 all reach the ₹15 bulk floor.
 --
--- Mirrors the live smart_reprice() + settings applied via the Management API.
+-- Mirrors the live smart_reprice() + settings + pricing_config via the Management API.
 
 CREATE OR REPLACE FUNCTION public.smart_reprice()
  RETURNS void
@@ -25,12 +28,16 @@ declare
   cfg  public.pricing_config;
   v_deep numeric;
   v_maxdisc numeric;
+  v_bulkmax numeric;
 begin
   select * into cfg from public.pricing_config where id = 1;
   if cfg is null or not cfg.enabled then return; end if;
   -- Cap: no price (shelf, bulk or member) may go more than maxDiscountPct% off MRP.
   v_maxdisc := coalesce((select (rewards->'lifecycle'->'pricing'->>'maxDiscountPct')::numeric
                         from public.settings where id = 1), 20);
+  -- Bulk (volume) buyers may go a little deeper than the single-unit cap.
+  v_bulkmax := coalesce((select (rewards->'lifecycle'->'pricing'->>'bulkMaxDiscountPct')::numeric
+                        from public.settings where id = 1), 25);
 
   insert into public.product_costs (product_id)
     select id from public.products on conflict (product_id) do nothing;
@@ -97,7 +104,7 @@ begin
   from priv where p.id = priv.id;
 
   update public.products p set
-    bulk_tiers = public.build_bulk_tiers(p.price, greatest(ceil(pc.cost * (1 + cfg.floor_markup)), ceil(p.mrp * (1 - v_maxdisc / 100))), cfg)
+    bulk_tiers = public.build_bulk_tiers(p.price, greatest(ceil(pc.cost * (1 + cfg.floor_markup)), ceil(p.mrp * (1 - v_bulkmax / 100))), cfg)
     from public.product_costs pc
     where pc.product_id = p.id and pc.cost is not null and pc.speed_tier <> 'unpriced';
   update public.products p set bulk_tiers = '[]'::jsonb
@@ -136,13 +143,15 @@ begin
 end; $function$
 
 
--- Config: profit-tuned tier positions + the 20% hard safety cap.
+-- Bulk-off percentages (pricing_config) + tier positions & caps (settings).
+update public.pricing_config set bulk_off_1 = 0.08, bulk_off_2 = 0.16, bulk_off_3 = 0.24 where id = 1;
 update public.settings
-set rewards = jsonb_set(jsonb_set(jsonb_set(jsonb_set(
+set rewards = jsonb_set(jsonb_set(jsonb_set(jsonb_set(jsonb_set(
       rewards,
-      '{lifecycle,pricing,maxDiscountPct}', '20'::jsonb, true),
-      '{lifecycle,pricing,prime}',  '{"start":25,"end":50}'::jsonb, true),
-      '{lifecycle,pricing,renew}',  '{"start":25,"end":50}'::jsonb, true),
+      '{lifecycle,pricing,maxDiscountPct}',     '20'::jsonb, true),
+      '{lifecycle,pricing,bulkMaxDiscountPct}', '25'::jsonb, true),
+      '{lifecycle,pricing,prime}',  '{"start":25,"end":75}'::jsonb, true),
+      '{lifecycle,pricing,renew}',  '{"start":50,"end":75}'::jsonb, true),
       '{lifecycle,pricing,normal}', '{"start":75,"end":100}'::jsonb, true)
 where id = 1;
 

@@ -17,7 +17,16 @@ export default function BulkPackSheet({ product, onClose }) {
   const mrp = Math.max(Number(product.mrp) || 0, base);
   const tiers = Array.isArray(product.bulkTiers) ? product.bulkTiers : [];
   const stock = typeof product.stock === "number" ? product.stock : Infinity;
-  const packs = [1, ...tiers.map((t) => Number(t.q))].filter((q) => q <= stock || q === 1);
+  // Only keep packs that actually lower THIS shopper's per-unit price. A member's
+  // rate can already match a bulk tier, which would otherwise show identical-price
+  // packs — so we drop any pack that doesn't beat the previous one.
+  const rawPacks = [1, ...tiers.map((t) => Number(t.q))].filter((q) => q <= stock || q === 1);
+  const packs = [];
+  let lastUnit = Infinity;
+  for (const q of rawPacks) {
+    const u = tierUnitPrice(product, q, user, settings.rewards);
+    if (q === 1 || u < lastUnit) { packs.push(q); lastUnit = u; }
+  }
 
   const [sel, setSel] = useState(inCart && packs.includes(inCart) ? inCart : packs[0]);
   const selUnit = tierUnitPrice(product, sel, user, settings.rewards);

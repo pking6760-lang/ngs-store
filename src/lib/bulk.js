@@ -35,8 +35,8 @@ export function tierUnitPrice(product, qty, user, rewardsCfg) {
   const isMember = !!user.member;
   const tier = !isMember ? "normal" : (Number(user.membershipCount) || 1) >= 2 ? "renew" : "prime";
   const T = P[tier] || {};
-  const start = T.start ?? (tier === "prime" ? 25 : tier === "renew" ? 25 : 75);
-  const end = T.end ?? (tier === "prime" ? 50 : tier === "renew" ? 50 : 100);
+  const start = T.start ?? (tier === "prime" ? 25 : tier === "renew" ? 50 : 75);
+  const end = T.end ?? (tier === "prime" ? 75 : tier === "renew" ? 75 : 100);
   const win = (L.windows || {})[tier] ?? (tier === "prime" ? 10 : tier === "renew" ? 7 : 6);
   const taper = Math.max(L.taperOrders ?? 15, 1);
   const n = (isMember ? user.memberOrderCount || 0 : user.orderCount || 0) + 1;
