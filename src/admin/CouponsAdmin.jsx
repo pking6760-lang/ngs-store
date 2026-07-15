@@ -36,6 +36,7 @@ function LifecycleSettings({ settings }) {
     shopFloorRupees: cfg.shopFloorRupees ?? 6,
     shopFloorPct: cfg.shopFloorPct ?? 3,
     deepMarginPct: P.deepMarginPct ?? 7,
+    maxDiscountPct: P.maxDiscountPct ?? 20,
     pr_s: P.prime?.start ?? 0, pr_e: P.prime?.end ?? 40,
     rn_s: P.renew?.start ?? 12, rn_e: P.renew?.end ?? 32,
     no_s: P.normal?.start ?? 44, no_e: P.normal?.end ?? 64,
@@ -64,6 +65,7 @@ function LifecycleSettings({ settings }) {
             ...(cfg.pricing || {}),
             enabled: true,
             deepMarginPct: num(form.deepMarginPct),
+            maxDiscountPct: pct(form.maxDiscountPct),
             prime: { start: pct(form.pr_s), end: pct(form.pr_e) },
             renew: { start: pct(form.rn_s), end: pct(form.rn_e) },
             normal: { start: pct(form.no_s), end: pct(form.no_e) },
@@ -102,7 +104,12 @@ function LifecycleSettings({ settings }) {
       <div className="rewards-rule">
         <span>Deepest price = cost +</span>
         <input type="number" min="0" value={form.deepMarginPct} onChange={(e) => set("deepMarginPct", e.target.value)} />
-        <span>% margin · always keep ≥ ₹</span>
+        <span>% margin · but never more than</span>
+        <input type="number" min="0" max="100" value={form.maxDiscountPct} onChange={(e) => set("maxDiscountPct", e.target.value)} />
+        <span>% off MRP.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Always keep ≥ ₹</span>
         <input type="number" min="0" value={form.shopFloorRupees} onChange={(e) => set("shopFloorRupees", e.target.value)} />
         <span>or</span>
         <input type="number" min="0" value={form.shopFloorPct} onChange={(e) => set("shopFloorPct", e.target.value)} />
