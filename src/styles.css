@@ -903,8 +903,29 @@ button {
   background: #eaf6ec;
   color: var(--green-dark);
   font-size: 13px;
-  padding: 10px 18px;
+  font-weight: 600;
+  padding: 11px 18px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  letter-spacing: 0.1px;
 }
+/* Small pulsing status dot — replaces the ⚡ / 🔴 emoji with a premium cue. */
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+}
+.status-dot.live {
+  background: #16a34a;
+  box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5);
+  animation: dotPulse 1.8s ease-out infinite;
+}
+.status-dot.closed { background: #e03131; }
+@keyframes dotPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }
+  70%  { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .status-dot.live { animation: none; } }
 .cart-lines {
   padding: 8px 14px;
   display: flex;
@@ -957,11 +978,16 @@ button {
 .line-delete {
   border: none;
   background: none;
-  font-size: 14px;
-  opacity: 0.6;
+  color: #9aa4ad;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
 .line-delete:hover {
-  opacity: 1;
+  color: #e03131;
 }
 
 .bill {
@@ -1049,6 +1075,13 @@ button {
 }
 .empty-emoji {
   font-size: 56px;
+}
+.empty-icon {
+  width: 76px; height: 76px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--green-tint, #eaf6ec);
+  color: var(--green, #1f7a3d);
+  margin-bottom: 4px;
 }
 .cart-empty p {
   font-weight: 800;
@@ -1607,7 +1640,15 @@ button {
   height: 18px;
 }
 .pay-option-icon {
-  font-size: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--green-tint, #eaf6ec);
+  color: var(--green-dark, #16663a);
+  flex: 0 0 auto;
 }
 .pay-option-text {
   display: flex;
@@ -1708,7 +1749,11 @@ button {
   font-size: 13px;
   padding: 12px 18px;
   line-height: 1.5;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
 }
+.store-closed-note .status-dot { position: relative; top: 3px; }
 .surge-tag {
   color: #b26a00;
   font-weight: 700;
@@ -3119,7 +3164,14 @@ body {
 
 /* "Add something extra" cross-sell row in the cart */
 .addons { margin: 14px 0 4px; }
-.addons-head { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+.addons-head {
+  font-size: 15px; font-weight: 800; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px; color: var(--ink);
+}
+.addons-head::before {
+  content: ""; width: 3px; height: 15px; border-radius: 2px;
+  background: var(--green, #1f7a3d);
+}
 .addons-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .addons-row::-webkit-scrollbar { display: none; }
 .addon-card {

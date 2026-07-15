@@ -591,25 +591,25 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </p>
             <p className="success-pay">
               {placed.payment === "razorpay"
-                ? "✅ Paid online"
+                ? "Paid online"
                 : placed.payment === "upi"
                 ? "Paid via UPI"
                 : placed.payment === "wallet"
-                ? "✅ Paid with NGS Wallet"
+                ? "Paid with NGS Wallet"
                 : "Cash on delivery"}
             </p>
             {placed.memberSavings > 0 && (
               <p className="success-savings">
-                💎 You saved <strong>₹{Math.round(placed.memberSavings)}</strong> with NGS Prime
+                You saved <strong>₹{Math.round(placed.memberSavings)}</strong> with NGS Prime
               </p>
             )}
             {placed.pointsEarned > 0 && (
               <p className="success-points">
-                🎁 You earned <strong>{placed.pointsEarned} points</strong>
+                You earned <strong>{placed.pointsEarned} points</strong>
               </p>
             )}
             <p className="success-eta">
-              Arriving in <strong>{placed.eta} minutes</strong> 🛵
+              Arriving in <strong>{placed.eta} minutes</strong>
             </p>
             <button className="checkout-btn" onClick={handleClose}>
               Continue shopping
@@ -619,7 +619,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           <div className="pay-step">
             <div className="pay-amount">
               Amount to pay <strong>₹{payLink.order.total}</strong>
-              <span className="pay-fixed">🔒 Secured by Razorpay</span>
+              <span className="pay-fixed">Secured by Razorpay</span>
             </div>
             <div className="upi-qr-wrap">
               <img
@@ -635,7 +635,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               Pay with UPI app
             </button>
             <p className="upi-note">
-              ⏳ Waiting for payment… this screen updates automatically the moment
+              Waiting for payment… this screen updates automatically the moment
               your payment goes through. You don't need to do anything after paying.
             </p>
             {placeError && <div className="auth-error">{placeError}</div>}
@@ -644,7 +644,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           <div className="pay-step">
             <div className="pay-amount">
               Amount to pay <strong>₹{payable.toFixed(2)}</strong>
-              <span className="pay-fixed">🔒 Fixed amount — pre-filled for you</span>
+              <span className="pay-fixed">Fixed amount — pre-filled for you</span>
             </div>
             <div className="upi-qr-wrap">
               <img className="upi-qr" src={qrDataUri(upiLink)} alt="UPI QR code" />
@@ -653,7 +653,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </p>
             </div>
             <a className="upi-app-btn" href={upiLink}>
-              📱 Open UPI app to pay ₹{payable.toFixed(2)}
+              Open UPI app to pay ₹{payable.toFixed(2)}
             </a>
             <div className="upi-id-row">
               <span>Or pay to UPI ID</span>
@@ -692,7 +692,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                         key={i}
                         onClick={() => pickSuggestion(s)}
                       >
-                        📍 {s.label}
+                        {s.label}
                       </button>
                     ))}
                   </div>
@@ -703,7 +703,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 then add your house / flat number.
               </p>
               <div className="checkout-phone">
-                <span className="checkout-phone-cc">🇮🇳 +91</span>
+                <span className="checkout-phone-cc">+91</span>
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -714,22 +714,22 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               <div className="location-actions">
                 <button className="location-btn" onClick={() => setShowMap(true)}>
-                  🗺️ Pin exact location on map
+                  Pin exact location on map
                 </button>
                 <button className="location-btn subtle" onClick={useMyLocation} disabled={locating}>
-                  {locating ? "📍 Getting location…" : "📍 Use current GPS"}
+                  {locating ? "Getting location…" : "Use current GPS"}
                 </button>
               </div>
               {needsLocation && (
                 <div className="area-hint">
-                  📍 Tip: pin your exact spot on the map so delivery reaches the
+                  Tip: pin your exact spot on the map so delivery reaches the
                   right door. You can still order without it.
                 </div>
               )}
               {location && (
                 <div className={`location-captured ${outOfArea ? "bad" : ""}`}>
                   <span>
-                    ✅ Location captured
+                    Location captured
                     <br />
                     <small>
                       {location.lat}, {location.lng}
@@ -748,14 +748,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {outOfArea && (
                 <div className="area-blocked">
-                  🚧 Sorry, you're about <strong>{dist} km</strong> away — we
+                  Sorry, you're about <strong>{dist} km</strong> away — we
                   currently deliver within <strong>{maxKm} km</strong>.
                   <br />
-                  We're coming to your area soon! 💚
+                  We're coming to your area soon.
                 </div>
               )}
               {dist != null && !outOfArea && (
-                <div className="area-ok">✅ Great news — we deliver to your area!</div>
+                <div className="area-ok">We deliver to your area</div>
               )}
               {locError && <div className="auth-error">{locError}</div>}
             </div>
@@ -765,7 +765,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {RAZORPAY_ENABLED ? (
                 <label className={`pay-option ${payment === "razorpay" ? "sel" : ""}`}>
                   <input type="radio" name="pay" checked={payment === "razorpay"} onChange={() => setPayment("razorpay")} />
-                  <span className="pay-option-icon">💳</span>
+                  <span className="pay-option-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>
+                  </span>
                   <span className="pay-option-text">
                     <strong>Pay online</strong>
                     <small>UPI, Cards, Wallets · secure &amp; instant</small>
@@ -774,7 +776,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               ) : (
                 <label className={`pay-option ${payment === "upi" ? "sel" : ""}`}>
                   <input type="radio" name="pay" checked={payment === "upi"} onChange={() => setPayment("upi")} />
-                  <span className="pay-option-icon">🟣</span>
+                  <span className="pay-option-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+                  </span>
                   <span className="pay-option-text">
                     <strong>UPI</strong>
                     <small>GPay, PhonePe, Paytm, BHIM</small>
@@ -789,7 +793,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   disabled={codBlocked}
                   onChange={() => !codBlocked && setPayment("cod")}
                 />
-                <span className="pay-option-icon">💵</span>
+                <span className="pay-option-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/></svg>
+                </span>
                 <span className="pay-option-text">
                   <strong>Cash on delivery</strong>
                   <small>
@@ -811,7 +817,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   onChange={(e) => setUseWalletCredit(e.target.checked)}
                 />
                 <span className="wallet-use-txt">
-                  <strong>💰 Use NGS Wallet</strong>
+                  <strong>Use NGS Wallet</strong>
                   <small>Balance ₹{walletBal.toFixed(2)} · applies ₹{walletCap.toFixed(2)} to this order</small>
                 </span>
               </label>
@@ -849,7 +855,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               {surgeFee > 0 && (
                 <div className="bill-row">
-                  <span>🌧️ Surge charge</span>
+                  <span>Surge charge</span>
                   <span>₹{surgeFee}</span>
                 </div>
               )}
@@ -861,7 +867,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {walletApplied > 0 && (
                 <div className="bill-row">
-                  <span>💰 NGS Wallet</span>
+                  <span>NGS Wallet</span>
                   <span className="free">−₹{walletApplied.toFixed(2)}</span>
                 </div>
               )}
@@ -892,7 +898,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           </div>
         ) : lines.length === 0 ? (
           <div className="cart-empty">
-            <div className="empty-emoji">🛒</div>
+            <div className="empty-icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="19" cy="21" r="1" />
+                <path d="M2.5 3h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6" />
+              </svg>
+            </div>
             <p>Your cart is empty</p>
             <span>Add items to get started</span>
             <button className="checkout-btn" onClick={handleClose}>
@@ -903,14 +916,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           <>
             {storeClosed ? (
               <div className="store-closed-note">
-                🔴 The store is currently <strong>closed</strong>. You can build
-                your cart, but ordering resumes when we reopen.
+                <span className="status-dot closed" aria-hidden="true" />
+                The store is currently <strong>closed</strong>. You can build
+                your cart, and ordering resumes the moment we reopen.
               </div>
             ) : (
               <div className="delivery-note">
-                ⚡ Delivery in <strong>12 minutes</strong>
+                <span className="status-dot live" aria-hidden="true" />
+                Arriving in <strong>12 minutes</strong>
                 {isSurge && (
-                  <span className="surge-tag"> · 🌧️ Surge charges apply</span>
+                  <span className="surge-tag"> · Surge pricing in effect</span>
                 )}
               </div>
             )}
@@ -963,7 +978,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       onClick={() => deleteItem(product.id)}
                       aria-label="Remove item"
                     >
-                      🗑️
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 5v6m4-6v6" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -979,9 +997,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   onChange={(e) => setUsePoints(e.target.checked)}
                 />
                 <span>
-                  🎁 Use {maxRedeemRupees * redeemPer} points for{" "}
+                  Redeem {maxRedeemRupees * redeemPer} points for{" "}
                   <strong>₹{maxRedeemRupees} off</strong>
-                  <small>You have {availablePoints} points</small>
+                  <small>{availablePoints} points available</small>
                 </span>
               </label>
             )}
@@ -991,7 +1009,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {appliedCode && couponDiscount > 0 ? (
                 <div className="coupon-applied">
                   <span>
-                    🎟️ <strong>{appliedCode}</strong> applied — ₹{couponDiscount} off
+                    <strong>{appliedCode}</strong> applied — ₹{couponDiscount} off
                   </span>
                   <button className="coupon-remove" onClick={removeCoupon}>
                     Remove
@@ -1027,7 +1045,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       className="coupon-browse-toggle"
                       onClick={() => setShowCoupons((s) => !s)}
                     >
-                      🎟️ {showCoupons ? "Hide coupons" : "View available coupons"}
+                      {showCoupons ? "Hide coupons" : "View available coupons"}
                     </button>
                   )}
 
@@ -1049,7 +1067,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                           <div className="coupon-card" key={c.code}>
                             <div className="coupon-card-left">
                               <div className="coupon-card-code">
-                                🎟️ {c.code}
+                                {c.code}
                                 <span className="coupon-card-off">{off}</span>
                               </div>
                               {cond && (
@@ -1118,7 +1136,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               {surgeFee > 0 && (
                 <div className="bill-row">
-                  <span>🌧️ Surge charge <small>(bad weather / peak)</small></span>
+                  <span>Surge charge <small>(bad weather / peak)</small></span>
                   <span>₹{surgeFee}</span>
                 </div>
               )}
@@ -1133,13 +1151,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <span>₹{grandTotal}</span>
               </div>
               {savings > 0 && (
-                <div className="savings-pill">You save ₹{savings} on this order 🎉</div>
+                <div className="savings-pill">You save ₹{savings} on this order</div>
               )}
               {!isMember && itemTotal > 0 && (
                 <div className="free-progress">
                   <div className="free-progress-top">
                     {qualifyingTotal >= FREE_DELIVERY_ABOVE ? (
-                      <span className="free-progress-done">🎉 FREE delivery unlocked!</span>
+                      <span className="free-progress-done">Free delivery unlocked</span>
                     ) : (
                       <span>
                         Add <strong>₹{Math.max(0, FREE_DELIVERY_ABOVE - qualifyingTotal)}</strong> more for FREE delivery
@@ -1160,7 +1178,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {itemTotal > 0 && (
                 <div className="earn-hint">
-                  🎁 You'll earn reward points on this order
+                  You'll earn reward points on this order
                 </div>
               )}
             </div>
@@ -1208,7 +1226,7 @@ function AddonSuggestions({ lines, onAdd, user, rewardsCfg }) {
   if (!items.length) return null;
   return (
     <div className="addons">
-      <div className="addons-head">🛒 You might also want</div>
+      <div className="addons-head">You might also want</div>
       <div className="addons-row">
         {items.map((p) => {
           const price = tierUnitPrice(p, 1, user, rewardsCfg); // this shopper's price
