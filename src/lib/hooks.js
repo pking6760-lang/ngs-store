@@ -18,13 +18,33 @@ import * as api from "./api.js";
 // (hook order never changes between renders).
 const BACKEND = api.isBackendConfigured;
 
+// Stale-while-revalidate cache: the public catalog (products, categories,
+// settings) is stashed in localStorage so a repeat open paints the last-known
+// data INSTANTLY, then revalidates in the background — instead of a blank grid
+// while the first network fetch runs. Quota failures (large base64 images) fail
+// soft: we just drop the cache and keep working from the network.
+function readCache(key, fallback) {
+  if (!key) return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+function writeCache(key, data) {
+  if (!key) return;
+  try { localStorage.setItem(key, JSON.stringify(data)); }
+  catch { try { localStorage.removeItem(key); } catch { /* ignore */ } }
+}
+
 // Generic backend hook: fetch once, then re-fetch on any realtime change to the
 // given tables. `fetcher` returns app-shaped data; `initial` shows instantly.
-function useBackend(fetcher, tables, initial, pollMs = 30000) {
-  const [data, setData] = useState(initial);
+// `cacheKey` (optional) turns on the stale-while-revalidate localStorage cache.
+function useBackend(fetcher, tables, initial, pollMs = 30000, cacheKey = null) {
+  const [data, setData] = useState(() => readCache(cacheKey, initial));
   useEffect(() => {
     let alive = true;
-    const load = () => fetcher().then((d) => alive && setData(d)).catch(() => {});
+    const load = () =>
+      fetcher().then((d) => { if (alive) { setData(d); writeCache(cacheKey, d); } }).catch(() => {});
     load();
     // Live updates: same-device bus + cross-device Realtime.
     const unsubs = tables.map((t) => api.subscribeTable(t, load));
@@ -46,7 +66,7 @@ function useBackend(fetcher, tables, initial, pollMs = 30000) {
 }
 
 export function useProducts() {
-  if (BACKEND) return useBackend(api.fetchProducts, ["products"], []);
+  if (BACKEND) return useBackend(api.fetchProducts, ["products"], [], 30000, "ngs_cache_products");
   const [products, setProducts] = useState(getProducts);
   useEffect(() => subscribe(() => setProducts(getProducts())), []);
   return products;
@@ -114,7 +134,7 @@ export function useWallet(userId) {
 }
 
 export function useCategories() {
-  if (BACKEND) return useBackend(api.fetchCategories, ["categories"], []);
+  if (BACKEND) return useBackend(api.fetchCategories, ["categories"], [], 30000, "ngs_cache_categories");
   const [categories, setCategories] = useState(getCategories);
   useEffect(() => subscribe(() => setCategories(getCategories())), []);
   return categories;
@@ -151,7 +171,7 @@ export function useMyOrders(userId) {
 export function useSettings() {
   // Start from the demo defaults so the UI has sensible values before the first
   // fetch resolves.
-  if (BACKEND) return useBackend(api.fetchSettings, ["settings"], getSettings());
+  if (BACKEND) return useBackend(api.fetchSettings, ["settings"], getSettings(), 30000, "ngs_cache_settings");
   const [settings, setSettings] = useState(getSettings);
   useEffect(() => subscribe(() => setSettings(getSettings())), []);
   return settings;

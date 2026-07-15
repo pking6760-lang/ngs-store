@@ -13,6 +13,7 @@ import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import CategoryIcon from "./components/CategoryIcon.jsx";
 import AddressSheet from "./components/AddressSheet.jsx";
+import InstallPrompt from "./components/InstallPrompt.jsx";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -263,11 +264,47 @@ export default function App() {
         <p className="footer-note">{shop.address}</p>
         <p className="footer-note">Groceries &amp; daily essentials, delivered fast.</p>
       </footer>
+
+      <InstallPrompt />
+    </div>
+  );
+}
+
+function HomeSkeleton() {
+  // Shown only on the first-ever open (empty cache). Repeat opens hydrate from
+  // the cache and skip straight to real content.
+  return (
+    <div className="home-skel" aria-hidden="true">
+      <div className="skel-banner-row">
+        <div className="skel-block skel-banner" />
+        <div className="skel-block skel-banner" />
+      </div>
+      <div className="skel-block skel-title" />
+      <div className="skel-row">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div className="skel-card" key={i}>
+            <div className="skel-block skel-thumb" />
+            <div className="skel-block skel-line" />
+            <div className="skel-block skel-line short" />
+          </div>
+        ))}
+      </div>
+      <div className="skel-block skel-title" />
+      <div className="skel-row">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div className="skel-card" key={i}>
+            <div className="skel-block skel-thumb" />
+            <div className="skel-block skel-line" />
+            <div className="skel-block skel-line short" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function HomeView({ products, categories, offer, onCategoryClick }) {
+  if (products.length === 0) return <HomeSkeleton />;
   const byCategory = (id) => products.filter((p) => p.category === id);
   const bestPrices = products.filter((p) => p.bait).slice(0, 12);
   const almostGone = products

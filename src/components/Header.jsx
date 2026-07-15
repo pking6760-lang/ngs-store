@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useUserNotifications, useWallet } from "../lib/hooks.js";
@@ -35,8 +36,26 @@ export default function Header({
   const firstName = isLoggedIn ? user.name.split(" ")[0] : null;
   const deliverTo = isLoggedIn && user.address ? user.address : shop.area;
 
+  // Blinkit-style header: as the page scrolls, the brand + location rows fold
+  // away while the search bar stays pinned to the top. A small hysteresis gap
+  // (collapse past 70px, expand under 20px) stops it flickering mid-scroll.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = window.scrollY || 0;
+        setCompact((c) => (c ? y > 20 : y > 70));
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, []);
+
   return (
-    <header className="header">
+    <header className={`header${compact ? " header--compact" : ""}`}>
       {/* Row 1 — brand + account actions */}
       <div className="header-top">
         <Logo onClick={onLogoClick} />

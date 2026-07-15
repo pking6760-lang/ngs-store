@@ -33,6 +33,10 @@ export default function ProductThumb({
         className="thumb-img"
         src={image}
         alt={name}
+        // Off-screen thumbnails don't block the first paint or the scroll:
+        // the browser defers loading + decoding until they're near the viewport.
+        loading="lazy"
+        decoding="async"
         // `contain` on white shows the whole product (no cropping) and blends
         // seamlessly with white-background catalog photos.
         style={{ ...boxStyle, objectFit: "contain", background: "#fff" }}
