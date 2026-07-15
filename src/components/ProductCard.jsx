@@ -30,6 +30,13 @@ export default function ProductCard({ product, badge }) {
   const lowStock = hasStockLimit && product.stock > 0 && product.stock <= LOW_STOCK;
   const atMax = hasStockLimit && qty >= product.stock;
   const bulkTier = firstBulkTier(product);
+  // Only surface pack options when a bulk tier actually beats this shopper's
+  // per-unit price. A Prime member's rate can already be lower than every bulk
+  // tier — then the packs would all show the same price, which looks pointless,
+  // so we show a plain ADD instead.
+  const bulkHelps = (product.bulkTiers || []).some(
+    (t) => tierUnitPrice(product, Number(t.q), user, settings.rewards) < price
+  );
   const [showPacks, setShowPacks] = useState(false);
 
   return (
@@ -97,12 +104,12 @@ export default function ProductCard({ product, badge }) {
           <button className="add-btn out" disabled>
             Sold out
           </button>
-        ) : qty === 0 && bulkTier ? (
+        ) : qty === 0 && bulkTier && bulkHelps ? (
           <div className="add-wrap">
             <button className="add-btn" onClick={() => setShowPacks(true)}>
               ADD
             </button>
-            <span className="add-opts">{product.bulkTiers.length + 1} options</span>
+            <span className="add-opts">Save on packs</span>
           </div>
         ) : qty === 0 ? (
           <button className="add-btn" onClick={() => add(product.id, product.stock)}>
