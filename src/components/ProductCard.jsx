@@ -42,7 +42,11 @@ export default function ProductCard({ product, badge }) {
           fill
           radius={14}
         />
-        {badge && !outOfStock && <span className="product-best">{badge}</span>}
+        {/* Show the "Best price" tag only when there's no discount ribbon, so the
+            two never collide in the same corner on a narrow card. */}
+        {badge && !outOfStock && discount === 0 && (
+          <span className="product-best">{badge}</span>
+        )}
         {discount > 0 && !outOfStock && (
           <span className="product-badge">
             <span className="product-badge-inner">
