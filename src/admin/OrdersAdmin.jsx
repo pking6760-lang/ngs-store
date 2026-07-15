@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
-import { useOrders, usePartners } from "../lib/hooks.js";
+import { useOrders, usePartners, useSettings } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import {
   updateOrderStatus, markCashReceived, acceptOrder, rejectOrder,
@@ -212,6 +212,12 @@ export default function OrdersAdmin() {
 }
 
 function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
+  const detailSettings = useSettings();
+  const redeemPer = Number(detailSettings.rewards?.redeemPer) || 10;
+  // What this order handed back as a scratch reward (one prize) + its ₹ cost.
+  const rewardWallet = Number(o.scratchWallet) || 0;
+  const rewardPoints = Number(o.scratchPoints) || 0;
+  const rewardCost = Math.round(rewardWallet + rewardPoints / redeemPer);
   const curIdx = ORDER_STATUSES.indexOf(o.status);
   // The owner does a track only when no staff partner is assigned to it.
   const ownerPacks = !o.pickerId;
@@ -306,8 +312,14 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
               {o.refundedAmount > 0 && (
                 <div className="od-bill-row"><span>↩︎ Refunded to wallet</span><span className="free">₹{o.refundedAmount}</span></div>
               )}
-              {o.pointsEarned > 0 && (
-                <div className="od-bill-row"><span>Points earned</span><span>{o.pointsEarned}</span></div>
+              {(rewardWallet > 0 || rewardPoints > 0) && (
+                <div className="od-bill-row reward-given">
+                  <span>Scratch reward given</span>
+                  <span>
+                    {rewardWallet > 0 ? `₹${rewardWallet} wallet` : `${rewardPoints} pts`}
+                    <small> · costs ₹{rewardCost}</small>
+                  </span>
+                </div>
               )}
             </div>
             <button className="print-btn" onClick={() => onPrint(o)}>

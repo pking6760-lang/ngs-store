@@ -45,13 +45,17 @@ export default function Dashboard({ onNavigate }) {
       const c = costMap[it.id];
       if (c != null) { grossMargin += (it.price - c) * it.qty; sold += it.price * it.qty; }
     }));
-    // Money the shop gives back today: points redeemed as ₹ off, coupons, and
-    // refunds to wallet. These come out of profit.
-    const rewardsGiven = todaysOrders.reduce((s, o) => s + (o.pointsDiscount || 0), 0);
+    // Reward the shop HANDS OUT on each order (the scratch prize): wallet cash at
+    // face value + points at their redemption value. Booked here as a cost so
+    // profit reflects it. Points now come ONLY from the scratch card, so this is
+    // the whole reward liability (no double count with later redemption).
+    const redeemPer = Number(settings.rewards?.redeemPer) || 10;
+    const rewardsGiven = todaysOrders.reduce(
+      (s, o) => s + (o.scratchWallet || 0) + (o.scratchPoints || 0) / redeemPer, 0);
     const couponsGiven = todaysOrders.reduce((s, o) => s + (o.couponDiscount || 0), 0);
     const refunds = todaysOrders.reduce((s, o) => s + (o.refundedAmount || 0), 0);
     const walletUsed = todaysOrders.reduce((s, o) => s + (o.walletUsed || 0), 0);
-    // Net profit nets out the discounts the shop funds + refunds.
+    // Net profit nets out the rewards the shop hands out + coupons + refunds.
     const profit = grossMargin - rewardsGiven - couponsGiven - refunds;
     const givenBack = rewardsGiven + couponsGiven + refunds;
     // Pending = anything not yet delivered (still needs action), any day.
@@ -70,7 +74,7 @@ export default function Dashboard({ onNavigate }) {
       walletUsed: Math.round(walletUsed),
       givenBack: Math.round(givenBack),
     };
-  }, [orders, costMap]);
+  }, [orders, costMap, settings]);
 
   // Best sellers over the last 7 days — aggregated straight from order items,
   // so it's always accurate regardless of the pricing schedule.
@@ -138,12 +142,12 @@ export default function Dashboard({ onNavigate }) {
         <section className="panel dash-giveback">
           <div className="panel-head"><h3>Rewards, wallet &amp; refunds · today</h3></div>
           <div className="giveback-grid">
-            <div className="giveback-item"><span><Ic name="gift" size={15} /> Points redeemed</span><strong>₹{stats.rewardsGiven}</strong></div>
+            <div className="giveback-item"><span><Ic name="gift" size={15} /> Rewards given (scratch)</span><strong>₹{stats.rewardsGiven}</strong></div>
             <div className="giveback-item"><span><Ic name="coupon" size={15} /> Coupons</span><strong>₹{stats.couponsGiven}</strong></div>
             <div className="giveback-item"><span><Ic name="wallet" size={15} /> Wallet used</span><strong>₹{stats.walletUsed}</strong></div>
             <div className="giveback-item"><span><Ic name="refund" size={15} /> Refunds to wallet</span><strong>₹{stats.refunds}</strong></div>
           </div>
-          <p className="dash-sub">Points &amp; coupons and refunds are already subtracted from today's profit above.</p>
+          <p className="dash-sub">Scratch rewards, coupons and refunds are already subtracted from today's profit above.</p>
         </section>
       )}
 

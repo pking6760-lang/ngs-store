@@ -2358,6 +2358,8 @@ body {
 .od-bill-row { display: flex; justify-content: space-between; font-size: 13.5px; color: #444; padding: 2px 0; }
 .od-bill-row .free { color: #3B5BDB; }
 .od-bill-row.total { font-weight: 800; color: #111; font-size: 15px; margin-top: 6px; border-top: 1px solid #eee; padding-top: 8px; }
+.od-bill-row.reward-given { color: #8a5a00; font-weight: 700; }
+.od-bill-row.reward-given small { color: #b08636; font-weight: 600; font-size: 11px; }
 .od-accept-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .od-accept {
   flex: 1; background: #3B5BDB; color: #fff; border: none; font-weight: 800; font-size: 14px;
