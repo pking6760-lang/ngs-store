@@ -15,6 +15,7 @@ import { smartReprice } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { Ic } from "./AdminIcons.jsx";
+import CategoryIcon from "../components/CategoryIcon.jsx";
 
 // Sentinel category values: NEW_CAT = create the AI-suggested category on save;
 // ADD_CAT = the "Create new category…" row that prompts for a name.
@@ -269,7 +270,7 @@ function CategoryManager({ categories, products, onClose }) {
                     className="cat-list-swatch"
                     style={{ background: c.color }}
                   >
-                    {c.icon}
+                    <CategoryIcon id={c.id} size={18} />
                   </span>
                   <span className="cat-list-name">{c.name}</span>
                   <span className="cat-list-count">{count} items</span>

@@ -365,7 +365,7 @@ body {
   letter-spacing: 0.03em;
 }
 .data-table th {
-  background: #fafbfa;
+  background: #f6f8fd;
 }
 .mini-table td,
 .data-table td {
@@ -519,7 +519,7 @@ body {
 .adm-dd-opt.sel { background: #eef2ff; color: #2B44A8; }
 .adm-dd-check { color: #2B44A8; font-weight: 900; flex: none; }
 .adm-dd-opt.new { color: #2B44A8; font-weight: 800; }
-.adm-dd-opt.new .adm-dd-opt-lbl::before { content: "✨ "; }
+.adm-dd-opt.new .adm-dd-opt-lbl::before { content: "+ "; font-weight: 900; }
 
 /* Who handled the order (order detail) */
 .od-handled { background: #f5f7fa; border: 1px solid #e6ebf1; border-radius: 12px; padding: 10px 12px; margin: 4px 0 12px; }
@@ -537,25 +537,37 @@ body {
   border-color: var(--green);
 }
 .primary-btn {
-  background: var(--green);
+  background: linear-gradient(140deg, var(--a-primary), var(--a-primary-d));
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 11px 18px;
   font-weight: 700;
   font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -10px rgba(43, 68, 168, 0.75);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
 }
 .primary-btn:hover {
-  background: var(--green-dark);
+  filter: brightness(1.05);
+  box-shadow: 0 12px 22px -10px rgba(43, 68, 168, 0.85);
 }
+.primary-btn:active { transform: translateY(1px); }
+.primary-btn:disabled { opacity: 0.55; box-shadow: none; filter: none; }
 .ghost-btn {
   background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid var(--a-line);
+  border-radius: 12px;
   padding: 11px 18px;
   font-weight: 700;
   font-size: 14px;
-  color: #444;
+  color: var(--a-ink);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.ghost-btn:hover {
+  background: var(--a-tint);
+  border-color: #cdd6ea;
 }
 .icon-btn {
   background: none;
@@ -583,18 +595,22 @@ body {
   flex-wrap: wrap;
 }
 .chip {
-  border: 1px solid var(--line);
+  border: 1px solid var(--a-line);
   background: #fff;
-  border-radius: 20px;
+  border-radius: 999px;
   padding: 8px 16px;
   font-size: 13px;
-  font-weight: 600;
-  color: #555;
+  font-weight: 700;
+  color: var(--a-sub);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
+.chip:hover { background: var(--a-tint); }
 .chip.active {
-  background: var(--green);
+  background: linear-gradient(140deg, var(--a-primary), var(--a-primary-d));
   color: #fff;
-  border-color: var(--green);
+  border-color: transparent;
+  box-shadow: 0 6px 14px -8px rgba(43,68,168,0.7);
 }
 
 /* ─── Status pills ───────────────────────────────────────── */
@@ -1880,7 +1896,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  color: #2e3d34;
   flex-shrink: 0;
 }
 .cat-list-name {
