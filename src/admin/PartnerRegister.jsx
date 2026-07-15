@@ -3,6 +3,7 @@ import * as api from "../lib/api.js";
 import * as kyc from "../lib/kyc.js";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
 import LivenessCapture from "./LivenessCapture.jsx";
+import { Ic } from "./AdminIcons.jsx";
 
 // A document number field with live ✓/✗ feedback once enough is typed.
 function NumField({ label, value, onChange, valid, hint, placeholder }) {
@@ -42,7 +43,7 @@ function DocPhoto({ label, hint, file, onPick }) {
         </button>
       ) : (
         <button type="button" className="doc-add" onClick={() => ref.current.click()}>
-          📷 Add photo
+          <Ic name="camera" size={16} /> Add photo
         </button>
       )}
     </div>
@@ -180,11 +181,11 @@ export default function PartnerRegister({ email, onDone }) {
             <h2>What is your work?</h2>
             <p className="preg-sub">Choose the role you're registering for.</p>
             <button className="role-card" onClick={() => goDetails("picker")}>
-              <span className="role-emoji">🧺</span>
+              <span className="role-emoji"><Ic name="basket" size={26} /></span>
               <span><strong>Picker</strong><small>Pack orders at the shop</small></span>
             </button>
             <button className="role-card" onClick={() => goDetails("delivery")}>
-              <span className="role-emoji">🛵</span>
+              <span className="role-emoji"><Ic name="scooter" size={26} /></span>
               <span><strong>Delivery partner</strong><small>Deliver orders to customers</small></span>
             </button>
           </>
@@ -218,11 +219,11 @@ export default function PartnerRegister({ email, onDone }) {
                 autoCorrect="off" spellCheck={false} placeholder="e.g. SBIN0001234" /></label>
             {bankInfo === "loading" && <div className="ifsc-hint">Checking IFSC…</div>}
             {bankInfo === "invalid" && form.bankIfsc.length === 11 && (
-              <div className="ifsc-hint bad">⚠️ We couldn't find that IFSC code — please re-check.</div>
+              <div className="ifsc-hint bad"><Ic name="alert" size={14} /> We couldn't find that IFSC code — please re-check.</div>
             )}
             {bankInfo && bankInfo !== "loading" && bankInfo !== "invalid" && (
               <div className="ifsc-hint ok">
-                🏦 <strong>{bankInfo.bank}</strong>
+                <Ic name="bank" size={15} /> <strong>{bankInfo.bank}</strong>
                 <span>{[bankInfo.branch, bankInfo.city, bankInfo.state].filter(Boolean).join(", ")}</span>
               </div>
             )}
@@ -273,7 +274,7 @@ export default function PartnerRegister({ email, onDone }) {
                 </div>
               ) : (
                 <button type="button" className="preg-selfie-btn" onClick={() => setShowLive(true)}>
-                  📷 Start live selfie
+                  <Ic name="camera" size={16} /> Start live selfie
                 </button>
               )}
             </div>

@@ -72,5 +72,10 @@ const PATHS = {
   rain: <><path d="M7 15a4.5 4.5 0 0 1 .5-9 5.5 5.5 0 0 1 10.6 1.4A3.8 3.8 0 0 1 17.5 15H7z" /><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2" /></>,
   flame: <path d="M12 2s5 4 5 9a5 5 0 0 1-10 0c0-1.5.6-2.7 1.4-3.6C8.2 9 9 10 10 10c0-2 2-4 2-8z" />,
   fingerprint: <><path d="M12 11a1.5 1.5 0 0 1 1.5 1.5c0 2.5-.7 4.3-.7 4.3" /><path d="M8.7 10.3a4 4 0 0 1 7.3 2.2c0 3-.8 5-.8 5" /><path d="M5.8 12a7 7 0 0 1 13.2-3.2" /><path d="M6 15.5c.4 1.6.3 3 .3 3" /><path d="M20 13.5c.1 1.2 0 2.4-.2 3.5" /></>,
+  basket: <><path d="M4 9h16l-1.4 9.3a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7L4 9z" /><path d="M4 9l2.4-5M20 9l-2.4-5M9.5 13v3M14.5 13v3" /></>,
+  scooter: <><circle cx="6" cy="17" r="2.4" /><circle cx="17" cy="17" r="2.4" /><path d="M6 17h7l3-6h3M13 11l-2-5H8M16 17h-3" /></>,
+  home: <path d="M3 11l9-8 9 8M5 10v10h6v-6h2v6h6V10" />,
+  signal: <><path d="M5 12.5a9 9 0 0 1 14 0M8 15.5a5 5 0 0 1 8 0" /><circle cx="12" cy="19" r="1.3" fill="currentColor" stroke="none" /></>,
+  box: <><path d="M21 8 12 3 3 8l9 5 9-5z" /><path d="M3 8v8l9 5 9-5V8" /><path d="M12 13v8" /></>,
 };
 export const ICONS = PATHS;

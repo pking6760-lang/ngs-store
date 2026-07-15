@@ -7,6 +7,7 @@ import { unlockAudio, stopAlarm } from "../lib/sound.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { withMinTime } from "../lib/ux.js";
+import { Ic } from "./AdminIcons.jsx";
 
 /* ── date helpers (IST) ─────────────────────────────────────────────────── */
 const IST = "Asia/Kolkata";
@@ -142,7 +143,7 @@ function LiveOrder({ task, busy, onAction }) {
           <div className="lo-row">
             <span className="lo-lbl">Collect from</span>
             {task.location
-              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer">📍 Navigate</a>
+              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
               : <span className="lo-muted">Address shared on accept</span>}
           </div>
           <div className="lo-items">
@@ -161,7 +162,7 @@ function LiveOrder({ task, busy, onAction }) {
           <div className="lo-row">
             <span className="lo-lbl">Deliver to</span>
             {task.location
-              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer">📍 Navigate</a>
+              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
               : <span className="lo-muted">Location shared at pickup</span>}
           </div>
           <div className="lo-row">
@@ -169,7 +170,7 @@ function LiveOrder({ task, busy, onAction }) {
             {task.paid
               ? <span className="lo-paid">✓ Already paid — collect nothing</span>
               : task.isCod
-                ? <span className="lo-cod">💵 Collect {money(task.codAmount)}</span>
+                ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
                 : <span className="lo-paid">✓ Prepaid</span>}
           </div>
 
@@ -205,7 +206,7 @@ function LiveOrder({ task, busy, onAction }) {
 
       {!accepted ? (
         <button className="pd-btn lo-accept" disabled={busy} onClick={() => onAction(() => api.partnerAccept(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : isReturn ? "✅ Accept return" : "✅ Accept order"}
+          {busy ? <span className="ngs-spin" /> : isReturn ? <><Ic name="check" size={16} /> Accept return</> : <><Ic name="check" size={16} /> Accept order</>}
         </button>
       ) : isReturn ? (
         <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkReturned(task.orderId))}>
@@ -213,11 +214,11 @@ function LiveOrder({ task, busy, onAction }) {
         </button>
       ) : isDelivery ? (
         <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkDelivered(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : "📦 Mark delivered"}
+          {busy ? <span className="ngs-spin" /> : <><Ic name="box" size={16} /> Mark delivered</>}
         </button>
       ) : (
         <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkPacked(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : "✅ Mark packed"}
+          {busy ? <span className="ngs-spin" /> : <><Ic name="check" size={16} /> Mark packed</>}
         </button>
       )}
     </div>
@@ -291,7 +292,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
         <div className="pd-av">{(firstName[0] || "N").toUpperCase()}</div>
         <div className="pd-who">
           <strong>Hi, {firstName}</strong>
-          <span className="pd-role">{isDelivery ? "🛵 Delivery partner" : "🧺 Picker"}</span>
+          <span className="pd-role">{isDelivery ? <><Ic name="scooter" size={12} /> Delivery partner</> : <><Ic name="basket" size={12} /> Picker</>}</span>
         </div>
         <button className={`pd-toggle ${presence.isOnline ? "on" : "off"}`} disabled={busy} onClick={toggle}>
           {busy ? <span className="ngs-spin" /> : <span className="pd-dot" />}{presence.isOnline ? "Online" : "Offline"}
@@ -320,12 +321,12 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
         <LiveOrder task={task} busy={taskBusy} onAction={taskAction} />
       ) : presence.isOnline ? (
         <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
-          <span className="emo">📡</span>
+          <span className="emo"><Ic name="signal" size={26} /></span>
           You're online — waiting for the next order. It'll ring here the moment one comes.
         </div>
       ) : (
         <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
-          <span className="emo">🌙</span>
+          <span className="emo"><Ic name="moon" size={26} /></span>
           You're offline. Go online in your booked slot to start receiving orders.
         </div>
       )}
@@ -333,7 +334,7 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
       <div className="pd-sec"><span>Today's {isDelivery ? "deliveries" : "orders"}</span><span className="hint">number · earning</span></div>
       <div className="pd-list">
         {todays.length === 0 ? (
-          <div className="pd-empty"><span className="emo">✅</span>No orders yet today.</div>
+          <div className="pd-empty"><span className="emo"><Ic name="check" size={26} /></span>No orders yet today.</div>
         ) : todays.map((l) => (
           <div className="pd-row" key={l.id}>
             <div><div className="r-main">Order {l.code ? `#${l.code}` : `#${(l.orderId || "").slice(0, 4).toUpperCase()}`}</div>
@@ -434,7 +435,7 @@ function Earnings({ wallet }) {
       </div>
       <div className="pd-sec"><span>Week by week</span></div>
       <div className="pd-list">
-        {weeks.length === 0 ? <div className="pd-empty"><span className="emo">📈</span>No earnings yet.</div>
+        {weeks.length === 0 ? <div className="pd-empty"><span className="emo"><Ic name="trending" size={26} /></span>No earnings yet.</div>
         : weeks.map((wk) => {
           const end = new Date(wk + "T12:00:00Z"); end.setUTCDate(end.getUTCDate() + 6);
           const endISO = end.toISOString().slice(0, 10);
@@ -444,7 +445,7 @@ function Earnings({ wallet }) {
           return (
             <div className="pd-row" key={wk}>
               <div><div className="r-main">{a.dm} – {b.dm}</div>
-                <div className="r-sub">{status === "Current" ? "⏳ Current week" : status === "Paid" ? "✓ Paid" : "Pending payout"}</div></div>
+                <div className="r-sub">{status === "Current" ? "Current week" : status === "Paid" ? "✓ Paid" : "Pending payout"}</div></div>
               <div className="r-amt amt-pos">{money(byWeek[wk])}</div>
             </div>
           );
@@ -484,7 +485,7 @@ function Wallet({ isDelivery, wallet, cfg }) {
 
       <div className="pd-sec"><span>Recent activity</span></div>
       <div className="pd-wcard" style={{ paddingTop: 4, paddingBottom: 4 }}>
-        {wallet.ledger.length === 0 ? <div className="pd-empty"><span className="emo">👛</span>No activity yet.</div>
+        {wallet.ledger.length === 0 ? <div className="pd-empty"><span className="emo"><Ic name="wallet" size={26} /></span>No activity yet.</div>
         : wallet.ledger.slice(0, 30).map((l) => {
           const inFlow = l.amount >= 0;
           return (
@@ -508,7 +509,7 @@ function Profile({ role, name, partner, onLogout }) {
       <div className="pd-top">
         <div className="pd-av">{(name?.[0] || "N").toUpperCase()}</div>
         <div className="pd-who"><strong>{name || "Partner"}</strong>
-          <span className="pd-role">{role === "delivery" ? "🛵 Delivery partner" : "🧺 Picker"}</span></div>
+          <span className="pd-role">{role === "delivery" ? <><Ic name="scooter" size={12} /> Delivery partner</> : <><Ic name="basket" size={12} /> Picker</>}</span></div>
       </div>
       <div className="pd-wcard">
         {p.empCode && <div className="pd-prof-kv"><span>Employee ID</span><span className="pd-emp">{p.empCode}</span></div>}

@@ -7,6 +7,7 @@ import PartnerRegister from "./PartnerRegister.jsx";
 import { PartnerMark } from "./BrandMark.jsx";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
 import LivenessCapture from "./LivenessCapture.jsx";
+import { Ic } from "./AdminIcons.jsx";
 import * as api from "../lib/api.js";
 
 // Mandatory re-acceptance when the Partner Terms change (e.g. new penalty /
@@ -129,8 +130,8 @@ function PartnerInner() {
     return (
       <>
         <div className="partner-rolebar">
-          <button className={adminRole === "picker" ? "sel" : ""} onClick={() => chooseRole("picker")}>🧺 Picking</button>
-          <button className={adminRole === "delivery" ? "sel" : ""} onClick={() => chooseRole("delivery")}>🛵 Delivery</button>
+          <button className={adminRole === "picker" ? "sel" : ""} onClick={() => chooseRole("picker")}><Ic name="basket" size={16} /> Picking</button>
+          <button className={adminRole === "delivery" ? "sel" : ""} onClick={() => chooseRole("delivery")}><Ic name="scooter" size={16} /> Delivery</button>
         </div>
         <PartnerDashboard role={adminRole} name={user?.name || "Admin"} partner={null} onLogout={logout} />
       </>
@@ -145,7 +146,7 @@ function PartnerInner() {
   if (partner.status === "pending") {
     return (
       <div className="partner-notstaff">
-        <div className="empty-emoji">🕒</div>
+        <div className="pns-ic"><Ic name="pending" size={30} /></div>
         <h2>Under review</h2>
         <p>Thanks, <strong>{partner.fullName}</strong>! The store is reviewing your
           documents. You'll be able to start once you're approved.</p>
@@ -157,7 +158,7 @@ function PartnerInner() {
   if (partner.status === "rejected") {
     return (
       <div className="partner-notstaff">
-        <div className="empty-emoji">⚠️</div>
+        <div className="pns-ic warn"><Ic name="alert" size={30} /></div>
         <h2>Not approved</h2>
         <p>Your registration wasn't approved. Please contact the store, or submit again with clearer documents.</p>
         <button className="preg-next" style={{ maxWidth: 260 }} onClick={() => setPartner(null)}>Register again</button>
@@ -233,7 +234,7 @@ function KycReverify({ items, onDone }) {
   if (remaining.length === 0) {
     return (
       <div className="partner-notstaff">
-        <div className="empty-emoji">✅</div>
+        <div className="pns-ic ok"><Ic name="check" size={30} /></div>
         <h2>All done</h2>
         <p>Thanks — your verification has been submitted.</p>
         <button className="pd-btn" onClick={onDone}>Continue</button>
@@ -243,7 +244,7 @@ function KycReverify({ items, onDone }) {
 
   return (
     <div className="kyc-reverify">
-      <div className="kyc-reverify-ico">🔒</div>
+      <div className="pns-ic"><Ic name="lock" size={28} /></div>
       <h2>Verification needed</h2>
       <p>The store needs you to complete the item{remaining.length > 1 ? "s" : ""} below to keep your account active. The rest of your details stay as they are.</p>
       {err && <div className="preg-error">{err}</div>}
@@ -255,7 +256,7 @@ function KycReverify({ items, onDone }) {
             <div className={`kyc-req-row ${isDone ? "done" : ""}`} key={item}>
               <span className="kyc-req-name">{KYC_ITEMS[item] || item}</span>
               {isDone ? (
-                <span className="kyc-req-ok">✓ Done</span>
+                <span className="kyc-req-ok"><Ic name="check" size={13} /> Done</span>
               ) : item === "selfie" ? (
                 <button className="kyc-req-btn" onClick={() => setLive(true)} disabled={!!busy}>
                   {loading ? "…" : "Take selfie"}
