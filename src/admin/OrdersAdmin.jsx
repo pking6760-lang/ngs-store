@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
-import { useOrders, usePartners, useSettings } from "../lib/hooks.js";
+import { useOrders, usePartners, useSettings, useAdminProducts } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import {
   updateOrderStatus, markCashReceived, acceptOrder, rejectOrder,
 } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
-import { createOrderQr, adminRefundToWallet, adminCreateReturn } from "../lib/api.js";
+import { createOrderQr, adminRefundToWallet, adminCreateReturn, getOpsConfigRaw } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import AdminPortal from "./AdminPortal.jsx";
 import Receipt from "./Receipt.jsx";
@@ -218,6 +218,31 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
   const rewardWallet = Number(o.scratchWallet) || 0;
   const rewardPoints = Number(o.scratchPoints) || 0;
   const rewardCost = Math.round(rewardWallet + rewardPoints / redeemPer);
+
+  // Per-order profit breakdown (admin-only: needs buying cost + payout rates).
+  const detailProducts = useAdminProducts();
+  const [detailOps, setDetailOps] = useState(null);
+  useEffect(() => { getOpsConfigRaw().then(setDetailOps).catch(() => {}); }, []);
+  const pnl = useMemo(() => {
+    const nn = (v) => Number(v) || 0;
+    const cost = {};
+    detailProducts.forEach((p) => { if (p.cost != null) cost[p.id] = p.cost; });
+    let margin = 0, missingCost = false;
+    (o.items || []).forEach((it) => {
+      if (cost[it.id] != null) margin += (it.price - cost[it.id]) * it.qty;
+      else missingCost = true;
+    });
+    const pickerPay = o.pickerId ? nn(detailOps?.picker_pack_fee) : 0;
+    const driverPay = o.riderId
+      ? (o.member && detailOps?.rider_member_base != null ? nn(detailOps.rider_member_base) : nn(detailOps?.rider_base))
+        + Math.max(nn(o.distanceKm) - nn(detailOps?.rider_free_km), 0) * nn(detailOps?.rider_per_km)
+        + ((o.surgeFee || 0) > 0 ? nn(detailOps?.peak_bonus) : 0)
+      : 0;
+    const coupon = nn(o.couponDiscount);
+    const refund = nn(o.refundedAmount);
+    const profit = margin - pickerPay - driverPay - rewardCost - coupon - refund;
+    return { margin: Math.round(margin), pickerPay, driverPay, coupon, refund, profit: Math.round(profit), missingCost };
+  }, [detailProducts, detailOps, o, rewardCost]);
   const curIdx = ORDER_STATUSES.indexOf(o.status);
   // The owner does a track only when no staff partner is assigned to it.
   const ownerPacks = !o.pickerId;
@@ -322,6 +347,34 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                 </div>
               )}
             </div>
+
+            {/* Owner-only: what YOU actually make on this order after every payout. */}
+            <div className="od-pnl">
+              <div className="od-pnl-head">Your profit on this order</div>
+              <div className="od-bill-row"><span>Item margin (sell − buy)</span><span>₹{pnl.margin}</span></div>
+              <div className="od-bill-row">
+                <span>Picker pay {o.pickerId ? "" : "· you packed"}</span>
+                <span className={pnl.pickerPay ? "" : "free"}>{pnl.pickerPay ? `−₹${pnl.pickerPay}` : "₹0"}</span>
+              </div>
+              <div className="od-bill-row">
+                <span>Driver pay {o.riderId ? "" : "· you delivered"}</span>
+                <span className={pnl.driverPay ? "" : "free"}>{pnl.driverPay ? `−₹${pnl.driverPay}` : "₹0"}</span>
+              </div>
+              {rewardCost > 0 && (
+                <div className="od-bill-row"><span>Scratch reward given</span><span>−₹{rewardCost}</span></div>
+              )}
+              {pnl.coupon > 0 && (
+                <div className="od-bill-row"><span>Coupon</span><span>−₹{pnl.coupon}</span></div>
+              )}
+              {pnl.refund > 0 && (
+                <div className="od-bill-row"><span>Refund</span><span>−₹{pnl.refund}</span></div>
+              )}
+              <div className="od-bill-row total"><span>Your profit</span><span>₹{pnl.profit}</span></div>
+              {pnl.missingCost && (
+                <p className="od-pnl-note">Some items have no buying cost set — margin may be understated.</p>
+              )}
+            </div>
+
             <button className="print-btn" onClick={() => onPrint(o)}>
               Print receipt (thermal printer)
             </button>

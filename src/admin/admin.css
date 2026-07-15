@@ -2360,6 +2360,10 @@ body {
 .od-bill-row.total { font-weight: 800; color: #111; font-size: 15px; margin-top: 6px; border-top: 1px solid #eee; padding-top: 8px; }
 .od-bill-row.reward-given { color: #8a5a00; font-weight: 700; }
 .od-bill-row.reward-given small { color: #b08636; font-weight: 600; font-size: 11px; }
+.od-pnl { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #f3f8f4; border: 1px solid #d9ead9; }
+.od-pnl-head { font-size: 12px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; color: #2f7d4f; margin-bottom: 8px; }
+.od-pnl .od-bill-row.total { color: #14713f; }
+.od-pnl-note { margin: 8px 0 0; font-size: 11px; color: #9a7b2e; }
 .od-accept-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .od-accept {
   flex: 1; background: #3B5BDB; color: #fff; border: none; font-weight: 800; font-size: 14px;

@@ -61,23 +61,18 @@ export default function Dashboard({ onNavigate }) {
     const refunds = todaysOrders.reduce((s, o) => s + (o.refundedAmount || 0), 0);
     const walletUsed = todaysOrders.reduce((s, o) => s + (o.walletUsed || 0), 0);
 
-    // Staff payouts — only when the shop pays someone. If picking is 'self' the
-    // owner packs (no picker pay); if delivery is 'self' the owner delivers (no
-    // driver pay). If both are self, all the margin is the owner's. We only book
-    // the pay once the work actually happened (packed / delivered).
-    const pickerStaff = ops?.coverage_picking === "staff";
-    const riderStaff = ops?.coverage_delivery === "staff";
+    // Staff payouts — booked ONLY when a partner actually did the work. If YOU
+    // pack an order it has no picker_id (no picker pay); if YOU deliver it there's
+    // no rider_id (no driver pay). So doing both yourself means the whole margin
+    // is yours, automatically — no dependence on the coverage setting.
     const n = (v) => Number(v) || 0;
     let pickerPay = 0, driverPay = 0;
     todaysOrders.forEach((o) => {
-      const packed = !!(o.pickerId || o.packedAt) ||
-        ["Packed", "Out for delivery", "Delivered"].includes(o.status);
-      const delivered = !!(o.riderId || o.deliveredAt) || o.status === "Delivered";
-      if (pickerStaff && packed) pickerPay += n(ops.picker_pack_fee);
-      if (riderStaff && delivered) {
-        const base = o.member && ops.rider_member_base != null ? n(ops.rider_member_base) : n(ops.rider_base);
-        const perKm = Math.max(n(o.distanceKm) - n(ops.rider_free_km), 0) * n(ops.rider_per_km);
-        const peak = (o.surgeFee || 0) > 0 ? n(ops.peak_bonus) : 0;
+      if (o.pickerId) pickerPay += n(ops?.picker_pack_fee);
+      if (o.riderId) {
+        const base = o.member && ops?.rider_member_base != null ? n(ops.rider_member_base) : n(ops?.rider_base);
+        const perKm = Math.max(n(o.distanceKm) - n(ops?.rider_free_km), 0) * n(ops?.rider_per_km);
+        const peak = (o.surgeFee || 0) > 0 ? n(ops?.peak_bonus) : 0;
         driverPay += base + perKm + peak;
       }
     });
