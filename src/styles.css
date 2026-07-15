@@ -465,6 +465,38 @@ button {
   width: 30px; height: 30px; border-radius: 50%; border: none;
   background: var(--bg-soft); color: var(--muted); font-size: 15px; cursor: pointer;
 }
+
+/* ─── Wallet "Add money" sheet ───────────────────────────────────────────── */
+.wtop {
+  position: relative;
+  background: #fff; width: 100%; max-width: 520px;
+  border-radius: 24px 24px 0 0;
+  padding: 10px 18px calc(22px + env(safe-area-inset-bottom));
+  max-height: 88vh; overflow-y: auto;
+  animation: bulkUp 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.wtop-grip { width: 40px; height: 4px; border-radius: 3px; background: #d9e0d7; margin: 4px auto 14px; }
+.wtop-x { top: 14px; }
+.wtop-title { font-size: 19px; font-weight: 850; letter-spacing: -0.01em; }
+.wtop-sub { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+.wtop-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0 12px; }
+.wtop-chip {
+  border: 1.5px solid var(--line); background: #fff; border-radius: 14px;
+  padding: 14px 0; font-size: 16px; font-weight: 800; color: var(--ink); cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+.wtop-chip.on { border-color: var(--green); background: var(--green-tint); color: var(--green-dark); }
+.wtop-custom {
+  display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--line);
+  border-radius: 14px; padding: 4px 14px; margin-top: 2px;
+}
+.wtop-custom:focus-within { border-color: var(--green); }
+.wtop-rupee { font-size: 18px; font-weight: 800; color: var(--muted); }
+.wtop-custom input { flex: 1; border: none; outline: none; font-size: 16px; font-weight: 700; padding: 12px 0; background: transparent; }
+.wtop-hint { font-size: 12px; color: var(--muted); margin: 10px 0 16px; }
+.wtop .checkout-btn:disabled { opacity: 0.5; }
+.wtop .mem-qr { margin-top: 8px; }
+.wtop .ghost-btn.full { margin-top: 8px; }
 .pd-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; }
 .pd-hero-img {
   position: relative; width: 96px; height: 96px; flex: 0 0 auto;

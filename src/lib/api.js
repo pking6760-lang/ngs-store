@@ -474,6 +474,15 @@ export async function createMembershipOrder() {
   return mapOrder(row);
 }
 
+// Create a wallet top-up order (₹50–₹10,000) that runs through the same Razorpay
+// QR flow. The wallet is credited server-side only once Razorpay confirms.
+export async function createTopupOrder(amount) {
+  const { data, error } = await must().rpc("create_topup_order", { p_amount: amount });
+  if (error) throw new Error(error.message || "Couldn't start the payment.");
+  const row = Array.isArray(data) ? data[0] : data;
+  return mapOrder(row);
+}
+
 // Admin activates membership for a customer who paid at the shop.
 export async function adminGrantMembership(userId, days = 30) {
   const { error } = await must().rpc("admin_grant_membership", { p_user_id: userId, p_days: days });

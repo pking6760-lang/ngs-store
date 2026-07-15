@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useMyOrders, useSettings, useUserNotifications, useWallet } from "../lib/hooks.js";
@@ -400,6 +401,7 @@ function RetryState({ error, onRetry, label }) {
 
 function WalletTab({ userId }) {
   const { balance, ledger, loading, error, reload } = useWallet(userId);
+  const [addOpen, setAddOpen] = useState(false);
   if (error) return <RetryState error="Couldn't load your wallet." onRetry={reload} label="your wallet" />;
   return (
     <div className="wallet-tab">
@@ -407,15 +409,17 @@ function WalletTab({ userId }) {
         <div className="wallet-card-lbl">NGS Wallet balance</div>
         <div className="wallet-card-bal">₹{balance.toFixed(2)}</div>
         <div className="wallet-card-note">Refunds land here and apply on your next order.</div>
-        <button
-          className="wallet-add-btn"
-          onClick={() =>
-            alert("Adding money to your wallet is coming soon. For now, refunds and returns are credited here automatically.")
-          }
-        >
+        <button className="wallet-add-btn" onClick={() => setAddOpen(true)}>
           + Add money
         </button>
       </div>
+
+      {addOpen && (
+        <WalletTopup
+          onClose={() => setAddOpen(false)}
+          onDone={() => { setAddOpen(false); reload(); }}
+        />
+      )}
 
       <h4 className="wallet-h">History</h4>
       {loading && ledger.length === 0 ? (
@@ -436,6 +440,155 @@ function WalletTab({ userId }) {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Add-money sheet: pick an amount, then pay by UPI. The wallet is credited
+// server-side only after Razorpay confirms (same pipeline as membership pay).
+function WalletTopup({ onClose, onDone }) {
+  const [step, setStep] = useState("amount"); // "amount" | "pay"
+  const [amount, setAmount] = useState(0);
+  const [custom, setCustom] = useState("");
+  const QUICK = [100, 200, 500, 1000];
+  const amt = custom ? parseInt(custom, 10) || 0 : amount;
+  const valid = amt >= 50 && amt <= 10000;
+
+  useBackGuard(true, () => (step === "pay" ? setStep("amount") : onClose()));
+
+  return createPortal(
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="wtop" onClick={(e) => e.stopPropagation()}>
+        <div className="wtop-grip" />
+        <button className="pd-sheet-x wtop-x" onClick={onClose} aria-label="Close">✕</button>
+
+        {step === "amount" ? (
+          <>
+            <div className="wtop-title">Add money</div>
+            <div className="wtop-sub">Top up your NGS Wallet and use it on any order.</div>
+            <div className="wtop-chips">
+              {QUICK.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  className={`wtop-chip ${!custom && amount === q ? "on" : ""}`}
+                  onClick={() => { setAmount(q); setCustom(""); }}
+                >
+                  ₹{q}
+                </button>
+              ))}
+            </div>
+            <label className="wtop-custom">
+              <span className="wtop-rupee">₹</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={custom}
+                onChange={(e) => { setCustom(e.target.value.replace(/\D/g, "").slice(0, 5)); setAmount(0); }}
+                placeholder="Enter another amount"
+              />
+            </label>
+            <div className="wtop-hint">Add between ₹50 and ₹10,000.</div>
+            <button className="checkout-btn" disabled={!valid} onClick={() => setStep("pay")}>
+              {valid ? `Proceed to pay ₹${amt}` : "Enter an amount"}
+            </button>
+          </>
+        ) : (
+          <TopupPay amount={amt} onPaid={onDone} onBack={() => setStep("amount")} />
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// UPI/QR payment for a wallet top-up — creates a top-up order, shows its
+// Razorpay UPI QR (or opens a UPI app), and polls until the webhook confirms.
+function TopupPay({ amount, onPaid, onBack }) {
+  const { user } = useAuth();
+  const [qr, setQr] = useState("loading"); // "loading" | "error" | { url }
+  const [order, setOrder] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    setQr("loading");
+    (async () => {
+      try {
+        const o = await api.createTopupOrder(amount);
+        if (!alive) return;
+        setOrder(o);
+        const { imageUrl, imageDataUrl } = await api.createOrderQr(o.dbId);
+        const clean = await cleanUpiQrFromImage(imageDataUrl).catch(() => null);
+        if (alive) setQr({ url: clean || imageDataUrl || imageUrl });
+      } catch (e) {
+        if (alive) { setErr(e.message || "Couldn't start the payment."); setQr("error"); }
+      }
+    })();
+    return () => { alive = false; };
+  }, [amount]);
+
+  useEffect(() => {
+    if (!order) return;
+    let alive = true;
+    const iv = setInterval(async () => {
+      try {
+        const st = await api.fetchOrderState(order.dbId);
+        if (alive && st?.payment_status === "paid") { clearInterval(iv); onPaid(); }
+      } catch { /* keep polling */ }
+    }, 3000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function payOnThisPhone() {
+    if (!order) return;
+    setErr("");
+    try {
+      const rp = await api.createRazorpayOrder(order.dbId);
+      const Razorpay = await loadRazorpay();
+      const rzp = new Razorpay({
+        key: rp.keyId, order_id: rp.orderId, amount: rp.amount, currency: rp.currency || "INR",
+        name: "NGS Nisha General Store", description: `Wallet top-up · ₹${amount}`,
+        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
+        theme: { color: "#0a9155" },
+        handler: async (resp) => {
+          try {
+            await api.verifyRazorpayPayment({
+              orderId: order.dbId,
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+            });
+          } catch { /* the polling effect / webhook still confirms it */ }
+        },
+      });
+      rzp.on("payment.failed", (r) => setErr(r?.error?.description || "Payment failed. Please try again."));
+      rzp.open();
+    } catch (e) {
+      setErr(e.message || "Couldn't open the payment. Please try again.");
+    }
+  }
+
+  return (
+    <div className="mem-qr">
+      <div className="mem-qr-amt">Pay ₹{amount} to your wallet<span><MIcon d={PIC.lock} size={12} /> Secured by Razorpay</span></div>
+      {qr === "error" ? (
+        <>
+          <div className="auth-error">{err}</div>
+          <button className="ghost-btn full" onClick={onBack}>Back</button>
+        </>
+      ) : qr && qr.url ? (
+        <>
+          <button className="checkout-btn" onClick={payOnThisPhone}>Pay with a UPI app on this phone</button>
+          <div className="mem-qr-or">— or scan the QR —</div>
+          <div className="mem-qr-wrap"><img className="mem-qr-img" src={qr.url} alt="UPI payment QR" /></div>
+          <p className="member-note">Open GPay, PhonePe, Paytm or any UPI app. The money lands in your wallet automatically the moment you pay.</p>
+          {err && <div className="auth-error">{err}</div>}
+          <button className="ghost-btn full" onClick={onBack}>Change amount</button>
+        </>
+      ) : (
+        <div className="mem-qr-loading">Creating a secure QR…</div>
       )}
     </div>
   );
