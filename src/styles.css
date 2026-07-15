@@ -3844,3 +3844,25 @@ body {
 .skel-line { height: 12px; margin-bottom: 7px; }
 .skel-line.short { width: 55%; }
 @media (min-width: 700px) { .skel-card { flex-basis: 22%; } }
+
+/* ── Pull-to-refresh spinner ─────────────────────────────────────────────── */
+.ptr {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 50%;
+  z-index: 60;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(16, 32, 24, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green, #0a9155);
+  pointer-events: none;
+  will-change: transform;
+}
+.ptr-ring { display: flex; transition: transform 0.08s linear; }
+.ptr--busy .ptr-ring { animation: ptr-spin 0.7s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }

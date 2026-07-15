@@ -14,6 +14,7 @@ import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/Live
 import CategoryIcon from "./components/CategoryIcon.jsx";
 import AddressSheet from "./components/AddressSheet.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
+import PullToRefresh from "./components/PullToRefresh.jsx";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -117,6 +118,17 @@ export default function App() {
     else setAuthOpen(true);
   }
 
+  // Pull-to-refresh: nudge every live hook to re-fetch (they all reload on window
+  // focus) and refresh the customer's own orders, then resolve so the spinner can
+  // settle. The catalog cache updates in place, so prices/stock come back fresh.
+  async function handleRefresh() {
+    try {
+      window.dispatchEvent(new Event("focus"));
+      reloadOrders?.();
+    } catch { /* ignore */ }
+    await new Promise((r) => setTimeout(r, 450));
+  }
+
   const searching = query.trim().length > 0;
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -145,6 +157,10 @@ export default function App() {
 
   return (
     <div className="app">
+      <PullToRefresh
+        onRefresh={handleRefresh}
+        disabled={cartOpen || accountOpen || authOpen || addressOpen || trackOpen}
+      />
       <Header
         query={query}
         onQueryChange={setQuery}
