@@ -19,6 +19,8 @@ export default function Header({
 
   const firstName = isLoggedIn ? user.name.split(" ")[0] : null;
 
+  const deliverTo = isLoggedIn && user.address ? user.address : shop.area;
+
   return (
     <header className="header">
       <div className="header-inner">
@@ -80,6 +82,17 @@ export default function Header({
           </span>
         </button>
       </div>
+
+      <button className="delivery-bar" onClick={onAccountClick}>
+        <span className="db-bolt" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+        </span>
+        <span className="db-text">
+          Delivery in <strong>12 minutes</strong>
+          <span className="db-addr">to {deliverTo}</span>
+        </span>
+        <span className="db-chevron" aria-hidden="true">▾</span>
+      </button>
     </header>
   );
 }
