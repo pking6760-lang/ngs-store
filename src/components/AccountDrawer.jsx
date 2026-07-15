@@ -74,7 +74,9 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
                 <div className="account-hello-info">
                   <div className="account-name">
                     {user.name}
-                    {user.member && <span className="member-chip">👑 Prime</span>}
+                    {user.member && (
+                      <span className="member-chip"><MIcon d={PIC.crown} size={12} /> Prime</span>
+                    )}
                   </div>
                   <div className="account-phone">+91 {user.phone}</div>
                 </div>
@@ -650,16 +652,29 @@ function Membership() {
     const pct = Math.max(6, Math.min(100, Math.round((daysLeft / (days || 30)) * 100)));
     return (
       <div className="membership-panel">
+        <div className="prime-active-tag">
+          <MIcon d={PIC.crown} size={14} /> Prime is active
+        </div>
         <PrimeCard name={user.name} until={user.memberUntil} active />
-        <div className="prime-meter"><span style={{ width: `${pct}%` }} /></div>
-        <div className="prime-left">{daysLeft} day{daysLeft === 1 ? "" : "s"} left on your membership</div>
-        {savedThisMonth > 0 && (
-          <div className="prime-saved">
-            💎 You’ve saved <strong>₹{Math.round(savedThisMonth)}</strong> this month with Prime
+
+        <div className="prime-status">
+          <div className="prime-status-stats">
+            <div className="prime-stat">
+              <span className="prime-stat-ico"><MIcon d={PIC.tag} size={16} /></span>
+              <span className="prime-stat-val">₹{Math.round(savedThisMonth)}</span>
+              <span className="prime-stat-lbl">saved this month</span>
+            </div>
+            <div className="prime-stat">
+              <span className="prime-stat-ico"><MIcon d={PIC.crown} size={16} /></span>
+              <span className="prime-stat-val">{daysLeft}</span>
+              <span className="prime-stat-lbl">day{daysLeft === 1 ? "" : "s"} left</span>
+            </div>
           </div>
-        )}
+          <div className="prime-meter"><span style={{ width: `${pct}%` }} /></div>
+          <div className="prime-status-note">Renew here anytime — your benefits never pause.</div>
+        </div>
+
         <PrimeBenefits benefits={MEMBERSHIP.benefits} />
-        <p className="prime-fine">You can renew here once your membership ends.</p>
       </div>
     );
   }
@@ -737,6 +752,7 @@ const PIC = {
   bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />,
   tag: <><path d="M20 12l-8 8-9-9V4h7l10 10-1 1z" /><circle cx="7.5" cy="7.5" r="1.2" /></>,
   wave: <><path d="M8.5 8.5a5 5 0 0 1 0 7" /><path d="M11.5 6a9 9 0 0 1 0 12" /><path d="M5.5 11a2 2 0 0 1 0 2" /></>,
+  lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
 };
 function MIcon({ d, size = 20 }) {
   return (
@@ -834,7 +850,7 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
 
   return (
     <div className="mem-qr">
-      <div className="mem-qr-amt">Pay ₹{price} to join NGS Prime<span>🔒 Secured by Razorpay</span></div>
+      <div className="mem-qr-amt">Pay ₹{price} to join NGS Prime<span><MIcon d={PIC.lock} size={12} /> Secured by Razorpay</span></div>
       {qr === "error" ? (
         <div className="auth-error">{err}</div>
       ) : qr && qr.url ? (

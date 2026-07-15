@@ -1981,12 +1981,14 @@ button {
 
 /* ─── Member chip + account points ───────────────────────── */
 .member-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: #fff4d6;
   color: #9a6b00;
   font-size: 11px;
   font-weight: 800;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   margin-left: 8px;
 }
@@ -3470,14 +3472,34 @@ body {
   color: #fff; background: linear-gradient(140deg, #22a24a, #178a3a);
   padding: 7px 11px; border-radius: 999px; box-shadow: 0 6px 14px -6px rgba(23,138,58,0.7);
 }
+/* Active-member status card (savings + days left + renewal meter) */
+.membership-panel { display: flex; flex-direction: column; }
+.prime-active-tag {
+  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+  font-size: 11.5px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #8a6410; background: linear-gradient(135deg, #fbeeca, #f6e2b0);
+  border: 1px solid rgba(154,107,22,0.22); border-radius: 999px; padding: 6px 12px; margin-bottom: 12px;
+}
+.prime-status {
+  margin-top: 14px; background: var(--card, #fff); border: 1px solid var(--line);
+  border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm);
+}
+.prime-status-stats { display: flex; gap: 12px; }
+.prime-stat {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  padding: 12px 14px; border-radius: 13px;
+  background: linear-gradient(150deg, #fdf6e6, #fbeecb);
+  border: 1px solid rgba(154,107,22,0.14);
+}
+.prime-stat-ico {
+  width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  background: rgba(154,107,22,0.12); color: #9a6b16; margin-bottom: 2px;
+}
+.prime-stat-val { font-size: 22px; font-weight: 900; line-height: 1; color: #6f4e0e; font-variant-numeric: tabular-nums; }
+.prime-stat-lbl { font-size: 11.5px; font-weight: 700; color: #9a7b3e; }
 .prime-meter { height: 7px; border-radius: 999px; background: var(--line, #e6ebf0); margin-top: 14px; overflow: hidden; }
 .prime-meter > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f4dd98, #d9b45a); }
-.prime-left { font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 7px; text-align: center; }
-.prime-saved {
-  margin-top: 12px; text-align: center; font-size: 14px; font-weight: 800;
-  color: #9a7b1e; background: linear-gradient(90deg, #fdf4e3, #fae9c6);
-  border-radius: 12px; padding: 10px 14px;
-}
+.prime-status-note { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 9px; text-align: center; }
 
 /* Refer & earn */
 .refer-panel { display: flex; flex-direction: column; gap: 16px; }

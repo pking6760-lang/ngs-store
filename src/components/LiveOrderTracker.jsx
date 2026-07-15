@@ -16,6 +16,9 @@ const Icon = {
   home: <path d="M3 11l9-8 9 8M5 10v10h14V10" />,
   clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   shield: <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />,
+  box: <><path d="M21 8 12 3 3 8l9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/></>,
+  basket: <><path d="M5 11h14l-1.2 8.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8L5 11zM9.5 11 12 4l2.5 7"/></>,
+  gift: <><path d="M20 12v8H4v-8M2 8h20v4H2zM12 8v12M12 8S11 3 8 3a2 2 0 0 0 0 4h4zM12 8s1-5 4-5a2 2 0 0 1 0 4h-4z"/></>,
 };
 function Svg({ d, size = 18, sw = 2 }) {
   return (
@@ -40,14 +43,14 @@ export function isLiveOrder(o) {
   return false;
 }
 
-// Friendly one-liner for the current status.
+// Friendly one-liner for the current status, with a matching line icon.
 function statusLine(order) {
   switch (order.status) {
-    case "Placed": return { emoji: "📝", text: "Order placed — getting it ready" };
-    case "Packed": return { emoji: "🧺", text: "Packed — waiting for a delivery partner" };
-    case "Out for delivery": return { emoji: "🛵", text: "On the way to you" };
-    case "Delivered": return { emoji: "🎁", text: "Delivered — scratch your reward!" };
-    default: return { emoji: "📦", text: order.status };
+    case "Placed": return { icon: "box", text: "Order placed — getting it ready" };
+    case "Packed": return { icon: "basket", text: "Packed — waiting for a delivery partner" };
+    case "Out for delivery": return { icon: "scooter", text: "On the way to you" };
+    case "Delivered": return { icon: "gift", text: "Delivered — scratch your reward!" };
+    default: return { icon: "box", text: order.status };
   }
 }
 
@@ -60,12 +63,12 @@ function etaMinutes(order) {
 
 /* ── Floating pill (sits just above the cart bar on the home page) ─────────── */
 export function LiveOrderPill({ order, raised, onOpen }) {
-  const { emoji, text } = statusLine(order);
+  const { icon, text } = statusLine(order);
   const delivered = order.status === "Delivered";
   const eta = etaMinutes(order);
   return (
     <button className={`live-pill ${raised ? "raised" : ""} ${delivered ? "reward" : ""}`} onClick={onOpen}>
-      <span className="live-pill-bike" aria-hidden>{emoji}</span>
+      <span className="live-pill-bike" aria-hidden><Svg d={Icon[icon]} size={20} /></span>
       <span className="live-pill-mid">
         <span className="live-pill-top">
           Order #{order.id}
@@ -75,7 +78,7 @@ export function LiveOrderPill({ order, raised, onOpen }) {
         <span className="live-pill-sub">{text}</span>
       </span>
       {delivered ? (
-        <span className="live-pill-gift" aria-hidden>🎁</span>
+        <span className="live-pill-gift" aria-hidden><Svg d={Icon.gift} size={22} /></span>
       ) : (
         <span className="live-pill-eta">
           <strong>{eta}</strong>
