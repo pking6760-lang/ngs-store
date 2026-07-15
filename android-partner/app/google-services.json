@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "749325788073",
+    "project_id": "ngs1-bd645",
+    "storage_bucket": "ngs1-bd645.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749325788073:android:526ff30d65877789aa5ab8",
+        "android_client_info": {
+          "package_name": "com.ngsstore.admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPv-YpG3tc0abL7qf4LmVtx1fMuIckCnE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749325788073:android:c05bc2fe60df15f3aa5ab8",
+        "android_client_info": {
+          "package_name": "com.ngsstore.partner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPv-YpG3tc0abL7qf4LmVtx1fMuIckCnE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,29 @@
+# Auto-deploys the customer web app to Firebase Hosting on every push.
+# One-time setup (see FIREBASE_SETUP.md):
+#   1. Create a Firebase project and enable Hosting.
+#   2. Put its project id in .firebaserc (replace the placeholder).
+#   3. Add a repo secret FIREBASE_SERVICE_ACCOUNT with the service-account JSON.
+name: Deploy customer web to Firebase Hosting
+
+on:
+  push:
+    branches: [main, claude/new-repo-j1xy3h]
+  workflow_dispatch: {}
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      # Production build → loads .env.production (public Supabase config) → base "/"
+      - run: npm run build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ngs1-bd645

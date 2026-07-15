@@ -3,17 +3,36 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "NGS Store \u2014 quick-commerce grocery delivery app (Blinkit-style)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:app": "vite build --config vite.config.mobile.js && node scripts/prepare-www.mjs",
+    "sync:android": "npm run build:app && cap sync android",
+    "build:customer": "vite build --config vite.config.customer.js"
   },
   "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^6.2.0",
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/geolocation": "^6.1.1",
+    "@capacitor/push-notifications": "^6.0.5",
+    "@supabase/supabase-js": "^2.110.2",
+    "capacitor-native-biometric": "^4.2.2",
+    "cordova-plugin-bluetooth-serial": "^0.4.7",
+    "jsqr": "^1.4.0",
+    "leaflet": "^1.9.4",
+    "qrcode-generator": "^2.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.1"
+    "playwright-core": "^1.61.1",
+    "vite": "^5.4.1",
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }

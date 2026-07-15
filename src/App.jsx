@@ -1,2063 +1,489 @@
-import { useState, useEffect, useCallback, useRef, Component } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useBackGuard } from "./lib/useBackGuard.js";
+import Header from "./components/Header.jsx";
+import ProductCard from "./components/ProductCard.jsx";
+import CartDrawer from "./components/CartDrawer.jsx";
+import AccountDrawer from "./components/AccountDrawer.jsx";
+import AuthModal from "./components/AuthModal.jsx";
+import { useCart } from "./context/CartContext.jsx";
+import { useAuth } from "./context/AuthContext.jsx";
+import { useProducts, useSettings, useCategories, useMyOrders } from "./lib/hooks.js";
+import { tierUnitPrice } from "./lib/bulk.js";
+import { getShopLocations } from "./lib/store.js";
+import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
+import CategoryIcon from "./components/CategoryIcon.jsx";
+import AddressSheet from "./components/AddressSheet.jsx";
+import InstallPrompt from "./components/InstallPrompt.jsx";
+import PullToRefresh from "./components/PullToRefresh.jsx";
+import { shop } from "./data/shop.js";
 
-// ── SECURITY LAYER ────────────────────────────────────────────────────────────
-// Password is never stored as plain text anywhere in this file.
-// We store only the SHA-256 hash. Even if someone reads the source code,
-// they cannot reverse a SHA-256 hash back to the original password.
-const PWD_HASH = "3a07108f6aa8e69f76a740e29e0e5523cdb8a6d2b05fc10faad5d8f91be7f47a"; // SHA-256 of "Nkm@92056"
-
-async function hashPassword(pw) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-// ── FINGERPRINT / FACE UNLOCK (WebAuthn) ──────────────────────────────────────
-// Uses the phone's built-in fingerprint/face sensor via the browser. The
-// credential ID is stored locally; the actual biometric data never leaves
-// the device (this is the same tech banking apps use).
-const BIOMETRIC_KEY = "_bio";
-
-function bufToBase64(buf) {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)));
-}
-function base64ToBuf(b64) {
-  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-}
-
-async function isBiometricAvailable() {
-  try {
-    if (!window.PublicKeyCredential) return false;
-    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  } catch { return false; }
-}
-
-function hasBiometricRegistered() {
-  try { return !!localStorage.getItem(BIOMETRIC_KEY); } catch { return false; }
-}
-
-async function registerBiometric() {
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  const userId = crypto.getRandomValues(new Uint8Array(16));
-  const cred = await navigator.credentials.create({
-    publicKey: {
-      challenge,
-      rp: { name: "NGS Store Admin" },
-      user: { id: userId, name: "admin", displayName: "Store Admin" },
-      pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-      timeout: 60000,
-    },
-  });
-  if (!cred) throw new Error("No credential created");
-  localStorage.setItem(BIOMETRIC_KEY, bufToBase64(cred.rawId));
-  return true;
-}
-
-async function verifyBiometric() {
-  const storedId = localStorage.getItem(BIOMETRIC_KEY);
-  if (!storedId) throw new Error("No fingerprint registered");
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  const assertion = await navigator.credentials.get({
-    publicKey: {
-      challenge,
-      allowCredentials: [{ id: base64ToBuf(storedId), type: "public-key" }],
-      userVerification: "required",
-      timeout: 60000,
-    },
-  });
-  return !!assertion;
-}
-
-function clearBiometric() {
-  try { localStorage.removeItem(BIOMETRIC_KEY); } catch {}
-}
-
-
-const SESSION_KEY = "_s";
-const SESSION_DURATION = 365 * 24 * 60 * 60 * 1000; // never expires (1 year)
-const LOCKOUT_KEY = "_lk";
-const MAX_ATTEMPTS = 3;
-const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minutes
-
-function getSession() {
-  try {
-    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if (s && s.v === 1) return s;
-  } catch {}
-  return null;
-}
-function setSession() {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ t: Date.now(), v: 1 }));
-}
-function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-}
-function getLockout() {
-  try { return JSON.parse(localStorage.getItem(LOCKOUT_KEY) || "null"); } catch { return null; }
-}
-function setLockout(attempts) {
-  localStorage.setItem(LOCKOUT_KEY, JSON.stringify({ attempts, time: Date.now() }));
-}
-function clearLockout() { localStorage.removeItem(LOCKOUT_KEY); }
-function isLockedOut() {
-  const lk = getLockout();
-  if (!lk) return false;
-  if (lk.attempts >= MAX_ATTEMPTS) {
-    if (Date.now() - lk.time < LOCKOUT_DURATION) return true;
-    clearLockout(); return false;
-  }
-  return false;
-}
-function lockoutRemainingMins() {
-  const lk = getLockout();
-  if (!lk) return 0;
-  return Math.ceil((LOCKOUT_DURATION - (Date.now() - lk.time)) / 60000);
-}
-
-// ── DATA KEYS (obfuscated, not named "orders" or "products") ─────────────────
-const DK1 = "ngs_d1"; // orders
-const DK2 = "ngs_d2"; // products
-const DK3 = "ngs_d3"; // store open/closed
-const DK4 = "ngs_d4"; // customers
-const DK5 = "ngs_d5"; // extra charges
-
-// ── UPI PAYMENT ────────────────────────────────────────────────────────────
-const UPI_ID = "Q006245410@ybl";
-const UPI_PAYEE_NAME = "NGS Store";
-
-// Builds a standard UPI deep link with the exact order amount, locked (not editable by the customer)
-function buildUpiLink(amount, orderId) {
-  const params = new URLSearchParams({
-    pa: UPI_ID,
-    pn: UPI_PAYEE_NAME,
-    am: amount.toFixed(2),
-    cu: "INR",
-    tn: "NGS Store Order " + orderId,
-  });
-  return "upi://pay?" + params.toString();
-}
-
-// Generates a QR code image URL for the UPI link (uses a free public QR API)
-function buildUpiQrUrl(upiLink) {
-  return "https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=" + encodeURIComponent(upiLink);
-}
-
-// ── SUPABASE DATABASE LAYER ───────────────────────────────────────────────────
-// Connects all phones to one shared database so orders sync everywhere.
-const SUPABASE_URL = "https://lphjuteikmnqbbuxbgoi.supabase.co";
-const SUPABASE_KEY = "sb_publishable_FbE-JNjShcOIfn50z6EOxQ_IRXbCGF0";
-
-const sbHeaders = {
-  "apikey": SUPABASE_KEY,
-  "Authorization": "Bearer " + SUPABASE_KEY,
-  "Content-Type": "application/json",
+const svgProps = {
+  width: 66, height: 66, viewBox: "0 0 24 24", fill: "none",
+  stroke: "currentColor", strokeWidth: 1.35, strokeLinecap: "round", strokeLinejoin: "round",
 };
-
-async function sbSelect(table) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, { headers: sbHeaders });
-  if (!res.ok) throw new Error("select failed");
-  return await res.json();
-}
-
-// Upsert one or many rows
-async function sbUpsert(table, rows) {
-  const body = Array.isArray(rows) ? rows : [rows];
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method: "POST",
-    headers: { ...sbHeaders, "Prefer": "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error("upsert failed: " + (await res.text()));
-}
-
-async function sbDelete(table, idField, idValue) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${idField}=eq.${encodeURIComponent(idValue)}`, {
-    method: "DELETE",
-    headers: sbHeaders,
-  });
-  if (!res.ok) throw new Error("delete failed");
-}
-
-// ── Mappers: convert between app objects and database rows ───────────────────
-const mapProductToRow = (p) => ({
-  id: p.id, name: p.name, price: p.price, mrp: p.mrp ?? null,
-  category: p.category, unit: p.unit, emoji: p.emoji, barcode: p.barcode ?? null,
-  slabs: p.slabs ?? [], in_stock: p.inStock ?? true,
-});
-const mapRowToProduct = (r) => ({
-  id: r.id, name: r.name, price: Number(r.price), mrp: r.mrp != null ? Number(r.mrp) : null,
-  category: r.category, unit: r.unit, emoji: r.emoji, barcode: r.barcode || "",
-  slabs: r.slabs || [], inStock: r.in_stock,
-});
-const mapCustomerToRow = (c) => ({
-  phone: c.phone, name: c.name, address: c.address, location: c.location ?? null,
-  first_order: c.firstOrder, last_order: c.lastOrder,
-  total_orders: c.totalOrders, total_spent: c.totalSpent,
-});
-const mapRowToCustomer = (r) => ({
-  phone: r.phone, name: r.name, address: r.address, location: r.location,
-  firstOrder: r.first_order, lastOrder: r.last_order,
-  totalOrders: r.total_orders, totalSpent: Number(r.total_spent),
-});
-
-// ── Compatibility wrapper so existing code keeps working ──────────────────────
-// Emulates window.storage.get/set but routes to Supabase tables.
-const db = {
-  async getOrders() {
-    const rows = await sbSelect("orders");
-    const mapped = rows.map(o => {
-      const payment = o.customer?._payment || null;
-      const customer = o.customer ? { ...o.customer } : o.customer;
-      if (customer && "_payment" in customer) delete customer._payment;
-      return { ...o, customer, payment };
-    });
-    return mapped.sort((a,b) => b.timestamp - a.timestamp);
+const banners = [
+  {
+    id: "b1",
+    title: "Free delivery over ₹199",
+    subtitle: "On daily essentials, every order",
+    icon: (
+      <svg {...svgProps}><path d="M1 4h12v11H1zM13 8h4l4 4v3h-8" /><circle cx="5.5" cy="18" r="1.7" /><circle cx="16.5" cy="18" r="1.7" /></svg>
+    ),
+    grad: "linear-gradient(135deg, #0a9155, #056b3c)",
+    fg: "#ffffff",
   },
-  async getProducts() {
-    const rows = await sbSelect("products");
-    return rows.map(mapRowToProduct);
+  {
+    id: "b2",
+    title: "Up to 40% off snacks",
+    subtitle: "Stock up for the week",
+    icon: (
+      <svg {...svgProps}><path d="M20.6 13.6 13 21.2a2 2 0 0 1-2.8 0L3 14V4a1 1 0 0 1 1-1h7l8.6 8.6a2 2 0 0 1 0 2z" /><circle cx="7.5" cy="7.5" r="1.4" /></svg>
+    ),
+    grad: "linear-gradient(135deg, #f6c445, #e39a00)",
+    fg: "#3a2a00",
   },
-  async getCustomers() {
-    const rows = await sbSelect("customers");
-    return rows.map(mapRowToCustomer).sort((a,b) => b.lastOrder - a.lastOrder);
+  {
+    id: "b3",
+    title: "Groceries in 12 minutes",
+    subtitle: "Fresh stock, delivered fast",
+    icon: (
+      <svg {...svgProps}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+    ),
+    grad: "linear-gradient(135deg, #2f6fb0, #16406e)",
+    fg: "#ffffff",
   },
-  async getCharges() {
-    return await sbSelect("charges");
-  },
-  async getStoreOpen() {
-    const rows = await sbSelect("settings");
-    const row = rows.find(r => r.key === "store_open");
-    return row ? row.value : true;
-  },
-  async saveOrder(order) {
-    await sbUpsert("orders", {
-      id: order.id, timestamp: order.timestamp, items: order.items,
-      total: order.total, subtotal: order.subtotal ?? order.total,
-      charges: order.charges ?? [],
-      // payment info is nested inside customer JSON since the orders table has no dedicated column for it
-      customer: { ...order.customer, _payment: order.payment ?? null },
-      status: order.status,
-    });
-  },
-  async updateOrderStatus(id, status) {
-    await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      headers: { ...sbHeaders, "Prefer": "return=minimal" },
-      body: JSON.stringify({ status }),
-    });
-  },
-  async saveProduct(p) { await sbUpsert("products", mapProductToRow(p)); },
-  async deleteProduct(id) { await sbDelete("products", "id", id); },
-  async saveCustomer(c) { await sbUpsert("customers", mapCustomerToRow(c)); },
-  async saveCharges(charges) {
-    // Replace all: simplest reliable approach for small lists
-    const existing = await sbSelect("charges");
-    for (const e of existing) {
-      if (!charges.find(c => c.id === e.id)) await sbDelete("charges", "id", e.id);
-    }
-    if (charges.length) await sbUpsert("charges", charges.map(c => ({ id: c.id, name: c.name, price: c.price, active: c.active })));
-  },
-  async setStoreOpen(open) {
-    await sbUpsert("settings", { key: "store_open", value: open });
-  },
-};
-
-const DEFAULT_PRODUCTS = [
-  { id: 1, name: "Britannia Gooday", category: "Biscuit", price: 30, unit: "pack", emoji: "🍪", inStock: true },
 ];
 
-function formatINR(n) { return "₹" + (Number(n) || 0).toLocaleString("en-IN"); }
-function genId() { return "NGS" + Math.floor(1000 + Math.random() * 9000); }
+export default function App() {
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("relevance");
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountTab, setAccountTab] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [addressOpen, setAddressOpen] = useState(false);
+  const { totalCount, items } = useCart();
+  const { user, isLoggedIn, awaitingOtp } = useAuth();
+  const [trackOpen, setTrackOpen] = useState(false);
+  const [trackId, setTrackId] = useState(null);
 
-// ── SMART SEARCH ───────────────────────────────────────────────────────────
-// Matches even with typos, partial words, or different word order.
-// Scores results so the best matches show first.
-function fuzzyScore(text, query) {
-  text = (text || "").toLowerCase();
-  query = (query || "").trim().toLowerCase();
-  if (!query) return 0;
-  if (text === query) return 100;
-  if (text.startsWith(query)) return 90;
-  if (text.includes(query)) return 70;
+  // Back button/gesture closes the open layer instead of leaving the site.
+  useBackGuard(authOpen, () => setAuthOpen(false));
+  useBackGuard(cartOpen, () => setCartOpen(false));
+  useBackGuard(accountOpen, () => setAccountOpen(false));
+  useBackGuard(!!activeCategory, () => setActiveCategory(null));
 
-  // word-by-word match (handles different word order, e.g. "gooday britannia")
-  const queryWords = query.split(/\s+/).filter(Boolean);
-  const textWords = text.split(/\s+/).filter(Boolean);
-  let wordHits = 0;
-  for (const qw of queryWords) {
-    if (textWords.some(tw => tw.includes(qw) || qw.includes(tw))) wordHits++;
+  // If a one-time code is still pending (e.g. the mobile browser reloaded the
+  // tab while the customer was in their email app), re-open the login modal so
+  // they land back on the code screen instead of a blank home page.
+  useEffect(() => {
+    if (awaitingOtp) setAuthOpen(true);
+  }, [awaitingOtp]);
+  const products = useProducts();
+  const settings = useSettings();
+  const categories = useCategories();
+
+  // The customer's current live order (if any) → floating tracker on the home page.
+  const { orders: myOrders, reload: reloadOrders } = useMyOrders(user?.id);
+  const activeOrder = useMemo(() => (myOrders || []).find(isLiveOrder) || null, [myOrders]);
+  const shopLoc = getShopLocations(settings)[0] || null;
+  // The sheet keeps showing the order it was opened on (by id) — even after the
+  // reward is scratched and it leaves the "active" set — until the user closes it.
+  const trackedOrder = useMemo(
+    () => (myOrders || []).find((o) => o.id === trackId) || activeOrder,
+    [myOrders, trackId, activeOrder]
+  );
+  function openTracker(o) { setTrackId(o.id); setTrackOpen(true); }
+
+  function handleAccountClick() {
+    if (isLoggedIn) {
+      setAccountTab(null); // land on the account menu, not straight into orders
+      setAccountOpen(true);
+    } else setAuthOpen(true);
   }
-  if (wordHits === queryWords.length && queryWords.length > 0) return 60;
-  if (wordHits > 0) return 40 * (wordHits / queryWords.length);
 
-  // typo tolerance: simple character overlap check for short queries
-  if (query.length >= 3) {
-    let matchedChars = 0;
-    let ti = 0;
-    for (const ch of query) {
-      const idx = text.indexOf(ch, ti);
-      if (idx !== -1) { matchedChars++; ti = idx + 1; }
-    }
-    const ratio = matchedChars / query.length;
-    if (ratio > 0.75) return 25 * ratio;
+  function handleBellClick() {
+    setAccountTab("inbox");
+    setAccountOpen(true);
   }
-  return 0;
-}
 
-function searchProducts(products, query) {
-  if (!query || !query.trim()) return products;
-  const scored = products
-    .map(p => ({
-      product: p,
-      score: Math.max(
-        fuzzyScore(p.name, query),
-        fuzzyScore(p.category, query) * 0.8,
-        fuzzyScore(p.barcode, query) * 0.9
-      ),
-    }))
-    .filter(x => x.score > 0)
-    .sort((a, b) => b.score - a.score);
-  return scored.map(x => x.product);
-}
+  function openWallet() {
+    setAccountTab("wallet");
+    setAccountOpen(true);
+  }
 
-const S_ORDER = ["pending", "confirmed", "out_for_delivery", "delivered"];
-const S_LABEL = { pending: "Pending", confirmed: "Confirmed", out_for_delivery: "On the way", delivered: "Delivered" };
-const S_LABEL_A = { pending: "Pending", confirmed: "Confirmed", out_for_delivery: "Out for Delivery", delivered: "Delivered" };
+  function openAddress() {
+    if (isLoggedIn) setAddressOpen(true);
+    else setAuthOpen(true);
+  }
 
-// ── STYLES ────────────────────────────────────────────────────────────────────
-const css = `
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --cream: #f5f0e8; --parchment: #ede7d9; --bark: #3d2b1f; --bark-mid: #6b4c3b;
-  --bark-light: #a07858; --leaf: #4a7c59; --leaf-light: #6aac7e; --leaf-pale: #e8f2eb;
-  --spice: #c8602a; --spice-light: #e07848; --gold: #c49a3c; --white: #fffefb;
-  --danger: #c0392b; --danger-pale: #fdecea;
-  --shadow: 0 2px 16px rgba(61,43,31,0.10); --shadow-lg: 0 8px 32px rgba(61,43,31,0.16);
-  --radius: 18px;
-}
-html, body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(--bark); min-height: 100vh; }
-.hdr { background: var(--bark); padding: 0 18px; height: 62px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; }
-.hdr-logo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; color: var(--cream); letter-spacing: 1px; cursor: pointer; user-select: none; }
-.hdr-logo sup { font-size: 10px; font-family: 'DM Sans', sans-serif; font-weight: 500; color: var(--gold); letter-spacing: 2px; vertical-align: super; margin-left: 4px; text-transform: uppercase; }
-.hdr-cart { background: var(--spice); border: none; border-radius: 12px; color: white; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px; padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s, transform 0.15s; }
-.hdr-cart:hover { background: var(--spice-light); transform: scale(1.04); }
-.cart-bubble { background: var(--cream); color: var(--spice); border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.bnav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--parchment); display: flex; z-index: 200; box-shadow: 0 -4px 20px rgba(61,43,31,0.08); }
-.bnav-btn { flex: 1; border: none; background: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; color: var(--bark-light); display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0; transition: color 0.2s; }
-.bnav-btn.active { color: var(--leaf); }
-.bnav-btn .ico { font-size: 20px; }
-.main { padding: 18px 16px 88px; max-width: 480px; margin: 0 auto; }
-.hero-band { background: var(--bark); border-radius: var(--radius); padding: 22px 20px 18px; margin-bottom: 20px; position: relative; overflow: hidden; }
-.hero-band h2 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--cream); margin-bottom: 4px; }
-.hero-band p { font-size: 13px; color: var(--bark-light); }
-.hero-leaf { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: 56px; opacity: 0.15; }
-.cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 18px; scrollbar-width: none; }
-.cats::-webkit-scrollbar { display: none; }
+  // Pull-to-refresh: nudge every live hook to re-fetch (they all reload on window
+  // focus) and refresh the customer's own orders, then resolve so the spinner can
+  // settle. The catalog cache updates in place, so prices/stock come back fresh.
+  async function handleRefresh() {
+    try {
+      window.dispatchEvent(new Event("focus"));
+      reloadOrders?.();
+    } catch { /* ignore */ }
+    await new Promise((r) => setTimeout(r, 450));
+  }
 
-/* ── SEARCH BAR ── */
-.search-box { position: relative; margin-bottom: 16px; }
-.search-input { width: 100%; padding: 13px 16px 13px 42px; border: 1.5px solid var(--parchment); border-radius: 16px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--bark); background: var(--white); outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: var(--shadow); }
-.search-input:focus { border-color: var(--leaf); box-shadow: 0 0 0 3px rgba(74,124,89,0.12); }
-.search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 17px; color: var(--bark-light); pointer-events: none; }
-.search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: var(--parchment); color: var(--bark-mid); border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.search-results-info { font-size: 13px; color: var(--bark-light); margin: -6px 0 14px 4px; }
-.search-no-results { text-align: center; padding: 40px 20px; }
-.search-no-results .big { font-size: 48px; margin-bottom: 10px; }
-.cat-pill { white-space: nowrap; padding: 6px 16px; border-radius: 30px; border: 1.5px solid var(--parchment); background: var(--white); font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 13px; color: var(--bark-mid); cursor: pointer; transition: all 0.18s; }
-.cat-pill.active { background: var(--leaf); color: white; border-color: var(--leaf); }
-.sec-head { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--bark); margin-bottom: 14px; }
-.pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.pcard { background: var(--white); border-radius: var(--radius); padding: 14px 12px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); transition: transform 0.18s, box-shadow 0.18s; }
-.pcard:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-.pcard-emoji { font-size: 42px; text-align: center; margin-bottom: 8px; }
-.pcard-name { font-weight: 600; font-size: 13px; line-height: 1.35; margin-bottom: 3px; color: var(--bark); }
-.pcard-cat { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--bark-light); margin-bottom: 8px; }
-.pcard-price { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--leaf); }
-.pcard-price span { font-size: 11px; font-family: 'DM Sans', sans-serif; color: var(--bark-light); font-weight: 400; }
-.add-btn { width: 100%; margin-top: 10px; padding: 7px; border: 1.5px solid var(--leaf); border-radius: 10px; background: transparent; color: var(--leaf); font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.18s; }
-.add-btn:hover { background: var(--leaf); color: white; }
-.qty-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-.qty-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: var(--leaf); color: white; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.qty-n { font-weight: 700; font-size: 15px; color: var(--bark); }
-.slab-box { margin-top: 8px; border-top: 1px dashed var(--parchment); padding-top: 8px; }
-.slab-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: 8px; margin-bottom: 3px; font-size: 12px; cursor: pointer; transition: background 0.15s; border: 1.5px solid transparent; }
-.slab-row:hover { background: var(--leaf-pale); }
-.slab-row.active-slab { background: var(--leaf-pale); border-color: var(--leaf-light); }
-.slab-qty { font-weight: 700; color: var(--bark-mid); }
-.slab-price { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--leaf); font-size: 13px; }
-.slab-save { background: var(--spice); color: white; border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 700; }
-.slab-heading { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--bark-light); font-weight: 600; margin-bottom: 4px; }
-.admin-slabs-box { margin-top: 10px; padding-top: 10px; border-top: 1.5px dashed var(--parchment); }
-.admin-slab-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-.admin-slab-row input { flex: 1; padding: 7px 10px; border: 1.5px solid var(--parchment); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--cream); outline: none; }
-.admin-slab-row input:focus { border-color: var(--leaf); background: white; }
-.add-slab-btn { padding: 7px 12px; border: 1.5px dashed var(--leaf); border-radius: 8px; background: transparent; color: var(--leaf); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-.remove-slab-btn { padding: 5px 8px; border: none; border-radius: 6px; background: var(--danger-pale); color: var(--danger); font-size: 12px; font-weight: 700; cursor: pointer; }
-.slab-label { font-size: 11px; font-weight: 700; color: var(--bark-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.mrp-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
-.mrp-strike { font-size: 12px; color: var(--bark-light); text-decoration: line-through; font-family: 'DM Sans', sans-serif; }
-.discount-badge { background: var(--spice); color: white; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; letter-spacing: 0.3px; }
-.empty-box { text-align: center; padding: 60px 20px; }
-.empty-box .big { font-size: 60px; margin-bottom: 14px; }
-.empty-box p { font-size: 15px; color: var(--bark-light); font-weight: 500; }
-.citem { background: var(--white); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.citem-emoji { font-size: 30px; }
-.citem-info { flex: 1; }
-.citem-name { font-weight: 600; font-size: 14px; }
-.citem-sub { font-size: 12px; color: var(--bark-light); margin-top: 2px; }
-.citem-total { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: var(--leaf); }
-.cart-summary-box { background: var(--white); border-radius: var(--radius); padding: 16px; margin-top: 14px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.cs-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; color: var(--bark-mid); }
-.cs-row.total { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--bark); border-top: 1.5px dashed var(--parchment); padding-top: 10px; margin-top: 4px; }
-.chk-form { background: var(--white); border-radius: var(--radius); padding: 18px; margin-top: 14px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.chk-form h3 { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; margin-bottom: 16px; color: var(--bark); }
-.fgrp { margin-bottom: 12px; }
-.fgrp label { font-size: 11px; font-weight: 600; color: var(--bark-light); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 5px; }
-.fgrp input, .fgrp textarea { width: 100%; padding: 11px 13px; border: 1.5px solid var(--parchment); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 16px; color: var(--bark); background: var(--cream); outline: none; transition: border-color 0.2s, background 0.2s; }
-.fgrp input:focus, .fgrp textarea:focus { border-color: var(--leaf); background: var(--white); }
-.fgrp textarea { resize: none; height: 72px; }
-.loc-btn { width: 100%; padding: 10px; margin-top: 6px; border: 1.5px dashed var(--leaf); border-radius: 12px; background: var(--leaf-pale); color: var(--leaf); font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.18s; }
-.loc-btn:hover { background: var(--leaf); color: white; border-style: solid; }
-.loc-btn:disabled { opacity: 0.6; cursor: wait; }
-.loc-preview { margin-top: 8px; padding: 10px 12px; background: var(--leaf-pale); border-radius: 10px; border: 1px solid var(--leaf-light); font-size: 12px; color: var(--leaf); font-weight: 500; display: flex; align-items: flex-start; gap: 6px; }
-.place-btn { width: 100%; padding: 15px; margin-top: 12px; border: none; border-radius: var(--radius); background: var(--bark); color: var(--cream); font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.15s; box-shadow: 0 4px 16px rgba(61,43,31,0.25); }
-.place-btn:hover { background: var(--bark-mid); transform: translateY(-1px); }
+  const searching = query.trim().length > 0;
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const cat = categories.find((c) => c.name.toLowerCase().includes(q));
+    const matched = products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (cat && p.category === cat.id)
+    );
+    return sortProducts(matched, sort);
+  }, [query, products, categories, sort]);
 
-/* ── PAYMENT METHOD ── */
-.pay-method-row { display: flex; gap: 8px; }
-.pay-method-btn { flex: 1; padding: 12px 8px; border: 1.5px solid var(--parchment); border-radius: 12px; background: var(--cream); color: var(--bark-mid); font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.18s; }
-.pay-method-btn.active { background: var(--leaf-pale); border-color: var(--leaf); color: var(--leaf); }
+  const cartValue = useMemo(() => {
+    return Object.entries(items).reduce((sum, [id, qty]) => {
+      const p = products.find((x) => x.id === id);
+      // Use the same tier price the cart charges, so the bar total matches.
+      return sum + (p ? tierUnitPrice(p, qty, user, settings.rewards) * qty : 0);
+    }, 0);
+  }, [items, products, user, settings.rewards]);
 
-/* ── UPI PAYMENT MODAL ── */
-.upi-overlay { position: fixed; inset: 0; background: rgba(61,43,31,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.upi-modal { background: var(--white); border-radius: 24px; padding: 22px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-.upi-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.upi-modal-header h3 { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: var(--bark); }
-.upi-close { background: var(--cream); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 14px; color: var(--bark-mid); cursor: pointer; }
-.upi-amount-lock { text-align: center; background: var(--leaf-pale); border-radius: 14px; padding: 14px; margin-bottom: 16px; }
-.upi-amount-lock-label { font-size: 11px; color: var(--bark-light); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-.upi-amount-lock-value { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 800; color: var(--leaf); margin: 4px 0; }
-.upi-amount-lock-note { font-size: 11px; color: var(--leaf); font-weight: 600; }
-.upi-qr-img { display: block; width: 220px; height: 220px; margin: 0 auto 14px; border-radius: 12px; border: 1.5px solid var(--parchment); }
-.upi-or-divider { text-align: center; margin: 10px 0; position: relative; }
-.upi-or-divider span { background: var(--white); padding: 0 12px; color: var(--bark-light); font-size: 12px; font-weight: 600; }
-.upi-or-divider::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--parchment); z-index: -1; }
-.upi-tap-btn { display: block; text-align: center; padding: 14px; background: #5f259f; color: white; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px; text-decoration: none; margin-bottom: 14px; }
-.upi-hint { font-size: 12px; color: var(--bark-light); text-align: center; margin-bottom: 16px; line-height: 1.5; }
-.upi-confirm-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; background: var(--leaf); color: white; font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; cursor: pointer; }
-.upi-confirm-btn:disabled { background: var(--leaf-light); cursor: not-allowed; }
-.success-wrap { text-align: center; padding: 52px 20px; }
-.success-wrap .s-ico { font-size: 70px; margin-bottom: 16px; animation: pop 0.5s ease; }
-@keyframes pop { 0%{transform:scale(0.5);opacity:0} 80%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
-.success-wrap h2 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 800; color: var(--leaf); margin-bottom: 8px; }
-.success-wrap p { font-size: 14px; color: var(--bark-light); margin-bottom: 20px; }
-.oid-tag { display: inline-block; background: var(--bark); color: var(--cream); padding: 6px 18px; border-radius: 20px; font-weight: 700; font-size: 14px; margin-bottom: 24px; letter-spacing: 1px; }
-.go-track { display: inline-block; padding: 12px 28px; background: var(--leaf); color: white; border: none; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px; cursor: pointer; }
-.ocard { background: var(--white); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.ocard.new-order { border-color: var(--spice); box-shadow: 0 0 0 3px rgba(200,96,42,0.1); }
-.ocard-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-.o-id { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--bark); }
-.o-date { font-size: 11px; color: var(--bark-light); margin-top: 2px; }
-.sbadge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-.s-pending { background: #fff3e0; color: #bf360c; }
-.s-confirmed { background: #e3f2fd; color: #0d47a1; }
-.s-out_for_delivery { background: #f3e5f5; color: #4a148c; }
-.s-delivered { background: var(--leaf-pale); color: var(--leaf); }
-.o-items { font-size: 13px; color: var(--bark-light); margin-bottom: 6px; line-height: 1.6; }
-.o-total { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 16px; color: var(--bark); }
-.progress-track { display: flex; align-items: center; margin: 12px 0 8px; }
-.prog-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.prog-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--parchment); border: 2px solid var(--parchment); transition: all 0.3s; }
-.prog-dot.done { background: var(--leaf); border-color: var(--leaf); }
-.prog-dot.current { background: var(--spice); border-color: var(--spice); box-shadow: 0 0 0 3px rgba(200,96,42,0.2); }
-.prog-label { font-size: 9px; color: var(--bark-light); text-align: center; font-weight: 500; white-space: nowrap; }
-.prog-line { flex: 1; height: 2px; background: var(--parchment); margin-bottom: 14px; transition: background 0.3s; }
-.prog-line.done { background: var(--leaf); }
-.toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: var(--bark); color: var(--cream); padding: 11px 20px; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px; z-index: 999; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: fadeSlide 0.3s ease; }
-@keyframes fadeSlide { from{opacity:0;transform:translateX(-50%) translateY(-12px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-
-/* ── SECRET TAP INDICATOR ── */
-.tap-dots { display: flex; gap: 4px; position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); }
-.tap-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background 0.2s; }
-.tap-dot.lit { background: var(--gold); }
-
-/* ── ADMIN LOGIN ── */
-.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bark); padding: 20px; }
-.login-card { background: var(--white); border-radius: 24px; padding: 36px 28px; width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
-.login-icon { font-size: 52px; margin-bottom: 12px; }
-.login-card h1 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 800; color: var(--bark); margin-bottom: 4px; }
-.login-card p { font-size: 13px; color: var(--bark-light); margin-bottom: 28px; }
-.login-card input { width: 100%; padding: 13px 16px; border: 2px solid var(--parchment); border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 16px; color: var(--bark); background: var(--cream); outline: none; margin-bottom: 12px; transition: border-color 0.2s; }
-.login-card input:focus { border-color: var(--leaf); background: var(--white); }
-.login-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; background: var(--bark); color: var(--cream); font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
-.login-btn:hover { background: var(--bark-mid); }
-.login-err { color: var(--danger); font-size: 13px; margin-top: 10px; font-weight: 500; }
-.lockout-msg { background: var(--danger-pale); color: var(--danger); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-top: 10px; }
-
-/* ── FAKE DECOY PANEL ── */
-.decoy-wrap { min-height: 100vh; background: #f8f8f8; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; font-family: 'DM Sans', sans-serif; }
-.decoy-wrap h2 { font-size: 18px; margin-bottom: 8px; }
-.decoy-wrap p { font-size: 13px; }
-
-/* ── ADMIN HEADER ── */
-.ahdr { background: var(--bark); padding: 0 18px; height: 62px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; }
-.ahdr-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 800; color: var(--cream); }
-.ahdr-sub { font-size: 11px; color: var(--bark-light); margin-top: 1px; }
-.notif-dot { background: var(--spice); color: white; border-radius: 20px; padding: 4px 10px; font-size: 12px; font-weight: 700; animation: pulse 1.5s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.65} }
-.logout-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--cream); border-radius: 8px; padding: 6px 12px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; }
-.logout-btn:hover { background: rgba(255,255,255,0.2); }
-.atabs { display: flex; background: var(--white); border-bottom: 1.5px solid var(--parchment); }
-.atab { flex: 1; padding: 13px; border: none; background: none; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px; color: var(--bark-light); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1.5px; transition: all 0.2s; }
-.atab.active { color: var(--leaf); border-bottom-color: var(--leaf); }
-.acontent { padding: 16px 16px 40px; max-width: 600px; margin: 0 auto; }
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-.stat-box { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); text-align: center; border: 1.5px solid var(--parchment); }
-.stat-num { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 800; color: var(--bark); }
-.stat-num.green { color: var(--leaf); }
-.stat-num.spice { color: var(--spice); }
-.stat-lbl { font-size: 11px; color: var(--bark-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-.cust-block { background: var(--cream); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
-.cust-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-.cust-row { font-size: 13px; color: var(--bark-mid); margin-bottom: 3px; display: flex; align-items: flex-start; gap: 6px; }
-.map-link { display: inline-flex; align-items: center; gap: 5px; background: var(--leaf-pale); color: var(--leaf); padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 6px; border: 1px solid var(--leaf-light); transition: background 0.18s; }
-.map-link:hover { background: var(--leaf); color: white; }
-.status-sel { width: 100%; padding: 10px 13px; margin-top: 12px; border: 2px solid var(--parchment); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--bark); background: var(--cream); cursor: pointer; outline: none; }
-.status-sel:focus { border-color: var(--leaf); background: var(--white); }
-.addp-box { background: var(--white); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.addp-box h3 { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; margin-bottom: 14px; }
-.add-prod-btn { width: 100%; padding: 12px; border: none; border-radius: 12px; background: var(--leaf); color: white; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 6px; }
-.add-prod-btn:hover { background: var(--leaf-light); }
-.prod-list-item { background: var(--white); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.pli-left { display: flex; align-items: center; gap: 10px; }
-.pli-name { font-weight: 600; font-size: 14px; }
-.pli-sub { font-size: 12px; color: var(--bark-light); }
-.del-btn { background: var(--danger-pale); color: var(--danger); border: none; border-radius: 8px; padding: 6px 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.del-btn:hover { background: var(--danger); color: white; }
-.edit-btn { background: #e8f2eb; color: var(--leaf); border: none; border-radius: 8px; padding: 6px 10px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.18s; }
-.edit-btn:hover { background: var(--leaf); color: white; }
-.edit-product-box { background: var(--leaf-pale); border: 2px solid var(--leaf-light); border-radius: var(--radius); padding: 16px; margin-bottom: 8px; }
-.edit-product-title { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--leaf); margin-bottom: 12px; }
-.save-edit-btn { flex: 1; padding: 10px; border: none; border-radius: 10px; background: var(--leaf); color: white; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; }
-.save-edit-btn:hover { background: var(--leaf-light); }
-.cancel-edit-btn { padding: 10px 16px; border: 1.5px solid var(--parchment); border-radius: 10px; background: white; color: var(--bark-mid); font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; }
-/* ── HISTORY ── */
-.history-day { background: var(--white); border-radius: var(--radius); margin-bottom: 12px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); overflow: hidden; }
-.history-day-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--cream); }
-.history-date { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 15px; color: var(--bark); }
-.history-day-stats { font-size: 12px; color: var(--bark-light); margin-top: 2px; }
-.history-day-revenue { font-family: 'Playfair Display', serif; font-weight: 800; font-size: 16px; color: var(--leaf); }
-.history-chevron { font-size: 14px; color: var(--bark-light); transition: transform 0.2s; }
-.history-chevron.open { transform: rotate(180deg); }
-.history-orders { padding: 8px 12px 12px; }
-.history-order { background: var(--cream); border-radius: 10px; padding: 12px; margin-top: 8px; }
-.history-order-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.history-order-id { font-weight: 700; font-size: 13px; color: var(--bark); }
-.history-order-items { font-size: 12px; color: var(--bark-light); margin-bottom: 4px; }
-
-/* ── BARCODE ── */
-.barcode-field { display: flex; gap: 8px; align-items: stretch; }
-.barcode-field input { flex: 1; }
-.barcode-scan-btn { padding: 0 14px; border: 1.5px solid var(--leaf); border-radius: 12px; background: var(--leaf-pale); color: var(--leaf); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
-.barcode-scan-btn:hover { background: var(--leaf); color: white; }
-.scanner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-.scanner-video { width: 100%; max-width: 400px; border-radius: 16px; background: #000; }
-.scanner-frame { position: relative; width: 100%; max-width: 400px; }
-.scanner-reticle { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 70%; height: 80px; border: 3px solid var(--leaf-light); border-radius: 12px; box-shadow: 0 0 0 2000px rgba(0,0,0,0.3); }
-.scanner-hint { color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; margin-top: 20px; text-align: center; }
-.scanner-close { margin-top: 20px; padding: 12px 28px; background: white; color: var(--bark); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; }
-.scanner-manual { margin-top: 14px; color: var(--leaf-light); font-size: 13px; background: none; border: none; cursor: pointer; text-decoration: underline; }
-
-/* ── EXTRA CHARGES ── */
-.charge-card { background: var(--white); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.charge-card.active-charge { border-color: var(--leaf); background: var(--leaf-pale); }
-.charge-info { flex: 1; }
-.charge-name { font-weight: 600; font-size: 14px; color: var(--bark); }
-.charge-price { font-size: 13px; color: var(--leaf); font-weight: 700; margin-top: 2px; }
-.charge-actions { display: flex; align-items: center; gap: 8px; }
-.charge-del { background: var(--danger-pale); color: var(--danger); border: none; border-radius: 8px; padding: 6px 9px; font-size: 12px; font-weight: 700; cursor: pointer; }
-.add-charge-box { background: var(--white); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.add-charge-box h3 { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; margin-bottom: 12px; }
-.charge-input-row { display: flex; gap: 8px; }
-.charge-input-row input { flex: 1; padding: 10px 12px; border: 1.5px solid var(--parchment); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--cream); outline: none; }
-.charge-input-row input:focus { border-color: var(--leaf); background: white; }
-.charge-add-btn { padding: 10px 16px; border: none; border-radius: 10px; background: var(--leaf); color: white; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; }
-.charge-row-bill { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; color: var(--spice); }
-
-/* ── THERMAL PRINT ── */
-.print-btn { width: 100%; margin-top: 10px; padding: 10px; border: 1.5px dashed var(--bark-mid); border-radius: 10px; background: transparent; color: var(--bark-mid); font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.18s; }
-.print-btn:hover { background: var(--bark); color: white; border-style: solid; }
-
-@media print {
-  body * { visibility: hidden !important; }
-  #thermal-receipt, #thermal-receipt * { visibility: visible !important; }
-  #thermal-receipt { position: fixed !important; left: 0 !important; top: 0 !important; width: 80mm !important; margin: 0 !important; padding: 0 !important; }
-}
-
-#thermal-receipt {
-  display: none;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 12px;
-  width: 80mm;
-  color: #000;
-  background: #fff;
-  padding: 4mm;
-}
-.tr-center { text-align: center; }
-.tr-bold { font-weight: bold; }
-.tr-big { font-size: 16px; font-weight: bold; }
-.tr-divider { border: none; border-top: 1px dashed #000; margin: 4px 0; }
-.tr-row { display: flex; justify-content: space-between; margin: 2px 0; }
-.tr-row-item { display: flex; justify-content: space-between; margin: 2px 0; font-size: 11px; }
-.tr-small { font-size: 10px; color: #444; }
-.tr-total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 4px; }
-
-.customers-tab-grid { display: flex; flex-direction: column; gap: 10px; }
-.customer-card { background: var(--white); border-radius: var(--radius); padding: 16px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); }
-.customer-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
-.customer-name-big { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: var(--bark); }
-.customer-phone { font-size: 13px; color: var(--bark-mid); margin-top: 2px; }
-.customer-stats { display: flex; gap: 8px; flex-wrap: wrap; }
-.customer-stat-pill { background: var(--cream); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--bark-mid); }
-.customer-stat-pill.green { background: var(--leaf-pale); color: var(--leaf); }
-.customer-address { font-size: 12px; color: var(--bark-light); margin-top: 8px; display: flex; gap: 5px; align-items: flex-start; }
-.notif-permission-bar { background: #fff3e0; border: 1.5px solid #ffb74d; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.notif-permission-bar p { font-size: 13px; color: var(--bark-mid); font-weight: 500; flex: 1; }
-.notif-enable-btn { background: var(--spice); color: white; border: none; border-radius: 8px; padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
-.store-toggle-card { background: var(--white); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px; border: 1.5px solid var(--parchment); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; }
-.store-toggle-card.open { border-color: var(--leaf); background: var(--leaf-pale); }
-.store-toggle-card.closed { border-color: var(--danger); background: var(--danger-pale); }
-.toggle-label { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; }
-.toggle-label.open { color: var(--leaf); }
-.toggle-label.closed { color: var(--danger); }
-.toggle-sub { font-size: 12px; color: var(--bark-light); margin-top: 2px; }
-.toggle-switch { position: relative; width: 54px; height: 30px; flex-shrink: 0; }
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 30px; transition: 0.3s; }
-.toggle-slider:before { content: ""; position: absolute; width: 22px; height: 22px; left: 4px; bottom: 4px; background: white; border-radius: 50%; transition: 0.3s; }
-input:checked + .toggle-slider { background: var(--leaf); }
-input:checked + .toggle-slider:before { transform: translateX(24px); }
-.store-closed-banner { background: var(--danger); color: white; text-align: center; padding: 14px 16px; font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; }
-.store-closed-checkout { background: var(--danger-pale); border: 2px solid var(--danger); border-radius: var(--radius); padding: 24px; text-align: center; margin-top: 14px; }
-.store-closed-checkout .closed-ico { font-size: 48px; margin-bottom: 10px; }
-.store-closed-checkout h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--danger); margin-bottom: 6px; }
-.store-closed-checkout p { font-size: 13px; color: var(--bark-light); }
-`;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CUSTOMER COMPONENTS
-// ─────────────────────────────────────────────────────────────────────────────
-function ShopView({ products, cart, cat, setCat, setCart, storeOpen }) {
-  const [search, setSearch] = useState("");
-  const cats = ["All", ...Array.from(new Set(products.map(p => p.category)))];
-  const categoryFiltered = cat === "All" ? products : products.filter(p => p.category === cat);
-  const filtered = search.trim() ? searchProducts(categoryFiltered, search) : categoryFiltered;
-  return (
-    <div className="main">
-      {!storeOpen && <div className="store-closed-banner">🔒 Store is currently closed — not accepting orders</div>}
-      <div className="hero-band">
-        <h2>Fresh from the Market</h2>
-        <p>Quality groceries, delivered to your door</p>
-        <div className="hero-leaf">🌿</div>
-      </div>
-      <div className="search-box">
-        <span className="search-icon">🔍</span>
-        <input
-          className="search-input"
-          placeholder="Search products..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        {search && (
-          <button className="search-clear" onClick={() => setSearch("")}>✕</button>
-        )}
-      </div>
-      <div className="cats">
-        {cats.map(c => <button key={c} className={"cat-pill" + (cat === c ? " active" : "")} onClick={() => setCat(c)}>{c}</button>)}
-      </div>
-      {search.trim() && (
-        <div className="search-results-info">
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{search}"
-        </div>
-      )}
-      {!search.trim() && <div className="sec-head">Products</div>}
-      {filtered.length === 0 ? (
-        <div className="search-no-results">
-          <div className="big">🔍</div>
-          <p style={{ color: "var(--bark-light)", fontWeight: 500 }}>No products found</p>
-          <p style={{ fontSize: 13, color: "var(--bark-light)", marginTop: 4 }}>Try a different search term</p>
-        </div>
-      ) : (
-      <div className="pgrid">
-        {filtered.map(p => {
-          const qty = cart[p.id] || 0;
-          return (
-            <div className="pcard" key={p.id}>
-              <div className="pcard-emoji">{p.emoji}</div>
-              <div className="pcard-name">{p.name}</div>
-              <div className="pcard-cat">{p.category}</div>
-              <div className="pcard-price">{formatINR(p.price)} <span>/{p.unit}</span></div>
-              {p.mrp && p.mrp > p.price && (
-                <div className="mrp-row">
-                  <span className="mrp-strike">MRP {formatINR(p.mrp)}</span>
-                  <span className="discount-badge">{Math.round((p.mrp - p.price) / p.mrp * 100)}% OFF</span>
-                </div>
-              )}
-              {p.slabs && p.slabs.length > 0 && (
-                <div className="slab-box">
-                  <div className="slab-heading">🏷️ Bulk Deals</div>
-                  {p.slabs.map((s,i) => {
-                    const saving = Math.round(((p.price - s.price) / p.price) * 100);
-                    const isActive = qty >= s.qty && (i === p.slabs.length-1 || qty < p.slabs[i+1].qty);
-                    return (
-                      <div key={i} className={"slab-row"+(isActive?" active-slab":"")} onClick={()=>setCart(c=>({...c,[p.id]:s.qty}))}>
-                        <span className="slab-qty">Buy {s.qty}+</span>
-                        <span className="slab-price">₹{s.price}/{p.unit}</span>
-                        {saving > 0 && <span className="slab-save">Save {saving}%</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {qty === 0
-                ? <button className="add-btn" onClick={() => setCart(c => ({ ...c, [p.id]: 1 }))}>+ Add</button>
-                : <div className="qty-row">
-                    <button className="qty-btn" onClick={() => setCart(c => { const n={...c}; n[p.id]>1?n[p.id]--:delete n[p.id]; return n; })}>−</button>
-                    <span className="qty-n">{qty}</span>
-                    <button className="qty-btn" onClick={() => setCart(c => ({ ...c, [p.id]: (c[p.id]||0)+1 }))}>+</button>
-                  </div>
-              }
-            </div>
-          );
-        })}
-      </div>
-      )}
-    </div>
-  );
-}
-
-const CUSTOMER_PROFILE_KEY = "ngs_profile";
-
-function loadProfile() {
-  try { return JSON.parse(localStorage.getItem(CUSTOMER_PROFILE_KEY) || "null"); } catch { return null; }
-}
-function saveProfile(data) {
-  try { localStorage.setItem(CUSTOMER_PROFILE_KEY, JSON.stringify(data)); } catch {}
-}
-
-function CartView({ products, cart, setCart, onOrderPlaced, setTab, success, setSuccess, storeOpen, charges }) {
-  const profile = loadProfile();
-  const [name, setName] = useState(profile?.name || "");
-  const [phone, setPhone] = useState(profile?.phone || "");
-  const [address, setAddress] = useState(profile?.address || "");
-  const [location, setLocation] = useState(profile?.location || null);
-  const [locLoading, setLocLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [profileSaved, setProfileSaved] = useState(!!profile);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // "cod" | "upi"
-  const [showPaymentScreen, setShowPaymentScreen] = useState(false);
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const [pendingOrder, setPendingOrder] = useState(null);
-
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
-  const getEffectivePrice = (p, qty) => {
-    if (!p.slabs || p.slabs.length === 0) return p.price;
-    const applicable = [...p.slabs].reverse().find(s => qty >= s.qty);
-    return applicable ? applicable.price : p.price;
-  };
-  const cartTotal = Object.entries(cart).reduce((s, [id, qty]) => {
-    const p = products.find(x => x.id === Number(id));
-    if (!p) return s;
-    return s + getEffectivePrice(p, qty) * qty;
-  }, 0);
-
-  const activeCharges = (charges || []).filter(c => c.active);
-  const chargesTotal = activeCharges.reduce((s, c) => s + Number(c.price), 0);
-  const grandTotal = cartTotal + chargesTotal;
-
-  const getLocation = () => {
-    if (!navigator.geolocation) { showToast("⚠️ Location not supported"); return; }
-    setLocLoading(true);
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const { latitude: lat, longitude: lng } = pos.coords;
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-        const data = await res.json();
-        const addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        setAddress(addr); setLocation({ lat, lng, label: addr }); showToast("📍 Location captured!");
-      } catch { setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`); setLocation({ lat, lng }); }
-      setLocLoading(false);
-    }, () => { showToast("❌ Location denied"); setLocLoading(false); });
-  };
-
-  const buildOrder = () => {
-    const items = Object.entries(cart).map(([id, qty]) => ({ ...products.find(x => x.id === Number(id)), qty }));
-    return {
-      id: genId(), timestamp: Date.now(), items, total: grandTotal, subtotal: cartTotal,
-      charges: activeCharges, customer: { name, phone, address, location: location||null },
-      status: "pending",
-      payment: { method: paymentMethod, status: paymentMethod === "cod" ? "cod" : "awaiting_confirmation" },
-    };
-  };
-
-  const finalizeOrder = async (order) => {
-    saveProfile({ name, phone, address, location: location||null });
-    setProfileSaved(true);
-    await onOrderPlaced(order, phone);
-    setCart({});
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!name.trim() || !phone.trim() || !address.trim()) { showToast("⚠️ Fill all fields"); return; }
-    const order = buildOrder();
-    if (paymentMethod === "upi") {
-      setPendingOrder(order);
-      setShowPaymentScreen(true);
-      return;
-    }
-    await finalizeOrder(order);
-  };
-
-  const handleConfirmUpiPayment = async () => {
-    if (!pendingOrder) return;
-    const paidOrder = { ...pendingOrder, payment: { ...pendingOrder.payment, status: "customer_confirmed_paid" } };
-    setPaymentConfirmed(true);
-    await finalizeOrder(paidOrder);
-  };
-
-  const handleClearProfile = () => {
-    localStorage.removeItem(CUSTOMER_PROFILE_KEY);
-    setName(""); setPhone(""); setAddress(""); setLocation(null);
-    setProfileSaved(false);
-    showToast("🗑️ Details cleared");
-  };
-
-  if (success) return (
-    <div className="main success-wrap">
-      <div className="s-ico">🎊</div>
-      <h2>Order Placed!</h2>
-      <p>NGS Store will confirm and deliver soon</p>
-      <div className="oid-tag">#{success}</div><br />
-      <button className="go-track" onClick={() => { setSuccess(null); setTab("orders"); }}>Track Order →</button>
-    </div>
-  );
-
-  const items = Object.entries(cart).map(([id, qty]) => ({ ...products.find(p => p.id === Number(id)), qty }));
-  if (!items.length) return <div className="main empty-box"><div className="big">🛒</div><p>Your cart is empty</p></div>;
+  function goHome() {
+    setActiveCategory(null);
+    setQuery("");
+  }
 
   return (
-    <div className="main">
-      {toast && <div className="toast">{toast}</div>}
-      <div className="sec-head">Your Cart</div>
-      {items.map(item => (
-        <div className="citem" key={item.id}>
-          <span className="citem-emoji">{item.emoji}</span>
-          <div className="citem-info">
-            <div className="citem-name">{item.name}</div>
-            <div className="citem-sub">
-              {(() => {
-                const ep = (!item.slabs||!item.slabs.length) ? item.price : ([...item.slabs].reverse().find(s=>item.qty>=s.qty)||{price:item.price}).price;
-                const isBulk = ep < item.price;
-                const hasMrpDeal = item.mrp && item.mrp > item.price;
-                return (
-                  <span>
-                    {formatINR(ep)} × {item.qty}
-                    {isBulk && <span style={{color:"var(--spice)",fontWeight:700,fontSize:11,marginLeft:4}}>Bulk deal!</span>}
-                    {!isBulk && hasMrpDeal && <span style={{color:"var(--spice)",fontWeight:700,fontSize:11,marginLeft:4}}>{Math.round((item.mrp-item.price)/item.mrp*100)}% off MRP</span>}
-                  </span>
-                );
-              })()}
-            </div>
-          </div>
-          <div className="citem-total">{formatINR(item.price * item.qty)}</div>
-        </div>
-      ))}
-      <div className="cart-summary-box">
-        <div className="cs-row"><span>Subtotal</span><span>{formatINR(cartTotal)}</span></div>
-        {activeCharges.map((c,i) => (
-          <div className="charge-row-bill" key={i}><span>{c.name}</span><span>+{formatINR(c.price)}</span></div>
-        ))}
-        {activeCharges.length === 0 && <div className="cs-row"><span>Delivery</span><span style={{color:"var(--leaf)"}}>FREE</span></div>}
-        <div className="cs-row total"><span>Total</span><span>{formatINR(grandTotal)}</span></div>
-      </div>
-      <div className="chk-form">
-        <h3>Delivery Details</h3>
-        {profileSaved && (
-          <div style={{background:"var(--leaf-pale)",border:"1.5px solid var(--leaf-light)",borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontSize:13,color:"var(--leaf)",fontWeight:600}}>✅ Using your saved details</span>
-            <button onClick={handleClearProfile} style={{background:"none",border:"none",color:"var(--bark-light)",fontSize:12,cursor:"pointer",fontWeight:600,fontFamily:"'DM Sans',sans-serif"}}>Change</button>
-          </div>
-        )}
-        <div className="fgrp"><label>Full Name</label><input placeholder="Your name" value={name} onChange={e=>setName(e.target.value)} /></div>
-        <div className="fgrp"><label>Phone</label><input type="tel" placeholder="+91 98765 43210" value={phone} onChange={e=>setPhone(e.target.value)} /></div>
-        <div className="fgrp">
-          <label>Delivery Address</label>
-          <textarea placeholder="House no., street, landmark..." value={address} onChange={e=>setAddress(e.target.value)} />
-          <button className="loc-btn" onClick={getLocation} disabled={locLoading}>
-            {locLoading ? "⏳ Getting location..." : "📍 Use My Current Location"}
-          </button>
-          {location && <div className="loc-preview"><span>📌</span><span>GPS: {location.lat?.toFixed(5)}, {location.lng?.toFixed(5)}</span></div>}
-        </div>
-        <div className="fgrp">
-          <label>Payment Method</label>
-          <div className="pay-method-row">
-            <button
-              type="button"
-              className={"pay-method-btn" + (paymentMethod === "cod" ? " active" : "")}
-              onClick={() => setPaymentMethod("cod")}
-            >
-              💵 Cash on Delivery
-            </button>
-            <button
-              type="button"
-              className={"pay-method-btn" + (paymentMethod === "upi" ? " active" : "")}
-              onClick={() => setPaymentMethod("upi")}
-            >
-              📲 Pay by UPI
-            </button>
-          </div>
-        </div>
-        {storeOpen
-          ? <button className="place-btn" onClick={handlePlaceOrder}>
-              {paymentMethod === "upi" ? "Continue to Pay — " : "Place Order — "}{formatINR(grandTotal)}
-            </button>
-          : <div className="store-closed-checkout">
-              <div className="closed-ico">🔒</div>
-              <h3>Store is Closed</h3>
-              <p>We are not accepting orders right now. Please check back soon!</p>
-            </div>
-        }
-      </div>
+    <div className="app">
+      <PullToRefresh
+        onRefresh={handleRefresh}
+        disabled={cartOpen || accountOpen || authOpen || addressOpen || trackOpen}
+      />
+      <Header
+        query={query}
+        onQueryChange={setQuery}
+        onCartClick={() => setCartOpen(true)}
+        onLogoClick={goHome}
+        onAccountClick={handleAccountClick}
+        onBellClick={handleBellClick}
+        onWalletClick={openWallet}
+        onAddressClick={openAddress}
+      />
 
-      {showPaymentScreen && pendingOrder && (
-        <div className="upi-overlay">
-          <div className="upi-modal">
-            <div className="upi-modal-header">
-              <h3>Scan & Pay</h3>
-              <button className="upi-close" onClick={() => { setShowPaymentScreen(false); setPendingOrder(null); }}>✕</button>
-            </div>
-            <div className="upi-amount-lock">
-              <div className="upi-amount-lock-label">Amount to pay</div>
-              <div className="upi-amount-lock-value">{formatINR(grandTotal)}</div>
-              <div className="upi-amount-lock-note">🔒 Fixed amount — cannot be changed</div>
-            </div>
-            <img className="upi-qr-img" src={buildUpiQrUrl(buildUpiLink(grandTotal, pendingOrder.id))} alt="UPI QR Code" />
-            <div className="upi-or-divider"><span>OR</span></div>
-            <a
-              className="upi-tap-btn"
-              href={buildUpiLink(grandTotal, pendingOrder.id)}
-            >
-              📲 Tap to Pay with UPI App
-            </a>
-            <p className="upi-hint">Scan the QR with any UPI app, or tap the button above on your phone to open Google Pay / PhonePe / Paytm directly.</p>
-            <button
-              className="upi-confirm-btn"
-              onClick={handleConfirmUpiPayment}
-              disabled={paymentConfirmed}
-            >
-              {paymentConfirmed ? "✅ Payment Confirmed" : "✅ I've Completed the Payment"}
-            </button>
-          </div>
+      {!settings.storeOpen && (
+        <div className="store-closed-banner">
+          <span className="status-dot closed" aria-hidden="true" />
+          Store is currently closed — you can browse, but ordering is paused.
         </div>
       )}
-    </div>
-  );
-}
 
-function OrdersView({ orders, myPhone }) {
-  const mine = orders
-    .filter(o => myPhone && o.customer?.phone === myPhone)
-    .sort((a,b) => b.timestamp - a.timestamp);
-  if (!myPhone) return (
-    <div className="main empty-box">
-      <div className="big">📋</div>
-      <p>Your order history will appear here</p>
-      <p style={{fontSize:13,color:"var(--bark-light)",marginTop:6}}>Place your first order to get started</p>
-    </div>
-  );
-  if (!mine.length) return (
-    <div className="main empty-box">
-      <div className="big">📋</div>
-      <p>No orders yet</p>
-    </div>
-  );
-  return (
-    <div className="main">
-      <div className="sec-head">My Orders ({mine.length})</div>
-      {mine.map(o => {
-        const si = S_ORDER.indexOf(o.status);
-        return (
-          <div className="ocard" key={o.id}>
-            <div className="ocard-top">
-              <div><div className="o-id">#{o.id}</div><div className="o-date">{new Date(o.timestamp).toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div>
-              <span className={"sbadge s-"+o.status}>{S_LABEL[o.status]}</span>
-            </div>
-            <div className="progress-track">
-              {S_ORDER.map((s,i) => (
-                <div key={s} style={{display:"contents"}}>
-                  <div className="prog-step">
-                    <div className={"prog-dot"+(i<si?" done":i===si?" current":"")}></div>
-                    <div className="prog-label">{S_LABEL[s]}</div>
-                  </div>
-                  {i<S_ORDER.length-1 && <div className={"prog-line"+(i<si?" done":"")}></div>}
-                </div>
+      {!isLoggedIn && (
+        <button className="guest-price-banner" onClick={() => setAuthOpen(true)}>
+          <span className="gpb-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" /></svg>
+          </span>
+          <span className="gpb-text">
+            You're seeing regular prices. <b>Log in &amp; get Prime</b> to save up to 15% on every item.
+          </span>
+          <span className="gpb-cta">Log in</span>
+        </button>
+      )}
+
+      <main className="main">
+        {searching ? (
+          <section className="section">
+            <h2 className="section-title">
+              {searchResults.length > 0
+                ? `Results for "${query}"`
+                : `No results for "${query}"`}
+            </h2>
+            {searchResults.length === 0 && (
+              <p className="empty-search">
+                Try searching for milk, bread, chips, or eggs.
+              </p>
+            )}
+            {searchResults.length > 1 && (
+              <SortBar sort={sort} onChange={setSort} />
+            )}
+            <div className="product-grid">
+              {searchResults.map((p) => (
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
-            <div className="o-items">{(o.items||[]).map(i=>`${i.emoji} ${i.name} ×${i.qty}`).join("  ·  ")}</div>
-            <div className="o-total">{formatINR(o.total)}</div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ADMIN COMPONENTS
-// ─────────────────────────────────────────────────────────────────────────────
-function BarcodeField({ value, onChange }) {
-  const [scanning, setScanning] = useState(false);
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const rafRef = useRef(null);
-
-  const stopScan = () => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-    setScanning(false);
-  };
-
-  const startScan = async () => {
-    if (!("BarcodeDetector" in window)) {
-      const manual = prompt("Camera barcode scanning isn't supported on this browser. Enter the barcode number manually:");
-      if (manual) onChange(manual.trim());
-      return;
-    }
-    setScanning(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      const detector = new window.BarcodeDetector({
-        formats: ["ean_13","ean_8","upc_a","upc_e","code_128","code_39","codabar","itf"]
-      });
-      const scan = async () => {
-        if (!videoRef.current || !streamRef.current) return;
-        try {
-          const codes = await detector.detect(videoRef.current);
-          if (codes.length > 0) {
-            onChange(codes[0].rawValue);
-            stopScan();
-            return;
-          }
-        } catch {}
-        rafRef.current = requestAnimationFrame(scan);
-      };
-      rafRef.current = requestAnimationFrame(scan);
-    } catch (err) {
-      setScanning(false);
-      const manual = prompt("Could not open camera. Enter the barcode number manually:");
-      if (manual) onChange(manual.trim());
-    }
-  };
-
-  useEffect(() => () => stopScan(), []);
-
-  return (
-    <>
-      <div className="barcode-field">
-        <input value={value} onChange={e=>onChange(e.target.value)} placeholder="Barcode number" />
-        <button type="button" className="barcode-scan-btn" onClick={startScan}>📷</button>
-      </div>
-      {scanning && (
-        <div className="scanner-overlay">
-          <div className="scanner-frame">
-            <video ref={videoRef} className="scanner-video" playsInline muted></video>
-            <div className="scanner-reticle"></div>
-          </div>
-          <div className="scanner-hint">Point your camera at the product barcode</div>
-          <button className="scanner-close" onClick={stopScan}>Cancel</button>
-          <button className="scanner-manual" onClick={()=>{ stopScan(); const m = prompt("Enter barcode manually:"); if(m) onChange(m.trim()); }}>Enter manually instead</button>
-        </div>
-      )}
-    </>
-  );
-}
-
-function SlabEditor({ slabs, setSlabs }) {
-  const [qtyInput, setQtyInput] = useState("");
-  const [priceInput, setPriceInput] = useState("");
-  const addSlab = () => {
-    if (!qtyInput || !priceInput) return;
-    const updated = [...slabs, { qty: Number(qtyInput), price: Number(priceInput) }]
-      .sort((a,b) => a.qty - b.qty);
-    setSlabs(updated);
-    setQtyInput(""); setPriceInput("");
-  };
-  return (
-    <div className="admin-slabs-box">
-      <div className="slab-label">Bulk Deal / Slab Pricing</div>
-      {slabs.map((s, i) => (
-        <div className="admin-slab-row" key={i}>
-          <span style={{fontSize:12,color:"var(--bark-mid)",whiteSpace:"nowrap"}}>Buy {s.qty}+</span>
-          <span style={{fontSize:12,color:"var(--leaf)",fontWeight:700}}>₹{s.price} each</span>
-          <button className="remove-slab-btn" onClick={()=>setSlabs(slabs.filter((_,j)=>j!==i))}>✕</button>
-        </div>
-      ))}
-      <div className="admin-slab-row">
-        <input type="number" placeholder="Min qty (e.g. 4)" value={qtyInput} onChange={e=>setQtyInput(e.target.value)} />
-        <input type="number" placeholder="Price each (₹)" value={priceInput} onChange={e=>setPriceInput(e.target.value)} />
-        <button className="add-slab-btn" onClick={addSlab}>+ Add</button>
-      </div>
-    </div>
-  );
-}
-
-function EditProductForm({ product, onSave, onCancel }) {
-  const [name, setName] = useState(product.name);
-  const [price, setPrice] = useState(String(product.price));
-  const [emoji, setEmoji] = useState(product.emoji);
-  const [unit, setUnit] = useState(product.unit);
-  const [category, setCategory] = useState(product.category);
-  const [slabs, setSlabs] = useState(product.slabs || []);
-  const [mrp, setMrp] = useState(product.mrp ? String(product.mrp) : "");
-  const [barcode, setBarcode] = useState(product.barcode || "");
-  return (
-    <div className="edit-product-box">
-      <div className="edit-product-title">✏️ Editing: {product.name}</div>
-      <div className="fgrp"><label>Product Name</label><input value={name} onChange={e=>setName(e.target.value)} /></div>
-      <div className="fgrp"><label>Selling Price (₹)</label><input type="number" value={price} onChange={e=>setPrice(e.target.value)} /></div>
-      <div className="fgrp"><label>MRP ₹ (original price, optional)</label><input type="number" value={mrp} onChange={e=>setMrp(e.target.value)} placeholder="Leave blank if no discount" /></div>
-      <div className="fgrp"><label>Emoji</label><input value={emoji} onChange={e=>setEmoji(e.target.value)} /></div>
-      <div className="fgrp"><label>Unit</label><input value={unit} onChange={e=>setUnit(e.target.value)} /></div>
-      <div className="fgrp"><label>Category</label><input value={category} onChange={e=>setCategory(e.target.value)} /></div>
-      <div className="fgrp"><label>Barcode</label><BarcodeField value={barcode} onChange={setBarcode} /></div>
-      <SlabEditor slabs={slabs} setSlabs={setSlabs} />
-      <div style={{display:"flex",gap:8,marginTop:12}}>
-        <button className="save-edit-btn" onClick={()=>onSave({name,price,emoji,unit,category,slabs,mrp:mrp?Number(mrp):null,barcode})}>✅ Save Changes</button>
-        <button className="cancel-edit-btn" onClick={onCancel}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-function ProductsTab({ products, onAdd, onDelete, onEdit }) {
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [emoji, setEmoji] = useState("🛒");
-  const [unit, setUnit] = useState("pack");
-  const [category, setCategory] = useState("Biscuit");
-  const [editingId, setEditingId] = useState(null);
-
-  const [addSlabs, setAddSlabs] = useState([]);
-  const [addMrp, setAddMrp] = useState("");
-  const [addBarcode, setAddBarcode] = useState("");
-  const handleAdd = async () => {
-    await onAdd({ name, price, emoji, unit, category, slabs: addSlabs, mrp: addMrp ? Number(addMrp) : null, barcode: addBarcode });
-    setName(""); setPrice(""); setEmoji("🛒"); setUnit("pack"); setCategory("Biscuit"); setAddSlabs([]); setAddMrp(""); setAddBarcode("");
-  };
-
-  const handleSaveEdit = async (id, updated) => {
-    await onEdit(id, updated);
-    setEditingId(null);
-  };
-
-  return (
-    <>
-      <div className="addp-box">
-        <h3>Add New Product</h3>
-        <div className="fgrp"><label>Product Name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Parle-G" /></div>
-        <div className="fgrp"><label>Selling Price (₹)</label><input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="e.g. 20" /></div>
-        <div className="fgrp"><label>MRP ₹ (original price, optional)</label><input type="number" value={addMrp} onChange={e=>setAddMrp(e.target.value)} placeholder="Leave blank if no discount" /></div>
-        <div className="fgrp"><label>Emoji</label><input value={emoji} onChange={e=>setEmoji(e.target.value)} placeholder="🍪" /></div>
-        <div className="fgrp"><label>Unit</label><input value={unit} onChange={e=>setUnit(e.target.value)} placeholder="pack / kg / L" /></div>
-        <div className="fgrp"><label>Category</label><input value={category} onChange={e=>setCategory(e.target.value)} placeholder="e.g. Biscuit, Dairy..." /></div>
-        <div className="fgrp"><label>Barcode</label><BarcodeField value={addBarcode} onChange={setAddBarcode} /></div>
-        <SlabEditor slabs={addSlabs} setSlabs={setAddSlabs} />
-        <button className="add-prod-btn" onClick={handleAdd} style={{marginTop:10}}>+ Add Product</button>
-      </div>
-      {products.map(p => (
-        <div key={p.id}>
-          {editingId === p.id
-            ? <EditProductForm
-                product={p}
-                onSave={(updated) => handleSaveEdit(p.id, updated)}
-                onCancel={() => setEditingId(null)}
-              />
-            : <div className="prod-list-item">
-                <div className="pli-left">
-                  <span style={{fontSize:30}}>{p.emoji}</span>
-                  <div>
-                    <div className="pli-name">{p.name}</div>
-                    <div className="pli-sub">{p.category} · {formatINR(p.price)}/{p.unit}</div>
-                    {p.barcode && <div className="pli-sub" style={{fontSize:11}}>🔖 {p.barcode}</div>}
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:6}}>
-                  <button className="edit-btn" onClick={()=>setEditingId(p.id)}>✏️ Edit</button>
-                  <button className="del-btn" onClick={()=>onDelete(p.id)}>✕</button>
-                </div>
-              </div>
-          }
-        </div>
-      ))}
-    </>
-  );
-}
-
-function CustomersTab({ customers }) {
-  if (!customers.length) return (
-    <div className="empty-box"><div className="big">👥</div><p>No customers yet</p></div>
-  );
-  return (
-    <div className="customers-tab-grid">
-      {customers.map(c => (
-        <div className="customer-card" key={c.phone}>
-          <div className="customer-card-top">
-            <div>
-              <div className="customer-name-big">👤 {c.name}</div>
-              <div className="customer-phone">📞 {c.phone}</div>
-            </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:11,color:"var(--bark-light)"}}>Last order</div>
-              <div style={{fontSize:12,fontWeight:600,color:"var(--bark-mid)"}}>{new Date(c.lastOrder).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}</div>
-            </div>
-          </div>
-          <div className="customer-stats">
-            <span className="customer-stat-pill">🛒 {c.totalOrders} order{c.totalOrders!==1?"s":""}</span>
-            <span className="customer-stat-pill green">💰 {formatINR(c.totalSpent)} spent</span>
-          </div>
-          <div className="customer-address">
-            <span>📍</span>
-            <span>{c.address}</span>
-          </div>
-          {c.location && (
-            <a className="map-link" style={{marginTop:8,display:"inline-flex"}}
-              href={`https://www.google.com/maps?q=${c.location.lat},${c.location.lng}`}
-              target="_blank" rel="noopener noreferrer">
-              🗺️ Open in Google Maps
-            </a>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ChargesTab({ charges, onAddCharge, onToggleCharge, onDeleteCharge }) {
-  const [chName, setChName] = useState("");
-  const [chPrice, setChPrice] = useState("");
-  const handleAdd = () => {
-    if (!chName.trim() || !chPrice) return;
-    onAddCharge({ name: chName, price: Number(chPrice) });
-    setChName(""); setChPrice("");
-  };
-  return (
-    <>
-      <div className="add-charge-box">
-        <h3>Add Extra Charge</h3>
-        <div className="charge-input-row">
-          <input placeholder="e.g. Delivery, Rain Charge" value={chName} onChange={e=>setChName(e.target.value)} />
-          <input type="number" placeholder="₹" value={chPrice} onChange={e=>setChPrice(e.target.value)} style={{maxWidth:80}} />
-          <button className="charge-add-btn" onClick={handleAdd}>+ Add</button>
-        </div>
-        <p style={{fontSize:12,color:"var(--bark-light)",marginTop:10}}>Turn a charge ON to apply it to all customer orders.</p>
-      </div>
-      {charges.length === 0
-        ? <div className="empty-box"><div className="big">🧾</div><p>No charges added yet</p></div>
-        : charges.map(c => (
-          <div className={"charge-card"+(c.active?" active-charge":"")} key={c.id}>
-            <div className="charge-info">
-              <div className="charge-name">{c.name}</div>
-              <div className="charge-price">{formatINR(c.price)}</div>
-            </div>
-            <div className="charge-actions">
-              <label className="toggle-switch">
-                <input type="checkbox" checked={c.active} onChange={()=>onToggleCharge(c.id)} />
-                <span className="toggle-slider"></span>
-              </label>
-              <button className="charge-del" onClick={()=>onDeleteCharge(c.id)}>✕</button>
-            </div>
-          </div>
-        ))
-      }
-    </>
-  );
-}
-
-function HistoryTab({ orders }) {
-  const [openDay, setOpenDay] = useState(null);
-  // Group orders by calendar date
-  const groups = {};
-  [...orders].sort((a,b)=>b.timestamp-a.timestamp).forEach(o => {
-    const d = new Date(o.timestamp);
-    const key = d.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(o);
-  });
-  const dayKeys = Object.keys(groups);
-
-  if (dayKeys.length === 0) return (
-    <div className="empty-box"><div className="big">📅</div><p>No order history yet</p></div>
-  );
-
-  return (
-    <div>
-      {dayKeys.map(day => {
-        const dayOrders = groups[day];
-        const dayRevenue = dayOrders.filter(o=>o.status==="delivered").reduce((s,o)=>s+o.total,0);
-        const isOpen = openDay === day;
-        return (
-          <div className="history-day" key={day}>
-            <div className="history-day-header" onClick={()=>setOpenDay(isOpen?null:day)}>
-              <div>
-                <div className="history-date">{day}</div>
-                <div className="history-day-stats">{dayOrders.length} order{dayOrders.length!==1?"s":""} · {dayOrders.filter(o=>o.status==="delivered").length} delivered</div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div className="history-day-revenue">{formatINR(dayRevenue)}</div>
-                <span className={"history-chevron"+(isOpen?" open":"")}>▼</span>
-              </div>
-            </div>
-            {isOpen && (
-              <div className="history-orders">
-                {dayOrders.map(o => (
-                  <div className="history-order" key={o.id}>
-                    <div className="history-order-top">
-                      <span className="history-order-id">#{o.id} · {new Date(o.timestamp).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
-                      <span className={"sbadge s-"+o.status}>{S_LABEL_A[o.status]}</span>
-                    </div>
-                    <div style={{fontSize:12,color:"var(--bark-mid)",marginBottom:4}}>👤 {o.customer?.name} · {o.customer?.phone}</div>
-                    <div className="history-order-items">{(o.items||[]).map(i=>`${i.name} ×${i.qty}`).join(", ")}</div>
-                    <div style={{fontWeight:700,fontSize:14,color:"var(--bark)"}}>{formatINR(o.total)}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function AdminPanel({ orders, products, setOrders, setProducts, showToast, onLogout, storeOpen, setStoreOpen, customers, charges, setCharges, bioAvailable, bioRegistered, onSetupBiometric, onRemoveBiometric, bioBusy }) {
-  const [tab, setTab] = useState("orders");
-  // Today's stats only (resets at midnight, calendar day)
-  const startOfToday = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
-  const todayOrders = orders.filter(o => o.timestamp >= startOfToday);
-  const pending = orders.filter(o=>o.status==="pending").length; // pending stays all-time so you never miss one
-  const todayRevenue = todayOrders.filter(o=>o.status==="delivered").reduce((s,o)=>s+o.total,0);
-  const todayDelivered = todayOrders.filter(o=>o.status==="delivered").length;
-
-  // ── NOTIFICATIONS ─────────────────────────────────────────────────────────
-  const [notifStatus, setNotifStatus] = useState(
-    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
-  );
-  const prevOrderCount = useRef(orders.length);
-
-  const requestNotifPermission = async () => {
-    try {
-      if (typeof Notification === "undefined") { showToast("⚠️ Notifications not supported here"); return; }
-      const result = await Notification.requestPermission();
-      setNotifStatus(result);
-      if (result === "granted") showToast("🔔 Notifications enabled!");
-    } catch { showToast("⚠️ Could not enable notifications"); }
-  };
-
-  const fireNotification = useCallback((order) => {
-    try {
-      if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-      const title = "🛒 New Order — NGS Store!";
-      const body = `${order.customer?.name} ordered ${(order.items||[]).map(i=>`${i.name} ×${i.qty}`).join(", ")} • ${formatINR(order.total)}`;
-      // On mobile (Android Chrome), `new Notification()` throws "Illegal constructor".
-      // Use the service worker registration to show the notification instead.
-      if ("serviceWorker" in navigator && navigator.serviceWorker.ready) {
-        navigator.serviceWorker.ready
-          .then(reg => reg.showNotification(title, { body, tag: order.id }))
-          .catch(() => {});
-      } else {
-        // Desktop fallback
-        try { new Notification(title, { body, tag: order.id }); } catch {}
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    const newCount = orders.length;
-    if (newCount > prevOrderCount.current) {
-      const newOrders = orders.slice(0, newCount - prevOrderCount.current);
-      newOrders.forEach(o => fireNotification(o));
-    }
-    prevOrderCount.current = newCount;
-  }, [orders.length]);
-
-  const toggleStore = async () => {
-    const next = !storeOpen;
-    setStoreOpen(next);
-    try { await db.setStoreOpen(next); } catch {}
-    showToast(next ? "✅ Store is now OPEN" : "🔒 Store is now CLOSED");
-  };
-
-  const saveCharges = async (updated) => {
-    setCharges(updated);
-    try { await db.saveCharges(updated); } catch {}
-  };
-  const onAddCharge = (ch) => { saveCharges([...charges, { ...ch, id: Date.now(), active: true }]); showToast("✅ Charge added"); };
-  const onToggleCharge = (id) => { saveCharges(charges.map(c => c.id===id ? {...c, active: !c.active} : c)); };
-  const onDeleteCharge = (id) => { saveCharges(charges.filter(c => c.id!==id)); showToast("🗑️ Charge removed"); };
-
-
-
-  const updateStatus = async (id, status) => {
-    const updated = orders.map(o=>o.id===id?{...o,status}:o);
-    setOrders(updated);
-    try { await db.updateOrderStatus(id, status); } catch {}
-    showToast(status==="delivered"?"✅ Marked delivered":"📦 Status updated");
-  };
-
-  // ── ESC/POS helpers ─────────────────────────────────────────────────────
-  const ESC = 0x1B; const GS = 0x1D;
-  const enc = new TextEncoder();
-
-  const escPos = {
-    init:       [ESC, 0x40],
-    bold_on:    [ESC, 0x45, 0x01],
-    bold_off:   [ESC, 0x45, 0x00],
-    center:     [ESC, 0x61, 0x01],
-    left:       [ESC, 0x61, 0x00],
-    large:      [GS,  0x21, 0x11],
-    normal:     [GS,  0x21, 0x00],
-    feed:       [ESC, 0x64, 0x03],
-    cut:        [GS,  0x56, 0x41, 0x10],
-  };
-
-  const buildReceipt = (o) => {
-    const date = new Date(o.timestamp).toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
-    const LINE = "--------------------------------";
-    const pad = (l, r, w=32) => { const gap = w - l.length - r.length; return l + (gap > 0 ? " ".repeat(gap) : " ") + r; };
-
-    const chunks = [];
-    const add = (bytes) => chunks.push(new Uint8Array(bytes));
-    const txt = (str) => chunks.push(enc.encode(str + String.fromCharCode(10)));
-
-    add(escPos.init);
-    add(escPos.center);
-    add(escPos.large);
-    add(escPos.bold_on);
-    txt("NGS STORE");
-    add(escPos.normal);
-    add(escPos.bold_off);
-    txt("Fresh Groceries");
-    txt("");
-    add(escPos.left);
-    txt(LINE);
-    txt("Order : #" + o.id);
-    txt("Date  : " + date);
-    txt(LINE);
-    add(escPos.bold_on);
-    txt("CUSTOMER DETAILS");
-    add(escPos.bold_off);
-    txt("Name  : " + (o.customer?.name || ""));
-    txt("Phone : " + (o.customer?.phone || ""));
-    // wrap address at 32 chars
-    const addr = o.customer?.address || "";
-    for (let i=0; i<addr.length; i+=32) {
-      txt((i===0?"Addr  : ":"        ") + addr.slice(i,i+32));
-    }
-    txt(LINE);
-    add(escPos.bold_on);
-    txt("ITEMS");
-    add(escPos.bold_off);
-    const items = Array.isArray(o.items) ? o.items : [];
-    if (items.length === 0) {
-      txt("(no items)");
-    } else {
-      items.forEach(i => {
-        const qty = Number(i.qty) || 1;
-        const basePrice = Number(i.price) || 0;
-        const ep = (!i.slabs || !i.slabs.length)
-          ? basePrice
-          : Number(([...i.slabs].reverse().find(s => qty >= s.qty) || {price: basePrice}).price);
-        const lineTotal = ep * qty;
-        const rawName = (i.name || "Item").toString();
-        const name = rawName.length > 18 ? rawName.slice(0, 18) : rawName;
-        txt(pad(name + " x" + qty, "Rs." + lineTotal));
-      });
-    }
-    txt(LINE);
-    if (o.charges && o.charges.length > 0) {
-      txt(pad("Subtotal", "Rs." + (o.subtotal != null ? o.subtotal : o.total)));
-      o.charges.forEach(c => txt(pad(c.name, "Rs." + c.price)));
-      txt(LINE);
-    }
-    add(escPos.bold_on);
-    add(escPos.large);
-    txt(pad("TOTAL", "Rs." + o.total));
-    add(escPos.normal);
-    add(escPos.bold_off);
-    txt(LINE);
-    add(escPos.left);
-    txt("Payment: " + (o.payment?.method === "upi" ? "UPI (" + (o.payment.status === "customer_confirmed_paid" ? "Paid" : "Pending") + ")" : "Cash on Delivery"));
-    txt(LINE);
-    add(escPos.center);
-    txt("");
-    txt("Thank you for ordering!");
-    txt("NGS Store");
-    txt("");
-    add(escPos.feed);
-    add(escPos.cut);
-
-    // Merge all chunks
-    const total = chunks.reduce((s,c)=>s+c.length,0);
-    const merged = new Uint8Array(total);
-    let offset = 0;
-    chunks.forEach(c => { merged.set(c, offset); offset += c.length; });
-    return merged;
-  };
-
-  const printReceipt = async (o) => {
-    if (!navigator.bluetooth) {
-      showToast("❌ Web Bluetooth not supported on this browser");
-      return;
-    }
-    try {
-      showToast("🔍 Searching for printer...");
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { namePrefix: "PT-210" },
-          { namePrefix: "Posiflow" },
-          { namePrefix: "pos" },
-          { namePrefix: "POS" },
-          { namePrefix: "Printer" },
-          { namePrefix: "printer" },
-          { namePrefix: "BT" },
-        ],
-        optionalServices: [
-          "000018f0-0000-1000-8000-00805f9b34fb", // common POS service
-          "e7810a71-73ae-499d-8c15-faa9aef0c3f2", // common ESC/POS BT
-          "49535343-fe7d-4ae5-8fa9-9fafd205e455", // another common UUID
-        ]
-      });
-      showToast("🔗 Connecting...");
-      const server = await device.gatt.connect();
-      // Try known ESC/POS service UUIDs
-      const serviceUUIDs = [
-        "000018f0-0000-1000-8000-00805f9b34fb",
-        "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
-        "49535343-fe7d-4ae5-8fa9-9fafd205e455",
-      ];
-      let characteristic = null;
-      for (const uuid of serviceUUIDs) {
-        try {
-          const service = await server.getPrimaryService(uuid);
-          const chars = await service.getCharacteristics();
-          characteristic = chars.find(c => c.properties.write || c.properties.writeWithoutResponse);
-          if (characteristic) break;
-        } catch {}
-      }
-      if (!characteristic) {
-        // fallback: try first available service
-        const services = await server.getPrimaryServices();
-        for (const svc of services) {
-          const chars = await svc.getCharacteristics();
-          characteristic = chars.find(c => c.properties.write || c.properties.writeWithoutResponse);
-          if (characteristic) break;
-        }
-      }
-      if (!characteristic) { showToast("❌ Could not find printer characteristic"); return; }
-
-      showToast("🖨️ Printing...");
-      const data = buildReceipt(o);
-      // PT-210 has a small buffer — send in SMALL chunks with pauses,
-      // otherwise the middle of the receipt gets dropped.
-      const CHUNK = 20;
-      for (let i=0; i<data.length; i+=CHUNK) {
-        const chunk = data.slice(i, i+CHUNK);
-        try {
-          if (characteristic.properties.writeWithoutResponse) {
-            await characteristic.writeValueWithoutResponse(chunk);
-          } else {
-            await characteristic.writeValue(chunk);
-          }
-        } catch (e) {
-          // retry once on failure
-          await new Promise(r => setTimeout(r, 60));
-          try { await characteristic.writeValue(chunk); } catch {}
-        }
-        await new Promise(r => setTimeout(r, 30));
-      }
-      await new Promise(r => setTimeout(r, 300)); // let printer finish
-      showToast("✅ Printed successfully!");
-      device.gatt.disconnect();
-    } catch (err) {
-      if (err.name === "NotFoundError") showToast("❌ No printer selected");
-      else showToast("❌ " + (err.message || "Print failed"));
-    }
-  };
-
-  const onAdd = async (np) => {
-    if (!np.name||!np.price) { showToast("⚠️ Fill name & price"); return; }
-    const p = {...np, id:Date.now(), price:Number(np.price), mrp: np.mrp ?? null, barcode: np.barcode ?? "", slabs: np.slabs ?? [], inStock:true};
-    setProducts([...products, p]);
-    try { await db.saveProduct(p); } catch (e) { showToast("⚠️ Save failed, check connection"); }
-    showToast("✅ Product added!");
-  };
-
-  const onDelete = async (id) => {
-    setProducts(products.filter(p=>p.id!==id));
-    try { await db.deleteProduct(id); } catch {}
-    showToast("🗑️ Removed");
-  };
-
-  const onEdit = async (id, updated) => {
-    const editedProducts = products.map(p =>
-      p.id === id ? { ...p, ...updated, price: Number(updated.price), mrp: updated.mrp ?? null } : p
-    );
-    setProducts(editedProducts);
-    const edited = editedProducts.find(p => p.id === id);
-    try { await db.saveProduct(edited); } catch {}
-    showToast("✅ Product updated!");
-  };
-
-  return (
-    <>
-      <div className="ahdr">
-        <div><div className="ahdr-title">NGS Dashboard</div><div className="ahdr-sub">Store Manager</div></div>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          {pending>0 && <span className="notif-dot">🔔 {pending}</span>}
-<button className="logout-btn" onClick={onLogout}>Logout</button>
-        </div>
-      </div>
-      <div className="atabs">
-        <button className={"atab"+(tab==="orders"?" active":"")} onClick={()=>setTab("orders")}>📦 Orders</button>
-        <button className={"atab"+(tab==="products"?" active":"")} onClick={()=>setTab("products")}>🏪 Products</button>
-      <button className={"atab"+(tab==="customers"?" active":"")} onClick={()=>setTab("customers")}>👥 Customers</button>
-      <button className={"atab"+(tab==="history"?" active":"")} onClick={()=>setTab("history")}>📅 History</button>
-      <button className={"atab"+(tab==="charges"?" active":"")} onClick={()=>setTab("charges")}>🧾 Charges</button>
-      </div>
-      <div className="acontent">
-        {tab==="orders" && (
-          <>
-            {notifStatus !== "granted" && notifStatus !== "unsupported" && (
-              <div className="notif-permission-bar">
-                <p>🔔 Enable notifications to get alerted when new orders arrive</p>
-                <button className="notif-enable-btn" onClick={requestNotifPermission}>Enable</button>
-              </div>
-            )}
-            {notifStatus === "granted" && (
-              <div style={{background:"var(--leaf-pale)",borderRadius:10,padding:"8px 14px",marginBottom:14,fontSize:13,color:"var(--leaf)",fontWeight:600}}>
-                🔔 Notifications are ON — you'll be alerted for every new order
-              </div>
-            )}
-            <div className={"store-toggle-card " + (storeOpen ? "open" : "closed")}>
-              <div>
-                <div className={"toggle-label " + (storeOpen ? "open" : "closed")}>
-                  {storeOpen ? "🟢 Store is Open" : "🔴 Store is Closed"}
-                </div>
-                <div className="toggle-sub">{storeOpen ? "Accepting orders from customers" : "Customers cannot place orders"}</div>
-              </div>
-              <label className="toggle-switch">
-                <input type="checkbox" checked={storeOpen} onChange={toggleStore} />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-            {bioAvailable && (
-              <div className="store-toggle-card" style={{marginBottom:18}}>
-                <div>
-                  <div className="toggle-label" style={{color:"var(--bark)"}}>
-                    👆 {bioRegistered ? "Fingerprint Login: ON" : "Fingerprint Login: OFF"}
-                  </div>
-                  <div className="toggle-sub">{bioRegistered ? "Unlock admin without typing your password" : "Skip typing your password next time"}</div>
-                </div>
-                {bioRegistered
-                  ? <button onClick={onRemoveBiometric} style={{padding:"7px 12px",border:"1.5px solid var(--danger)",borderRadius:10,background:"var(--danger-pale)",color:"var(--danger)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>Turn Off</button>
-                  : <button onClick={onSetupBiometric} disabled={bioBusy} style={{padding:"7px 14px",border:"1.5px solid var(--leaf)",borderRadius:10,background:"var(--leaf-pale)",color:"var(--leaf)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>{bioBusy?"Setting up...":"Set Up"}</button>
-                }
-              </div>
-            )}
-            <div style={{fontSize:12,color:"var(--bark-light)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>📊 Today's Summary</div>
-            <div className="stats-grid">
-              <div className="stat-box"><div className="stat-num spice">{pending}</div><div className="stat-lbl">Pending (all)</div></div>
-              <div className="stat-box"><div className="stat-num">{todayOrders.length}</div><div className="stat-lbl">Orders Today</div></div>
-              <div className="stat-box"><div className="stat-num green">{todayDelivered}</div><div className="stat-lbl">Delivered Today</div></div>
-              <div className="stat-box"><div className="stat-num green" style={{fontSize:20}}>{formatINR(todayRevenue)}</div><div className="stat-lbl">Revenue Today</div></div>
-            </div>
-            {orders.length===0
-              ? <div className="empty-box"><div className="big">📭</div><p>No orders yet</p></div>
-              : orders.map(o=>(
-                <div className={"ocard"+(o.status==="pending"?" new-order":"")} key={o.id}>
-                  <div className="ocard-top">
-                    <div><div className="o-id">#{o.id}</div><div className="o-date">{new Date(o.timestamp).toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div>
-                    <span className={"sbadge s-"+o.status}>{S_LABEL_A[o.status]}</span>
-                  </div>
-                  <div className="cust-block">
-                    <div className="cust-name">👤 {o.customer?.name}</div>
-                    <div className="cust-row"><span>📞</span>{o.customer?.phone}</div>
-                    <div className="cust-row"><span>📍</span><span>{o.customer?.address}</span></div>
-                    {o.customer?.location && (
-                      <a className="map-link" href={`https://www.google.com/maps?q=${o.customer?.location?.lat},${o.customer?.location?.lng}`} target="_blank" rel="noopener noreferrer">🗺️ Open in Google Maps</a>
-                    )}
-                  </div>
-                  <div className="o-items">{o.items?.map(i=>`${i.emoji} ${i.name} ×${i.qty}`).join("  ·  ")}</div>
-                  {o.charges && o.charges.length > 0 && (
-                    <div style={{fontSize:12,color:"var(--spice)",marginBottom:4}}>
-                      {o.subtotal != null && <div style={{color:"var(--bark-light)"}}>Subtotal: {formatINR(o.subtotal)}</div>}
-                      {o.charges.map((c,i)=><div key={i}>+ {c.name}: {formatINR(c.price)}</div>)}
-                    </div>
-                  )}
-                  <div className="o-total">{formatINR(o.total)}</div>
-                  {o.payment && (
-                    <div style={{marginTop:6,marginBottom:6}}>
-                      {o.payment.method === "upi"
-                        ? <span className="sbadge" style={{background: o.payment.status === "customer_confirmed_paid" ? "var(--leaf-pale)" : "#fff3e0", color: o.payment.status === "customer_confirmed_paid" ? "var(--leaf)" : "#bf360c"}}>
-                            📲 UPI: {o.payment.status === "customer_confirmed_paid" ? "Customer says PAID — verify in your bank/UPI app" : "Awaiting payment"}
-                          </span>
-                        : <span className="sbadge" style={{background:"var(--leaf-pale)",color:"var(--leaf)"}}>💵 Cash on Delivery</span>
-                      }
-                    </div>
-                  )}
-                  <select className="status-sel" value={o.status} onChange={e=>updateStatus(o.id,e.target.value)}>
-                    {S_ORDER.map(s=><option key={s} value={s}>{S_LABEL_A[s]}</option>)}
-                  </select>
-                  <button className="print-btn" onClick={()=>printReceipt(o)}>🖨️ Print Receipt</button>
-                </div>
-              ))
-            }
-          </>
-        )}
-        {tab==="products" && <ProductsTab products={products} onAdd={onAdd} onDelete={onDelete} onEdit={onEdit} />}
-        {tab==="customers" && <CustomersTab customers={customers} />}
-        {tab==="history" && <HistoryTab orders={orders} />}
-        {tab==="charges" && <ChargesTab charges={charges} onAddCharge={onAddCharge} onToggleCharge={onToggleCharge} onDeleteCharge={onDeleteCharge} />}
-      </div>
-    </>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ROOT APP
-// ─────────────────────────────────────────────────────────────────────────────
-function AppInner() {
-  const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
-  const [storeOpen, setStoreOpen] = useState(true);
-  const [customers, setCustomers] = useState([]);
-  const [charges, setCharges] = useState([]);
-  const [toast, setToast] = useState(null);
-
-  // Customer state
-  const [tab, setTab] = useState("shop");
-  const [cart, setCart] = useState({});
-  const [cat, setCat] = useState("All");
-  const [success, setSuccess] = useState(null);
-  const [myPhone, setMyPhone] = useState(() => {
-    try { const p = JSON.parse(localStorage.getItem(CUSTOMER_PROFILE_KEY) || "null"); return p?.phone || ""; } catch { return ""; }
-  });
-
-  // Admin / security state
-  const [mode, setMode] = useState("customer"); // "customer" | "login" | "admin" | "decoy"
-  const [pw, setPw] = useState("");
-  const [pwErr, setPwErr] = useState("");
-  const [tapCount, setTapCount] = useState(0);
-  const [bioAvailable, setBioAvailable] = useState(false);
-  const [bioRegistered, setBioRegistered] = useState(hasBiometricRegistered());
-  const [bioBusy, setBioBusy] = useState(false);
-  const tapTimer = useRef(null);
-  const lastAttemptTime = useRef(0);
-
-  const showToast = useCallback((msg) => { setToast(msg); setTimeout(()=>setToast(null), 3000); }, []);
-
-  // Load data from Supabase + poll every 4s so all phones stay in sync
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [pr, or, so, cu, ch] = await Promise.all([
-          db.getProducts().catch(()=>null),
-          db.getOrders().catch(()=>null),
-          db.getStoreOpen().catch(()=>null),
-          db.getCustomers().catch(()=>null),
-          db.getCharges().catch(()=>null),
-        ]);
-        if (pr && pr.length) setProducts(pr);
-        else if (pr && pr.length === 0) {
-          // First run — seed the default product into the database
-          try { await db.saveProduct(DEFAULT_PRODUCTS[0]); setProducts(DEFAULT_PRODUCTS); } catch {}
-        }
-        if (or) setOrders(or);
-        if (so !== null && so !== undefined) setStoreOpen(so);
-        if (cu) setCustomers(cu);
-        if (ch) setCharges(ch);
-      } catch {}
-    };
-    load();
-    const iv = setInterval(load, 4000);
-    return () => clearInterval(iv);
-  }, []);
-
-  // Clear any stale lockout from previous wrong hash bug
-  useEffect(() => { clearLockout(); }, []);
-
-  // Check if this device supports fingerprint/face unlock
-  useEffect(() => { isBiometricAvailable().then(setBioAvailable); }, []);
-
-  const handleBiometricLogin = async () => {
-    setBioBusy(true);
-    setPwErr("");
-    try {
-      await verifyBiometric();
-      setSession();
-      setMode("admin");
-    } catch (err) {
-      setPwErr("⚠️ Fingerprint not recognized — use password instead");
-    }
-    setBioBusy(false);
-  };
-
-  const handleSetupBiometric = async () => {
-    setBioBusy(true);
-    try {
-      await registerBiometric();
-      setBioRegistered(true);
-      showToast("✅ Fingerprint login enabled!");
-    } catch (err) {
-      showToast("⚠️ Could not set up fingerprint");
-    }
-    setBioBusy(false);
-  };
-
-  // Restore admin session on mount
-  useEffect(() => {
-    const s = getSession();
-    if (s) { setMode("admin"); }
-  }, []);
-
-
-
-  // ── SECRET TAP: tap logo 5 times within 3 seconds ─────────────────────────
-  const handleLogoTap = () => {
-    const next = tapCount + 1;
-    setTapCount(next);
-    clearTimeout(tapTimer.current);
-    if (next >= 5) {
-      setTapCount(0);
-      if (isLockedOut()) {
-        showToast(`🔒 Locked out for ${lockoutRemainingMins()} more minutes`);
-        return;
-      }
-      setMode("login");
-    } else {
-      tapTimer.current = setTimeout(() => setTapCount(0), 3000);
-    }
-  };
-
-  // ── LOGIN ─────────────────────────────────────────────────────────────────
-  const handleLogin = async () => {
-    // Rate limit: max 1 attempt per 2 seconds
-    if (Date.now() - lastAttemptTime.current < 2000) return;
-    lastAttemptTime.current = Date.now();
-
-    if (isLockedOut()) {
-      setPwErr(`🔒 Too many attempts. Try again in ${lockoutRemainingMins()} minutes.`);
-      return;
-    }
-
-    const hash = await hashPassword(pw);
-    setPw("");
-
-    if (hash === PWD_HASH) {
-      clearLockout();
-      setSession();
-      setMode("admin");
-      setPwErr("");
-    } else {
-      const lk = getLockout();
-      const attempts = (lk?.attempts || 0) + 1;
-      setLockout(attempts);
-      if (attempts >= MAX_ATTEMPTS) {
-        // Show decoy panel to confuse attacker
-        setMode("decoy");
-        setPwErr("");
-      } else {
-        setPwErr(`❌ Wrong password. ${MAX_ATTEMPTS - attempts} attempt${MAX_ATTEMPTS-attempts!==1?"s":""} left.`);
-      }
-    }
-  };
-
-  const handleLogout = () => {
-    clearSession();
-    setMode("customer");
-  };
-
-  const handleOrderPlaced = async (order, phone) => {
-    setOrders([order, ...orders]);
-    setSuccess(order.id);
-    setMyPhone(phone);
-    // Save order to shared database
-    try { await db.saveOrder(order); } catch (e) { showToast("⚠️ Order may not have saved — check internet"); }
-
-    // Save/update customer record in database
-    try {
-      const prevCustomers = await db.getCustomers().catch(()=>[]);
-      const existing = prevCustomers.find(c => c.phone === order.customer.phone);
-      const record = {
-        phone: order.customer.phone,
-        name: order.customer.name,
-        address: order.customer.address,
-        location: order.customer.location || null,
-        firstOrder: existing ? existing.firstOrder : order.timestamp,
-        lastOrder: order.timestamp,
-        totalOrders: existing ? existing.totalOrders + 1 : 1,
-        totalSpent: existing ? existing.totalSpent + order.total : order.total,
-      };
-      await db.saveCustomer(record);
-      setCustomers(existing
-        ? prevCustomers.map(c => c.phone === record.phone ? record : c)
-        : [record, ...prevCustomers]);
-    } catch {}
-  };
-
-  const cartCount = Object.values(cart).reduce((a,b)=>a+b,0);
-
-  // ── DECOY PANEL (shown after 3 wrong attempts) ────────────────────────────
-  if (mode === "decoy") return (
-    <>
-      <style>{css}</style>
-      <div className="decoy-wrap">
-        <h2>Nothing here</h2>
-        <p>This page does not exist.</p>
-        <button onClick={()=>setMode("customer")} style={{marginTop:20,background:"none",border:"none",color:"#bbb",cursor:"pointer",fontSize:12}}>Go back</button>
-      </div>
-    </>
-  );
-
-  // ── LOGIN SCREEN ──────────────────────────────────────────────────────────
-  if (mode === "login") return (
-    <>
-      <style>{css}</style>
-      <div className="login-wrap">
-        <div className="login-card">
-          <div className="login-icon">🔐</div>
-          <h1>NGS Admin</h1>
-          <p>{bioRegistered ? "Use your fingerprint or password" : "Enter your password to continue"}</p>
-
-          {bioAvailable && bioRegistered && (
-            <button
-              onClick={handleBiometricLogin}
-              disabled={bioBusy}
-              style={{width:"100%",padding:"14px",marginBottom:14,border:"2px solid var(--leaf)",borderRadius:14,background:"var(--leaf-pale)",color:"var(--leaf)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
-            >
-              👆 {bioBusy ? "Verifying..." : "Unlock with Fingerprint"}
-            </button>
-          )}
-
-          <input
-            type="password" placeholder="Password" value={pw}
-            onChange={e=>setPw(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&handleLogin()}
-            autoComplete="off"
+          </section>
+        ) : activeCategory ? (
+          <CategoryView
+            category={activeCategory}
+            products={products}
+            sort={sort}
+            onSortChange={setSort}
+            onBack={() => setActiveCategory(null)}
           />
-          <button className="login-btn" onClick={handleLogin}>Enter Dashboard</button>
-          {pwErr && <div className="login-err">{pwErr}</div>}
-          {isLockedOut() && (
-            <div className="lockout-msg">🔒 Locked out for {lockoutRemainingMins()} minutes</div>
-          )}
-          <button onClick={()=>{setMode("customer");setPw("");setPwErr("");}} style={{marginTop:16,background:"none",border:"none",color:"var(--bark-light)",cursor:"pointer",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>← Back to store</button>
-        </div>
-      </div>
-    </>
-  );
+        ) : (
+          <HomeView
+            products={products}
+            categories={categories}
+            offer={settings.offerBanner}
+            onCategoryClick={setActiveCategory}
+          />
+        )}
+      </main>
 
-  // ── ADMIN DASHBOARD ───────────────────────────────────────────────────────
-  if (mode === "admin") return (
-    <>
-      <style>{css}</style>
-      {toast && <div className="toast">{toast}</div>}
-      <div id="thermal-receipt"></div>
-      <AdminPanel
-        orders={orders} products={products}
-        setOrders={setOrders} setProducts={setProducts}
-        showToast={showToast} onLogout={handleLogout}
-        storeOpen={storeOpen} setStoreOpen={setStoreOpen}
-        customers={customers}
-        charges={charges} setCharges={setCharges}
-        bioAvailable={bioAvailable} bioRegistered={bioRegistered}
-        onSetupBiometric={handleSetupBiometric}
-        onRemoveBiometric={() => { clearBiometric(); setBioRegistered(false); showToast("Fingerprint login removed"); }}
-        bioBusy={bioBusy}
+      {/* Live order tracker — floats just above the cart bar total */}
+      {activeOrder && !cartOpen && !trackOpen && (
+        <LiveOrderPill
+          order={activeOrder}
+          raised={totalCount > 0}
+          onOpen={() => openTracker(activeOrder)}
+        />
+      )}
+
+      {/* Sticky bottom cart bar (mobile-friendly) */}
+      {totalCount > 0 && !cartOpen && (
+        <button className="cart-bar" onClick={() => setCartOpen(true)}>
+          <span className="cart-bar-left">
+            <span className="cart-bar-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.5 3h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6" /></svg>
+            </span>
+            {totalCount} item{totalCount > 1 ? "s" : ""}
+          </span>
+          <span className="cart-bar-right">
+            ₹{cartValue} <span className="cart-bar-arrow">View cart →</span>
+          </span>
+        </button>
+      )}
+
+      <LiveTrackingSheet
+        open={trackOpen && !!trackedOrder}
+        order={trackedOrder}
+        shopLoc={shopLoc}
+        onClose={() => { setTrackOpen(false); setTrackId(null); }}
+        onRefresh={reloadOrders}
       />
-    </>
-  );
 
-  // ── CUSTOMER STORE ────────────────────────────────────────────────────────
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onRequireLogin={() => setAuthOpen(true)}
+      />
+
+      <AccountDrawer
+        open={accountOpen}
+        initialTab={accountTab}
+        onClose={() => setAccountOpen(false)}
+        onOpenCart={() => setCartOpen(true)}
+      />
+
+      <AddressSheet open={addressOpen} onClose={() => setAddressOpen(false)} />
+
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={() => setAuthOpen(false)}
+        reason={
+          cartOpen ? "Log in to place your order and track it." : undefined
+        }
+      />
+
+      <footer className="footer">
+        <p className="footer-name">{shop.name}</p>
+        <p className="footer-note">{shop.address}</p>
+        <p className="footer-note">Groceries &amp; daily essentials, delivered fast.</p>
+      </footer>
+
+      <InstallPrompt />
+    </div>
+  );
+}
+
+function HomeSkeleton() {
+  // Shown only on the first-ever open (empty cache). Repeat opens hydrate from
+  // the cache and skip straight to real content.
   return (
-    <>
-      <style>{css}</style>
-      {toast && <div className="toast">{toast}</div>}
-      <div className="hdr" style={{position:"relative"}}>
-        <div className="hdr-logo" onClick={handleLogoTap}>
-          NGS<sup>store</sup>
-        </div>
-        {/* Secret tap dots — only visible while tapping */}
-        {tapCount > 0 && (
-          <div className="tap-dots">
-            {[0,1,2,3,4].map(i=>(
-              <div key={i} className={"tap-dot"+(i<tapCount?" lit":"")}></div>
-            ))}
-          </div>
-        )}
-        {cartCount > 0 && (
-          <button className="hdr-cart" onClick={()=>setTab("cart")}>
-            🛒 Cart <span className="cart-bubble">{cartCount}</span>
-          </button>
-        )}
+    <div className="home-skel" aria-hidden="true">
+      <div className="skel-banner-row">
+        <div className="skel-block skel-banner" />
+        <div className="skel-block skel-banner" />
       </div>
-      {tab==="shop" && <ShopView products={products} cart={cart} cat={cat} setCat={setCat} setCart={setCart} storeOpen={storeOpen} />}
-      {tab==="cart" && <CartView products={products} cart={cart} setCart={setCart} onOrderPlaced={handleOrderPlaced} setTab={setTab} success={success} setSuccess={setSuccess} storeOpen={storeOpen} charges={charges} />}
-      {tab==="orders" && <OrdersView orders={orders} myPhone={myPhone} />}
-      <div className="bnav">
-        {[["shop","🏪","Shop"],["cart","🛒","Cart"],["orders","📋","Orders"]].map(([v,ico,lbl])=>(
-          <button key={v} className={"bnav-btn"+(tab===v?" active":"")} onClick={()=>setTab(v)}>
-            <span className="ico">{ico}</span>
-            {lbl}{v==="cart"&&cartCount>0?` (${cartCount})`:""}
-          </button>
+      <div className="skel-block skel-title" />
+      <div className="skel-row">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div className="skel-card" key={i}>
+            <div className="skel-block skel-thumb" />
+            <div className="skel-block skel-line" />
+            <div className="skel-block skel-line short" />
+          </div>
         ))}
       </div>
+      <div className="skel-block skel-title" />
+      <div className="skel-row">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div className="skel-card" key={i}>
+            <div className="skel-block skel-thumb" />
+            <div className="skel-block skel-line" />
+            <div className="skel-block skel-line short" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HomeView({ products, categories, offer, onCategoryClick }) {
+  if (products.length === 0) return <HomeSkeleton />;
+  const byCategory = (id) => products.filter((p) => p.category === id);
+  const bestPrices = products.filter((p) => p.bait).slice(0, 12);
+  const almostGone = products
+    .filter((p) => typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && p.inStock !== false)
+    .sort((a, b) => a.stock - b.stock)
+    .slice(0, 12);
+  return (
+    <>
+      {offer && offer.trim() && (
+        <div className="offer-strip">{offer}</div>
+      )}
+
+      <div className="banner-row">
+        {banners.map((b) => (
+          <div
+            className="banner"
+            key={b.id}
+            style={{ background: b.grad, color: b.fg }}
+          >
+            <div className="banner-text">
+              <h3>{b.title}</h3>
+              <p>{b.subtitle}</p>
+            </div>
+            <div className="banner-icon">{b.icon}</div>
+          </div>
+        ))}
+      </div>
+
+      {bestPrices.length > 0 && (
+        <section className="section best-prices">
+          <h2 className="section-title">Best Prices</h2>
+          <div className="product-row">
+            {bestPrices.map((p) => (
+              <ProductCard key={p.id} product={p} badge="Best price" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {almostGone.length > 0 && (
+        <section className="section">
+          <h2 className="section-title">Almost Gone</h2>
+          <div className="product-row">
+            {almostGone.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="section">
+        <h2 className="section-title">Shop by category</h2>
+        <div className="category-grid">
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              className="category-tile"
+              style={{ background: c.color }}
+              onClick={() => onCategoryClick(c)}
+            >
+              <span className="category-icon"><CategoryIcon id={c.id} /></span>
+              <span className="category-name">{c.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {categories
+        .filter((c) => byCategory(c.id).length > 0)
+        .map((c) => (
+          <section className="section" key={c.id}>
+            <div className="section-head">
+              <h2 className="section-title">{c.name}</h2>
+              <button className="see-all" onClick={() => onCategoryClick(c)}>
+                see all →
+              </button>
+            </div>
+            <div className="product-row">
+              {byCategory(c.id)
+                .slice(0, 6)
+                .map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+            </div>
+          </section>
+        ))}
     </>
   );
 }
 
-
-// ── ERROR BOUNDARY: keeps the screen from going blank if anything errors ──────
-class ErrorBoundary extends Component {
-  constructor(props) { super(props); this.state = { hasError: false, msg: "" }; }
-  static getDerivedStateFromError(error) { return { hasError: true, msg: String(error && error.message || error) }; }
-  componentDidCatch(error, info) { console.error("App error:", error, info); }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "sans-serif", background: "#f5f0e8", color: "#3d2b1f", textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
-          <h2 style={{ marginBottom: 8 }}>NGS Store</h2>
-          <p style={{ fontSize: 14, color: "#6b4c3b", marginBottom: 16 }}>Something went wrong loading the page. Please refresh.</p>
-          <div style={{ fontSize: 11, color: "#a07858", marginBottom: 16, maxWidth: 320, wordBreak: "break-word", fontFamily: "monospace", background: "#ede7d9", padding: 10, borderRadius: 8 }}>{this.state.msg}</div>
-          <button onClick={() => window.location.reload()} style={{ padding: "10px 22px", background: "#3d2b1f", color: "#f5f0e8", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600 }}>Refresh</button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
+function CategoryView({ category, products, sort, onSortChange, onBack }) {
+  const list = sortProducts(
+    products.filter((p) => p.category === category.id),
+    sort
+  );
+  return (
+    <section className="section">
+      <div className="category-header">
+        <button className="back-btn" onClick={onBack}>
+          ← Back
+        </button>
+        <h2 className="section-title cat-title">
+          <CategoryIcon id={category.id} size={20} /> {category.name}
+        </h2>
+        <span className="count-pill">{list.length} items</span>
+      </div>
+      {list.length > 1 && <SortBar sort={sort} onChange={onSortChange} />}
+      <div className="product-grid">
+        {list.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
+    </section>
+  );
 }
 
-export default function App() {
+const SORTS = [
+  { id: "relevance", label: "Popular" },
+  { id: "price-asc", label: "Price ↑" },
+  { id: "price-desc", label: "Price ↓" },
+  { id: "discount", label: "Discount" },
+];
+
+function SortBar({ sort, onChange }) {
   return (
-    <ErrorBoundary>
-      <AppInner />
-    </ErrorBoundary>
+    <div className="sort-bar">
+      <span className="sort-label">Sort</span>
+      {SORTS.map((s) => (
+        <button
+          key={s.id}
+          className={`sort-chip ${sort === s.id ? "active" : ""}`}
+          onClick={() => onChange(s.id)}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
   );
+}
+
+// Sort a product list. In-stock items always come before sold-out ones.
+function sortProducts(list, sort) {
+  const disc = (p) => (p.mrp > p.price ? (p.mrp - p.price) / p.mrp : 0);
+  const arr = [...list];
+  const cmp = {
+    "price-asc": (a, b) => a.price - b.price,
+    "price-desc": (a, b) => b.price - a.price,
+    discount: (a, b) => disc(b) - disc(a),
+  }[sort];
+  if (cmp) arr.sort(cmp);
+  // Keep out-of-stock items at the end regardless of sort.
+  arr.sort((a, b) => (a.inStock === false ? 1 : 0) - (b.inStock === false ? 1 : 0));
+  return arr;
 }
