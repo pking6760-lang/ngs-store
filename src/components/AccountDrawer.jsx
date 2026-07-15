@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
@@ -512,15 +512,23 @@ function TopupPay({ amount, onPaid, onBack }) {
   const [qr, setQr] = useState("loading"); // "loading" | "error" | { url }
   const [order, setOrder] = useState(null);
   const [err, setErr] = useState("");
+  const [paying, setPaying] = useState(false);
+  const rzpOrderRef = useRef(null); // pre-created Razorpay order, so the tap is instant
 
   useEffect(() => {
     let alive = true;
     setQr("loading");
+    // Warm the Razorpay SDK immediately so tapping "Pay with a UPI app" doesn't
+    // stall for a few seconds downloading the checkout script.
+    loadRazorpay().catch(() => {});
     (async () => {
       try {
         const o = await api.createTopupOrder(amount);
         if (!alive) return;
         setOrder(o);
+        // Pre-create the Razorpay order in the background too, so the button
+        // opens the payment sheet instantly instead of waiting on a round-trip.
+        api.createRazorpayOrder(o.dbId).then((rp) => { if (alive) rzpOrderRef.current = rp; }).catch(() => {});
         const { imageUrl, imageDataUrl } = await api.createOrderQr(o.dbId);
         const clean = await cleanUpiQrFromImage(imageDataUrl).catch(() => null);
         if (alive) setQr({ url: clean || imageDataUrl || imageUrl });
@@ -544,17 +552,22 @@ function TopupPay({ amount, onPaid, onBack }) {
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function payOnThisPhone() {
-    if (!order) return;
-    setErr("");
+    if (!order || paying) return;
+    setErr(""); setPaying(true);
     try {
-      const rp = await api.createRazorpayOrder(order.dbId);
+      // Use the pre-created order + pre-loaded SDK when ready (instant); fall
+      // back to creating/loading on the spot if the warm-up hasn't finished.
+      const rp = rzpOrderRef.current || (await api.createRazorpayOrder(order.dbId));
+      rzpOrderRef.current = rp;
       const Razorpay = await loadRazorpay();
       const rzp = new Razorpay({
         key: rp.keyId, order_id: rp.orderId, amount: rp.amount, currency: rp.currency || "INR",
         name: "NGS Nisha General Store", description: `Wallet top-up · ₹${amount}`,
         prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
         theme: { color: "#0a9155" },
+        modal: { ondismiss: () => setPaying(false) },
         handler: async (resp) => {
+          setPaying(false);
           try {
             await api.verifyRazorpayPayment({
               orderId: order.dbId,
@@ -565,10 +578,11 @@ function TopupPay({ amount, onPaid, onBack }) {
           } catch { /* the polling effect / webhook still confirms it */ }
         },
       });
-      rzp.on("payment.failed", (r) => setErr(r?.error?.description || "Payment failed. Please try again."));
+      rzp.on("payment.failed", (r) => { setPaying(false); setErr(r?.error?.description || "Payment failed. Please try again."); });
       rzp.open();
     } catch (e) {
       setErr(e.message || "Couldn't open the payment. Please try again.");
+      setPaying(false);
     }
   }
 
@@ -582,7 +596,9 @@ function TopupPay({ amount, onPaid, onBack }) {
         </>
       ) : qr && qr.url ? (
         <>
-          <button className="checkout-btn" onClick={payOnThisPhone}>Pay with a UPI app on this phone</button>
+          <button className="checkout-btn" onClick={payOnThisPhone} disabled={paying}>
+            {paying ? "Opening UPI…" : "Pay with a UPI app on this phone"}
+          </button>
           <div className="mem-qr-or">— or scan the QR —</div>
           <div className="mem-qr-wrap"><img className="mem-qr-img" src={qr.url} alt="UPI payment QR" /></div>
           <p className="member-note">Open GPay, PhonePe, Paytm or any UPI app. The money lands in your wallet automatically the moment you pay.</p>
@@ -968,15 +984,19 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
   const [order, setOrder] = useState(null);
   const [err, setErr] = useState("");
+  const [paying, setPaying] = useState(false);
+  const rzpOrderRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
     setQr("loading");
+    loadRazorpay().catch(() => {}); // warm the SDK so the pay button is instant
     (async () => {
       try {
         const o = await api.createMembershipOrder();
         if (!alive) return;
         setOrder(o);
+        api.createRazorpayOrder(o.dbId).then((rp) => { if (alive) rzpOrderRef.current = rp; }).catch(() => {});
         const { imageUrl, imageDataUrl } = await api.createOrderQr(o.dbId);
         const clean = await cleanUpiQrFromImage(imageDataUrl).catch(() => null);
         if (alive) setQr({ url: clean || imageDataUrl || imageUrl });
@@ -1001,17 +1021,20 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
 
   // Open the UPI apps directly (GPay / PhonePe / Paytm / any UPI) on this phone.
   async function payOnThisPhone() {
-    if (!order) return;
-    setErr("");
+    if (!order || paying) return;
+    setErr(""); setPaying(true);
     try {
-      const rp = await api.createRazorpayOrder(order.dbId);
+      const rp = rzpOrderRef.current || (await api.createRazorpayOrder(order.dbId));
+      rzpOrderRef.current = rp;
       const Razorpay = await loadRazorpay();
       const rzp = new Razorpay({
         key: rp.keyId, order_id: rp.orderId, amount: rp.amount, currency: rp.currency || "INR",
         name: "NGS Nisha General Store", description: "NGS Prime membership",
         prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
         theme: { color: "#0a9155" },
+        modal: { ondismiss: () => setPaying(false) },
         handler: async (resp) => {
+          setPaying(false);
           try {
             await api.verifyRazorpayPayment({
               orderId: order.dbId,
@@ -1022,10 +1045,11 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
           } catch { /* the polling effect / webhook still confirms it */ }
         },
       });
-      rzp.on("payment.failed", (r) => setErr(r?.error?.description || "Payment failed. Please try again."));
+      rzp.on("payment.failed", (r) => { setPaying(false); setErr(r?.error?.description || "Payment failed. Please try again."); });
       rzp.open();
     } catch (e) {
       setErr(e.message || "Couldn't open the payment. Please try again.");
+      setPaying(false);
     }
   }
 
@@ -1036,7 +1060,9 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
         <div className="auth-error">{err}</div>
       ) : qr && qr.url ? (
         <>
-          <button className="checkout-btn" onClick={payOnThisPhone}>Pay with a UPI app on this phone</button>
+          <button className="checkout-btn" onClick={payOnThisPhone} disabled={paying}>
+            {paying ? "Opening UPI…" : "Pay with a UPI app on this phone"}
+          </button>
           <div className="mem-qr-or">— or scan the QR —</div>
           <div className="mem-qr-wrap"><img className="mem-qr-img" src={qr.url} alt="UPI payment QR" /></div>
           <p className="member-note">Open GPay, PhonePe, Paytm or any UPI app. Your membership activates automatically the moment you pay.</p>
