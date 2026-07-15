@@ -472,7 +472,7 @@ function Inbox({ notes, userId, error, onRetry }) {
   if (!notes || notes.length === 0) {
     return (
       <div className="account-empty">
-        <div className="empty-emoji">🔔</div>
+        <div className="empty-ic"><MIcon d={PIC.bell} size={30} /></div>
         <p>No messages yet</p>
         <span>Offers and updates from the store will appear here.</span>
       </div>
@@ -483,7 +483,10 @@ function Inbox({ notes, userId, error, onRetry }) {
     <div className="inbox-list">
       {notes.map((n) => (
         <div className={`inbox-item ${n.read ? "" : "unread"}`} key={n.id}>
-          <div className="inbox-item-title">🔔 {n.title}</div>
+          <div className="inbox-item-title">
+            <span className="inbox-item-ic"><MIcon d={PIC.bell} size={15} /></span>
+            {n.title}
+          </div>
           {n.body && <div className="inbox-item-body">{n.body}</div>}
           <div className="inbox-item-time">{formatTime(n.createdAt)}</div>
         </div>
@@ -502,6 +505,7 @@ function Rewards({ user }) {
   return (
     <div className="rewards-panel">
       <div className="rewards-hero">
+        <div className="rewards-hero-ic"><MIcon d={PIC.star} size={20} /></div>
         <div className="rewards-hero-val">{points}</div>
         <div className="rewards-hero-lbl">reward points</div>
         <div className="rewards-hero-worth">worth ₹{worth} off your next order</div>
@@ -536,7 +540,7 @@ function Referral({ user }) {
 
   const shareText =
     stats?.code &&
-    `Shop daily essentials on NGS — use my code ${stats.code} and we both get ₹${stats.amount} off. 🛒`;
+    `Shop daily essentials on NGS — use my code ${stats.code} and we both get ₹${stats.amount} off.`;
 
   async function share() {
     if (!stats?.code) return;
@@ -555,7 +559,7 @@ function Referral({ user }) {
     setBusy(true); setMsg(null);
     try {
       const r = await api.applyReferral(code.trim().toUpperCase());
-      setMsg({ ok: true, text: `✅ Code applied! You'll get ₹${r.reward} after your first order.` });
+      setMsg({ ok: true, text: `Code applied! You'll get ₹${r.reward} after your first order.` });
       setCode("");
       load();
     } catch (e2) {
@@ -569,7 +573,7 @@ function Referral({ user }) {
   return (
     <div className="refer-panel">
       <div className="refer-hero">
-        <div className="refer-hero-emoji">🎁</div>
+        <div className="refer-hero-ic"><MIcon d={PIC.gift} size={26} /></div>
         <h3>Refer a friend, both get ₹{amount}</h3>
         <p>Share your code. When your friend places their first order, you both get ₹{amount} in your NGS Wallet.</p>
       </div>
@@ -578,7 +582,7 @@ function Referral({ user }) {
         <span className="refer-code-label">Your code</span>
         <button className="refer-code" onClick={copyCode}>{stats?.code || "…"}</button>
         <button className="primary-btn refer-share" onClick={share}>Share code</button>
-        {copied && <span className="refer-copied">Copied ✓</span>}
+        {copied && <span className="refer-copied"><MIcon d={PIC.check} size={13} /> Copied</span>}
       </div>
 
       {stats && (
@@ -603,11 +607,17 @@ function Referral({ user }) {
             </button>
           </div>
           <small className="refer-fine">Only before your first order.</small>
-          {msg && <div className={msg.ok ? "refer-ok" : "refer-err"}>{msg.text}</div>}
+          {msg && (
+            <div className={msg.ok ? "refer-ok" : "refer-err"}>
+              <MIcon d={msg.ok ? PIC.check : PIC.alert} size={14} /> {msg.text}
+            </div>
+          )}
         </form>
       )}
       {stats?.usedCode && (
-        <div className="refer-used">✅ You've already used a friend's code — enjoy!</div>
+        <div className="refer-used">
+          <MIcon d={PIC.check} size={15} /> You've already used a friend's code — enjoy!
+        </div>
       )}
     </div>
   );
@@ -767,6 +777,8 @@ const PIC = {
   xc: <><circle cx="12" cy="12" r="9" /><path d="m15 9-6 6M9 9l6 6" /></>,
   alert: <><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v4M12 17.5v.5" /></>,
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>,
+  gift: <><path d="M20 12v8H4v-8M2 8h20v4H2zM12 8v12M12 8S11 3 8 3a2 2 0 0 0 0 4h4zM12 8s1-5 4-5a2 2 0 0 1 0 4h-4z" /></>,
+  star: <path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.3 6.2 21l1.1-6.5L2.6 9.8l6.5-.9L12 3z" />,
 };
 function MIcon({ d, size = 20 }) {
   return (
@@ -957,7 +969,7 @@ function Profile() {
         {busy ? "Saving…" : "Save changes"}
       </button>
       {error && <div className="auth-error">{error}</div>}
-      {saved && <div className="profile-saved">✅ Saved</div>}
+      {saved && <div className="profile-saved"><MIcon d={PIC.check} size={15} /> Saved</div>}
     </form>
   );
 }

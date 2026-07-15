@@ -1713,7 +1713,7 @@ button {
   text-decoration: none;
 }
 .profile-saved {
-  text-align: center;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
   color: var(--green-dark);
   font-weight: 700;
   font-size: 14px;
@@ -2056,6 +2056,11 @@ button {
   border-radius: 14px;
   padding: 22px;
   text-align: center;
+}
+.rewards-hero-ic {
+  width: 44px; height: 44px; margin: 0 auto 10px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.16); color: #fff;
 }
 .rewards-hero-val {
   font-size: 40px;
@@ -2448,7 +2453,13 @@ button {
   border-color: color-mix(in srgb, var(--green) 40%, var(--line));
   background: var(--green-tint);
 }
-.inbox-item-title { font-weight: 800; font-size: 14px; }
+.inbox-item-title { font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 9px; }
+.inbox-item-ic {
+  flex: none; width: 28px; height: 28px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--green-tint, #eaf6ee); color: var(--green-dark, #178a3a);
+}
+.inbox-item.unread .inbox-item-ic { background: var(--green, #0AA25F); color: #fff; }
 .inbox-item-body { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
 .inbox-item-time { font-size: 11px; color: var(--muted); margin-top: 8px; }
 
@@ -3558,7 +3569,12 @@ body {
 .refer-panel { display: flex; flex-direction: column; gap: 16px; }
 .refer-hero { text-align: center; padding: 18px 12px; border-radius: 16px;
   background: linear-gradient(135deg, #eef3ff, #f6efff); }
-.refer-hero-emoji { font-size: 40px; }
+.refer-hero-ic {
+  width: 54px; height: 54px; margin: 0 auto 4px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; color: #6b4bd6;
+  box-shadow: 0 6px 16px -6px rgba(107,75,214,0.4);
+}
 .refer-hero h3 { margin: 6px 0 4px; font-size: 19px; }
 .refer-hero p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
 .refer-code-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -3569,7 +3585,7 @@ body {
   color: var(--green-dark, #2B44A8); cursor: pointer;
 }
 .refer-share { width: 100%; }
-.refer-copied { font-size: 12px; color: #2f9e44; font-weight: 700; }
+.refer-copied { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #2f9e44; font-weight: 700; }
 .refer-stats { display: flex; gap: 12px; }
 .refer-stats > div { flex: 1; text-align: center; background: #f7f9fc; border-radius: 12px; padding: 12px; }
 .refer-stats strong { display: block; font-size: 20px; }
@@ -3582,9 +3598,12 @@ body {
   font-size: 15px; text-transform: uppercase; font-weight: 700;
 }
 .refer-fine { font-size: 11px; color: var(--muted); }
-.refer-ok { font-size: 13px; color: #2f9e44; font-weight: 700; }
-.refer-err { font-size: 13px; color: #e03131; font-weight: 700; }
-.refer-used { text-align: center; font-size: 13px; color: #2f9e44; font-weight: 700;
+.refer-ok { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #2f9e44; font-weight: 700;
+  background: #ebfbee; border-radius: 10px; padding: 10px 12px; }
+.refer-err { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #e03131; font-weight: 700;
+  background: #fdecec; border-radius: 10px; padding: 10px 12px; }
+.refer-used { display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-size: 13px; color: #2f9e44; font-weight: 700;
   background: #ebfbee; border-radius: 10px; padding: 10px; }
 
 .prime-benefits {
