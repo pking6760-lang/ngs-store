@@ -1,8 +1,21 @@
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useUserNotifications } from "../lib/hooks.js";
+import { useUserNotifications, useWallet } from "../lib/hooks.js";
 import { shop } from "../data/shop.js";
 import Logo from "./Logo.jsx";
+
+// Compact wallet balance chip — sits in the top bar (native app chrome), not as
+// a separate card. Tapping it opens the wallet.
+function WalletChip({ balance, onClick, className }) {
+  return (
+    <button className={className} onClick={onClick} aria-label="NGS Wallet">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-3M3 7h16a1 1 0 0 1 1 1v3h-4a2 2 0 0 0 0 4h4" />
+      </svg>
+      ₹{Number(balance || 0).toFixed(2)}
+    </button>
+  );
+}
 
 export default function Header({
   query,
@@ -11,10 +24,12 @@ export default function Header({
   onLogoClick,
   onAccountClick,
   onBellClick,
+  onWalletClick,
 }) {
   const { totalCount } = useCart();
   const { user, isLoggedIn } = useAuth();
   const { notes } = useUserNotifications(user?.id);
+  const { balance } = useWallet(user?.id);
   const unread = notes.filter((n) => !n.read).length;
 
   const firstName = isLoggedIn ? user.name.split(" ")[0] : null;
@@ -46,6 +61,10 @@ export default function Header({
             placeholder='Search "milk", "bread", "atta"...'
           />
         </div>
+
+        {isLoggedIn && (
+          <WalletChip balance={balance} onClick={onWalletClick} className="header-wallet" />
+        )}
 
         {isLoggedIn && (
           <button
@@ -83,16 +102,21 @@ export default function Header({
         </button>
       </div>
 
-      <button className="delivery-bar" onClick={onAccountClick}>
-        <span className="db-bolt" aria-hidden="true">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
-        </span>
-        <span className="db-text">
-          Delivery in <strong>12 minutes</strong>
-          <span className="db-addr">to {deliverTo}</span>
-        </span>
-        <span className="db-chevron" aria-hidden="true">▾</span>
-      </button>
+      <div className="delivery-bar">
+        <button className="db-main" onClick={onAccountClick}>
+          <span className="db-bolt" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+          </span>
+          <span className="db-text">
+            Delivery in <strong>12 minutes</strong>
+            <span className="db-addr">to {deliverTo}</span>
+          </span>
+          <span className="db-chevron" aria-hidden="true">▾</span>
+        </button>
+        {isLoggedIn && (
+          <WalletChip balance={balance} onClick={onWalletClick} className="db-wallet" />
+        )}
+      </div>
     </header>
   );
 }
