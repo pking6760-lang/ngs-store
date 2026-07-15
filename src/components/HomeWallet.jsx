@@ -1,9 +1,9 @@
 import { useAuth } from "../context/AuthContext.jsx";
 import { useWallet } from "../lib/hooks.js";
 
-// A compact, professional NGS Wallet strip for the home screen. Shows the live
-// balance and a quick "Add money" action; tapping the card opens the wallet.
-// Only rendered for signed-in customers (the wallet needs an account).
+// A premium NGS Wallet card for the home screen — shows the live balance and a
+// quick "Add money" action; tapping the card opens the wallet. Only rendered
+// for signed-in customers (the wallet needs an account).
 export default function HomeWallet({ onOpen }) {
   const { user, isLoggedIn } = useAuth();
   const { balance } = useWallet(user?.id);
@@ -21,7 +21,7 @@ export default function HomeWallet({ onOpen }) {
         <span className="hw-bal">₹{(balance || 0).toFixed(2)}</span>
       </span>
       <span className="hw-add">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
         Add money
       </span>
     </button>
