@@ -115,6 +115,14 @@ function AdminHome({ name, onOpen, onLogout }) {
   const pendingPartners = partners.filter((p) => p.status === "pending").length;
   const badge = { orders: activeOrders, partners: pendingPartners };
 
+  // Today's figures for the glanceable hero strip (reset automatically each day).
+  const isToday = (iso) => {
+    const d = new Date(iso), n = new Date();
+    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  };
+  const todays = orders.filter((o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn);
+  const todaysRevenue = todays.reduce((s, o) => s + (o.total || 0), 0);
+
   return (
     <div className="adm-home">
       <header className="adm-hero">
@@ -127,6 +135,20 @@ function AdminHome({ name, onOpen, onLogout }) {
           <button className="adm-logout" onClick={onLogout}>Log out</button>
         </div>
         <div className="adm-hello">Hi, {name || "Store Manager"}</div>
+        <div className="adm-hero-stats">
+          <button className="adm-hstat" onClick={() => onOpen("orders")}>
+            <div className="adm-hstat-val">{todays.length}</div>
+            <div className="adm-hstat-lbl">Orders today</div>
+          </button>
+          <button className="adm-hstat" onClick={() => onOpen("dashboard")}>
+            <div className="adm-hstat-val">₹{todaysRevenue}</div>
+            <div className="adm-hstat-lbl">Revenue today</div>
+          </button>
+          <button className="adm-hstat" onClick={() => onOpen("orders")}>
+            <div className="adm-hstat-val">{activeOrders}</div>
+            <div className="adm-hstat-lbl">Pending</div>
+          </button>
+        </div>
         <StoreControls />
       </header>
 

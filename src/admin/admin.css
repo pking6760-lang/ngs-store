@@ -212,12 +212,13 @@ body {
 }
 .stat-card {
   background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius);
   padding: 18px;
   display: flex;
   align-items: center;
   gap: 14px;
+  box-shadow: var(--a-shadow-sm);
 }
 .stat-icon {
   width: 48px;
@@ -292,10 +293,12 @@ body {
 }
 .panel {
   background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius);
   padding: 18px;
   min-width: 0; /* let the panel shrink inside the grid instead of overflowing */
+  box-shadow: var(--a-shadow-sm);
+  margin-bottom: 16px;
 }
 /* Wide tables scroll inside their card rather than pushing the page sideways. */
 .table-scroll {
@@ -430,7 +433,11 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
+.cat-bar-label svg { color: var(--a-primary); flex: 0 0 auto; }
 .cat-bar-track {
   background: #eef0ee;
   border-radius: 6px;
@@ -2531,15 +2538,23 @@ body {
    NGS Admin — clean redesign: one home screen, tile grid, no bottom bar
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --a-bg: #EEF1F6;
+  --a-bg: #eceffa;
   --a-surface: #ffffff;
-  --a-ink: #141A22;
-  --a-sub: #6B7885;
-  --a-line: #E2E8EF;
+  --a-ink: #141a2b;
+  --a-sub: #6b7488;
+  --a-line: #e4e8f2;
   --a-primary: #3B5BDB;
   --a-primary-d: #2B44A8;
+  --a-tint: #eef2ff;              /* indigo wash for icon chips / accents */
+  --a-radius: 16px;
+  --a-shadow-sm: 0 1px 2px rgba(24,32,64,0.05), 0 1px 3px rgba(24,32,64,0.04);
+  --a-shadow: 0 6px 18px -8px rgba(24,32,64,0.16);
+  --a-shadow-md: 0 12px 28px -14px rgba(24,32,64,0.24);
+  --a-shadow-lg: 0 24px 50px -20px rgba(24,32,64,0.32);
 }
-.adm { position: fixed; inset: 0; background: var(--a-bg); color: var(--a-ink); overflow: hidden;
+.adm { position: fixed; inset: 0;
+  background: radial-gradient(1100px 380px at 92% -12%, #dde5ff 0%, transparent 60%), var(--a-bg);
+  color: var(--a-ink); overflow: hidden;
   display: flex; flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;
   /* The redesigned admin roots at .adm (not the old .admin). Older controls
@@ -2557,35 +2572,56 @@ body {
 
 /* Home */
 .adm-home { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 30px; }
-.adm-hero { background: linear-gradient(135deg, var(--a-primary), var(--a-primary-d)); color: #fff;
-  padding: max(16px, env(safe-area-inset-top)) 18px 20px; border-radius: 0 0 26px 26px; box-shadow: 0 10px 30px -14px rgba(43,68,168,0.7); }
+.adm-hero { position: relative; overflow: hidden;
+  background: linear-gradient(140deg, #4763e6 0%, var(--a-primary-d) 62%, #223a95 100%); color: #fff;
+  padding: max(18px, env(safe-area-inset-top)) 18px 22px; border-radius: 0 0 28px 28px;
+  box-shadow: 0 18px 40px -20px rgba(43,68,168,0.85); }
+.adm-hero::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(420px 200px at 88% -30%, rgba(255,255,255,0.28), transparent 70%); }
+.adm-hero > * { position: relative; }
 .adm-hero-top { display: flex; align-items: center; justify-content: space-between; }
 .adm-brand { display: flex; align-items: center; gap: 6px; }
 .adm-brand .brand-mark { margin-right: 2px; }
 .adm-logo { font-weight: 800; font-size: 22px; letter-spacing: -0.02em; color: #fff; }
 .adm-sub { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.75); }
 .adm-logout { background: rgba(255,255,255,0.16); color: #fff; border: 0; padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; cursor: pointer; }
-.adm-hello { font-size: 21px; font-weight: 800; margin: 14px 0 14px; }
+.adm-logout:hover { background: rgba(255,255,255,0.26); }
+.adm-hello { font-size: 21px; font-weight: 800; margin: 15px 0 14px; letter-spacing: -0.01em; }
+
+/* Glanceable "today" strip so the home shows live numbers up front */
+.adm-hero-stats { display: flex; gap: 10px; margin-bottom: 16px; }
+.adm-hstat { flex: 1; background: rgba(255,255,255,0.13); border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 14px; padding: 11px 12px; backdrop-filter: blur(4px);
+  color: #fff; text-align: left; cursor: pointer; font: inherit; transition: background 0.14s ease; }
+.adm-hstat:hover { background: rgba(255,255,255,0.2); }
+.adm-hstat-val { font-size: 19px; font-weight: 900; line-height: 1; letter-spacing: -0.01em; }
+.adm-hstat-lbl { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.8); margin-top: 5px; }
 .adm-hero .store-controls { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .adm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
 .adm-tile { position: relative; background: var(--a-surface); border: 1px solid var(--a-line); border-radius: 18px;
-  padding: 16px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; cursor: pointer;
-  box-shadow: 0 8px 20px -14px rgba(20,26,34,0.4); min-height: 92px; text-align: left; }
-.adm-tile:active { transform: scale(0.98); }
-.adm-tile-ic { width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; }
+  padding: 16px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 11px; cursor: pointer;
+  box-shadow: var(--a-shadow); min-height: 90px; text-align: left;
+  transition: transform 0.16s ease, box-shadow 0.16s ease; }
+.adm-tile:hover { transform: translateY(-3px); box-shadow: var(--a-shadow-md); }
+.adm-tile:active { transform: translateY(-1px) scale(0.99); }
+.adm-tile-ic { width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
 .adm-tile-ic svg { width: 24px; height: 24px; display: block; }
-.adm-tile-lbl { font-weight: 800; font-size: 15px; color: var(--a-ink); }
+.adm-tile-lbl { font-weight: 800; font-size: 15px; color: var(--a-ink); letter-spacing: -0.01em; }
 .adm-tile-badge { position: absolute; top: 12px; right: 12px; background: #F03E3E; color: #fff; min-width: 22px; height: 22px;
-  border-radius: 999px; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 6px; }
+  border-radius: 999px; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  box-shadow: 0 4px 10px -3px rgba(240,62,62,0.7); }
 
 /* Section view */
 .adm-sec { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .adm-secbar { display: flex; align-items: center; gap: 12px; padding: max(12px, env(safe-area-inset-top)) 16px 12px;
-  background: var(--a-surface); border-bottom: 1px solid var(--a-line); }
+  background: rgba(255,255,255,0.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--a-line);
+  position: sticky; top: 0; z-index: 5; }
 .adm-back { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 12px; border: 1px solid var(--a-line); background: #fff;
-  font-size: 20px; cursor: pointer; color: var(--a-ink); }
-.adm-secbar h1 { font-size: 18px; margin: 0; font-weight: 800; }
+  font-size: 20px; cursor: pointer; color: var(--a-ink); display: flex; align-items: center; justify-content: center;
+  transition: background 0.14s ease; }
+.adm-back:hover { background: var(--a-tint); }
+.adm-secbar h1 { font-size: 18px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
 .adm-sec-body { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 14px 16px 34px; }
 
 /* Retheme the admin login + store controls to the new indigo */

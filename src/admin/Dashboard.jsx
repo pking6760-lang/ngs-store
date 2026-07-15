@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useProducts, useAdminProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
 import { Ic } from "./AdminIcons.jsx";
+import CategoryIcon from "../components/CategoryIcon.jsx";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
@@ -275,7 +276,7 @@ export default function Dashboard({ onNavigate }) {
             {topCategories.map((c) => (
               <div className="cat-bar-row" key={c.id}>
                 <span className="cat-bar-label">
-                  {c.icon} {c.name}
+                  <CategoryIcon id={c.id} size={16} /> {c.name}
                 </span>
                 <div className="cat-bar-track">
                   <div
