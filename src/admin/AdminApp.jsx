@@ -338,7 +338,7 @@ function Login({ onSignIn }) {
                 onClick={fingerprintLogin}
                 disabled={bioBusy}
               >
-                <span className="fingerprint-icon">☝️</span>
+                <span className="fingerprint-icon"><Ic name="fingerprint" size={20} /></span>
                 {bioBusy ? "Waiting for fingerprint…" : "Login with fingerprint"}
               </button>
             </>

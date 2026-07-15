@@ -1915,7 +1915,7 @@ body {
   background: #e0e7ff;
 }
 .fingerprint-icon {
-  font-size: 18px;
+  display: inline-flex;
 }
 
 /* ─── Stock toggle + tag ─────────────────────────────────── */
