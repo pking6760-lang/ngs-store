@@ -23,7 +23,15 @@ export default class ErrorBoundary extends Component {
           textAlign: "center", fontFamily: "-apple-system, Segoe UI, Roboto, sans-serif",
           color: "#16202c", background: "#f6f8f7",
         }}>
-          <div style={{ fontSize: 44 }}>🛒</div>
+          <div style={{
+            width: 68, height: 68, borderRadius: 20, background: "#eaf6ee", color: "#178a3a",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3 2 20h20L12 3z" /><path d="M12 10v4M12 17.5v.5" />
+            </svg>
+          </div>
           <h2 style={{ margin: 0, fontSize: 20 }}>Something went wrong</h2>
           <p style={{ margin: 0, color: "#5b6470", maxWidth: 320, lineHeight: 1.5 }}>
             The app hit an unexpected error. Reloading usually fixes it.

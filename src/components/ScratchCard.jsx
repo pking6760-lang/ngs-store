@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "../lib/api.js";
 
+// Line icons (no emoji) for the reward reveal.
+const SG = {
+  gift: <path d="M20 12v8H4v-8M2 8h20v4H2zM12 8v12M12 8S11 3 8 3a2 2 0 0 0 0 4h4zM12 8s1-5 4-5a2 2 0 0 1 0 4h-4z" />,
+  wallet: <path d="M3 7a2 2 0 0 1 2-2h12v3M3 7v10a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-3M3 7h15a1 1 0 0 1 1 1v3h-4a2 2 0 0 0 0 4h4" />,
+  star: <path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.3 6.2 21l1.1-6.5L2.6 9.8l6.5-.9L12 3z" />,
+};
+function SGIcon({ d, size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+  );
+}
+
 // A scratch-to-reveal reward card. A gold foil canvas sits over the prize; the
 // customer scratches it off with a finger, and once ~45% is cleared the reward
 // is claimed server-side and revealed with a pop. If the order was already
@@ -48,7 +61,7 @@ export default function ScratchCard({ orderId, existingReward }) {
     ctx.font = "800 15px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("🎁  Scratch here", rect.width / 2, rect.height / 2);
+    ctx.fillText("Scratch here", rect.width / 2, rect.height / 2);
 
     let drawing = false;
     const point = (e) => {
@@ -98,12 +111,12 @@ export default function ScratchCard({ orderId, existingReward }) {
 
   return (
     <div className="scratch">
-      <div className="scratch-title">🎉 You've got a reward!</div>
+      <div className="scratch-title"><SGIcon d={SG.gift} size={18} /> You've got a reward!</div>
       <div className="scratch-stage">
         <div className={`scratch-prize ${revealed ? "show" : ""}`}>
           {won ? (
             <>
-              <div className="scratch-prize-emoji">{cash > 0 ? "💰" : "🎁"}</div>
+              <div className="scratch-prize-emoji">{cash > 0 ? <SGIcon d={SG.wallet} size={40} /> : <SGIcon d={SG.gift} size={40} />}</div>
               <div className="scratch-prize-rows">
                 {cash > 0 && (
                   <div className="scratch-prize-row"><strong>₹{cash}</strong><span>wallet cash</span></div>
@@ -115,7 +128,7 @@ export default function ScratchCard({ orderId, existingReward }) {
             </>
           ) : (
             <>
-              <div className="scratch-prize-emoji">🙂</div>
+              <div className="scratch-prize-emoji scratch-prize-muted"><SGIcon d={SG.star} size={38} /></div>
               <div className="scratch-prize-lbl">No reward this time — try your next order!</div>
             </>
           )}
@@ -125,7 +138,7 @@ export default function ScratchCard({ orderId, existingReward }) {
       {revealed ? (
         <div className="scratch-done">
           {won
-            ? `Added ${[cash > 0 ? `₹${cash} to your wallet` : null, pts > 0 ? `${pts} points` : null].filter(Boolean).join(" + ")} 🎊`
+            ? `Added ${[cash > 0 ? `₹${cash} to your wallet` : null, pts > 0 ? `${pts} points` : null].filter(Boolean).join(" + ")}`
             : "Better luck next time!"}
         </div>
       ) : (

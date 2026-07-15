@@ -11,6 +11,7 @@ import { useProducts, useSettings, useCategories, useMyOrders } from "./lib/hook
 import { tierUnitPrice } from "./lib/bulk.js";
 import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
+import CategoryIcon from "./components/CategoryIcon.jsx";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -311,7 +312,7 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
               style={{ background: c.color }}
               onClick={() => onCategoryClick(c)}
             >
-              <span className="category-icon">{c.icon}</span>
+              <span className="category-icon"><CategoryIcon id={c.id} /></span>
               <span className="category-name">{c.name}</span>
             </button>
           ))}
@@ -352,8 +353,8 @@ function CategoryView({ category, products, sort, onSortChange, onBack }) {
         <button className="back-btn" onClick={onBack}>
           ← Back
         </button>
-        <h2 className="section-title">
-          {category.icon} {category.name}
+        <h2 className="section-title cat-title">
+          <CategoryIcon id={category.id} size={20} /> {category.name}
         </h2>
         <span className="count-pill">{list.length} items</span>
       </div>

@@ -62,9 +62,15 @@ export default function MapPicker({ open, initial, onClose, onConfirm }) {
         </div>
         <div className="mappick-map-wrap">
           <div ref={mapEl} className="mappick-map" />
-          <div className="mappick-pin" aria-hidden>📍</div>
+          <div className="mappick-pin" aria-hidden>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="#e03131" stroke="#fff" strokeWidth="1.6">
+              <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" />
+              <circle cx="12" cy="10" r="2.6" fill="#fff" stroke="none" />
+            </svg>
+          </div>
           <button className="mappick-gps" onClick={recenter} disabled={locating}>
-            {locating ? "Locating…" : "◎ My location"}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="7" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none" /></svg>
+            {locating ? "Locating…" : "My location"}
           </button>
         </div>
         <div className="mappick-foot">
