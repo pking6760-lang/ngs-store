@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Nisha General Store">
+  <defs>
+    <linearGradient id="ngsBg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#13bd68"/>
+      <stop offset="1" stop-color="#05713e"/>
+    </linearGradient>
+    <radialGradient id="ngsShine2" cx="0.3" cy="0.25" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#ngsBg2)"/>
+  <rect width="64" height="64" fill="url(#ngsShine2)"/>
+  <g transform="translate(6 6) scale(0.8125)">
+    <path d="M19 45.5 V21 a1 1 0 0 1 1-1 h4 a1 1 0 0 1 .8.4 L37.8 37 V21 a1 1 0 0 1 1-1 h3.2 a1 1 0 0 1 1 1 v23.5 a1 1 0 0 1-1 1 h-4 a1 1 0 0 1-.8-.4 L26.2 29 v16.5 a1 1 0 0 1-1 1 H20 a1 1 0 0 1-1-1 z" fill="#ffffff"/>
+    <path d="M43.5 19.2 c1.2 -4.4 5 -6.7 9.3 -6.4 c.4 4.3 -2.2 8.4 -6.6 9.1 c-1 .16 -2 .12 -2.9 -.1 z" fill="#bdf0d0"/>
+    <path d="M45 19 c1.8 -2.4 4.2 -4 6.9 -4.9" fill="none" stroke="#0a7a45" stroke-width="1.1" stroke-linecap="round"/>
+  </g>
+</svg>
