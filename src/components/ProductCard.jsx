@@ -18,6 +18,13 @@ export default function ProductCard({ product, badge }) {
   const price = tierUnitPrice(product, 1, user, settings.rewards);
   const discount = product.mrp > 0 ? Math.round(((product.mrp - price) / product.mrp) * 100) : 0;
   const savings = product.mrp - price;
+  // Entry Prime price (a brand-new Prime member's rate) — shown to guests and
+  // non-Prime members so an MRP tag reads as "you can save", not "expensive".
+  const isPrime = !!user?.member;
+  const primePrice = tierUnitPrice(
+    product, 1, { member: true, membershipCount: 1, memberOrderCount: 0 }, settings.rewards
+  );
+  const showPrimeHint = !isPrime && primePrice > 0 && primePrice < price;
   const hasStockLimit = typeof product.stock === "number";
   const outOfStock = product.inStock === false || (hasStockLimit && product.stock <= 0);
   const lowStock = hasStockLimit && product.stock > 0 && product.stock <= LOW_STOCK;
@@ -71,6 +78,14 @@ export default function ProductCard({ product, badge }) {
           </div>
           {savings > 0 && !outOfStock && (
             <span className="save-pill">Save ₹{savings}</span>
+          )}
+          {showPrimeHint && !outOfStock && (
+            <span className="prime-hint">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
+              </svg>
+              ₹{primePrice} with Prime
+            </span>
           )}
         </div>
         {outOfStock ? (

@@ -179,6 +179,18 @@ export default function App() {
         </div>
       )}
 
+      {!isLoggedIn && (
+        <button className="guest-price-banner" onClick={() => setAuthOpen(true)}>
+          <span className="gpb-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" /></svg>
+          </span>
+          <span className="gpb-text">
+            You're seeing regular prices. <b>Log in &amp; get Prime</b> to save up to 15% on every item.
+          </span>
+          <span className="gpb-cta">Log in</span>
+        </button>
+      )}
+
       <main className="main">
         {searching ? (
           <section className="section">

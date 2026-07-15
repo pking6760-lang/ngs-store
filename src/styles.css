@@ -3866,3 +3866,55 @@ body {
 .ptr-ring { display: flex; transition: transform 0.08s linear; }
 .ptr--busy .ptr-ring { animation: ptr-spin 0.7s linear infinite; }
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
+
+/* ── Prime price hint (shown to guests / non-Prime on each card) ──────────── */
+.prime-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #8a5a00;
+  background: linear-gradient(135deg, #fff4d6, #ffe9b0);
+  border: 1px solid #f2d488;
+  white-space: nowrap;
+}
+.prime-hint svg { color: #d09414; flex: 0 0 auto; }
+
+/* ── Guest "log in for member prices" banner ─────────────────────────────── */
+.guest-price-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 32px);
+  max-width: var(--max);
+  margin: 10px auto 0;
+  padding: 10px 12px;
+  border: 1px solid #f2d488;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff8e8, #fdefc7);
+  cursor: pointer;
+  text-align: left;
+}
+.gpb-icon {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff3d0; color: #d09414;
+}
+.gpb-text { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.35; color: #6b4e12; }
+.gpb-text b { color: #7a5200; font-weight: 850; }
+.gpb-cta {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: linear-gradient(140deg, var(--green), var(--green-dark));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
