@@ -47,4 +47,10 @@ android-partner/.gradle/
 android-partner/capacitor-cordova-android-plugins/build/
 android-partner/app/src/main/assets/public/
 www-partner/
+www-customer/
 scratchpad/
+
+# NGS customer Android project — ignore build output
+android-customer/build/
+android-customer/app/build/
+android-customer/.gradle/
