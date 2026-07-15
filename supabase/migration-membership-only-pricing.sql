@@ -1,22 +1,17 @@
--- Membership-only pricing model (profit-tuned).
+-- Membership pricing model (profit-tuned) — with bulk/quantity discounts ON.
 --
--- Goal: never lose money, make good money, and make Prime clearly worth it.
---   • Guest / non-member / logged-out  →  MRP (no auto-discount).
---   • All discounts come ONLY from membership tiers, deepest for a new Prime and
---     fading gently after their order limit; renewing restores the good rate.
---   • Auto quantity-discounts (bulk tiers) are turned OFF so a guest always pays
---     MRP; membership is the single reason to save. (Re-enable build_bulk_tiers
---     to bring "buy N save X" back.)
+-- Guest / non-member: MRP for a single unit, but "buy N, save X" volume discounts
+-- apply to everyone (buy 2 → 4% off, 3 → 8%, 4 → 12%, all bounded by the floor).
+-- Members additionally get their tier price; each buyer is charged the LOWER of
+-- (their member tier price, the bulk quantity price) — so nobody ever overpays.
 --
--- The tier price sits between a per-item floor and MRP:
---   floor = greatest(cost + deepMarginPct%, MRP − maxDiscountPct%)  -- never below cost
---   price = floor + (MRP − floor) × position%      (0% = floor/deepest, 100% = MRP)
--- Positions (settings.rewards.lifecycle.pricing), giving these % OFF MRP with the
--- default maxDiscountPct = 20 (so floor = 80% of MRP):
---   Prime 1st   : 25% → 50%  = 15% off (new) → 10% off (settled)
---   Prime renew : 25% → 50%  = 15% off (new) → 10% off (settled)
---   Normal      : 75% → 100% =  5% off (new) →  0% off / MRP (settled)
--- Example (MRP ₹20, cost ₹12, floor ₹16): Prime ₹17→₹18, Normal ₹19→₹20, Guest ₹20.
+--   • Shelf single-unit price = MRP.
+--   • Bulk tiers = build_bulk_tiers(MRP, floor, cfg)  (config: pricing_config.bulk_*).
+--   • floor = greatest(cost + deepMarginPct%, MRP − maxDiscountPct%)  — never below cost.
+--   • Member tier price = floor + (MRP − floor) × position%.
+--     Positions (settings.rewards.lifecycle.pricing), with maxDiscountPct = 20:
+--       Prime 1st / renew : 25% → 50%  = 15% off (new) → 10% off (settled)
+--       Normal            : 75% → 100% =  5% off (new) →  0% off / MRP (settled)
 --
 -- Mirrors the live smart_reprice() + settings applied via the Management API.
 
@@ -102,7 +97,7 @@ begin
   from priv where p.id = priv.id;
 
   update public.products p set
-    bulk_tiers = '[]'::jsonb
+    bulk_tiers = public.build_bulk_tiers(p.price, greatest(ceil(pc.cost * (1 + cfg.floor_markup)), ceil(p.mrp * (1 - v_maxdisc / 100))), cfg)
     from public.product_costs pc
     where pc.product_id = p.id and pc.cost is not null and pc.speed_tier <> 'unpriced';
   update public.products p set bulk_tiers = '[]'::jsonb
@@ -141,7 +136,7 @@ begin
 end; $function$
 
 
--- Config: the profit-tuned tier positions + the 20% hard safety cap.
+-- Config: profit-tuned tier positions + the 20% hard safety cap.
 update public.settings
 set rewards = jsonb_set(jsonb_set(jsonb_set(jsonb_set(
       rewards,
