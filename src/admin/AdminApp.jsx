@@ -13,7 +13,7 @@ import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import PartnersAdmin from "./PartnersAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
 import { AdminMark } from "./BrandMark.jsx";
-import { ICONS } from "./AdminIcons.jsx";
+import { Ic } from "./AdminIcons.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { useSettings, useOrders, usePartners } from "../lib/hooks.js";
@@ -34,17 +34,17 @@ const ROLE_KEY = "ngs-admin-role"; // "admin"
 const NAME_KEY = "ngs-admin-name";
 
 const TILES = [
-  { id: "dashboard", label: "Overview", icon: ICONS.dashboard, tint: "#4C6EF5" },
-  { id: "orders", label: "Orders", icon: ICONS.orders, tint: "#1C7ED6" },
-  { id: "products", label: "Products", icon: ICONS.products, tint: "#F08C00" },
-  { id: "pricing", label: "Smart Pricing", icon: ICONS.pricing, tint: "#12B886" },
-  { id: "customers", label: "Customers", icon: ICONS.customers, tint: "#7048E8" },
-  { id: "feedback", label: "Feedback", icon: ICONS.feedback, tint: "#F59F00" },
-  { id: "partners", label: "Partners", icon: ICONS.partners, tint: "#0CA678" },
-  { id: "delivery", label: "Delivery", icon: ICONS.delivery, tint: "#0C8599" },
-  { id: "offers", label: "Offers", icon: ICONS.offers, tint: "#E64980" },
-  { id: "notify", label: "Notify", icon: ICONS.notify, tint: "#F76707" },
-  { id: "settings", label: "Settings", icon: ICONS.settings, tint: "#5C6570" },
+  { id: "dashboard", label: "Overview", icon: "dashboard", tint: "#4C6EF5" },
+  { id: "orders", label: "Orders", icon: "orders", tint: "#1C7ED6" },
+  { id: "products", label: "Products", icon: "products", tint: "#F08C00" },
+  { id: "pricing", label: "Smart Pricing", icon: "pricing", tint: "#12B886" },
+  { id: "customers", label: "Customers", icon: "customers", tint: "#7048E8" },
+  { id: "feedback", label: "Feedback", icon: "feedback", tint: "#F59F00" },
+  { id: "partners", label: "Partners", icon: "partners", tint: "#0CA678" },
+  { id: "delivery", label: "Delivery", icon: "delivery", tint: "#0C8599" },
+  { id: "offers", label: "Offers", icon: "offers", tint: "#E64980" },
+  { id: "notify", label: "Notify", icon: "notify", tint: "#F76707" },
+  { id: "settings", label: "Settings", icon: "settings", tint: "#5C6570" },
 ];
 
 export default function AdminApp() {
@@ -133,7 +133,7 @@ function AdminHome({ name, onOpen, onLogout }) {
       <div className="adm-grid">
         {TILES.map((t) => (
           <button key={t.id} className="adm-tile" onClick={() => onOpen(t.id)}>
-            <span className="adm-tile-ic" style={{ background: `${t.tint}1A`, color: t.tint }}>{t.icon}</span>
+            <span className="adm-tile-ic" style={{ background: `${t.tint}1A`, color: t.tint }}><Ic name={t.icon} size={24} /></span>
             <span className="adm-tile-lbl">{t.label}</span>
             {badge[t.id] > 0 && <span className="adm-tile-badge">{badge[t.id]}</span>}
           </button>
@@ -218,7 +218,8 @@ export function StoreControls() {
         onClick={() => change({ deliveryMode: surge ? "normal" : "surge" })}
         title="Turn on during rain / bad weather / peak — members pay delivery too"
       >
-        {surge ? "🌧️ Surge ON" : "☀️ Normal day"}
+        <Ic name={surge ? "rain" : "sun"} size={17} />
+        {surge ? "Surge ON" : "Normal day"}
       </button>
     </div>
   );

@@ -14,6 +14,7 @@ import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSugg
 import { smartReprice } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
+import { Ic } from "./AdminIcons.jsx";
 
 // Sentinel category values: NEW_CAT = create the AI-suggested category on save;
 // ADD_CAT = the "Create new category…" row that prompts for a name.
@@ -74,7 +75,7 @@ export default function ProductsAdmin() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button type="button" className="search-scan-btn" onClick={scanToSearch} title="Scan a barcode to find a product">📷</button>
+          <button type="button" className="search-scan-btn" onClick={scanToSearch} title="Scan a barcode to find a product" aria-label="Scan barcode"><Ic name="camera" size={20} /></button>
         </div>
         <Dropdown
           className="admin-select"
@@ -87,7 +88,7 @@ export default function ProductsAdmin() {
           ]}
         />
         <button className="ghost-btn" onClick={() => setManagingCats(true)}>
-          🏷️ Categories
+          Categories
         </button>
         <button
           className="primary-btn"
@@ -137,7 +138,7 @@ export default function ProductsAdmin() {
                         <span className="stock-tag exempt">No free-del</span>
                       )}
                       <span className={`cell-barcode ${p.barcode ? "has" : "none"}`}>
-                        {p.barcode ? `📷 ${p.barcode}` : "no barcode"}
+                        {p.barcode ? `${p.barcode}` : "no barcode"}
                       </span>
                     </span>
                   </div>
@@ -197,7 +198,7 @@ export default function ProductsAdmin() {
 
 function CategoryManager({ categories, products, onClose }) {
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState("🏷️");
+  const [icon, setIcon] = useState("");
   const [error, setError] = useState("");
 
   async function add(e) {
@@ -208,7 +209,7 @@ function CategoryManager({ categories, products, onClose }) {
       return;
     }
     setName("");
-    setIcon("🏷️");
+    setIcon("");
     setError("");
   }
 
@@ -278,7 +279,7 @@ function CategoryManager({ categories, products, onClose }) {
                     onClick={() => remove(c)}
                     aria-label={`Delete ${c.name}`}
                   >
-                    🗑️
+                    <Ic name="trash" size={16} />
                   </button>
                 </li>
               );
@@ -368,7 +369,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
         // No existing category fits — propose creating one; the owner confirms.
         next.category = NEW_CAT;
         next.newCategoryName = smart.newName;
-        catMsg = ` ✨ New category suggested: “${smart.newName}”.`;
+        catMsg = ` New category suggested: “${smart.newName}”.`;
       } else if (res.found) {
         const cat = guessCategory(res, categories);
         if (cat) next.category = cat;
@@ -465,7 +466,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
         <div className="modal-body">
           <div className="field wide scan-field">
             <button type="button" className="scan-btn" onClick={doScan} disabled={scanBusy}>
-              {scanBusy ? "Opening camera…" : "📷 Scan barcode to auto-fill"}
+              {scanBusy ? "Opening camera…" : "Scan barcode to auto-fill"}
             </button>
             {scanErr && (
               <>
@@ -519,7 +520,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
                 onClick={doNameSearch}
                 disabled={(form.name || "").trim().length < 3 || (lookup && lookup.busy)}
                 title="Auto-fill weight & details from the name"
-              >🔍 Find</button>
+              >Find</button>
             </div>
           </label>
 
@@ -621,7 +622,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
                     ? "Processing…"
                     : form.image
                     ? "Change photo"
-                    : "📷 Upload photo"}
+                    : "Upload photo"}
                   <input
                     type="file"
                     accept="image/*"
@@ -715,7 +716,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
                 if (confirm(`Delete "${form.name}"?`)) onDelete(product.id);
               }}
             >
-              🗑️ Delete
+              Delete
             </button>
           )}
           <button type="button" className="ghost-btn" onClick={onClose}>

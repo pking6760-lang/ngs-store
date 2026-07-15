@@ -53,7 +53,7 @@ export default function NotifyAdmin() {
       if (audience === "all") who = `all customers${typeof r.count === "number" ? ` (${r.count})` : ""}`;
       else if (audience === "winback") who = `${r.count ?? 0} lapsed customer${r.count === 1 ? "" : "s"}`;
       else who = pick.name || "customer";
-      setResult({ ok: true, msg: `✅ Sent to ${who}` });
+      setResult({ ok: true, msg: `Sent to ${who}` });
       if (audience !== "winback") { setTitle(""); setBody(""); }
       if (audience === "one") {
         setPick(null);
@@ -81,7 +81,7 @@ export default function NotifyAdmin() {
             setResult(null);
           }}
         >
-          📣 All customers
+          All customers
         </button>
         <button
           type="button"
@@ -91,7 +91,7 @@ export default function NotifyAdmin() {
             setResult(null);
           }}
         >
-          👤 One customer
+          One customer
         </button>
         <button
           type="button"
@@ -101,7 +101,7 @@ export default function NotifyAdmin() {
             setResult(null);
           }}
         >
-          💤 Win-back
+          Win-back
         </button>
       </div>
 
@@ -111,7 +111,7 @@ export default function NotifyAdmin() {
             {pick ? (
               <div className="picked-row">
                 <span>
-                  📌 {pick.name || "Customer"}{" "}
+                  {pick.name || "Customer"}{" "}
                   <span className="muted">
                     {pick.phone || pick.email || ""}
                   </span>
@@ -182,7 +182,7 @@ export default function NotifyAdmin() {
                 setTitle(e.target.value);
                 setResult(null);
               }}
-              placeholder="Title — e.g. 🎉 Weekend sale is live!"
+              placeholder="Title — e.g. Weekend sale is live!"
               maxLength={120}
             />
             <textarea

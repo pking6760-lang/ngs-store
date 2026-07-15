@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Ic } from "./AdminIcons.jsx";
 import { useSettings } from "../lib/hooks.js";
 import { getShopLocations } from "../lib/store.js";
 import { updateSettings } from "../lib/actions.js";
@@ -77,7 +78,7 @@ export default function DeliveryAdmin() {
         </div>
         <p className="delivery-hint">
           The <strong>surge charge</strong> is added to every order only while
-          you turn on <strong>🌧️ Surge</strong> (top bar) — for rain, peak hours
+          you turn on <strong>Surge</strong> (top bar) — for rain, peak hours
           or bad weather.
         </p>
         <p className="delivery-hint">
@@ -87,7 +88,7 @@ export default function DeliveryAdmin() {
         </p>
         <div className="delivery-save">
           <button className="primary-btn" onClick={save}>Save</button>
-          {saved && <span className="notify-sent">✅ Saved</span>}
+          {saved && <span className="notify-sent">Saved</span>}
           {error && <span className="auth-error">{error}</span>}
         </div>
       </section>
@@ -147,12 +148,12 @@ function ShopLocations({ settings }) {
       </p>
 
       {locations.length === 0 ? (
-        <div className="shop-loc-unset">📍 No shop location added yet.</div>
+        <div className="shop-loc-unset">No shop location added yet.</div>
       ) : (
         <div className="shop-loc-list">
           {locations.map((l) => (
             <div className="shop-loc-row" key={l.id}>
-              <span className="shop-loc-pin">📍</span>
+              <span className="shop-loc-pin"></span>
               <div className="shop-loc-info">
                 <div className="shop-loc-name">{l.label}</div>
                 <a className="shop-loc-coords" href={googleMapsLink(l)}
@@ -161,7 +162,7 @@ function ShopLocations({ settings }) {
                 </a>
               </div>
               <button className="shop-loc-del" onClick={() => removeLocation(l.id)}
-                aria-label={`Remove ${l.label}`}>🗑️</button>
+                aria-label={`Remove ${l.label}`}><Ic name="trash" size={16} /></button>
             </div>
           ))}
         </div>
@@ -176,10 +177,10 @@ function ShopLocations({ settings }) {
         />
         <div className="shop-loc-coord-row">
           <button className="location-btn" onClick={useMyLocation} disabled={locating}>
-            {locating ? "📍 Getting location…" : "📍 Use my current location"}
+            {locating ? "Getting location…" : "Use my current location"}
           </button>
           {coords.lat !== "" && (
-            <span className="shop-loc-picked">✅ {coords.lat}, {coords.lng}</span>
+            <span className="shop-loc-picked">{coords.lat}, {coords.lng}</span>
           )}
         </div>
         {error && <div className="auth-error">{error}</div>}

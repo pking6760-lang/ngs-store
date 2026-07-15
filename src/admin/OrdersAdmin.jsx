@@ -119,10 +119,10 @@ export default function OrdersAdmin() {
     setPrintMsg("Printing…");
     try {
       await printReceiptBluetooth(order, SHOP, address);
-      setPrintMsg("✅ Sent to printer");
+      setPrintMsg("Sent to printer");
       setTimeout(() => setPrintMsg(""), 2500);
     } catch (e) {
-      setPrintMsg("⚠️ " + (e.message || "Print failed. Check the printer is on and paired."));
+      setPrintMsg("" + (e.message || "Print failed. Check the printer is on and paired."));
     }
   }
 
@@ -157,12 +157,12 @@ export default function OrdersAdmin() {
                   <span className="order-row-time">{formatTime(o.createdAt)}</span>
                   <span className="order-row-tags">
                     {isNew && !o.isReturn && <span className="row-new">● NEW</span>}
-                    {!o.isReturn && o.paymentStatus === "paid" && <span className="row-paid">✅ paid</span>}
+                    {!o.isReturn && o.paymentStatus === "paid" && <span className="row-paid">paid</span>}
                     <StatusPill status={o.status} />
                   </span>
                 </div>
                 {o.status === "Delivered" && (
-                  <div className="order-row-rider">🛵 {handlerLabel(o.riderId, true)}</div>
+                  <div className="order-row-rider">{handlerLabel(o.riderId, true)}</div>
                 )}
               </button>
             );
@@ -197,7 +197,7 @@ export default function OrdersAdmin() {
               <div className="printer-list">
                 {picker.devices.map((d) => (
                   <button key={d.address} className="printer-item" onClick={() => choosePrinter(d)}>
-                    🖨️ {d.name || d.address}
+                    {d.name || d.address}
                     <span>{d.address}</span>
                   </button>
                 ))}
@@ -244,39 +244,39 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
           <div className="od-payline"><PaymentTag order={o} /></div>
           {(deliveredBy || packedBy) && (
             <div className="od-handled">
-              {packedBy && <div className="od-handled-row"><span>🧺 Packed by</span><strong>{packedBy}</strong></div>}
+              {packedBy && <div className="od-handled-row"><span>Packed by</span><strong>{packedBy}</strong></div>}
               {deliveredBy && (
                 <div className="od-handled-row">
-                  <span>🛵 Delivered by</span>
+                  <span>Delivered by</span>
                   <strong>{deliveredBy}{o.deliveredAt ? ` · ${formatTime(o.deliveredAt)}` : ""}</strong>
                 </div>
               )}
             </div>
           )}
           {o.needsOwner && o.status !== "Delivered" && o.status !== "Cancelled" && (
-            <div className="od-needs-owner">⚠️ No delivery partner was available — this one's on you. Pack it and deliver, or wait for a partner to come online.</div>
+            <div className="od-needs-owner">No delivery partner was available — this one's on you. Pack it and deliver, or wait for a partner to come online.</div>
           )}
 
           <section className="od-section">
             <h4>Customer</h4>
             <div className="od-row">
-              👤 <strong>{o.customer || "Customer"}</strong>
-              {o.member && <span className="member-chip">👑 Prime</span>}
+              <strong>{o.customer || "Customer"}</strong>
+              {o.member && <span className="member-chip">Prime</span>}
             </div>
             {o.userPhone && (
-              <a className="od-call" href={`tel:+91${o.userPhone}`}>📞 Call +91 {o.userPhone}</a>
+              <a className="od-call" href={`tel:+91${o.userPhone}`}>Call +91 {o.userPhone}</a>
             )}
           </section>
 
           <section className="od-section">
             <h4>Delivery</h4>
-            <div className="od-row">🏠 {o.address || "No address given"}</div>
+            <div className="od-row">{o.address || "No address given"}</div>
             {o.location ? (
               <a className="od-map" href={googleMapsLink(o.location)} target="_blank" rel="noopener noreferrer">
-                📍 Open location in Google Maps →
+                Open location in Google Maps →
               </a>
             ) : (
-              <div className="od-muted">📍 No location shared</div>
+              <div className="od-muted">No location shared</div>
             )}
             {o.distanceKm != null && <div className="od-muted">{o.distanceKm} km from shop</div>}
           </section>
@@ -307,15 +307,15 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                 <div className="od-bill-row"><span>↩︎ Refunded to wallet</span><span className="free">₹{o.refundedAmount}</span></div>
               )}
               {o.pointsEarned > 0 && (
-                <div className="od-bill-row"><span>🎁 Points earned</span><span>{o.pointsEarned}</span></div>
+                <div className="od-bill-row"><span>Points earned</span><span>{o.pointsEarned}</span></div>
               )}
             </div>
             <button className="print-btn" onClick={() => onPrint(o)}>
-              🧾 Print receipt (thermal printer)
+              Print receipt (thermal printer)
             </button>
             <div className="print-sub">
               <button className="print-change" onClick={onChangePrinter}>Change printer</button>
-              {savedPrinter() && <span className="print-saved">🖨️ {savedPrinter().name}</span>}
+              {savedPrinter() && <span className="print-saved">{savedPrinter().name}</span>}
             </div>
             {printMsg && <p className="print-msg">{printMsg}</p>}
           </section>
@@ -324,7 +324,7 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
             <section className="od-section">
               <h4>Collect payment</h4>
               <button className="collect-btn" onClick={() => openQr(o)}>
-                {qrFor === o.id ? "▲ Hide payment QR" : "📲 Show UPI QR (scan & pay)"}
+                {qrFor === o.id ? "▲ Hide payment QR" : "Show UPI QR (scan & pay)"}
               </button>
               {qrFor === o.id && (
                 <div className="collect-qr">
@@ -351,14 +351,14 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                 {o.status === "Returned"
                   ? "✓ Return complete — item collected, customer refunded to wallet."
                   : o.riderId
-                    ? "🛵 A delivery partner is collecting the return…"
-                    : "🛵 Waiting for a delivery partner to collect the return…"}
+                    ? "A delivery partner is collecting the return…"
+                    : "Waiting for a delivery partner to collect the return…"}
               </div>
             ) : (
              <>
             {o.accepted === false && o.status !== "Cancelled" && (
               <div className="od-accept-row">
-                <button className="od-accept" onClick={() => acceptOrder(o)}>✅ Accept order</button>
+                <button className="od-accept" onClick={() => acceptOrder(o)}>Accept order</button>
                 <button className="od-reject" onClick={() => rejectOrder(o)}>✖ Reject</button>
               </div>
             )}
@@ -375,10 +375,10 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                 {curIdx < 1 && (
                   ownerPacks ? (
                     <button className="od-status current" disabled={!!statusBusy} onClick={() => doChange("Packed")}>
-                      {statusBusy === "Packed" ? <span className="ngs-spin" /> : "📦 Mark packed"}
+                      {statusBusy === "Packed" ? <span className="ngs-spin" /> : "Mark packed"}
                     </button>
                   ) : (
-                    <div className="od-role-wait">🧺 Picker is packing this order…</div>
+                    <div className="od-role-wait">Picker is packing this order…</div>
                   )
                 )}
                 {/* Delivery step (after Packed) */}
@@ -386,7 +386,7 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                   ownerDelivers ? (
                     o.status === "Packed" ? (
                       <button className="od-status current" disabled={!!statusBusy} onClick={() => doChange("Out for delivery")}>
-                        {statusBusy === "Out for delivery" ? <span className="ngs-spin" /> : "🛵 Out for delivery"}
+                        {statusBusy === "Out for delivery" ? <span className="ngs-spin" /> : "Out for delivery"}
                       </button>
                     ) : (
                       <button className="od-status current" disabled={!!statusBusy} onClick={() => doChange("Delivered")}>
@@ -395,7 +395,7 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
                     )
                   ) : (
                     <div className="od-role-wait">
-                      🛵 {o.status === "Out for delivery" ? "Driver is on the way…" : "Waiting for the driver to pick up…"}
+                      {o.status === "Out for delivery" ? "Driver is on the way…" : "Waiting for the driver to pick up…"}
                     </div>
                   )
                 )}
@@ -580,19 +580,19 @@ function RefundSection({ order }) {
 function PaymentTag({ order }) {
   if (order.paymentStatus === "paid") {
     return order.razorpayPaymentId ? (
-      <span className="order-pay-tag paid">✅ PAID online · ₹{order.total}</span>
+      <span className="order-pay-tag paid">PAID online · ₹{order.total}</span>
     ) : (
-      <span className="order-pay-tag paidcash">💵 PAID cash · ₹{order.total}</span>
+      <span className="order-pay-tag paidcash">PAID cash · ₹{order.total}</span>
     );
   }
   const method = order.paymentMethod || order.payment;
   if (method === "cod") {
-    return <span className="order-pay-tag cod">💵 COLLECT ₹{order.total} (cash or UPI)</span>;
+    return <span className="order-pay-tag cod">COLLECT ₹{order.total} (cash or UPI)</span>;
   }
   if (method === "razorpay" || method === "online" || method === "card") {
     return <span className="order-pay-tag unpaid">⏳ Online — payment pending</span>;
   }
-  return <span className="order-pay-tag">💳 ₹{order.total}</span>;
+  return <span className="order-pay-tag">₹{order.total}</span>;
 }
 
 function Chip({ active, onClick, children }) {

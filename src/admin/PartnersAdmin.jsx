@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Ic } from "./AdminIcons.jsx";
 import { usePartners } from "../lib/hooks.js";
 import * as api from "../lib/api.js";
 import { kycReport } from "../lib/kyc.js";
@@ -34,7 +35,7 @@ function DocView({ path, label, onOpen }) {
   }
   return (
     <button type="button" className="pdoc" onClick={open}>
-      {url ? <img src={url} alt={label} /> : <div className="pdoc-loading">{opening ? "…" : "📄"}</div>}
+      {url ? <img src={url} alt={label} /> : <div className="pdoc-loading">{opening ? "…" : ""}</div>}
       <span>{label}</span>
     </button>
   );
@@ -113,7 +114,7 @@ function ReKycRequest({ partner }) {
       )}
       {msg && <div className="rekyc-msg">{msg}</div>}
       {!open ? (
-        <button className="rekyc-btn" onClick={() => setOpen(true)}>🔄 Request re-verification (KYC)</button>
+        <button className="rekyc-btn" onClick={() => setOpen(true)}>Request re-verification (KYC)</button>
       ) : (
         <div className="rekyc-form">
           <p className="rekyc-hint">Pick what the partner should re-submit. They complete only these — the rest of their KYC stays.</p>
@@ -235,13 +236,13 @@ function WalletBlock({ partner, w, onChange }) {
         <div className="pw-stat"><span>Strikes</span><strong className={strikes >= 2 ? "neg" : ""}>{strikes}</strong></div>
       </div>
       <div className="pwallet-actions">
-        <button disabled={busy || cash <= 0} onClick={() => setModal("deposit")}>💵 Confirm cash deposit</button>
-        <button disabled={busy || bal <= 0} onClick={() => setModal("payout")}>💸 Record payout</button>
+        <button disabled={busy || cash <= 0} onClick={() => setModal("deposit")}>Confirm cash deposit</button>
+        <button disabled={busy || bal <= 0} onClick={() => setModal("payout")}>Record payout</button>
       </div>
       <div className="pwallet-fix">
-        <button className="fix-btn" disabled={busy} onClick={() => setModal("adjust")}>⚖️ Adjust balance / fix mistake</button>
+        <button className="fix-btn" disabled={busy} onClick={() => setModal("adjust")}>Adjust balance / fix mistake</button>
         {strikes > 0 && (
-          <button className="fix-btn" disabled={busy} onClick={clearStrikes}>🧹 Reset strikes</button>
+          <button className="fix-btn" disabled={busy} onClick={clearStrikes}>Reset strikes</button>
         )}
       </div>
       {msg && <div className="pwallet-msg">{msg}</div>}
@@ -343,7 +344,7 @@ export default function PartnersAdmin() {
     <>
       {cashOnRoad > 0 && (
         <div className="cash-road">
-          <span>💵 Cash on the road</span>
+          <span>Cash on the road</span>
           <strong>₹{Math.round(cashOnRoad).toLocaleString("en-IN")}</strong>
           <small>held by {holders} partner{holders === 1 ? "" : "s"}</small>
         </div>
@@ -352,18 +353,18 @@ export default function PartnersAdmin() {
         <>
           {pending.length > 0 && (
             <button className="pending-banner" onClick={() => setView("requests")}>
-              🔔 {pending.length} partner{pending.length === 1 ? "" : "s"} waiting for your approval — review →
+              {pending.length} partner{pending.length === 1 ? "" : "s"} waiting for your approval — review →
             </button>
           )}
           <div className="partner-nav">
             {pending.length === 0 && (
               <button className="requests-link" onClick={() => setView("requests")}>
-                📋 Requests ({pending.length}) →
+                Requests ({pending.length}) →
               </button>
             )}
             {rejected.length > 0 && (
               <button className="requests-link" onClick={() => setView("rejected")}>
-                🚫 Rejected ({rejected.length}) →
+                Rejected ({rejected.length}) →
               </button>
             )}
           </div>
@@ -391,10 +392,10 @@ export default function PartnersAdmin() {
             return (
               <div className="order-card" key={p.id}>
                 <button className="partner-head" onClick={() => setOpenId(open ? null : p.id)}>
-                  <span className="partner-role">{p.role === "picker" ? "🧺" : "🛵"}</span>
+                  <span className="partner-role"><Ic name={p.role === "picker" ? "products" : "delivery"} size={18} /></span>
                   <span className="partner-main">
                     <strong>{p.fullName}{p.empCode && <span className="emp-badge">{p.empCode}</span>}</strong>
-                    <small>{p.role === "picker" ? "Picker" : "Delivery"} · 📞 {p.phone || "—"}</small>
+                    <small>{p.role === "picker" ? "Picker" : "Delivery"} · {p.phone || "—"}</small>
                   </span>
                   <span className={`partner-status ${p.status}`}>{p.status}</span>
                 </button>
@@ -461,12 +462,12 @@ export default function PartnersAdmin() {
                     {p.status !== "approved" && (
                       !p.termsAcceptedAt ? (
                         <div className="approve-blocked">
-                          🔒 Can't approve yet — this partner hasn't accepted the Terms &amp; Conditions.
+                          Can't approve yet — this partner hasn't accepted the Terms &amp; Conditions.
                           They must re-open the app and complete registration (accepting the declaration) first.
                         </div>
                       ) : (
                         <button className="od-accept" disabled={busy} onClick={() => decide(p, "approved")}>
-                          {busy === p.userId + "approved" ? <span className="ngs-spin" /> : "✅ Approve partner"}
+                          {busy === p.userId + "approved" ? <span className="ngs-spin" /> : "Approve partner"}
                         </button>
                       )
                     )}

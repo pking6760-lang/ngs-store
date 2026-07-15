@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
+import { Ic } from "./AdminIcons.jsx";
 import { useAdminProducts } from "../lib/hooks.js";
 import * as api from "../lib/api.js";
 import { withMinTime } from "../lib/ux.js";
 
 const TIER = {
-  fast:   { label: "Fast", icon: "🔥", note: "advertised as best-price bait" },
-  steady: { label: "Steady", icon: "⚖️", note: "normal margin" },
-  slow:   { label: "Slow", icon: "🐢", note: "fatter margin" },
-  dead:   { label: "Dead", icon: "💤", note: "clearance to move stock" },
+  fast:   { label: "Fast", icon: "", note: "advertised as best-price bait" },
+  steady: { label: "Steady", icon: "", note: "normal margin" },
+  slow:   { label: "Slow", icon: "", note: "fatter margin" },
+  dead:   { label: "Dead", icon: "", note: "clearance to move stock" },
   unpriced: { label: "No cost yet", icon: "＋", note: "add a buying price to auto-price" },
 };
 const ORDER = ["fast", "steady", "slow", "dead", "unpriced"];
@@ -115,10 +116,10 @@ export default function SmartPricing() {
       <div className="sp-card">
         <h4>Target margins</h4>
         <div className="sp-grid">
-          <Field label="🔥 Fast %" value={pct(cfg.fast_margin)} onChange={(v) => set("fast_margin", v / 100)} />
-          <Field label="⚖️ Steady %" value={pct(cfg.steady_margin)} onChange={(v) => set("steady_margin", v / 100)} />
-          <Field label="🐢 Slow %" value={pct(cfg.slow_margin)} onChange={(v) => set("slow_margin", v / 100)} />
-          <Field label="💤 Clearance %" value={pct(cfg.clearance_markup)} onChange={(v) => set("clearance_markup", v / 100)} hint="over cost" />
+          <Field label="Fast %" value={pct(cfg.fast_margin)} onChange={(v) => set("fast_margin", v / 100)} />
+          <Field label="Steady %" value={pct(cfg.steady_margin)} onChange={(v) => set("steady_margin", v / 100)} />
+          <Field label="Slow %" value={pct(cfg.slow_margin)} onChange={(v) => set("slow_margin", v / 100)} />
+          <Field label="Clearance %" value={pct(cfg.clearance_markup)} onChange={(v) => set("clearance_markup", v / 100)} hint="over cost" />
         </div>
         <h4>Rules</h4>
         <div className="sp-grid">
@@ -174,7 +175,7 @@ export default function SmartPricing() {
       {groups.map((g) => (
         <div className="sp-group" key={g.tier}>
           <div className="sp-group-head">
-            <span className="sp-tier-badge">{TIER[g.tier].icon} {TIER[g.tier].label}</span>
+            <span className={`sp-tier-badge tier-${g.tier}`}>{TIER[g.tier].label}</span>
             <span className="sp-group-note">{TIER[g.tier].note}</span>
           </div>
           {g.items.map((p) => (
@@ -208,13 +209,13 @@ export default function SmartPricing() {
                   <button
                     className={`sp-bait-btn pin ${p.baitOverride === "pin" ? "on" : ""} ${p.bait && p.baitOverride !== "hide" ? "live" : ""}`}
                     onClick={() => override(p, "pin")}
-                    title="Always advertise"
-                  >📣</button>
+                    title="Always advertise" aria-label="Always advertise"
+                  ><Ic name="broadcast" size={16} /></button>
                   <button
                     className={`sp-bait-btn hide ${p.baitOverride === "hide" ? "on" : ""}`}
                     onClick={() => override(p, "hide")}
-                    title="Never advertise"
-                  >🚫</button>
+                    title="Never advertise" aria-label="Never advertise"
+                  ><Ic name="x" size={16} /></button>
                 </div>
               )}
             </div>

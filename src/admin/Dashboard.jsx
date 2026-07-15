@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useProducts, useAdminProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
+import { Ic } from "./AdminIcons.jsx";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
@@ -121,25 +122,25 @@ export default function Dashboard({ onNavigate }) {
   return (
     <>
       <div className="stat-row">
-        <StatCard label="Today's orders" value={stats.orders} icon="🧾" tone="blue" />
-        <StatCard label="Today's revenue" value={`₹${stats.revenue}`} icon="💰" tone="amber" />
+        <StatCard label="Today's orders" value={stats.orders} icon="orders" tone="blue" />
+        <StatCard label="Today's revenue" value={`₹${stats.revenue}`} icon="revenue" tone="amber" />
         <StatCard
           label={stats.marginPct != null ? `Today's profit · ${stats.marginPct.toFixed(0)}%` : "Today's profit"}
           value={`₹${stats.profit}`}
-          icon="📈"
+          icon="profit"
           tone="green"
         />
-        <StatCard label="Pending orders" value={stats.pending} icon="⏳" tone="pink" />
+        <StatCard label="Pending orders" value={stats.pending} icon="pending" tone="pink" />
       </div>
 
       {(stats.givenBack > 0 || stats.walletUsed > 0) && (
         <section className="panel dash-giveback">
           <div className="panel-head"><h3>Rewards, wallet &amp; refunds · today</h3></div>
           <div className="giveback-grid">
-            <div className="giveback-item"><span>🎁 Points redeemed</span><strong>₹{stats.rewardsGiven}</strong></div>
-            <div className="giveback-item"><span>🎟️ Coupons</span><strong>₹{stats.couponsGiven}</strong></div>
-            <div className="giveback-item"><span>👛 Wallet used</span><strong>₹{stats.walletUsed}</strong></div>
-            <div className="giveback-item"><span>↩︎ Refunds to wallet</span><strong>₹{stats.refunds}</strong></div>
+            <div className="giveback-item"><span><Ic name="gift" size={15} /> Points redeemed</span><strong>₹{stats.rewardsGiven}</strong></div>
+            <div className="giveback-item"><span><Ic name="coupon" size={15} /> Coupons</span><strong>₹{stats.couponsGiven}</strong></div>
+            <div className="giveback-item"><span><Ic name="wallet" size={15} /> Wallet used</span><strong>₹{stats.walletUsed}</strong></div>
+            <div className="giveback-item"><span><Ic name="refund" size={15} /> Refunds to wallet</span><strong>₹{stats.refunds}</strong></div>
           </div>
           <p className="dash-sub">Points &amp; coupons and refunds are already subtracted from today's profit above.</p>
         </section>
@@ -166,7 +167,7 @@ export default function Dashboard({ onNavigate }) {
 
       <section className="panel lowstock-panel">
         <div className="panel-head">
-          <h3>⚠️ Low stock {lowStock.length > 0 && <span className="lowstock-count">{lowStock.length}</span>}</h3>
+          <h3><Ic name="alert" size={17} /> Low stock {lowStock.length > 0 && <span className="lowstock-count">{lowStock.length}</span>}</h3>
           <label className="lowstock-thresh">
             Alert at ≤
             <input
@@ -180,7 +181,7 @@ export default function Dashboard({ onNavigate }) {
           </label>
         </div>
         {lowStock.length === 0 ? (
-          <p className="panel-empty">Everything's well stocked. 👍</p>
+          <p className="panel-empty">Everything's well stocked.</p>
         ) : (
           <div className="lowstock-list">
             {lowStock.map((p) => (
@@ -203,7 +204,7 @@ export default function Dashboard({ onNavigate }) {
 
       <section className="panel">
         <div className="panel-head">
-          <h3>🔥 Best sellers · 7 days</h3>
+          <h3><Ic name="flame" size={17} /> Best sellers · 7 days</h3>
           <button className="link-btn" onClick={() => onNavigate("pricing")}>
             Pricing →
           </button>
@@ -215,7 +216,7 @@ export default function Dashboard({ onNavigate }) {
             {bestSellers.map((p, i) => (
               <div className="best-row" key={p.id}>
                 <span className="best-rank">{i + 1}</span>
-                <span className="best-name">{p.icon ? `${p.icon} ` : ""}{p.name}</span>
+                <span className="best-name">{p.name}</span>
                 <span className="best-qty">{p.qty} sold</span>
               </div>
             ))}
@@ -297,7 +298,7 @@ export default function Dashboard({ onNavigate }) {
 function StatCard({ label, value, icon, tone }) {
   return (
     <div className={`stat-card ${tone}`}>
-      <div className="stat-icon">{icon}</div>
+      <div className="stat-icon"><Ic name={icon} size={22} /></div>
       <div className="stat-body">
         <div className="stat-value">{value}</div>
         <div className="stat-label">{label}</div>

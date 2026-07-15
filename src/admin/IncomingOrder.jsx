@@ -57,12 +57,12 @@ export default function IncomingOrder() {
   return (
     <div className="incoming-overlay">
       <div className="incoming-card">
-        <div className="incoming-pulse">🔔</div>
+        <div className="incoming-pulse"></div>
         <div className="incoming-title">NEW ORDER</div>
         <div className="incoming-id">#{order.id}</div>
 
         {order.member && (
-          <div className="incoming-member">👑 Prime member · priority</div>
+          <div className="incoming-member">Prime member · priority</div>
         )}
 
         <div className="incoming-amount">
@@ -73,12 +73,12 @@ export default function IncomingOrder() {
         </div>
 
         <div className="incoming-customer">
-          👤 {order.customer}
-          {order.userPhone ? ` · 📞 +91 ${order.userPhone}` : ""}
+          {order.customer}
+          {order.userPhone ? ` · +91 ${order.userPhone}` : ""}
         </div>
 
         {order.address && (
-          <div className="incoming-address">🏠 {order.address}</div>
+          <div className="incoming-address">{order.address}</div>
         )}
 
         {order.location && (
@@ -88,7 +88,7 @@ export default function IncomingOrder() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            📍 View location on Google Maps
+            View location on Google Maps
           </a>
         )}
 

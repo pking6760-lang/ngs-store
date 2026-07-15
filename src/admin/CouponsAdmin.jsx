@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Ic } from "./AdminIcons.jsx";
 import { useCoupons, useSettings, useCategories } from "../lib/hooks.js";
 import { upsertCoupon, deleteCoupon, updateSettings } from "../lib/actions.js";
 import Dropdown from "./Dropdown.jsx";
@@ -129,7 +130,7 @@ function LifecycleSettings({ settings }) {
       </p>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 8 }}>
         <button className="primary-btn" onClick={save}>Save member pricing</button>
-        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
+        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>Saved</span>}
       </div>
     </section>
   );
@@ -184,7 +185,7 @@ function MembershipSettings({ settings }) {
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
         <button className="primary-btn" onClick={save}>Save membership</button>
-        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
+        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>Saved</span>}
       </div>
     </section>
   );
@@ -263,7 +264,7 @@ function ScratchSettings({ settings }) {
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
         <button className="primary-btn" onClick={save}>Save scratch rule</button>
-        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
+        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>Saved</span>}
       </div>
     </section>
   );
@@ -339,7 +340,7 @@ function RewardsSettings({ settings }) {
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
         <button className="primary-btn" onClick={save}>Save points rule</button>
         {saved && (
-          <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>
+          <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>Saved</span>
         )}
       </div>
     </section>
@@ -367,13 +368,13 @@ function OfferBanner({ settings }) {
           setText(e.target.value);
           setSaved(false);
         }}
-        placeholder="e.g. 🎉 Diwali sale — 10% off with code NISHA10"
+        placeholder="e.g. Diwali sale — 10% off with code NISHA10"
       />
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12 }}>
         <button className="primary-btn" onClick={save}>
           Save banner
         </button>
-        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✅ Saved</span>}
+        {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>Saved</span>}
       </div>
     </section>
   );
@@ -467,7 +468,7 @@ function CouponManager({ coupons, categories }) {
           coupons.map((c) => (
             <div className="coupon-rowc" key={c.code}>
               <div>
-                <div className="coupon-code">🎟️ {c.code}</div>
+                <div className="coupon-code">{c.code}</div>
                 <div className="coupon-desc">
                   {c.type === "percent" ? `${c.value}% off` : `₹${c.value} off`}
                   {c.category ? ` · only ${catName(c.category)}` : ""}
@@ -489,7 +490,7 @@ function CouponManager({ coupons, categories }) {
                 }}
                 aria-label={`Delete ${c.code}`}
               >
-                🗑️
+                <Ic name="trash" size={16} />
               </button>
             </div>
           ))

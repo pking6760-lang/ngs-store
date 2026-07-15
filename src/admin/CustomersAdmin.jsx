@@ -43,7 +43,7 @@ export default function CustomersAdmin() {
                 <span className="customer-row-main">
                   <span className="customer-row-name">
                     {c.name}
-                    {c.member && <span className="member-chip">👑 Prime</span>}
+                    {c.member && <span className="member-chip">Prime</span>}
                   </span>
                   <span className="customer-row-sub">
                     +91 {c.phone} · {s.orders} order{s.orders === 1 ? "" : "s"}
@@ -107,7 +107,7 @@ function CustomerDetail({ customer, orders, onClose }) {
               <div className="customer-hero-name">
                 {customer.name}
                 {customer.member ? (
-                  <span className="member-chip">👑 Prime</span>
+                  <span className="member-chip">Prime</span>
                 ) : (
                   <span className="nonmember-chip">Not a member</span>
                 )}
@@ -194,7 +194,7 @@ function CustomerDetail({ customer, orders, onClose }) {
               <button className="primary-btn" type="submit">
                 Send to {customer.name.split(" ")[0]}
               </button>
-              {sent && <span className="notify-sent">✅ Sent</span>}
+              {sent && <span className="notify-sent">Sent</span>}
             </div>
           </form>
 
@@ -205,7 +205,7 @@ function CustomerDetail({ customer, orders, onClose }) {
                 {notes.map((n) => (
                   <div className="notify-item" key={n.id}>
                     <div className="notify-item-title">
-                      🔔 {n.title}
+                      {n.title}
                       {!n.read && <span className="notify-unread">Unread</span>}
                     </div>
                     {n.body && <div className="notify-item-body">{n.body}</div>}

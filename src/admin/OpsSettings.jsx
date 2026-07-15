@@ -9,8 +9,8 @@ const GROUPS = [
     title: "Who does the work",
     note: "Switch to Staff once you've hired. In 'Me', orders come to this admin app.",
     toggles: [
-      { key: "coverage_picking", label: "🧺 Picking" },
-      { key: "coverage_delivery", label: "🛵 Delivery" },
+      { key: "coverage_picking", label: "Picking" },
+      { key: "coverage_delivery", label: "Delivery" },
     ],
   },
   {
