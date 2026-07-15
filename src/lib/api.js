@@ -143,7 +143,7 @@ function mapProfile(r) {
 
 /* ─── Auth (email OTP) ──────────────────────────────────────────────────── */
 
-// Email a 6-digit one-time code. Creates the account on first use. Requires the
+// Email an 8-digit one-time code. Creates the account on first use. Requires the
 // project's email template to include the code token ({{ .Token }}), which
 // needs custom SMTP configured on Supabase (see EMAIL_OTP_SETUP.md).
 export async function sendEmailCode(email, name) {

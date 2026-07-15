@@ -28,7 +28,7 @@ function IndiaFlag() {
   );
 }
 
-// Passwordless login. With a real backend it's email → 6-digit code. In the
+// Passwordless login. With a real backend it's email → 8-digit code. In the
 // demo it's phone → 4-digit code shown on screen. `reason` optionally explains
 // why we're asking.
 export default function AuthModal({ open, onClose, onSuccess, reason }) {
@@ -91,9 +91,8 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
     else setError(res.error);
   }
 
-  // Demo phone code is 4 digits; email OTP length is set on Supabase (6–10),
-  // so allow up to 10 and don't hard-cap at 6.
-  const codeLen = email ? 10 : 4;
+  // Demo phone code is 4 digits; the email OTP from Supabase is 8 digits.
+  const codeLen = email ? 8 : 4;
 
   return (
     <div className="modal-overlay" onClick={onBackdrop}>
@@ -119,7 +118,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
             <p className="auth-reason">
               {reason ||
                 (email
-                  ? "We'll email you a 6-digit code — no password needed."
+                  ? "We'll email you an 8-digit code — no password needed."
                   : "We'll send a one-time code to your WhatsApp.")}
             </p>
             <form className="auth-form" onSubmit={sendCode}>
@@ -167,7 +166,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
               <span className="auth-trust-ic"><AI d={email ? AIcon.mail : AIcon.chat} size={15} /></span>
               <span>
                 {email
-                  ? "A 6-digit code arrives in your inbox — no password needed."
+                  ? "An 8-digit code arrives in your inbox — no password needed."
                   : "The code arrives on WhatsApp — no password needed."}
               </span>
             </div>
@@ -211,7 +210,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
                     setCode(e.target.value.replace(/\D/g, "").slice(0, codeLen));
                     setError("");
                   }}
-                  placeholder={email ? "Enter the code" : `${codeLen}-digit code`} autoFocus
+                  placeholder={`${codeLen}-digit code`} autoFocus
                 />
               </label>
               {error && <div className="auth-error">{error}</div>}
