@@ -12,6 +12,7 @@ import FeedbackAdmin from "./FeedbackAdmin.jsx";
 import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import PartnersAdmin from "./PartnersAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
+import { AdminMark } from "./BrandMark.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { useSettings, useOrders, usePartners } from "../lib/hooks.js";
@@ -118,6 +119,7 @@ function AdminHome({ name, onOpen, onLogout }) {
       <header className="adm-hero">
         <div className="adm-hero-top">
           <div className="adm-brand">
+            <AdminMark size={30} />
             <span className="adm-logo">NGS</span>
             <span className="adm-sub">admin</span>
           </div>
@@ -295,6 +297,7 @@ function Login({ onSignIn }) {
     <div className="login-screen">
       <div className="login-card">
         <div className="admin-brand center">
+          <AdminMark size={44} />
           <span className="admin-logo">NGS</span>
           <span className="admin-logo-sub">admin</span>
         </div>

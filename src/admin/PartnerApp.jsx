@@ -4,6 +4,7 @@ import { toast } from "../lib/toast.js";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
+import { PartnerMark } from "./BrandMark.jsx";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
 import LivenessCapture from "./LivenessCapture.jsx";
 import * as api from "../lib/api.js";
@@ -46,6 +47,7 @@ function PartnerLogin() {
   return (
     <div className="partner-login-bg">
       <div className="partner-login-brand">
+        <PartnerMark size={52} />
         <span className="admin-logo">NGS</span>
         <span className="admin-logo-sub">partner</span>
         <p>Picking &amp; delivery</p>
@@ -77,6 +79,7 @@ function PartnerLogin() {
 function Splash({ text }) {
   return (
     <div className="partner-splash">
+      <PartnerMark size={56} />
       <span className="admin-logo">NGS</span>
       <span className="admin-logo-sub">partner</span>
       {text && <p style={{ marginTop: 12, color: "#cfe6d3" }}>{text}</p>}

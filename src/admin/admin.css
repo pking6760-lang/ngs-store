@@ -40,8 +40,24 @@ body {
 }
 .admin-brand.center {
   justify-content: center;
+  align-items: center;
   padding-bottom: 8px;
 }
+/* NGS brand badge shared by the admin + partner headers */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+}
+.brand-mark svg {
+  display: block;
+  border-radius: 22%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+.admin-brand.center .brand-mark { margin-right: 0; margin-bottom: 8px; }
+.admin-brand.center { flex-direction: column; }
+.partner-login-brand .brand-mark,
+.partner-splash .brand-mark { display: flex; justify-content: center; margin: 0 auto 10px; }
 .admin-logo {
   font-size: 24px;
   font-weight: 800;
@@ -2529,7 +2545,8 @@ body {
 .adm-hero { background: linear-gradient(135deg, var(--a-primary), var(--a-primary-d)); color: #fff;
   padding: max(16px, env(safe-area-inset-top)) 18px 20px; border-radius: 0 0 26px 26px; box-shadow: 0 10px 30px -14px rgba(43,68,168,0.7); }
 .adm-hero-top { display: flex; align-items: center; justify-content: space-between; }
-.adm-brand { display: flex; align-items: baseline; gap: 6px; }
+.adm-brand { display: flex; align-items: center; gap: 6px; }
+.adm-brand .brand-mark { margin-right: 2px; }
 .adm-logo { font-weight: 800; font-size: 22px; letter-spacing: -0.02em; color: #fff; }
 .adm-sub { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.75); }
 .adm-logout { background: rgba(255,255,255,0.16); color: #fff; border: 0; padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; cursor: pointer; }
