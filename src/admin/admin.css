@@ -1180,22 +1180,34 @@ body {
 
 /* ─── Login ──────────────────────────────────────────────── */
 .login-screen {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1e2a63, #3B5BDB);
+  background:
+    radial-gradient(600px 300px at 82% -8%, rgba(255,255,255,0.22), transparent 65%),
+    linear-gradient(150deg, #223a95 0%, #2f4bc4 55%, #3B5BDB 100%);
   padding: 20px;
+  /* Login renders outside .adm — re-point the shared accent to indigo so no
+     leftover control (fingerprint button, focus rings) shows customer green. */
+  --green: #3B5BDB;
+  --green-dark: #2B44A8;
+  --line: #E4E8F2;
 }
 .login-card {
+  position: relative;
   background: #fff;
-  border-radius: 18px;
-  padding: 32px;
-  width: min(380px, 100%);
+  border-radius: 22px;
+  padding: 34px 30px;
+  width: min(384px, 100%);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 30px 70px -24px rgba(12, 18, 48, 0.6), 0 2px 8px rgba(12,18,48,0.12);
+}
+.login-card form {
+  gap: 11px;
 }
 .login-card h2 {
   font-size: 20px;
@@ -1213,24 +1225,32 @@ body {
   margin-bottom: 12px;
 }
 .login-input {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
+  border: 1px solid var(--a-line);
+  border-radius: 12px;
+  padding: 13px 14px;
   font-size: 15px;
   outline: none;
+  background: #fbfcfe;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
 }
 .login-input:focus {
-  border-color: var(--green);
+  border-color: var(--a-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.14);
 }
 .login-error {
   color: #c0392b;
   font-size: 13px;
+  background: #fdecec;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-weight: 600;
 }
 .login-btn {
   width: 100%;
   display: block;
   box-sizing: border-box;
-  background: var(--green);
+  background: linear-gradient(140deg, var(--a-primary), var(--a-primary-d)) !important;
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -1238,7 +1258,10 @@ body {
   font-size: 15px;
   font-weight: 800;
   margin-top: 10px;
+  box-shadow: 0 12px 24px -12px rgba(43, 68, 168, 0.8);
+  cursor: pointer;
 }
+.login-btn:disabled { opacity: 0.6; box-shadow: none; }
 .login-hint {
   text-align: center;
   font-size: 12px;
@@ -2625,8 +2648,9 @@ body {
 .adm-sec-body { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 14px 16px 34px; }
 
 /* Retheme the admin login + store controls to the new indigo */
-.login-btn { background: var(--a-primary) !important; }
 .login-screen .admin-logo { color: var(--a-primary) !important; }
+.login-screen .admin-logo-sub { color: var(--a-sub); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; font-size: 11px; }
+.login-screen .admin-brand.center { gap: 4px; margin-bottom: 4px; }
 
 /* Cash-on-road summary + per-partner wallet */
 .cash-road { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg,#fff3d6,#fff9ee);
