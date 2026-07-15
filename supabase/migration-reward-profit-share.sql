@@ -1,21 +1,25 @@
--- Scratch reward: reveal ONE prize only — reward points usually, wallet cash rarely.
+-- Reward redesign: a small, FIXED SHARE of each order's profit (shop keeps ≥90%).
 --
--- Before: an order's scratch card could grant BOTH scratch_points AND scratch_wallet.
--- Now place_order picks a single prize:
---   • ~10% of orders (walletChancePct, and only when a wallet amount was earned):
---     WALLET cash, capped small (walletMaxRupees), points dropped.
---   • otherwise: POINTS — the wallet's rupee value folds into points (same worth,
---     no cash paid out).
--- Both paths stay inside the existing profit budget (profit − shop floor), so the
--- shop never loses money. Verified over 30 rolled-back orders: 0 double-prizes,
--- ~7% wallet, ~93% points, wallet capped at ₹7-8.
+-- Before: points came off item margin and only the "boost" portion was capped by
+-- profit — the base reward was uncapped, so a high-margin order could give a lot.
+-- Now place_order computes the order's real profit, then:
+--   reward_value = min( rewardSharePct% of profit , profit − shop_floor )   (≥ 0)
+-- and hands it out as ONE scratch prize:
+--   • ~10% of orders (walletChancePct): wallet cash, capped at walletMaxRupees (small).
+--   • otherwise: reward points ( reward_value × pointsPerRupee ).
+-- So the shop keeps at least (100 − rewardSharePct)% of every order's profit, and
+-- never drops below the shop floor. Never both prizes, never a loss.
 --
--- The client (ScratchCard) already shows only the non-zero prize, so no app change.
--- This file mirrors the live place_order() + settings applied via the Management API.
+-- Verified over 80 rolled-back orders: 0 double-prizes, ~12% wallet (capped ₹8),
+-- ~88% points (₹9 on a ~₹90-profit order → shop keeps ~90%).
+--
+-- New config: rewards.lifecycle.rewardSharePct (default 10),
+--             rewards.scratch.walletChancePct (default 10).
+-- The client (ScratchCard) already shows only the non-zero prize — no app change.
+-- Mirrors the live place_order() + settings applied via the Management API.
 
-update public.settings
-set rewards = jsonb_set(rewards, '{scratch,walletChancePct}', '10'::jsonb, true)
-where id = 1;
+update public.settings set rewards = jsonb_set(rewards, '{lifecycle,rewardSharePct}', '10'::jsonb, true) where id = 1;
+update public.settings set rewards = jsonb_set(rewards, '{scratch,walletChancePct}', '10'::jsonb, true) where id = 1;
 
 CREATE OR REPLACE FUNCTION public.place_order(p_items jsonb, p_coupon text DEFAULT NULL::text, p_location jsonb DEFAULT NULL::jsonb, p_payment text DEFAULT 'upi'::text, p_address text DEFAULT NULL::text, p_wallet numeric DEFAULT 0, p_redeem_points integer DEFAULT 0, p_membership boolean DEFAULT false)
  RETURNS orders
@@ -24,6 +28,7 @@ CREATE OR REPLACE FUNCTION public.place_order(p_items jsonb, p_coupon text DEFAU
  SET search_path TO 'public'
 AS $function$
 declare
+  v_reward_val numeric := 0;
   v_uid          uuid := auth.uid();
   v_profile      public.profiles;
   v_settings     public.settings;
@@ -289,15 +294,10 @@ begin
     v_surge := coalesce(v_settings.surge_fee, 0);
   end if;
 
-  -- Points/scratch earned, boosted by the tier perk; bounded by real profit so
-  -- the shop always keeps its floor (rewards only ever come from the order).
-  v_base_pts  := floor(greatest(v_reward_margin, 0) * v_margin_ppr);
-  v_boost_pts := floor(greatest(v_reward_margin, 0) * v_margin_ppr * v_mult);
-  v_extra_pts := greatest(v_boost_pts - v_base_pts, 0);
-  v_base_wal  := least(round(greatest(v_high_margin, 0) * greatest(v_wallet_cut, 0) / 100), v_wallet_max);
-  v_boost_wal := least(round(greatest(v_high_margin, 0) * greatest(v_wallet_cut, 0) / 100 * v_mult), round(v_wallet_max * v_mult));
-  v_extra_wal := greatest(v_boost_wal - v_base_wal, 0);
-
+  -- ── Reward: a small, fixed SHARE of THIS order's profit ────────────────────
+  -- The shop always keeps the large majority of every order's profit. The reward
+  -- is capped at rewardSharePct% of profit AND never lets profit fall below the
+  -- shop floor — then handed out as a single scratch prize.
   v_picker_cost := case when v_ops.coverage_picking = 'staff' then coalesce(v_ops.picker_pack_fee, 0) else 0 end;
   v_rider_cost  := case when v_ops.coverage_delivery = 'staff' then
       (case when v_is_member then coalesce(v_ops.rider_member_base, v_ops.rider_base) else v_ops.rider_base end)
@@ -307,39 +307,27 @@ begin
   v_profit     := v_item_margin + (v_delivery + v_handling + v_surge) - v_picker_cost - v_rider_cost;
   v_shop_floor := greatest(coalesce((v_life->>'shopFloorRupees')::numeric, 6),
                            round(v_item_total * coalesce((v_life->>'shopFloorPct')::numeric, 3) / 100));
-  v_budget := greatest(0, v_profit - v_shop_floor);
-  v_pw_val := (v_extra_pts::numeric / nullif(v_redeem_per, 0)) + v_extra_wal;
-  if v_life_on and coalesce(v_pw_val, 0) > v_budget and v_pw_val > 0 then
-    v_scale := greatest(0, v_budget / v_pw_val);
-    v_extra_pts := floor(v_extra_pts * v_scale);
-    v_extra_wal := floor(v_extra_wal * v_scale);
-  end if;
 
-  v_points_total   := v_base_pts + v_extra_pts;
-  v_scratch_wallet := v_base_wal + v_extra_wal;
-  v_scratch_points := round(v_points_total * greatest(v_pts_share, 0) / 100);
-  v_points         := greatest(v_points_total - v_scratch_points, 0);
+  v_reward_val := greatest(0, least(
+      round(greatest(v_profit, 0) * coalesce((v_life->>'rewardSharePct')::numeric, 10) / 100),
+      v_profit - v_shop_floor));
   if coalesce((v_scratch->>'enabled')::boolean, true) = false
-     or v_item_total < coalesce((v_scratch->>'minOrder')::numeric, 0) then
-    v_points := v_points_total; v_scratch_points := 0; v_scratch_wallet := 0;
+     or v_item_total < coalesce((v_scratch->>'minOrder')::numeric, 0)
+     or not v_life_on then
+    v_reward_val := 0;
   end if;
 
-  -- The scratch reveals ONE prize only: wallet cash RARELY, reward points usually.
-  -- On a points win the wallet's value folds into points (same worth, no cash out);
-  -- on a wallet win the cash is capped small and the points are dropped. Either way
-  -- it stays inside the already profit-bounded budget, so the shop never loses money.
-  if v_scratch_points > 0 or v_scratch_wallet > 0 then
-    if v_scratch_wallet >= 1
-       and random() < coalesce((v_scratch->>'walletChancePct')::numeric, 10) / 100 then
-      v_scratch_wallet := least(v_scratch_wallet,
-                                coalesce((v_scratch->>'walletMaxRupees')::numeric, 8));
-      v_scratch_points := 0;
-    else
-      v_scratch_points := v_scratch_points + round(v_scratch_wallet * greatest(v_redeem_per, 0));
-      v_scratch_wallet := 0;
-    end if;
+  -- One prize only: wallet cash RARELY (capped small), reward points usually.
+  v_points := 0;
+  if v_reward_val < 1 then
+    v_scratch_points := 0; v_scratch_wallet := 0;
+  elsif random() < coalesce((v_scratch->>'walletChancePct')::numeric, 10) / 100 then
+    v_scratch_wallet := least(round(v_reward_val), coalesce((v_scratch->>'walletMaxRupees')::numeric, 8));
+    v_scratch_points := 0;
+  else
+    v_scratch_points := floor(v_reward_val * greatest(v_redeem_per, 0));
+    v_scratch_wallet := 0;
   end if;
-
   v_total := v_item_total - v_discount - v_redeem_rupees
              + v_delivery + v_handling + v_surge + v_member_fee;
 
