@@ -13,6 +13,7 @@ import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import PartnersAdmin from "./PartnersAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
 import { AdminMark } from "./BrandMark.jsx";
+import { ICONS } from "./AdminIcons.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { useSettings, useOrders, usePartners } from "../lib/hooks.js";
@@ -33,17 +34,17 @@ const ROLE_KEY = "ngs-admin-role"; // "admin"
 const NAME_KEY = "ngs-admin-name";
 
 const TILES = [
-  { id: "dashboard", label: "Overview", icon: "📊", tint: "#4C6EF5" },
-  { id: "orders", label: "Orders", icon: "🧾", tint: "#1C7ED6" },
-  { id: "products", label: "Products", icon: "📦", tint: "#F08C00" },
-  { id: "pricing", label: "Smart Pricing", icon: "🏷️", tint: "#12B886" },
-  { id: "customers", label: "Customers", icon: "👥", tint: "#7048E8" },
-  { id: "feedback", label: "Feedback", icon: "⭐", tint: "#F59F00" },
-  { id: "partners", label: "Partners", icon: "🛵", tint: "#0CA678" },
-  { id: "delivery", label: "Delivery", icon: "🚴", tint: "#0C8599" },
-  { id: "offers", label: "Offers", icon: "🎟️", tint: "#E64980" },
-  { id: "notify", label: "Notify", icon: "🔔", tint: "#F76707" },
-  { id: "settings", label: "Settings", icon: "⚙️", tint: "#5C6570" },
+  { id: "dashboard", label: "Overview", icon: ICONS.dashboard, tint: "#4C6EF5" },
+  { id: "orders", label: "Orders", icon: ICONS.orders, tint: "#1C7ED6" },
+  { id: "products", label: "Products", icon: ICONS.products, tint: "#F08C00" },
+  { id: "pricing", label: "Smart Pricing", icon: ICONS.pricing, tint: "#12B886" },
+  { id: "customers", label: "Customers", icon: ICONS.customers, tint: "#7048E8" },
+  { id: "feedback", label: "Feedback", icon: ICONS.feedback, tint: "#F59F00" },
+  { id: "partners", label: "Partners", icon: ICONS.partners, tint: "#0CA678" },
+  { id: "delivery", label: "Delivery", icon: ICONS.delivery, tint: "#0C8599" },
+  { id: "offers", label: "Offers", icon: ICONS.offers, tint: "#E64980" },
+  { id: "notify", label: "Notify", icon: ICONS.notify, tint: "#F76707" },
+  { id: "settings", label: "Settings", icon: ICONS.settings, tint: "#5C6570" },
 ];
 
 export default function AdminApp() {
@@ -125,7 +126,7 @@ function AdminHome({ name, onOpen, onLogout }) {
           </div>
           <button className="adm-logout" onClick={onLogout}>Log out</button>
         </div>
-        <div className="adm-hello">Hi, {name || "Store Manager"} 👋</div>
+        <div className="adm-hello">Hi, {name || "Store Manager"}</div>
         <StoreControls />
       </header>
 
