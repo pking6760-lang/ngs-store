@@ -156,7 +156,7 @@ function MyOrders({ user, onReorder }) {
   if (myOrders.length === 0) {
     return (
       <div className="account-empty">
-        <div className="empty-emoji">📦</div>
+        <div className="empty-ic"><MIcon d={PIC.box} size={30} /></div>
         <p>{loading ? "Loading your orders…" : "No orders yet"}</p>
         {!loading && <span>Your orders and their live status will appear here.</span>}
       </div>
@@ -244,12 +244,18 @@ function OrderDetail({ order, onClose, onReorder }) {
           <div className="order-detail-time">{formatTime(order.createdAt)}</div>
 
           {cancelled ? (
-            <div className="order-cancelled-note">✖ This order was cancelled.</div>
+            <div className="order-note cancelled">
+              <span className="order-note-ic"><MIcon d={PIC.xc} size={18} /></span>
+              <span>This order was cancelled.</span>
+            </div>
           ) : returned ? (
-            <div className="order-cancelled-note">
-              {order.status === "Returned"
-                ? `↩︎ This order was returned.${order.refundedAmount > 0 ? ` ₹${order.refundedAmount} was added to your NGS Wallet.` : ""}`
-                : "↩︎ A return is being arranged — our partner will collect the items."}
+            <div className="order-note returned">
+              <span className="order-note-ic"><MIcon d={PIC.undo} size={18} /></span>
+              <span>
+                {order.status === "Returned"
+                  ? `This order was returned.${order.refundedAmount > 0 ? ` ₹${order.refundedAmount} was added to your NGS Wallet.` : ""}`
+                  : "A return is being arranged — our partner will collect the items."}
+              </span>
             </div>
           ) : (
             <ol className="status-steps">
@@ -307,7 +313,7 @@ function OrderDetail({ order, onClose, onReorder }) {
           )}
 
           <button className="checkout-btn reorder" onClick={reorder}>
-            🔁 Reorder these items
+            <MIcon d={PIC.reorder} size={17} /> Reorder these items
           </button>
         </div>
       </div>
@@ -375,7 +381,7 @@ function RatingBox({ order }) {
         </>
       )}
       {done && order.feedback && <p className="rating-fb">“{order.feedback}”</p>}
-      {done && <p className="rating-thanks">Thanks for your feedback! 💚</p>}
+      {done && <p className="rating-thanks">Thanks for your feedback!</p>}
     </div>
   );
 }
@@ -383,9 +389,11 @@ function RatingBox({ order }) {
 function RetryState({ error, onRetry, label }) {
   return (
     <div className="load-retry">
-      <div className="load-retry-ic">⚠️</div>
+      <div className="load-retry-ic"><MIcon d={PIC.alert} size={22} /></div>
       <p>{error || `Couldn't load ${label || "this"}.`}</p>
-      <button className="load-retry-btn" onClick={onRetry}>↻ Retry</button>
+      <button className="load-retry-btn" onClick={onRetry}>
+        <MIcon d={PIC.reorder} size={15} /> Retry
+      </button>
     </div>
   );
 }
@@ -753,6 +761,12 @@ const PIC = {
   tag: <><path d="M20 12l-8 8-9-9V4h7l10 10-1 1z" /><circle cx="7.5" cy="7.5" r="1.2" /></>,
   wave: <><path d="M8.5 8.5a5 5 0 0 1 0 7" /><path d="M11.5 6a9 9 0 0 1 0 12" /><path d="M5.5 11a2 2 0 0 1 0 2" /></>,
   lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
+  box: <><path d="M21 8 12 3 3 8l9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8" /></>,
+  reorder: <><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v4h-4" /></>,
+  undo: <><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-5" /></>,
+  xc: <><circle cx="12" cy="12" r="9" /><path d="m15 9-6 6M9 9l6 6" /></>,
+  alert: <><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v4M12 17.5v.5" /></>,
+  bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>,
 };
 function MIcon({ d, size = 20 }) {
   return (
