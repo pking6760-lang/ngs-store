@@ -714,10 +714,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               <div className="location-actions">
                 <button className="location-btn" onClick={() => setShowMap(true)}>
-                  Pin exact location on map
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s7-6.3 7-12A7 7 0 0 0 5 10c0 5.7 7 12 7 12z" /><circle cx="12" cy="10" r="2.5" /></svg>
+                  Pin on map
                 </button>
                 <button className="location-btn subtle" onClick={useMyLocation} disabled={locating}>
-                  {locating ? "Getting location…" : "Use current GPS"}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>
+                  {locating ? "Locating…" : "Use current GPS"}
                 </button>
               </div>
               {needsLocation && (
