@@ -3942,3 +3942,15 @@ body {
 /* Keep the tag line's height reserved so prices align across cards whether or
    not an item is a bestseller (the weight moved onto the image). */
 .product-unit { min-height: 18px; display: flex; align-items: center; }
+
+/* ── Keep the ADD / qty-stepper inside the card on narrow phones ──────────── */
+/* The control is fixed-width; the price column shrinks (and its MRP wraps below
+   if needed) so the stepper can never spill past the card's right edge. */
+.product-footer { gap: 6px; }
+.product-price { min-width: 0; flex: 1 1 auto; }
+.price-line { flex-wrap: wrap; }
+.add-btn,
+.qty-stepper { flex: 0 0 auto; }
+.add-btn { padding: 8px 14px; }
+.qty-stepper button { padding: 5px 9px; font-size: 15px; }
+.qty-stepper span { min-width: 14px; font-size: 13px; }
