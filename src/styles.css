@@ -3918,3 +3918,27 @@ body {
   font-size: 13px;
   font-weight: 800;
 }
+
+/* ── Weight/quantity pill on the product image (replaces the delivery time) ── */
+.product-weight {
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(3px);
+  color: #24352b;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  max-width: calc(100% - 14px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Keep the tag line's height reserved so prices align across cards whether or
+   not an item is a bestseller (the weight moved onto the image). */
+.product-unit { min-height: 18px; display: flex; align-items: center; }

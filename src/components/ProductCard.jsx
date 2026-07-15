@@ -54,7 +54,9 @@ export default function ProductCard({ product, badge }) {
             </span>
           </span>
         )}
-        <span className="product-delivery">12 min</span>
+        {product.unit && !lowStock && !outOfStock && (
+          <span className="product-weight">{product.unit}</span>
+        )}
         {lowStock && !outOfStock && (
           <span className="product-lowstock">
             {product.hot ? "Selling fast · " : ""}Only {product.stock} left
@@ -64,7 +66,6 @@ export default function ProductCard({ product, badge }) {
       </div>
       <div className="product-name">{product.name}</div>
       <div className="product-unit">
-        {product.unit}
         {product.hot && !lowStock && !outOfStock && (
           <span className="product-hot">Bestseller</span>
         )}
