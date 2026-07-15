@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useUserNotifications, useWallet } from "../lib/hooks.js";
@@ -36,26 +35,13 @@ export default function Header({
   const firstName = isLoggedIn ? user.name.split(" ")[0] : null;
   const deliverTo = isLoggedIn && user.address ? user.address : shop.area;
 
-  // Blinkit-style header: as the page scrolls, the brand + location rows fold
-  // away while the search bar stays pinned to the top. A small hysteresis gap
-  // (collapse past 70px, expand under 20px) stops it flickering mid-scroll.
-  const [compact, setCompact] = useState(false);
-  useEffect(() => {
-    let raf = 0;
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        const y = window.scrollY || 0;
-        setCompact((c) => (c ? y > 20 : y > 70));
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
-  }, []);
-
+  // Blinkit-style header: the brand + location rows sit in a normal (non-sticky)
+  // block that scrolls away, while the search bar below is `position: sticky` and
+  // pins to the top of the viewport. Because nothing changes height on scroll,
+  // there's no layout feedback loop — the search just glides up and stays put.
   return (
-    <header className={`header${compact ? " header--compact" : ""}`}>
+    <>
+      <header className="header">
       {/* Row 1 — brand + account actions */}
       <div className="header-top">
         <Logo onClick={onLogoClick} />
@@ -102,22 +88,25 @@ export default function Header({
           <WalletChip balance={balance} onClick={onWalletClick} className="hl-wallet" />
         )}
       </div>
+      </header>
 
-      {/* Row 3 — search */}
-      <div className="header-searchrow">
-        <div className="search-wrap">
-          <span className="search-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-          </span>
-          <input
-            className="search-input"
-            type="text"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder='Search "milk", "bread", "atta"...'
-          />
+      {/* Search — sticks to the top of the viewport as the page scrolls */}
+      <div className="searchbar">
+        <div className="header-searchrow">
+          <div className="search-wrap">
+            <span className="search-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            </span>
+            <input
+              className="search-input"
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder='Search "milk", "bread", "atta"...'
+            />
+          </div>
         </div>
       </div>
-    </header>
+    </>
   );
 }
