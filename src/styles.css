@@ -2565,6 +2565,36 @@ input:focus-visible {
   letter-spacing: 0.01em;
 }
 
+/* ─── Home wallet strip ─────────────────────────────────────────────────── */
+.home-wallet {
+  width: 100%;
+  display: flex; align-items: center; gap: 13px;
+  margin: 0 0 14px; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background:
+    radial-gradient(120% 140% at 100% 0%, #eafaf0 0%, transparent 55%),
+    #ffffff;
+  box-shadow: var(--shadow); cursor: pointer; text-align: left;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.home-wallet:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.home-wallet:active { transform: translateY(0); }
+.hw-icon {
+  flex: none; width: 44px; height: 44px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; background: linear-gradient(140deg, var(--green), var(--green-dark));
+  box-shadow: 0 6px 14px -6px rgba(10,145,85,0.5);
+}
+.hw-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hw-lbl { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.01em; }
+.hw-bal { font-size: 20px; font-weight: 850; color: var(--ink); line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.hw-add {
+  flex: none; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 800; color: var(--green-dark);
+  background: var(--green-tint); border: 1px solid rgba(31,142,58,0.2);
+  padding: 9px 13px; border-radius: 999px;
+}
+
 /* ─── Section headers ─── */
 .section-title {
   position: relative;

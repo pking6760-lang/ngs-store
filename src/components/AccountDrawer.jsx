@@ -15,13 +15,15 @@ import ProductThumb from "./ProductThumb.jsx";
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
   { id: "orders", label: "My Orders" },
-  { id: "wallet", label: "Wallet" },
   { id: "inbox", label: "Inbox" },
   { id: "rewards", label: "Rewards" },
   { id: "refer", label: "Refer & earn" },
   { id: "membership", label: "Membership" },
   { id: "profile", label: "Profile" },
 ];
+// The Wallet lives on the home screen, not in this menu — but it's still a
+// section page reachable from the home wallet card (initialTab="wallet").
+const WALLET_TAB = { id: "wallet", label: "Wallet" };
 
 export default function AccountDrawer({ open, onClose, initialTab, onOpenCart }) {
   const { user, isLoggedIn, logout } = useAuth();
@@ -41,7 +43,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
     onClose();
   }
 
-  const active = TABS.find((t) => t.id === tab);
+  const active = [...TABS, WALLET_TAB].find((t) => t.id === tab);
 
   // Back button / gesture: close the drawer at the menu, or step back from a
   // section page to the menu — never fall through to the website home.

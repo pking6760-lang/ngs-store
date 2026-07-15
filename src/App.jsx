@@ -12,6 +12,7 @@ import { tierUnitPrice } from "./lib/bulk.js";
 import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import CategoryIcon from "./components/CategoryIcon.jsx";
+import HomeWallet from "./components/HomeWallet.jsx";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -104,6 +105,11 @@ export default function App() {
     setAccountOpen(true);
   }
 
+  function openWallet() {
+    setAccountTab("wallet");
+    setAccountOpen(true);
+  }
+
   const searching = query.trim().length > 0;
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -184,6 +190,7 @@ export default function App() {
             categories={categories}
             offer={settings.offerBanner}
             onCategoryClick={setActiveCategory}
+            onOpenWallet={openWallet}
           />
         )}
       </main>
@@ -251,7 +258,7 @@ export default function App() {
   );
 }
 
-function HomeView({ products, categories, offer, onCategoryClick }) {
+function HomeView({ products, categories, offer, onCategoryClick, onOpenWallet }) {
   const byCategory = (id) => products.filter((p) => p.category === id);
   const bestPrices = products.filter((p) => p.bait).slice(0, 12);
   const almostGone = products
@@ -260,6 +267,8 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
     .slice(0, 12);
   return (
     <>
+      <HomeWallet onOpen={onOpenWallet} />
+
       {offer && offer.trim() && (
         <div className="offer-strip">{offer}</div>
       )}
