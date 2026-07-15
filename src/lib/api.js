@@ -121,7 +121,7 @@ function mapOrder(r) {
     address: r.address, distanceKm: num(r.distance_km), location: r.location,
     rating: r.rating, feedback: r.feedback, riderRating: r.rider_rating || 0, needsOwner: !!r.needs_owner,
     walletUsed: num(r.wallet_used), refundedAmount: num(r.refunded_amount), refundedAt: r.refunded_at,
-    isReturn: !!r.is_return, returnOf: r.return_of, isMembership: !!r.is_membership,
+    isReturn: !!r.is_return, returnOf: r.return_of, isMembership: !!r.is_membership, isTopup: !!r.is_topup,
     membershipFee: num(r.membership_fee), membershipDays: r.membership_days || 0,
     welcomeDiscount: num(r.welcome_discount),
     // Prime savings meter: what this member saved vs the normal price.
@@ -420,6 +420,8 @@ export async function fetchMyOrders() {
     // order flip to "Returned", not the pickup task itself.
     .eq("is_return", false)
     .eq("is_membership", false)
+    // Wallet top-ups are payments, not orders — they show in the Wallet history.
+    .eq("is_topup", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);
@@ -1021,8 +1023,10 @@ export async function fetchAllOrders() {
     .from("orders").select("*, order_items(*)")
     // Never surface an online order to the shop until its payment is confirmed.
     .neq("status", "Awaiting payment")
-    // Membership purchases aren't fulfillment orders — keep them out of the ops list.
+    // Membership purchases and wallet top-ups aren't fulfillment orders — keep
+    // them out of the ops list (they're payments, not deliveries).
     .eq("is_membership", false)
+    .eq("is_topup", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);
