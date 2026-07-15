@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useProducts, useAdminProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
+import { getOpsConfigRaw } from "../lib/api.js";
 import { Ic } from "./AdminIcons.jsx";
 import CategoryIcon from "../components/CategoryIcon.jsx";
 
@@ -11,6 +12,10 @@ export default function Dashboard({ onNavigate }) {
   const categories = useCategories();
   const settings = useSettings();
   const threshold = settings.lowStockThreshold ?? 5;
+
+  // Ops rates + who covers picking/delivery — to net staff payouts out of profit.
+  const [ops, setOps] = useState(null);
+  useEffect(() => { getOpsConfigRaw().then(setOps).catch(() => {}); }, []);
 
   // Buying cost per product, for the profit figure.
   const costMap = useMemo(() => {
@@ -55,8 +60,31 @@ export default function Dashboard({ onNavigate }) {
     const couponsGiven = todaysOrders.reduce((s, o) => s + (o.couponDiscount || 0), 0);
     const refunds = todaysOrders.reduce((s, o) => s + (o.refundedAmount || 0), 0);
     const walletUsed = todaysOrders.reduce((s, o) => s + (o.walletUsed || 0), 0);
-    // Net profit nets out the rewards the shop hands out + coupons + refunds.
-    const profit = grossMargin - rewardsGiven - couponsGiven - refunds;
+
+    // Staff payouts — only when the shop pays someone. If picking is 'self' the
+    // owner packs (no picker pay); if delivery is 'self' the owner delivers (no
+    // driver pay). If both are self, all the margin is the owner's. We only book
+    // the pay once the work actually happened (packed / delivered).
+    const pickerStaff = ops?.coverage_picking === "staff";
+    const riderStaff = ops?.coverage_delivery === "staff";
+    const n = (v) => Number(v) || 0;
+    let pickerPay = 0, driverPay = 0;
+    todaysOrders.forEach((o) => {
+      const packed = !!(o.pickerId || o.packedAt) ||
+        ["Packed", "Out for delivery", "Delivered"].includes(o.status);
+      const delivered = !!(o.riderId || o.deliveredAt) || o.status === "Delivered";
+      if (pickerStaff && packed) pickerPay += n(ops.picker_pack_fee);
+      if (riderStaff && delivered) {
+        const base = o.member && ops.rider_member_base != null ? n(ops.rider_member_base) : n(ops.rider_base);
+        const perKm = Math.max(n(o.distanceKm) - n(ops.rider_free_km), 0) * n(ops.rider_per_km);
+        const peak = (o.surgeFee || 0) > 0 ? n(ops.peak_bonus) : 0;
+        driverPay += base + perKm + peak;
+      }
+    });
+    const staffPay = pickerPay + driverPay;
+
+    // Net profit nets out rewards handed out + coupons + refunds + staff payouts.
+    const profit = grossMargin - rewardsGiven - couponsGiven - refunds - staffPay;
     const givenBack = rewardsGiven + couponsGiven + refunds;
     // Pending = anything not yet delivered (still needs action), any day.
     const pending = orders.filter(
@@ -73,8 +101,11 @@ export default function Dashboard({ onNavigate }) {
       refunds: Math.round(refunds),
       walletUsed: Math.round(walletUsed),
       givenBack: Math.round(givenBack),
+      pickerPay: Math.round(pickerPay),
+      driverPay: Math.round(driverPay),
+      staffPay: Math.round(staffPay),
     };
-  }, [orders, costMap, settings]);
+  }, [orders, costMap, settings, ops]);
 
   // Best sellers over the last 7 days — aggregated straight from order items,
   // so it's always accurate regardless of the pricing schedule.
@@ -138,16 +169,26 @@ export default function Dashboard({ onNavigate }) {
         <StatCard label="Pending orders" value={stats.pending} icon="pending" tone="pink" />
       </div>
 
-      {(stats.givenBack > 0 || stats.walletUsed > 0) && (
+      {(stats.givenBack > 0 || stats.walletUsed > 0 || stats.staffPay > 0) && (
         <section className="panel dash-giveback">
-          <div className="panel-head"><h3>Rewards, wallet &amp; refunds · today</h3></div>
+          <div className="panel-head"><h3>Costs &amp; giveaways · today</h3></div>
           <div className="giveback-grid">
+            {stats.pickerPay > 0 && (
+              <div className="giveback-item"><span><Ic name="box" size={15} /> Picker pay</span><strong>₹{stats.pickerPay}</strong></div>
+            )}
+            {stats.driverPay > 0 && (
+              <div className="giveback-item"><span><Ic name="delivery" size={15} /> Driver pay</span><strong>₹{stats.driverPay}</strong></div>
+            )}
             <div className="giveback-item"><span><Ic name="gift" size={15} /> Rewards given (scratch)</span><strong>₹{stats.rewardsGiven}</strong></div>
             <div className="giveback-item"><span><Ic name="coupon" size={15} /> Coupons</span><strong>₹{stats.couponsGiven}</strong></div>
             <div className="giveback-item"><span><Ic name="wallet" size={15} /> Wallet used</span><strong>₹{stats.walletUsed}</strong></div>
             <div className="giveback-item"><span><Ic name="refund" size={15} /> Refunds to wallet</span><strong>₹{stats.refunds}</strong></div>
           </div>
-          <p className="dash-sub">Scratch rewards, coupons and refunds are already subtracted from today's profit above.</p>
+          <p className="dash-sub">
+            Picker &amp; driver pay, scratch rewards, coupons and refunds are already
+            subtracted from today's profit above.
+            {stats.staffPay === 0 && " You cover picking & delivery yourself, so all the margin is yours."}
+          </p>
         </section>
       )}
 
