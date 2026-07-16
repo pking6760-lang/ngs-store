@@ -584,6 +584,8 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
             <input
               type="number"
               min="0"
+              step="0.01"
+              inputMode="decimal"
               value={form.cost ?? ""}
               onChange={(e) => update("cost", e.target.value)}
               placeholder="what you pay"
@@ -595,6 +597,8 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
             <input
               type="number"
               min="0"
+              step="0.01"
+              inputMode="decimal"
               value={form.price}
               onChange={(e) => update("price", e.target.value)}
               required
@@ -606,6 +610,8 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
             <input
               type="number"
               min="0"
+              step="0.01"
+              inputMode="decimal"
               value={form.mrp}
               onChange={(e) => update("mrp", e.target.value)}
             />
