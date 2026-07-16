@@ -4165,3 +4165,18 @@ body {
 }
 .pay-paid-link:disabled { opacity: 0.6; }
 .pay-pro .upi-qr-wrap { margin-top: 4px; }
+
+/* ── UPI app buttons on the pay screen ── */
+.upi-apps-label { align-self: flex-start; font-size: 12px; font-weight: 800; color: var(--muted); margin: 14px 0 2px; }
+.upi-apps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.upi-app {
+  display: flex; align-items: center; gap: 10px; padding: 11px 12px;
+  border: 1px solid var(--line); border-radius: 13px; background: #fff; text-decoration: none;
+  transition: border-color .15s ease, background .15s ease;
+}
+.upi-app:active { background: var(--bg-soft, #f2f5f0); border-color: var(--green); }
+.upi-app-ic {
+  width: 34px; height: 34px; flex: none; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;
+}
+.upi-app-name { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.2; }

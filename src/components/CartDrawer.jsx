@@ -53,6 +53,22 @@ const IS_IOS =
   (/iP(hone|ad|od)/.test(navigator.userAgent || "") ||
     (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1));
 
+// UPI apps shown as direct buttons on the pay screen. Each opens that specific
+// app with the amount pre-filled: on Android via an intent:// URL targeting the
+// package; on iOS via the app's own URL scheme (targeting a specific app avoids
+// the generic upi:// link being grabbed by the wrong handler like WhatsApp).
+const UPI_APPS = [
+  { id: "gpay", name: "Google Pay", short: "G", bg: "#ffffff", fg: "#1a73e8", bd: "#dfe3ea", pkg: "com.google.android.apps.nbu.paisa.user", ios: "tez://upi/pay" },
+  { id: "phonepe", name: "PhonePe", short: "Pe", bg: "#5f259f", fg: "#ffffff", pkg: "com.phonepe.app", ios: "phonepe://pay" },
+  { id: "paytm", name: "Paytm", short: "P", bg: "#042e5b", fg: "#00baf2", pkg: "net.one97.paytm", ios: "paytmmp://pay" },
+  { id: "bhim", name: "BHIM UPI", short: "B", bg: "#f26522", fg: "#ffffff", pkg: "in.org.npci.upiapp", ios: "upi://pay" },
+];
+function upiAppHref(upiIntent, app) {
+  if (!upiIntent || upiIntent.indexOf("?") < 0) return "#";
+  const q = upiIntent.slice(upiIntent.indexOf("?") + 1);
+  return IS_IOS ? `${app.ios}?${q}` : `intent://pay?${q}#Intent;scheme=upi;package=${app.pkg};end`;
+}
+
 // Tap-to-add delivery instructions shown on the checkout page.
 const DELIVERY_NOTES = [
   { icon: "🔕", label: "Don't ring the bell" },
@@ -718,24 +734,34 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               <p className="upi-hint">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly</p>
             </div>
 
-            {/* Android supports the UPI app chooser via a upi:// intent — open the
-                customer's UPI app directly (no gateway screen). iOS has no such
-                chooser (a raw upi:// link opens a random handler like WhatsApp), so
-                on iPhone we use Razorpay's sheet, which opens UPI apps correctly. */}
-            {payLink.upiIntent && !IS_IOS ? (
-              <a className="pay-proceed" href={payLink.upiIntent}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" /></svg>
-                Pay ₹{Number(payLink.order.total).toFixed(2)} with UPI app
-              </a>
+            {/* Tap your UPI app to pay — opens that app directly with the amount
+                pre-filled (targeting a specific app avoids the generic upi:// link
+                being grabbed by the wrong handler). Falls back to Razorpay's sheet
+                for cards / any other method, or if an app isn't installed. */}
+            {payLink.upiIntent ? (
+              <>
+                <div className="upi-apps-label">Pay by UPI app</div>
+                <div className="upi-apps">
+                  {UPI_APPS.map((app) => (
+                    <a className="upi-app" key={app.id} href={upiAppHref(payLink.upiIntent, app)}>
+                      <span
+                        className="upi-app-ic"
+                        style={{ background: app.bg, color: app.fg, boxShadow: app.bd ? `inset 0 0 0 1px ${app.bd}` : "none" }}
+                      >
+                        {app.short}
+                      </span>
+                      <span className="upi-app-name">{app.name}</span>
+                    </a>
+                  ))}
+                </div>
+                <button className="pay-paid-link" onClick={payOnThisPhone}>
+                  Pay by card / other methods
+                </button>
+              </>
             ) : (
               <button className="pay-proceed" onClick={payOnThisPhone}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" /></svg>
                 Pay ₹{Number(payLink.order.total).toFixed(2)}
-              </button>
-            )}
-            {payLink.upiIntent && !IS_IOS && (
-              <button className="pay-paid-link" onClick={payOnThisPhone}>
-                Pay by card / other methods
               </button>
             )}
             <p className="upi-note">
