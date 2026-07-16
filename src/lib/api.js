@@ -1176,6 +1176,55 @@ export async function broadcastNotification(title, body) {
   return { ok: true, count: data ?? 0 };
 }
 
+/* ─── Automated notification campaigns (message bank + schedule) ───────────── */
+export async function fetchNotifTemplates() {
+  const { data, error } = await must().from("notification_templates")
+    .select("*").order("bucket").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((t) => ({ id: t.id, bucket: t.bucket, title: t.title, body: t.body || "", active: t.active }));
+}
+export async function addNotifTemplate({ bucket, title, body }) {
+  const { error } = await must().from("notification_templates").insert({ bucket, title, body: body || "" });
+  if (error) throw new Error(error.message || "Couldn't add.");
+  return { ok: true };
+}
+export async function setNotifTemplateActive(id, active) {
+  const { error } = await must().from("notification_templates").update({ active }).eq("id", id);
+  if (error) throw error; return { ok: true };
+}
+export async function deleteNotifTemplate(id) {
+  const { error } = await must().from("notification_templates").delete().eq("id", id);
+  if (error) throw error; return { ok: true };
+}
+export async function importNotifTemplates(items) {
+  const { data, error } = await must().rpc("import_notification_templates", { p_items: items });
+  if (error) throw new Error(error.message || "Import failed.");
+  return { ok: true, count: data ?? 0 };
+}
+export async function sendBucketNow(bucket) {
+  const { data, error } = await must().rpc("send_bucket_now", { p_bucket: bucket });
+  if (error) throw new Error(error.message || "Couldn't send.");
+  pingLocal("notifications");
+  return { ok: true, count: data ?? 0 };
+}
+export async function fetchNotifCampaigns() {
+  const { data, error } = await must().from("notification_campaigns")
+    .select("*").order("on_date", { nullsFirst: true }).order("hour_ist");
+  if (error) throw error;
+  return (data || []).map((c) => ({
+    id: c.id, label: c.label, bucket: c.bucket, hour: c.hour_ist,
+    dow: c.dow, onDate: c.on_date, enabled: c.enabled, lastRun: c.last_run,
+  }));
+}
+export async function updateNotifCampaign(id, patch) {
+  const p = {};
+  if (patch.enabled !== undefined) p.enabled = patch.enabled;
+  if (patch.hour !== undefined) p.hour_ist = patch.hour;
+  if (patch.onDate !== undefined) p.on_date = patch.onDate || null;
+  const { error } = await must().from("notification_campaigns").update(p).eq("id", id);
+  if (error) throw error; return { ok: true };
+}
+
 /* ─── Change notifications ──────────────────────────────────────────────────
    Two ways a screen learns data changed:
    1. LOCAL bus — a write on THIS device immediately tells every hook here to
