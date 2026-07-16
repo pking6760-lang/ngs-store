@@ -79,7 +79,7 @@ async function sendFcm(accessToken: string, token: string, title: string, body: 
             priority: "high",
             notification: {
               sound: "alarm",
-              channel_id: "orders_alarm",
+              channel_id: "orders_alarm_v2",
               notification_priority: "PRIORITY_MAX",
               default_vibrate_timings: true,
             },

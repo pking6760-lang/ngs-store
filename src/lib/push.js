@@ -32,7 +32,7 @@ export async function initAdminPush() {
     // (the server sends this same channel_id). res/raw/alarm.ogg is a ~24s siren.
     try {
       await PushNotifications.createChannel({
-        id: "orders_alarm",
+        id: "orders_alarm_v2",
         name: "New order alarm",
         description: "Loud alarm when a customer places an order",
         importance: 5,
