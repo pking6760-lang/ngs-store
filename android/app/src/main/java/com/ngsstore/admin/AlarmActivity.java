@@ -39,15 +39,11 @@ public class AlarmActivity extends Activity {
     ((TextView) findViewById(R.id.alarm_title)).setText(title != null ? title : "New order");
     ((TextView) findViewById(R.id.alarm_body)).setText(body != null ? body : "");
 
-    findViewById(R.id.btn_open).setOnClickListener(v -> {
+    findViewById(R.id.btn_accept).setOnClickListener(v -> {
       stopAlarm();
       Intent i = new Intent(this, MainActivity.class);
       i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
       startActivity(i);
-      finish();
-    });
-    findViewById(R.id.btn_dismiss).setOnClickListener(v -> {
-      stopAlarm();
       finish();
     });
   }

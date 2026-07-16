@@ -3,27 +3,62 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:background="#0B1220"
-    android:padding="28dp">
+    android:gravity="center_horizontal"
+    android:background="#08080A"
+    android:paddingLeft="26dp"
+    android:paddingRight="26dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="28dp">
 
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="0.5" />
+
+    <!-- Incoming pill -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🛒 INCOMING ORDER"
-        android:textColor="#8AB4FF"
-        android:textSize="16sp"
-        android:letterSpacing="0.12"
+        android:background="@drawable/bg_alarm_pill"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
+        android:text="● INCOMING ORDER"
+        android:textColor="#FF4757"
+        android:textSize="13sp"
         android:textStyle="bold"
-        android:layout_marginBottom="18dp" />
+        android:letterSpacing="0.14" />
+
+    <!-- Glowing avatar -->
+    <FrameLayout
+        android:layout_width="176dp"
+        android:layout_height="176dp"
+        android:layout_marginTop="30dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_alarm_glow" />
+
+        <TextView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_alarm_ring"
+            android:gravity="center"
+            android:text="🔔"
+            android:textSize="50sp" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/alarm_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
         android:gravity="center"
-        android:text="New order"
-        android:textColor="#FFFFFF"
+        android:text="New delivery!"
+        android:textColor="#F4F4F6"
         android:textSize="30sp"
         android:textStyle="bold" />
 
@@ -31,35 +66,39 @@
         android:id="@+id/alarm_body"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
         android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:lineSpacingExtra="3dp"
         android:text=""
-        android:textColor="#C7D2E5"
-        android:textSize="18sp" />
+        android:textColor="#9A9AA4"
+        android:textSize="17sp" />
 
     <View
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
+    <!-- Accept (single action) -->
     <Button
-        android:id="@+id/btn_open"
+        android:id="@+id/btn_accept"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:text="Open order"
+        android:layout_height="66dp"
+        android:background="@drawable/bg_accept_btn"
+        android:text="Accept order"
+        android:textAllCaps="false"
         android:textColor="#FFFFFF"
         android:textSize="19sp"
         android:textStyle="bold"
-        android:backgroundTint="#1DB954"
-        android:layout_marginBottom="14dp" />
+        android:stateListAnimator="@null" />
 
-    <Button
-        android:id="@+id/btn_dismiss"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Dismiss"
-        android:textColor="#FFFFFF"
-        android:textSize="17sp"
-        android:backgroundTint="#E0245E" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="@string/app_name"
+        android:textColor="#3A3A42"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.08" />
 
 </LinearLayout>
