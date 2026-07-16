@@ -81,6 +81,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   }, [lines, setQty]);
 
   const itemTotal = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
+  // Minimum order value — checkout is blocked below it (server enforces too).
+  const minOrder = Number(settings.rewards?.minOrderValue) || 0;
+  const belowMin = itemTotal > 0 && itemTotal < minOrder;
+  const minShortfall = belowMin ? Math.ceil(minOrder - itemTotal) : 0;
   // Ultra-low-margin items (milk, curd, bread) don't count toward the
   // free-delivery minimum. They're still in the cart total — just excluded here.
   const qualifyingTotal = lines.reduce(
@@ -1185,13 +1189,20 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
             </div>
 
+            {belowMin && (
+              <div className="min-order-note">
+                Minimum order is ₹{minOrder} — add ₹{minShortfall} more to check out.
+              </div>
+            )}
             <button
               className="checkout-btn place"
               onClick={goToCheckout}
-              disabled={storeClosed}
+              disabled={storeClosed || belowMin}
             >
               {storeClosed
                 ? "Store closed"
+                : belowMin
+                ? `Add ₹${minShortfall} more`
                 : `Proceed to checkout • ₹${grandTotal}`}
             </button>
           </>

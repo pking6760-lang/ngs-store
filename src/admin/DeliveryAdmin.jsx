@@ -14,6 +14,7 @@ export default function DeliveryAdmin() {
     handlingFee: settings.handlingFee,
     surgeFee: settings.surgeFee ?? 20,
     maxDistanceKm: settings.maxDistanceKm ?? 5,
+    minOrderValue: settings.rewards?.minOrderValue ?? 0,
   });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -37,6 +38,10 @@ export default function DeliveryAdmin() {
       });
       await updateSettings({
         maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
+        rewards: {
+          ...(settings.rewards || {}),
+          minOrderValue: Math.max(0, Number(form.minOrderValue) || 0),
+        },
       });
       setSaved(true);
     } catch (e) {
@@ -59,6 +64,11 @@ export default function DeliveryAdmin() {
             <span>Free delivery above (₹)</span>
             <input type="number" min="0" value={form.freeDeliveryAbove}
               onChange={(e) => set("freeDeliveryAbove", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>Minimum order value (₹)</span>
+            <input type="number" min="0" value={form.minOrderValue}
+              onChange={(e) => set("minOrderValue", e.target.value)} />
           </label>
           <label className="dfield">
             <span>Handling charge (₹)</span>

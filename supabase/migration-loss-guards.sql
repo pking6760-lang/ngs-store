@@ -1,21 +1,21 @@
--- Loss guards: an order can never sell below cost (supersedes the v2 place_order).
+-- Loss guards + minimum order value (latest place_order).
 --
--- Closes two gaps that could have lost money:
---  1. Coupon was uncapped — a big coupon could sell below cost. Now the coupon is
---     capped at the order's product margin, so it can only ever reach breakeven.
---  2. The scratch-reward budget ignored the coupon + points redemption, so a coupon
---     AND a reward could together exceed the margin. The budget now subtracts the
---     coupon + points redemption, so reward + coupon + redemption can never exceed
---     the margin.
+-- No order can sell below cost:
+--  1. Product/bulk price floored at cost + deepMargin% (never below cost).
+--  2. Coupon capped at the order's product margin (breakeven floor).
+--  3. Scratch-reward budget nets out the coupon + points redemption, so
+--     reward + coupon + redemption can never exceed the margin.
+--  4. Scratch reward bounded by profit − shop floor (never a loss).
+-- Verified with a 90%-off coupon over 25 rolled-back orders: worst net ₹0.00.
 --
--- Combined with the existing guards — product/bulk price floored at cost+deepMargin%,
--- reward bounded by profit − shop floor — every order nets >= 0 (worst case breakeven
--- on an extreme coupon). Verified over 25 rolled-back orders with a 90%-off coupon:
--- worst net ₹0.00, zero losses.
+-- Minimum order value: carts below rewards.minOrderValue are rejected (skipped for
+-- membership-only purchases) so tiny orders can't run at a loss — important if
+-- delivery/picking is ever switched to paid staff. Enforced in place_order AND the
+-- customer cart; tunable in admin → Charges. Default set to ₹99.
 --
--- Remaining (by design, not a bug): if delivery/picking is switched to PAID STAFF,
--- a tiny order's driver pay can exceed its margin+fees — prevent with a minimum
--- order value (not enabled here; the shop self-covers). Mirrors the live place_order().
+-- Mirrors the live place_order() + settings via the Management API.
+
+update public.settings set rewards = jsonb_set(rewards, '{minOrderValue}', '99'::jsonb, true) where id = 1;
 
 CREATE OR REPLACE FUNCTION public.place_order(p_items jsonb, p_coupon text DEFAULT NULL::text, p_location jsonb DEFAULT NULL::jsonb, p_payment text DEFAULT 'upi'::text, p_address text DEFAULT NULL::text, p_wallet numeric DEFAULT 0, p_redeem_points integer DEFAULT 0, p_membership boolean DEFAULT false)
  RETURNS orders
@@ -255,6 +255,15 @@ begin
     v_cat_totals := jsonb_set(v_cat_totals, array[coalesce(v_prod.category,'_')],
       to_jsonb(coalesce((v_cat_totals->>coalesce(v_prod.category,'_'))::numeric, 0) + v_unit * v_qty));
   end loop;
+
+  -- Minimum order value guard: reject carts below the shop's minimum so tiny
+  -- orders can never run at a loss (skipped for membership-only purchases).
+  if not coalesce(p_membership, false)
+     and v_item_total > 0
+     and v_item_total < coalesce((v_rewards->>'minOrderValue')::numeric, 0) then
+    raise exception 'Minimum order is Rs %. Please add a little more to place your order.',
+      coalesce((v_rewards->>'minOrderValue')::numeric, 0)::int;
+  end if;
 
   if p_coupon is not null and length(trim(p_coupon)) > 0 then
     select * into v_coupon from public.coupons where code = upper(trim(p_coupon)) and active;
