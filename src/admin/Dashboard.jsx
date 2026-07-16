@@ -50,6 +50,10 @@ export default function Dashboard({ onNavigate }) {
       const c = costMap[it.id];
       if (c != null) { grossMargin += (it.price - c) * it.qty; sold += it.price * it.qty; }
     }));
+    // Fees the shop COLLECTS (delivery + handling + surge) are income on top of
+    // product margin — added to profit.
+    const feesCollected = todaysOrders.reduce(
+      (s, o) => s + (o.deliveryFee || 0) + (o.handling || 0) + (o.surgeFee || 0), 0);
     // Reward the shop HANDS OUT on each order (the scratch prize): wallet cash at
     // face value + points at their redemption value. Booked here as a cost so
     // profit reflects it. Points now come ONLY from the scratch card, so this is
@@ -78,8 +82,8 @@ export default function Dashboard({ onNavigate }) {
     });
     const staffPay = pickerPay + driverPay;
 
-    // Net profit nets out rewards handed out + coupons + refunds + staff payouts.
-    const profit = grossMargin - rewardsGiven - couponsGiven - refunds - staffPay;
+    // Net profit = product margin + fees collected − rewards − coupons − refunds − staff pay.
+    const profit = grossMargin + feesCollected - rewardsGiven - couponsGiven - refunds - staffPay;
     const givenBack = rewardsGiven + couponsGiven + refunds;
     // Pending = anything not yet delivered (still needs action), any day.
     const pending = orders.filter(
@@ -99,6 +103,7 @@ export default function Dashboard({ onNavigate }) {
       pickerPay: Math.round(pickerPay),
       driverPay: Math.round(driverPay),
       staffPay: Math.round(staffPay),
+      feesCollected: Math.round(feesCollected),
     };
   }, [orders, costMap, settings, ops]);
 
@@ -164,10 +169,13 @@ export default function Dashboard({ onNavigate }) {
         <StatCard label="Pending orders" value={stats.pending} icon="pending" tone="pink" />
       </div>
 
-      {(stats.givenBack > 0 || stats.walletUsed > 0 || stats.staffPay > 0) && (
+      {(stats.givenBack > 0 || stats.walletUsed > 0 || stats.staffPay > 0 || stats.feesCollected > 0) && (
         <section className="panel dash-giveback">
-          <div className="panel-head"><h3>Costs &amp; giveaways · today</h3></div>
+          <div className="panel-head"><h3>Income &amp; costs · today</h3></div>
           <div className="giveback-grid">
+            {stats.feesCollected > 0 && (
+              <div className="giveback-item"><span><Ic name="revenue" size={15} /> Fees collected</span><strong className="gb-income">+₹{stats.feesCollected}</strong></div>
+            )}
             {stats.pickerPay > 0 && (
               <div className="giveback-item"><span><Ic name="box" size={15} /> Picker pay</span><strong>₹{stats.pickerPay}</strong></div>
             )}
@@ -180,8 +188,8 @@ export default function Dashboard({ onNavigate }) {
             <div className="giveback-item"><span><Ic name="refund" size={15} /> Refunds to wallet</span><strong>₹{stats.refunds}</strong></div>
           </div>
           <p className="dash-sub">
-            Picker &amp; driver pay, scratch rewards, coupons and refunds are already
-            subtracted from today's profit above.
+            Fees collected are added, and picker &amp; driver pay, scratch rewards,
+            coupons and refunds are subtracted — all reflected in today's profit above.
             {stats.staffPay === 0 && " You cover picking & delivery yourself, so all the margin is yours."}
           </p>
         </section>

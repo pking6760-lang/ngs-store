@@ -238,10 +238,16 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
         + Math.max(nn(o.distanceKm) - nn(detailOps?.rider_free_km), 0) * nn(detailOps?.rider_per_km)
         + ((o.surgeFee || 0) > 0 ? nn(detailOps?.peak_bonus) : 0)
       : 0;
+    // Fees the shop COLLECTS from the customer — income on top of margin.
+    const deliveryFee = nn(o.deliveryFee);
+    const handling = nn(o.handling);
+    const surge = nn(o.surgeFee);
+    const fees = deliveryFee + handling + surge;
     const coupon = nn(o.couponDiscount);
     const refund = nn(o.refundedAmount);
-    const profit = margin - pickerPay - driverPay - rewardCost - coupon - refund;
-    return { margin: Math.round(margin), pickerPay, driverPay, coupon, refund, profit: Math.round(profit), missingCost };
+    const profit = margin + fees - pickerPay - driverPay - rewardCost - coupon - refund;
+    return { margin: Math.round(margin), deliveryFee, handling, surge, fees,
+      pickerPay, driverPay, coupon, refund, profit: Math.round(profit), missingCost };
   }, [detailProducts, detailOps, o, rewardCost]);
   const curIdx = ORDER_STATUSES.indexOf(o.status);
   // The owner does a track only when no staff partner is assigned to it.
@@ -352,6 +358,15 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
             <div className="od-pnl">
               <div className="od-pnl-head">Your profit on this order</div>
               <div className="od-bill-row"><span>Item margin (sell − buy)</span><span>₹{pnl.margin}</span></div>
+              {pnl.deliveryFee > 0 && (
+                <div className="od-bill-row"><span>Delivery fee</span><span className="income">+₹{pnl.deliveryFee}</span></div>
+              )}
+              {pnl.handling > 0 && (
+                <div className="od-bill-row"><span>Handling fee</span><span className="income">+₹{pnl.handling}</span></div>
+              )}
+              {pnl.surge > 0 && (
+                <div className="od-bill-row"><span>Surge fee</span><span className="income">+₹{pnl.surge}</span></div>
+              )}
               <div className="od-bill-row">
                 <span>Picker pay {o.pickerId ? "" : "· you packed"}</span>
                 <span className={pnl.pickerPay ? "" : "free"}>{pnl.pickerPay ? `−₹${pnl.pickerPay}` : "₹0"}</span>

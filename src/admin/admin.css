@@ -258,6 +258,7 @@ body {
   color: #47535f;
 }
 .giveback-item strong { font-size: 15px; color: #1c2430; }
+.giveback-item strong.gb-income { color: #14713f; }
 .trend-bars { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 8px; }
 .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 6px; }
 .trend-amt { font-size: 10px; font-weight: 700; color: #6b7885; white-space: nowrap; }
@@ -2362,6 +2363,7 @@ body {
 .od-bill-row.reward-given small { color: #b08636; font-weight: 600; font-size: 11px; }
 .od-pnl { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #f3f8f4; border: 1px solid #d9ead9; }
 .od-pnl-head { font-size: 12px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; color: #2f7d4f; margin-bottom: 8px; }
+.od-pnl .income { color: #14713f; font-weight: 700; }
 .od-pnl .od-bill-row.total { color: #14713f; }
 .od-pnl-note { margin: 8px 0 0; font-size: 11px; color: #9a7b2e; }
 .od-accept-row { display: flex; gap: 8px; margin-bottom: 12px; }
