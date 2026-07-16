@@ -283,7 +283,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         setSuggestions(res);
       } catch { setSuggestions([]); }
       finally { setSearching(false); }
-    }, 350);
+    }, 500);
   }
 
   // Customer picks a place → fill the address and capture its coordinates.

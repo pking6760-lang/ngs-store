@@ -128,31 +128,87 @@ export async function reverseGeocode(lat, lng) {
   return clean.join(", ") || data.display_name || "";
 }
 
+// Build a concise, human-readable label from a Nominatim address object.
+function nominatimLabel(item) {
+  const a = item.address || {};
+  const lead =
+    item.name ||
+    [a.house_number, a.road].filter(Boolean).join(" ") ||
+    a.neighbourhood || a.suburb;
+  const parts = [
+    lead,
+    a.neighbourhood || a.suburb || a.residential || a.hamlet,
+    a.city || a.town || a.village || a.municipality || a.city_district || a.county,
+    a.postcode,
+  ].filter(Boolean);
+  // Drop consecutive repeats (e.g. lead == suburb).
+  const clean = parts.filter((v, i) => v !== parts[i - 1]);
+  return clean.join(", ") || item.display_name || "";
+}
+
 // Address autocomplete: as the customer types, return matching places (with
 // coordinates) so they can pick their location on the "map" without granting
-// GPS permission. Free, no API key (OpenStreetMap via Photon). `bias` is an
-// optional {lat,lng} (e.g. the shop) so nearby results rank first.
+// GPS permission. Free, no API key (OpenStreetMap via Nominatim). `bias` is an
+// optional {lat,lng} (e.g. the shop) — we search inside a box around it so
+// results stay in the deliverable area and rank the way a maps app would,
+// instead of returning same-named places in other cities.
 export async function searchAddress(query, bias) {
   const q = (query || "").trim();
   if (q.length < 3) return [];
-  let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=en`;
-  if (bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng)) {
-    url += `&lat=${bias.lat}&lon=${bias.lng}`;
+  const hasBias = bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng);
+  let url =
+    `https://nominatim.openstreetmap.org/search?format=jsonv2` +
+    `&q=${encodeURIComponent(q)}&addressdetails=1&limit=6&countrycodes=in`;
+  if (hasBias) {
+    // ~35 km box around the shop; bounded so far-away matches are excluded.
+    const d = 0.32;
+    const vb = [bias.lng - d, bias.lat - d, bias.lng + d, bias.lat + d].join(",");
+    url += `&viewbox=${vb}&bounded=1`;
   }
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.features || [])
-    .map((f) => {
-      const p = f.properties || {};
-      const [lng, lat] = f.geometry.coordinates;
-      const label = [p.name, p.street, p.district, p.city || p.county, p.state, p.postcode]
-        .filter(Boolean)
-        .filter((v, i, arr) => v !== arr[i - 1])
-        .join(", ");
-      return { label, lat, lng };
-    })
-    .filter((s) => s.label);
+  try {
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (res.ok) {
+      const data = await res.json();
+      const out = (Array.isArray(data) ? data : [])
+        .map((item) => ({
+          label: nominatimLabel(item),
+          lat: Number(item.lat),
+          lng: Number(item.lon),
+        }))
+        .filter((s) => s.label && Number.isFinite(s.lat) && Number.isFinite(s.lng));
+      // De-duplicate identical labels (Nominatim can repeat a place).
+      const seen = new Set();
+      const uniq = out.filter((s) => (seen.has(s.label) ? false : seen.add(s.label)));
+      if (uniq.length) return uniq;
+      // Bounded search found nothing local — retry once without the box.
+      if (hasBias) return searchAddress(q, null);
+    }
+  } catch { /* fall through to Photon */ }
+  // Fallback: Photon (different OSM index) if Nominatim is down or empty.
+  return photonSearch(q, bias);
+}
+
+async function photonSearch(query, bias) {
+  let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=en`;
+  if (bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng)) {
+    url += `&lat=${bias.lat}&lon=${bias.lng}&zoom=13&location_bias_scale=0.9`;
+  }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.features || [])
+      .map((f) => {
+        const p = f.properties || {};
+        const [lng, lat] = f.geometry.coordinates;
+        const label = [p.name, p.street, p.district, p.city || p.county, p.state, p.postcode]
+          .filter(Boolean)
+          .filter((v, i, arr) => v !== arr[i - 1])
+          .join(", ");
+        return { label, lat, lng };
+      })
+      .filter((s) => s.label);
+  } catch { return []; }
 }
 
 // Straight-line distance between two {lat, lng} points, in kilometres.
