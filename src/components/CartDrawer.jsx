@@ -861,6 +861,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 onToggle={() => setAddMembership((v) => !v)} />
             )}
 
+            {/* Fees (delivery / handling / surge) were already itemised on the
+                cart's Bill details — don't repeat them here. Only show the
+                adjustments the customer makes on this screen (points, coupon,
+                Prime, wallet) and the final amount to pay. */}
             <div className="bill compact">
               {discount > 0 && (
                 <div className="bill-row">
@@ -872,24 +876,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="bill-row">
                   <span>Coupon ({appliedCode})</span>
                   <span className="free">−₹{couponDiscount}</span>
-                </div>
-              )}
-              <div className="bill-row">
-                <span>Delivery fee</span>
-                <span>
-                  {deliveryFee === 0 ? (
-                    <span className="free">
-                      FREE{freeReason === "member" ? " · Prime" : ""}
-                    </span>
-                  ) : (
-                    `₹${deliveryFee}`
-                  )}
-                </span>
-              </div>
-              {surgeFee > 0 && (
-                <div className="bill-row">
-                  <span>Surge charge</span>
-                  <span>₹{surgeFee}</span>
                 </div>
               )}
               {memberFee > 0 && (
