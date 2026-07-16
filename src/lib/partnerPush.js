@@ -26,15 +26,18 @@ export async function initPartnerPush() {
     }
     if (perm.receive !== "granted") return;
 
-    // High-importance alarm channel so order alerts pop over everything with
-    // sound + vibration (must match channel_id the server sends).
+    // Max-importance alarm channel that rings a LOUD, long siren even when the
+    // phone is locked / the app is closed — so a rider never misses an assigned
+    // order. A channel's sound is fixed at creation, so this uses a fresh id
+    // (the server sends this same channel_id). res/raw/alarm.ogg is a ~24s siren.
     try {
       await PushNotifications.createChannel({
-        id: "orders",
-        name: "New orders",
-        description: "Rings when you're assigned an order",
+        id: "orders_alarm",
+        name: "New order alarm",
+        description: "Loud alarm when you're assigned an order",
         importance: 5,
         visibility: 1,
+        sound: "alarm.ogg",
         vibration: true,
       });
     } catch { /* ignore */ }

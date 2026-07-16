@@ -13,13 +13,13 @@ export default function IncomingOrder() {
   const orders = useOrders();
   const [slide, setSlide] = useState(0); // 0..100 slide-to-accept progress
 
-  // The owner's alarm is a PACKING alarm: it fires only for a brand-new order
-  // that the owner must pack — i.e. no staff picker is on it (picker_id null).
-  // If a staff picker is handling packing, the owner isn't needed and it stays
-  // silent, even if a driver has taken the delivery. Delivery that later falls
-  // to the owner appears as buttons on the order the owner is already packing.
+  // Ring the owner for EVERY brand-new order that still needs their
+  // confirmation — regardless of whether a staff picker/rider was auto-assigned.
+  // The owner accepting (or rejecting) is always the shop's confirmation step, so
+  // the owner should never sleep through an order just because staff will fulfil
+  // it. (The loud FCM push fires for these same orders even when the app is shut.)
   const pending = orders.filter(
-    (o) => o.accepted !== true && o.status === "Placed" && !o.pickerId
+    (o) => o.accepted !== true && o.status === "Placed"
   );
   const order = pending.length ? pending[pending.length - 1] : null;
 

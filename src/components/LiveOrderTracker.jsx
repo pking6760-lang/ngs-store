@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ORDER_STATUSES } from "../lib/store.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { getCurrentLocation } from "../lib/location.js";
 import * as api from "../lib/api.js";
 import ScratchCard from "./ScratchCard.jsx";
 import ProductThumb from "./ProductThumb.jsx";
@@ -130,8 +131,26 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   const rafRef = useRef(null);
   const [rider, setRider] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareErr, setShareErr] = useState("");
 
   useBackGuard(open, onClose);
+
+  // Order was placed without a pinned location → let the customer share it now
+  // so delivery can reach them and the live map lights up.
+  const shareLocation = useCallback(async () => {
+    if (!order?.dbId) return;
+    setSharing(true); setShareErr("");
+    try {
+      const loc = await getCurrentLocation();
+      await api.setOrderLocation(order.dbId, { lat: loc.lat, lng: loc.lng });
+      if (onRefresh) await onRefresh();
+    } catch (e) {
+      setShareErr(e.message || "Couldn't get your location.");
+    } finally {
+      setSharing(false);
+    }
+  }, [order?.dbId, onRefresh]);
 
   // Pull the assigned rider (name + phone) for the driver card.
   const loadRider = useCallback(() => {
@@ -308,10 +327,11 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
         ) : (
           <div className="lt-nomap">
             <Svg d={Icon.home} size={26} />
-            <p>Live map appears once your delivery location is shared.</p>
-            <button className="lt-nomap-refresh" onClick={refresh} disabled={refreshing}>
-              {refreshing ? "Refreshing…" : "Refresh"}
+            <p>Share your location so the rider reaches you and the live map turns on.</p>
+            <button className="lt-nomap-share" onClick={shareLocation} disabled={sharing}>
+              {sharing ? "Getting your location…" : "📍 Share my location"}
             </button>
+            {shareErr && <span className="lt-nomap-err">{shareErr}</span>}
           </div>
         )}
 

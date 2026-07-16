@@ -60,7 +60,15 @@ async function sendFcm(accessToken: string, token: string, title: string, body: 
       message: {
         token,
         notification: { title, body },
-        android: { priority: "high", notification: { sound: "default", channel_id: "orders" } },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "alarm",
+            channel_id: "orders_alarm",
+            notification_priority: "PRIORITY_MAX",
+            default_vibrate_timings: true,
+          },
+        },
         data: { type: "new_task" },
       },
     }),

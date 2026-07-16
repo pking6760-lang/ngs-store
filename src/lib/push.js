@@ -26,15 +26,18 @@ export async function initAdminPush() {
     }
     if (perm.receive !== "granted") return;
 
-    // High-importance channel so order alerts pop up with sound (Android 8+
-    // requires a channel; it must match channel_id sent by the server).
+    // Max-importance channel that rings a LOUD, long alarm sound even when the
+    // phone is locked / the app is closed — so the owner never sleeps through an
+    // order. A channel's sound is fixed at creation, so this uses a fresh id
+    // (the server sends this same channel_id). res/raw/alarm.ogg is a ~24s siren.
     try {
       await PushNotifications.createChannel({
-        id: "orders",
-        name: "New orders",
-        description: "Alerts when a customer places an order",
+        id: "orders_alarm",
+        name: "New order alarm",
+        description: "Loud alarm when a customer places an order",
         importance: 5,
         visibility: 1,
+        sound: "alarm.ogg",
         vibration: true,
       });
     } catch { /* ignore */ }

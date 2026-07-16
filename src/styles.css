@@ -981,6 +981,13 @@ button {
   display: inline-block; margin: 12px auto 0; background: var(--green); color: #fff;
   border: none; border-radius: 10px; padding: 9px 18px; font-weight: 700; font-size: 13px;
 }
+.lt-nomap-share {
+  display: inline-block; margin: 14px auto 0; background: var(--green); color: #fff;
+  border: none; border-radius: 12px; padding: 11px 20px; font-weight: 800; font-size: 13.5px;
+  box-shadow: 0 6px 16px rgba(10, 145, 85, 0.28); cursor: pointer;
+}
+.lt-nomap-share:disabled { opacity: 0.7; }
+.lt-nomap-err { display: block; margin-top: 8px; font-size: 12px; color: #c0392b; font-weight: 600; }
 
 /* Map markers */
 .lt-marker {

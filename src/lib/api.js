@@ -423,6 +423,14 @@ export async function partnerUpdateLocation(orderId, lat, lng) {
   if (error) throw error;
 }
 
+// Customer attaches their exact location to an order placed without one, so
+// live tracking + the map light up. Only works while the order is in flight.
+export async function setOrderLocation(orderId, location) {
+  const { error } = await must().rpc("set_order_location", { p_order: orderId, p_location: location });
+  if (error) throw new Error(error.message || "Couldn't save your location.");
+  pingLocal("orders");
+}
+
 // Customer scratches the reward card after delivery. Returns { type, amount }.
 export async function claimScratchReward(orderId) {
   const { data, error } = await must().rpc("claim_scratch_reward", { p_order: orderId });
