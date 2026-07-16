@@ -12,6 +12,10 @@ import { tierUnitPrice } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
+import gpayLogo from "../assets/upi/gpay.png";
+import phonepeLogo from "../assets/upi/phonepe.png";
+import paytmLogo from "../assets/upi/paytm.png";
+import bhimLogo from "../assets/upi/bhim.png";
 import {
   pointsForSpend,
   redeemableRupees,
@@ -58,10 +62,10 @@ const IS_IOS =
 // package; on iOS via the app's own URL scheme (targeting a specific app avoids
 // the generic upi:// link being grabbed by the wrong handler like WhatsApp).
 const UPI_APPS = [
-  { id: "gpay", name: "Google Pay", short: "G", bg: "#ffffff", fg: "#1a73e8", bd: "#dfe3ea", scheme: "tez://upi/pay" },
-  { id: "phonepe", name: "PhonePe", short: "Pe", bg: "#5f259f", fg: "#ffffff", scheme: "phonepe://pay" },
-  { id: "paytm", name: "Paytm", short: "P", bg: "#042e5b", fg: "#00baf2", scheme: "paytmmp://pay" },
-  { id: "bhim", name: "BHIM UPI", short: "B", bg: "#f26522", fg: "#ffffff", scheme: "upi://pay" },
+  { id: "gpay", name: "Google Pay", logo: gpayLogo, scheme: "tez://upi/pay" },
+  { id: "phonepe", name: "PhonePe", logo: phonepeLogo, scheme: "phonepe://pay" },
+  { id: "paytm", name: "Paytm", logo: paytmLogo, scheme: "paytmmp://pay" },
+  { id: "bhim", name: "BHIM UPI", logo: bhimLogo, scheme: "upi://pay" },
 ];
 // Use each app's own URL scheme (works from both the Capacitor WebView and a
 // mobile browser). intent:// is avoided because the in-app WebView can't launch
@@ -748,11 +752,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="upi-apps">
                   {UPI_APPS.map((app) => (
                     <a className="upi-app" key={app.id} href={upiAppHref(payLink.upiIntent, app)}>
-                      <span
-                        className="upi-app-ic"
-                        style={{ background: app.bg, color: app.fg, boxShadow: app.bd ? `inset 0 0 0 1px ${app.bd}` : "none" }}
-                      >
-                        {app.short}
+                      <span className="upi-app-ic">
+                        <img src={app.logo} alt={app.name} />
                       </span>
                       <span className="upi-app-name">{app.name}</span>
                     </a>
