@@ -781,17 +781,12 @@ async function myUid() {
 
 // The owner-controlled dials (rates, caps, hours) — the partner app reads them.
 export async function getOpsConfig() {
-  const { data, error } = await must().from("ops_config").select("*").eq("id", 1).maybeSingle();
+  // Partner-facing config only. ops_config itself is admin-only (it holds
+  // margins & payout formulas a partner must not see), so read the handful of
+  // fields the partner app needs via a SECURITY DEFINER RPC.
+  const { data, error } = await must().rpc("get_partner_config");
   if (error) throw error;
-  if (!data) return null;
-  return {
-    handling: Number(data.handling_fee), deliveryFee: Number(data.delivery_fee),
-    freeThreshold: Number(data.free_delivery_threshold), surgeFee: Number(data.surge_fee),
-    surgeOn: !!data.surge_on, codCustomerLimit: Number(data.cod_customer_limit),
-    riderCashCap: Number(data.rider_cash_cap), pickerSlotMin: Number(data.picker_slot_min),
-    storeOpenHour: data.store_open_hour, storeCloseHour: data.store_close_hour,
-    coveragePicking: data.coverage_picking, coverageDelivery: data.coverage_delivery,
-  };
+  return data || null;
 }
 
 // Online / offline presence.

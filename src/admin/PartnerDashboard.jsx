@@ -66,7 +66,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
   useEffect(() => { initPartnerPush(); }, []);
   useEffect(() => {
     reload();
-    const unsubs = ["wallet_ledger", "partner_slots", "partner_presence", "ops_config", "partner_strikes"]
+    const unsubs = ["wallet_ledger", "partner_slots", "partner_presence", "partner_strikes"]
       .map((t) => api.subscribeTable(t, reload));
     const onVis = () => { if (document.visibilityState === "visible") reload(); };
     document.addEventListener("visibilitychange", onVis);
