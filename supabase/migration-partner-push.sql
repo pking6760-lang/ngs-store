@@ -19,7 +19,7 @@ create or replace function public._notify_partner(p_user uuid, p_role text, p_or
 begin
   perform net.http_post(
     url := 'https://wvlkhvqohkkxlatwotvy.supabase.co/functions/v1/notify-partner',
-    headers := jsonb_build_object('Content-Type','application/json','x-webhook-secret','94075e1969c27b54b99c866927cf19a9'),
+    headers := jsonb_build_object('Content-Type','application/json','x-webhook-secret',(select value from private.app_secret where key = 'webhook_secret')),
     body := jsonb_build_object(
       'userId', p_user, 'role', p_role,
       'code', (select human_code from public.orders where id = p_order),

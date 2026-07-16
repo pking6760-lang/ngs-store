@@ -95,7 +95,7 @@ begin
   if coalesce(NEW.is_return, false) or coalesce(NEW.is_membership, false) then return NEW; end if;
   perform net.http_post(
     url := 'https://wvlkhvqohkkxlatwotvy.supabase.co/functions/v1/notify-admin',
-    headers := jsonb_build_object('Content-Type','application/json','x-webhook-secret','94075e1969c27b54b99c866927cf19a9'),
+    headers := jsonb_build_object('Content-Type','application/json','x-webhook-secret',(select value from private.app_secret where key = 'webhook_secret')),
     body := jsonb_build_object('type','INSERT','record', to_jsonb(NEW))
   );
   return NEW;
