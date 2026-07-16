@@ -17,3 +17,12 @@ insert into public.notification_templates (bucket, title, body) values
   ('winter', 'Sardi aa gayi ❄️',   'Garam chai, soup aur dry-fruits — winter essentials NGS se ghar par. ☕'),
   ('winter', 'Winter is here ❄️',  'Thandi me bahar kyun? Fresh grocery ghar baithe NGS se mangao. 🧣')
 on conflict do nothing;
+
+-- Rain / Monsoon (North-India onset ~1 July).
+insert into public.notification_campaigns (label, bucket, hour_ist, dow, on_date, enabled) values
+  ('Monsoon begins', 'rain', 9, null, '2027-07-01', true)
+on conflict do nothing;
+insert into public.notification_templates (bucket, title, body) values
+  ('rain', 'Barish ka mausam 🌧️', 'Bahar mat jao — garam pakode ka saamaan ghar par NGS se! ☔'),
+  ('rain', 'Rainy day, cozy day ☔', 'Chai-pakode aur zaroorat ka saamaan, sab ghar baithe NGS se. 🌧️')
+on conflict do nothing;
