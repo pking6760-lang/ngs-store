@@ -90,7 +90,9 @@ async function sendFcm(accessToken: string, token: string, title: string, body: 
 
 Deno.serve(async (req) => {
   try {
-    if (WEBHOOK_SECRET && req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
+    // Fail CLOSED: reject if the secret is unset or doesn't match (an empty
+    // env var must never open this endpoint to anonymous alarm-spam).
+    if (!WEBHOOK_SECRET || req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
       return new Response("forbidden", { status: 401 });
     }
     const payload = await req.json().catch(() => ({}));
