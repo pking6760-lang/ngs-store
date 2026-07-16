@@ -7,7 +7,7 @@ import { useProducts, useSettings, useCategories, useCoupons, useWallet } from "
 import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
-import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage } from "../lib/payments.js";
+import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import { tierUnitPrice } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
@@ -436,8 +436,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       // Redraw it as a plain, clean QR (no branded card).
       const { imageUrl, imageDataUrl } = await api.createOrderQr(order.dbId);
       const cleanQr = await cleanUpiQrFromImage(imageDataUrl);
+      // Pull the UPI intent string out of the QR so tapping "Pay" can open the
+      // customer's UPI app directly (no gateway screen), like a big q-commerce app.
+      const upiIntent = await decodeUpiFromQr(imageDataUrl);
       setPayLink({
-        imageUrl, imageDataUrl, cleanQr,
+        imageUrl, imageDataUrl, cleanQr, upiIntent,
         order, count: lines.reduce((a, l) => a + l.qty, 0),
       });
       setStep("payqr");
@@ -707,13 +710,28 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               <p className="upi-hint">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly</p>
             </div>
 
-            <button className="pay-proceed" onClick={payOnThisPhone}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" /></svg>
-              Pay with UPI app · ₹{Number(payLink.order.total).toFixed(2)}
-            </button>
+            {/* Primary: open the customer's UPI app DIRECTLY via the intent link
+                decoded from the QR — no gateway screen. Falls back to Razorpay's
+                in-page checkout only if the intent couldn't be read (e.g. desktop). */}
+            {payLink.upiIntent ? (
+              <a className="pay-proceed" href={payLink.upiIntent}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" /></svg>
+                Pay ₹{Number(payLink.order.total).toFixed(2)} with UPI app
+              </a>
+            ) : (
+              <button className="pay-proceed" onClick={payOnThisPhone}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" /></svg>
+                Pay ₹{Number(payLink.order.total).toFixed(2)}
+              </button>
+            )}
+            {payLink.upiIntent && (
+              <button className="pay-paid-link" onClick={payOnThisPhone}>
+                Pay by card / other methods
+              </button>
+            )}
             <p className="upi-note">
-              Waiting for payment… this screen updates automatically the moment
-              your payment goes through. You don't need to do anything after paying.
+              After you pay, this screen confirms automatically — you don't need
+              to do anything else.
             </p>
             {placeError && <div className="auth-error">{placeError}</div>}
           </div>

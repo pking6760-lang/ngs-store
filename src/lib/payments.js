@@ -81,3 +81,31 @@ export async function cleanUpiQrFromImage(imageDataUrl) {
     return "";
   }
 }
+
+// Decode the raw UPI intent string (upi://pay?pa=…&am=…&tr=…) out of Razorpay's
+// QR image. Opening this string as a link launches the customer's UPI app
+// directly (GPay / PhonePe / Paytm) with the merchant + amount pre-filled — the
+// same experience as a big quick-commerce app — while the payment still routes
+// through Razorpay, so the webhook confirms the order. Returns "" if unreadable.
+export async function decodeUpiFromQr(imageDataUrl) {
+  if (!imageDataUrl || typeof document === "undefined") return "";
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = imageDataUrl;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const px = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(px.data, canvas.width, canvas.height);
+    const data = code?.data || "";
+    return data.startsWith("upi://") ? data : "";
+  } catch {
+    return "";
+  }
+}
