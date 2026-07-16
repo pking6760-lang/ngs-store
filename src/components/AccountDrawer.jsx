@@ -7,7 +7,8 @@ import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../li
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
-import { cleanUpiQrFromImage, loadRazorpay } from "../lib/payments.js";
+import { cleanUpiQrFromImage, decodeUpiFromQr, loadRazorpay } from "../lib/payments.js";
+import UpiPayScreen from "./UpiPayScreen.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
 import ScratchCard from "./ScratchCard.jsx";
@@ -523,6 +524,7 @@ function WalletTopup({ onClose, onDone }) {
 function TopupPay({ amount, onPaid, onBack }) {
   const { user } = useAuth();
   const [qr, setQr] = useState("loading"); // "loading" | "error" | { url }
+  const [upiIntent, setUpiIntent] = useState("");
   const [order, setOrder] = useState(null);
   const [err, setErr] = useState("");
   const [paying, setPaying] = useState(false);
@@ -544,7 +546,8 @@ function TopupPay({ amount, onPaid, onBack }) {
         api.createRazorpayOrder(o.dbId).then((rp) => { if (alive) rzpOrderRef.current = rp; }).catch(() => {});
         const { imageUrl, imageDataUrl } = await api.createOrderQr(o.dbId);
         const clean = await cleanUpiQrFromImage(imageDataUrl).catch(() => null);
-        if (alive) setQr({ url: clean || imageDataUrl || imageUrl });
+        const intent = await decodeUpiFromQr(imageDataUrl).catch(() => "");
+        if (alive) { setUpiIntent(intent); setQr({ url: clean || imageDataUrl || imageUrl }); }
       } catch (e) {
         if (alive) { setErr(e.message || "Couldn't start the payment."); setQr("error"); }
       }
@@ -601,26 +604,18 @@ function TopupPay({ amount, onPaid, onBack }) {
 
   return (
     <div className="mem-qr">
-      <div className="mem-qr-amt">Pay ₹{amount} to your wallet<span><MIcon d={PIC.lock} size={12} /> Secured by Razorpay</span></div>
-      {qr === "error" ? (
-        <>
-          <div className="auth-error">{err}</div>
-          <button className="ghost-btn full" onClick={onBack}>Back</button>
-        </>
-      ) : qr && qr.url ? (
-        <>
-          <button className="checkout-btn" onClick={payOnThisPhone} disabled={paying}>
-            {paying ? "Opening UPI…" : "Pay with a UPI app on this phone"}
-          </button>
-          <div className="mem-qr-or">— or scan the QR —</div>
-          <div className="mem-qr-wrap"><img className="mem-qr-img" src={qr.url} alt="UPI payment QR" /></div>
-          <p className="member-note">Open GPay, PhonePe, Paytm or any UPI app. The money lands in your wallet automatically the moment you pay.</p>
-          {err && <div className="auth-error">{err}</div>}
-          <button className="ghost-btn full" onClick={onBack}>Change amount</button>
-        </>
-      ) : (
-        <div className="mem-qr-loading">Creating a secure QR…</div>
-      )}
+      <UpiPayScreen
+        amount={amount}
+        loading={qr === null || qr === "loading"}
+        qrSrc={qr && qr.url ? qr.url : null}
+        upiIntent={upiIntent}
+        onRazorpay={payOnThisPhone}
+        error={qr === "error" ? err : ""}
+        note="The money lands in your NGS Wallet automatically the moment you pay."
+      />
+      <button className="ghost-btn full" onClick={onBack}>
+        {qr === "error" ? "Back" : "Change amount"}
+      </button>
     </div>
   );
 }
@@ -1002,6 +997,7 @@ function PrimeBenefits({ benefits }) {
 function MembershipQrPay({ price, onPaid, onCancel }) {
   const { user } = useAuth();
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
+  const [upiIntent, setUpiIntent] = useState("");
   const [order, setOrder] = useState(null);
   const [err, setErr] = useState("");
   const [paying, setPaying] = useState(false);
@@ -1019,7 +1015,8 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
         api.createRazorpayOrder(o.dbId).then((rp) => { if (alive) rzpOrderRef.current = rp; }).catch(() => {});
         const { imageUrl, imageDataUrl } = await api.createOrderQr(o.dbId);
         const clean = await cleanUpiQrFromImage(imageDataUrl).catch(() => null);
-        if (alive) setQr({ url: clean || imageDataUrl || imageUrl });
+        const intent = await decodeUpiFromQr(imageDataUrl).catch(() => "");
+        if (alive) { setUpiIntent(intent); setQr({ url: clean || imageDataUrl || imageUrl }); }
       } catch (e) {
         if (alive) { setErr(e.message || "Couldn't start the payment."); setQr("error"); }
       }
@@ -1075,22 +1072,15 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
 
   return (
     <div className="mem-qr">
-      <div className="mem-qr-amt">Pay ₹{price} to join NGS Prime<span><MIcon d={PIC.lock} size={12} /> Secured by Razorpay</span></div>
-      {qr === "error" ? (
-        <div className="auth-error">{err}</div>
-      ) : qr && qr.url ? (
-        <>
-          <button className="checkout-btn" onClick={payOnThisPhone} disabled={paying}>
-            {paying ? "Opening UPI…" : "Pay with a UPI app on this phone"}
-          </button>
-          <div className="mem-qr-or">— or scan the QR —</div>
-          <div className="mem-qr-wrap"><img className="mem-qr-img" src={qr.url} alt="UPI payment QR" /></div>
-          <p className="member-note">Open GPay, PhonePe, Paytm or any UPI app. Your membership activates automatically the moment you pay.</p>
-          {err && <div className="auth-error">{err}</div>}
-        </>
-      ) : (
-        <div className="mem-qr-loading">Creating a secure QR…</div>
-      )}
+      <UpiPayScreen
+        amount={price}
+        loading={qr === null || qr === "loading"}
+        qrSrc={qr && qr.url ? qr.url : null}
+        upiIntent={upiIntent}
+        onRazorpay={payOnThisPhone}
+        error={qr === "error" ? err : ""}
+        note="Your NGS Prime membership activates automatically the moment you pay."
+      />
       <button className="ghost-btn full" onClick={onCancel}>Cancel</button>
     </div>
   );

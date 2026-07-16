@@ -4194,3 +4194,16 @@ body {
 }
 .upi-app-ic img { width: 100%; height: 100%; object-fit: contain; }
 .upi-app-name { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+
+/* Professional loader inside the pay screen */
+.pay-loading {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 40px 0 32px; color: var(--muted); font-size: 13.5px; font-weight: 600;
+}
+.pay-spinner {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 4px solid var(--green-tint, #e7f6ee);
+  border-top-color: var(--green, #0a9155);
+  animation: paySpin 0.8s linear infinite;
+}
+@keyframes paySpin { to { transform: rotate(360deg); } }
