@@ -112,12 +112,42 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
     return () => { alive = false; if (stop) stop(); };
   }, [streamOrderId]);
 
+  // There is no reject — an assigned order is already the partner's. So the
+  // instant one appears (i.e. right after they tap Accept on the lock-screen
+  // alarm), accept it automatically and drop straight onto the delivery / pick
+  // page. No second Accept tap. If the accept call fails, we fall back to a
+  // manual Accept button so they're never stuck.
+  const autoTried = useRef(new Set());
+  const [autoFailed, setAutoFailed] = useState(false);
+  useEffect(() => {
+    if (!task || task.state !== "assigned") { setAutoFailed(false); return; }
+    if (taskBusy || autoTried.current.has(task.orderId)) return;
+    autoTried.current.add(task.orderId);
+    (async () => {
+      stopAlarm();
+      setTaskBusy(true);
+      try {
+        await api.partnerAccept(task.orderId);
+        const t = await api.getMyTask(); setTask(t); await reload();
+      } catch { setAutoFailed(true); }
+      finally { setTaskBusy(false); }
+    })();
+  }, [task, taskBusy]);
+
+  function manualAccept() {
+    if (!task) return;
+    setAutoFailed(false);
+    autoTried.current.add(task.orderId);
+    taskAction(() => api.partnerAccept(task.orderId));
+  }
+
   const isDelivery = role === "delivery";
   const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload, task, taskBusy, taskAction };
   const switching = useReveal(tab, 300, 650);
 
-  // Once accepted, a dedicated full-screen run page takes over the whole screen.
-  const runActive = task && task.state !== "assigned";
+  // Any active order takes over the whole screen — from "Accepting…" straight
+  // through to the delivery / pick flow.
+  const runActive = !!task;
 
   return (
     <div className="pd">
@@ -141,7 +171,10 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
           </button>
         ))}
       </nav>
-      {runActive && <RunScreen task={task} busy={taskBusy} onAction={taskAction} />}
+      {runActive && (
+        <RunScreen task={task} busy={taskBusy} onAction={taskAction}
+          autoFailed={autoFailed} onAccept={manualAccept} />
+      )}
     </div>
   );
 }
@@ -254,15 +287,17 @@ function IncomingOrder({ task, busy, onAction }) {
   );
 }
 
-/* ── Full-screen run page (dedicated page after Accept) ─────────────────── */
-function RunScreen({ task, busy, onAction }) {
+/* ── Full-screen run page (takes over from Accept → delivery/pick) ──────── */
+function RunScreen({ task, busy, onAction, autoFailed, onAccept }) {
   const isReturn = !!task.isReturn;
   const isDelivery = task.role === "delivery";
+  const assigned = task.state === "assigned";
   const out = task.state === "out_for_delivery";
   const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
-  const heading = isReturn ? "Return pickup" : isDelivery ? "Delivery" : "Packing";
-  const status = isReturn ? "Collect the items"
-    : isDelivery ? (out ? "On the way" : "Ready to go") : "Scan every item";
+  const heading = assigned ? "New order" : isReturn ? "Return pickup" : isDelivery ? "Delivery" : "Packing";
+  const status = assigned ? (autoFailed ? "Tap to accept" : "Accepting…")
+    : isReturn ? "Collect the items"
+      : isDelivery ? (out ? "On the way" : "Ready to go") : "Scan every item";
   return (
     <div className="pd-runscreen">
       <div className="pd-runscreen-head">
@@ -273,11 +308,51 @@ function RunScreen({ task, busy, onAction }) {
         <span className="pd-rs-code">#{code}</span>
       </div>
       <div className="pd-runscreen-body">
-        {isReturn ? <ReturnBody task={task} busy={busy} onAction={onAction} />
-          : isDelivery ? <DeliveryBody task={task} busy={busy} onAction={onAction} />
-            : <PickBody task={task} busy={busy} onAction={onAction} />}
+        {assigned ? <AcceptingBody task={task} busy={busy} autoFailed={autoFailed} onAccept={onAccept} />
+          : isReturn ? <ReturnBody task={task} busy={busy} onAction={onAction} />
+            : isDelivery ? <DeliveryBody task={task} busy={busy} onAction={onAction} />
+              : <PickBody task={task} busy={busy} onAction={onAction} />}
       </div>
     </div>
+  );
+}
+
+/* Accepting body — auto-accepting spinner; manual Accept only if that failed. */
+function AcceptingBody({ task, busy, autoFailed, onAccept }) {
+  const isReturn = !!task.isReturn;
+  const isDelivery = task.role === "delivery";
+  return (
+    <>
+      {task.earning > 0 && <EarnBanner amount={task.earning} />}
+      {isDelivery && !isReturn ? (
+        <div className="pd-run-card">
+          <div className="lo-row" style={{ borderTop: "none" }}>
+            <span className="lo-lbl">Payment</span>
+            {task.paid ? <span className="lo-paid">✓ Prepaid</span>
+              : task.isCod ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
+                : <span className="lo-paid">✓ Prepaid</span>}
+          </div>
+        </div>
+      ) : (
+        <div className="pd-run-card">
+          <div className="lo-items">
+            <span className="lo-lbl">{isReturn ? "Collect these items back" : "Pack these"}</span>
+            {(task.items || []).map((it, i) => (
+              <div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="pd-run-foot">
+        {!autoFailed ? (
+          <div className="pd-accepting"><span className="ngs-spin" /> Accepting your order…</div>
+        ) : (
+          <button className="pd-btn lo-accept" disabled={busy} onClick={onAccept}>
+            {busy ? <span className="ngs-spin" /> : <><Ic name="check" size={16} /> Accept order</>}
+          </button>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -516,16 +591,10 @@ function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, ta
         </div>
       </div>
 
-      {task && task.state === "assigned" ? (
-        // The incoming order to accept. Once accepted, a full-screen run page
-        // (rendered above the whole dashboard) takes over — so nothing else of
-        // the accepted flow lives here in Home.
-        <IncomingOrder task={task} busy={taskBusy} onAction={taskAction} />
-      ) : task ? (
-        <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
-          <span className="emo"><Ic name="scooter" size={26} /></span>
-          Opening your {task.role === "delivery" ? "delivery" : "packing"} page…
-        </div>
+      {task ? (
+        // Any active order is handled by the full-screen run page rendered above
+        // the whole dashboard — nothing for it lives here in Home.
+        null
       ) : presence.isOnline ? (
         <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
           <span className="emo"><Ic name="signal" size={26} /></span>
