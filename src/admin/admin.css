@@ -2852,3 +2852,23 @@ body {
 .rekyc-actions { display: flex; gap: 10px; margin-top: 8px; }
 .rekyc-actions .ghost-btn { flex: 1; background: none; border: 1px solid var(--line, #dde3ea); border-radius: 10px; padding: 10px; font-weight: 700; }
 .rekyc-actions .primary-btn { flex: 1; }
+
+/* ── Prime member economics card ─────────────────────────────────────────── */
+.prime-eco { border-radius: 14px; padding: 14px; margin-bottom: 8px; border: 1px solid #e3e8ef; background: #f7fafc; }
+.prime-eco.good { background: #f1faf3; border-color: #cfead8; }
+.prime-eco.bad { background: #fdf3f2; border-color: #f2d5d0; }
+.pe-verdict { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.pe-net { font-size: 26px; font-weight: 900; letter-spacing: -0.02em; }
+.prime-eco.good .pe-net { color: #14713f; }
+.prime-eco.bad .pe-net { color: #b4372a; }
+.pe-tag { font-size: 12.5px; font-weight: 800; }
+.prime-eco.good .pe-tag { color: #2f7d4f; }
+.prime-eco.bad .pe-tag { color: #b4372a; }
+.pe-rows { display: flex; flex-direction: column; gap: 3px; }
+.pe-row { display: flex; justify-content: space-between; font-size: 13.5px; color: #43505f; }
+.pe-row b { font-weight: 700; color: #1c2430; }
+.pe-row.income b { color: #14713f; }
+.pe-row.total { margin-top: 6px; padding-top: 7px; border-top: 1px solid #dfe6ee; font-weight: 800; }
+.pe-row.total span, .pe-row.total b { font-weight: 900; color: #111; }
+.pe-note { margin: 10px 0 0; font-size: 11.5px; color: #6a7684; line-height: 1.4; }
+.pe-note b { color: #43505f; }

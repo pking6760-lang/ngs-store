@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
-import { useCustomers, useOrders, useUserNotifications } from "../lib/hooks.js";
+import { useCustomers, useOrders, useUserNotifications, useSettings, useAdminProducts } from "../lib/hooks.js";
 import { sendNotification } from "../lib/actions.js";
 import AdminPortal from "./AdminPortal.jsx";
 
@@ -79,6 +79,39 @@ function CustomerDetail({ customer, orders, onClose }) {
   const valid = orders.filter((o) => o.status !== "Cancelled");
   const totalSpend = valid.reduce((s, o) => s + (o.total || 0), 0);
 
+  // Prime economics: is this member worth it? What they paid for Prime + the
+  // margin you earned on their orders, minus the perks you handed them.
+  const settings = useSettings();
+  const adminProducts = useAdminProducts();
+  const eco = useMemo(() => {
+    const nn = (v) => Number(v) || 0;
+    const cost = {};
+    adminProducts.forEach((p) => { if (p.cost != null) cost[p.id] = p.cost; });
+    const redeemPer = nn(settings.rewards?.redeemPer) || 10;
+    const stdDelivery = nn(settings.deliveryFee);
+    const stdHandling = nn(settings.handlingFee);
+    const freeThresh = nn(settings.freeDeliveryAbove);
+    let feePaid = 0, savings = 0, rewards = 0, margin = 0, freeDelivery = 0, freeHandling = 0;
+    valid.forEach((o) => {
+      feePaid += nn(o.membershipFee);
+      if (o.isTopup || o.isMembership) return;
+      savings += nn(o.memberSavings);
+      rewards += nn(o.scratchWallet) + nn(o.scratchPoints) / redeemPer;
+      (o.items || []).forEach((it) => { if (cost[it.id] != null) margin += (it.price - cost[it.id]) * it.qty; });
+      if (o.member) {
+        freeHandling += stdHandling;
+        if (nn(o.itemTotal) < freeThresh) freeDelivery += stdDelivery;
+      }
+    });
+    const perks = freeDelivery + freeHandling + rewards; // deducted from the fee+margin
+    const net = feePaid + margin - perks;                // your real net on this member
+    return {
+      feePaid: Math.round(feePaid), savings: Math.round(savings), rewards: Math.round(rewards),
+      margin: Math.round(margin), freeDelivery: Math.round(freeDelivery), freeHandling: Math.round(freeHandling),
+      net: Math.round(net),
+    };
+  }, [valid, adminProducts, settings]);
+
   function send(e) {
     e.preventDefault();
     if (!title.trim()) return;
@@ -151,6 +184,29 @@ function CustomerDetail({ customer, orders, onClose }) {
               <b>{customer.createdAt ? fmtDate(customer.createdAt) : "—"}</b>
             </div>
           </div>
+
+          {customer.member && (
+            <>
+              <h4 className="customer-sec">Prime economics</h4>
+              <div className={`prime-eco ${eco.net >= 0 ? "good" : "bad"}`}>
+                <div className="pe-verdict">
+                  <span className="pe-net">₹{eco.net}</span>
+                  <span className="pe-tag">{eco.net >= 0 ? "Profitable member ✓" : "Costing you ✗"}</span>
+                </div>
+                <div className="pe-rows">
+                  <div className="pe-row income"><span>Prime fee paid</span><b>+₹{eco.feePaid}</b></div>
+                  <div className="pe-row income"><span>Margin on their orders</span><b>+₹{eco.margin}</b></div>
+                  {eco.freeDelivery > 0 && <div className="pe-row"><span>Free delivery given</span><b>−₹{eco.freeDelivery}</b></div>}
+                  {eco.freeHandling > 0 && <div className="pe-row"><span>Free handling given</span><b>−₹{eco.freeHandling}</b></div>}
+                  {eco.rewards > 0 && <div className="pe-row"><span>Scratch rewards given</span><b>−₹{eco.rewards}</b></div>}
+                  <div className="pe-row total"><span>Net to you</span><b>₹{eco.net}</b></div>
+                </div>
+                <p className="pe-note">
+                  They also saved <b>₹{eco.savings}</b> on member prices — already reflected in the margin above.
+                </p>
+              </div>
+            </>
+          )}
 
           <h4 className="customer-sec">Order history</h4>
           {orders.length === 0 ? (
