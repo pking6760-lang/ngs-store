@@ -21,12 +21,23 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  /* Kill the grey/blue flash the mobile WebView paints on every tap. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background: var(--bg-soft);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  /* Native-app feel: don't let taps select UI text or pop the callout menu. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* But keep real text fields fully selectable/editable. */
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 button {
