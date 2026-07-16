@@ -415,7 +415,12 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
               </button>
               {qrFor === o.id && (
                 <div className="collect-qr">
-                  {qrState.loading && <p>Creating UPI QR…</p>}
+                  {qrState.loading && (
+                    <div className="od-qr-loading" aria-live="polite">
+                      <div className="od-qr-skel" />
+                      <span>Creating secure QR…</span>
+                    </div>
+                  )}
                   {qrState.url && (
                     <>
                       <img src={qrState.url} alt="UPI payment QR code" />

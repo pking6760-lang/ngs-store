@@ -114,7 +114,11 @@ export default function ScratchCard({ orderId, existingReward }) {
       <div className="scratch-title"><SGIcon d={SG.gift} size={18} /> You've got a reward!</div>
       <div className="scratch-stage">
         <div className={`scratch-prize ${revealed ? "show" : ""}`}>
-          {won ? (
+          {!revealed ? (
+            // Until the reward is actually claimed & revealed, keep the outcome
+            // hidden — never leak "No reward" (or the prize) through the foil.
+            <div className="scratch-prize-emoji scratch-prize-muted"><SGIcon d={SG.gift} size={44} /></div>
+          ) : won ? (
             <>
               <div className="scratch-prize-emoji">{cash > 0 ? <SGIcon d={SG.wallet} size={40} /> : <SGIcon d={SG.gift} size={40} />}</div>
               <div className="scratch-prize-rows">

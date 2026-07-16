@@ -2886,3 +2886,16 @@ body {
   color: var(--a-accent, #3b5bdb); font-size: 13px; font-weight: 800; cursor: pointer;
 }
 .show-more-btn:hover { background: #f6f8fb; }
+
+/* Animated QR skeleton loader (replaces the plain "Creating UPI QR…" text) */
+.od-qr-loading { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 2px; }
+.od-qr-skel { width: 160px; aspect-ratio: 1 / 1; border-radius: 14px; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; }
+.od-qr-skel::before { content: ""; position: absolute; inset: -60%;
+  background: conic-gradient(from 0deg, transparent 0 72%, #3B5BDB 88%, transparent 100%);
+  animation: odqrspin 1.05s linear infinite; }
+.od-qr-skel::after { content: ""; position: absolute; inset: 3px; border-radius: 11px; background: #fff;
+  background-image: radial-gradient(#dfe3ee 1px, transparent 1.5px); background-size: 13px 13px; }
+.od-qr-loading span { font-size: 12.5px; font-weight: 700; color: #3B5BDB; }
+@keyframes odqrspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .od-qr-skel::before { animation: none; } }
