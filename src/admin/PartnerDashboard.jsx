@@ -74,9 +74,50 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
     return () => { unsubs.forEach((u) => u && u()); document.removeEventListener("visibilitychange", onVis); clearInterval(poll); };
   }, [reload]);
 
+  // Current assigned task — polled here (not in Home) so the full-screen
+  // delivery / pick page can cover the tabs and survive tab switches.
+  const [task, setTask] = useState(null);
+  const [taskBusy, setTaskBusy] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const tick = () => api.getMyTask().then((t) => alive && setTask(t)).catch(() => {});
+    tick();
+    const iv = setInterval(tick, 5000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [presence.activeOrderId]);
+
+  async function taskAction(fn) {
+    stopAlarm(); // they're handling it — silence the ring
+    setTaskBusy(true);
+    try { await withMinTime(fn, 700, 1500); const t = await api.getMyTask(); setTask(t); await reload(); }
+    catch (e) { alert(e.message || "Something went wrong."); }
+    finally { setTaskBusy(false); }
+  }
+
+  // Stream live GPS to the customer while on an active DELIVERY run.
+  const streamOrderId = task && task.role === "delivery" && (task.state === "accepted" || task.state === "out_for_delivery")
+    ? task.orderId : null;
+  useEffect(() => {
+    if (!streamOrderId) return;
+    let stop = null, alive = true, last = 0;
+    import("../lib/location.js").then(({ watchLocation }) => {
+      if (!alive) return;
+      watchLocation((loc) => {
+        const now = Date.now();
+        if (now - last < 8000) return;
+        last = now;
+        api.partnerUpdateLocation(streamOrderId, loc.lat, loc.lng).catch(() => {});
+      }).then((s) => { if (alive) stop = s; else s && s(); });
+    });
+    return () => { alive = false; if (stop) stop(); };
+  }, [streamOrderId]);
+
   const isDelivery = role === "delivery";
-  const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload };
+  const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload, task, taskBusy, taskAction };
   const switching = useReveal(tab, 300, 650);
+
+  // Once accepted, a dedicated full-screen run page takes over the whole screen.
+  const runActive = task && task.state !== "assigned";
 
   return (
     <div className="pd">
@@ -100,6 +141,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
           </button>
         ))}
       </nav>
+      {runActive && <RunScreen task={task} busy={taskBusy} onAction={taskAction} />}
     </div>
   );
 }
@@ -212,9 +254,35 @@ function IncomingOrder({ task, busy, onAction }) {
   );
 }
 
-/* ── Delivery run — two swipe steps: Out for delivery → Delivered ────────── */
-function DeliveryRun({ task, busy, onAction }) {
+/* ── Full-screen run page (dedicated page after Accept) ─────────────────── */
+function RunScreen({ task, busy, onAction }) {
+  const isReturn = !!task.isReturn;
+  const isDelivery = task.role === "delivery";
+  const out = task.state === "out_for_delivery";
   const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+  const heading = isReturn ? "Return pickup" : isDelivery ? "Delivery" : "Packing";
+  const status = isReturn ? "Collect the items"
+    : isDelivery ? (out ? "On the way" : "Ready to go") : "Scan every item";
+  return (
+    <div className="pd-runscreen">
+      <div className="pd-runscreen-head">
+        <div className="pd-rs-titles">
+          <span className="pd-rs-title">{heading}</span>
+          <span className="pd-rs-status">● {status}</span>
+        </div>
+        <span className="pd-rs-code">#{code}</span>
+      </div>
+      <div className="pd-runscreen-body">
+        {isReturn ? <ReturnBody task={task} busy={busy} onAction={onAction} />
+          : isDelivery ? <DeliveryBody task={task} busy={busy} onAction={onAction} />
+            : <PickBody task={task} busy={busy} onAction={onAction} />}
+      </div>
+    </div>
+  );
+}
+
+/* Delivery body — two swipe steps: Out for delivery → Delivered (no accept). */
+function DeliveryBody({ task, busy, onAction }) {
   const out = task.state === "out_for_delivery";
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
 
@@ -229,86 +297,84 @@ function DeliveryRun({ task, busy, onAction }) {
   }
 
   return (
-    <div className="pd-run">
-      <div className="lo-head">
-        <span className="lo-live">● {out ? "ON THE WAY" : "READY TO GO"}</span>
-        <span className="lo-code">#{code}</span>
-      </div>
+    <>
       {task.earning > 0 && <EarnBanner amount={task.earning} />}
+      <div className="pd-run-card">
+        <div className="lo-row" style={{ borderTop: "none" }}>
+          <span className="lo-lbl">Deliver to</span>
+          {task.location
+            ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
+            : <span className="lo-muted">Location shared at pickup</span>}
+        </div>
+        <div className="lo-row">
+          <span className="lo-lbl">Payment</span>
+          {task.paid ? <span className="lo-paid">✓ Already paid — collect nothing</span>
+            : task.isCod ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
+              : <span className="lo-paid">✓ Prepaid</span>}
+        </div>
 
-      <div className="lo-row">
-        <span className="lo-lbl">Deliver to</span>
-        {task.location
-          ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
-          : <span className="lo-muted">Location shared at pickup</span>}
-      </div>
-      <div className="lo-row">
-        <span className="lo-lbl">Payment</span>
-        {task.paid ? <span className="lo-paid">✓ Already paid — collect nothing</span>
-          : task.isCod ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
-            : <span className="lo-paid">✓ Prepaid</span>}
-      </div>
-
-      {!task.paid && task.isCod && (
-        <>
-          <button className="lo-qr-btn" onClick={showQr}>
-            <QrGlyph />
-            <span>{qr && qr !== "error" ? "Hide UPI QR" : "Show UPI QR — customer pays now"}</span>
-          </button>
-          {qr === "loading" && <div className="lo-qr-wrap"><div className="qr-spin"><span>Making secure QR…</span></div></div>}
-          {qr === "error" && <div className="lo-muted" style={{ textAlign: "center" }}>Couldn't create QR. Collect cash instead.</div>}
-          {qr && qr.url && (
-            <div className="lo-qr-wrap">
-              <div className="lo-qr"><img src={qr.url} alt="UPI QR" /></div>
-              <p className="lo-qr-note">Scan with <strong>any UPI app</strong> to pay <strong>{money(task.codAmount)}</strong><br /><span>Confirms automatically</span></p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Two-step progress */}
-      <div className="pd-steps">
-        <div className={`pd-step ${out ? "done" : "on"}`}><span className="pd-step-dot" /> Out for delivery</div>
-        <div className={`pd-step ${out ? "on" : ""}`}><span className="pd-step-dot" /> Delivered</div>
+        {!task.paid && task.isCod && (
+          <>
+            <button className="lo-qr-btn" onClick={showQr}>
+              <QrGlyph />
+              <span>{qr && qr !== "error" ? "Hide UPI QR" : "Show UPI QR — customer pays now"}</span>
+            </button>
+            {qr === "loading" && <div className="lo-qr-wrap"><div className="qr-spin"><span>Making secure QR…</span></div></div>}
+            {qr === "error" && <div className="lo-muted" style={{ textAlign: "center" }}>Couldn't create QR. Collect cash instead.</div>}
+            {qr && qr.url && (
+              <div className="lo-qr-wrap">
+                <div className="lo-qr"><img src={qr.url} alt="UPI QR" /></div>
+                <p className="lo-qr-note">Scan with <strong>any UPI app</strong> to pay <strong>{money(task.codAmount)}</strong><br /><span>Confirms automatically</span></p>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {!out ? (
-        <SlideAction label="Slide to go — Out for delivery" busy={busy} tone="blue"
-          onConfirm={() => onAction(() => api.partnerMarkOutForDelivery(task.orderId))} />
-      ) : (
-        <SlideAction label="Slide when handed over — Delivered" busy={busy} tone="green"
-          onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId))} />
-      )}
-    </div>
+      <div className="pd-run-foot">
+        <div className="pd-steps">
+          <div className={`pd-step ${out ? "done" : "on"}`}><span className="pd-step-dot" /> Out for delivery</div>
+          <div className={`pd-step ${out ? "on" : ""}`}><span className="pd-step-dot" /> Delivered</div>
+        </div>
+        {!out ? (
+          <SlideAction label="Slide to go — Out for delivery" busy={busy} tone="blue"
+            onConfirm={() => onAction(() => api.partnerMarkOutForDelivery(task.orderId))} />
+        ) : (
+          <SlideAction label="Slide when handed over — Delivered" busy={busy} tone="green"
+            onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId))} />
+        )}
+      </div>
+    </>
   );
 }
 
-/* ── Return run — swipe to confirm picked up ────────────────────────────── */
-function ReturnRun({ task, busy, onAction }) {
-  const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+/* Return body — swipe to confirm picked up. */
+function ReturnBody({ task, busy, onAction }) {
   return (
-    <div className="pd-run">
-      <div className="lo-head"><span className="lo-live lo-return">● RETURN PICKUP</span><span className="lo-code">#{code}</span></div>
+    <>
       {task.earning > 0 && <EarnBanner amount={task.earning} />}
-      <div className="lo-row">
-        <span className="lo-lbl">Collect from</span>
-        {task.location
-          ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
-          : <span className="lo-muted">Address shared on accept</span>}
+      <div className="pd-run-card">
+        <div className="lo-row" style={{ borderTop: "none" }}>
+          <span className="lo-lbl">Collect from</span>
+          {task.location
+            ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
+            : <span className="lo-muted">Address shared on accept</span>}
+        </div>
+        <div className="lo-items">
+          <span className="lo-lbl">Collect these items back</span>
+          {(task.items || []).map((it, i) => (<div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>))}
+        </div>
       </div>
-      <div className="lo-items">
-        <span className="lo-lbl">Collect these items back</span>
-        {(task.items || []).map((it, i) => (<div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>))}
+      <div className="pd-run-foot">
+        <SlideAction label="Slide when collected — Return picked up" busy={busy} tone="green"
+          onConfirm={() => onAction(() => api.partnerMarkReturned(task.orderId))} />
       </div>
-      <SlideAction label="Slide when collected — Return picked up" busy={busy} tone="green"
-        onConfirm={() => onAction(() => api.partnerMarkReturned(task.orderId))} />
-    </div>
+    </>
   );
 }
 
-/* ── Pick run — scan each item; wrong barcode beeps; auto-packs when done ── */
-function PickRun({ task, busy, onAction }) {
-  const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+/* Pick body — scan each item; wrong barcode beeps; auto-packs when done. */
+function PickBody({ task, busy, onAction }) {
   const items = task.items || [];
   const [scanned, setScanned] = useState(() => items.map(() => 0));
   const [scanning, setScanning] = useState(false);
@@ -360,10 +426,8 @@ function PickRun({ task, busy, onAction }) {
   }
 
   return (
-    <div className="pd-run">
-      <div className="lo-head"><span className="lo-live">● PACKING</span><span className="lo-code">#{code}</span></div>
+    <>
       {task.earning > 0 && <EarnBanner amount={task.earning} />}
-
       <div className="pd-pack-head">
         <span>Scan every item to pack</span>
         <span className="pd-pack-count">{doneUnits}/{totalUnits}</span>
@@ -386,58 +450,22 @@ function PickRun({ task, busy, onAction }) {
 
       {msg.text && <div className={`pd-scan-msg ${msg.kind}`}>{msg.text}</div>}
 
-      {!allDone && (
-        <button className="pd-btn lo-accept" disabled={scanning || busy} onClick={scanOne}>
-          {scanning ? <span className="ngs-spin" /> : <><Ic name="barcode" size={18} /> Scan item</>}
-        </button>
-      )}
-      {allDone && <div className="pd-scan-msg ok" style={{ textAlign: "center" }}>{busy ? "Marking packed…" : "Packed ✓"}</div>}
-    </div>
+      <div className="pd-run-foot">
+        {!allDone ? (
+          <button className="pd-btn lo-accept" disabled={scanning || busy} onClick={scanOne}>
+            {scanning ? <span className="ngs-spin" /> : <><Ic name="barcode" size={18} /> Scan item</>}
+          </button>
+        ) : (
+          <div className="pd-scan-msg ok" style={{ textAlign: "center" }}>{busy ? "Marking packed…" : "Packed ✓"}</div>
+        )}
+      </div>
+    </>
   );
 }
 
 /* ── Home ───────────────────────────────────────────────────────────────── */
-function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, reload }) {
+function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, taskBusy, taskAction }) {
   const [busy, setBusy] = useState(false);
-  const [task, setTask] = useState(null);
-  const [taskBusy, setTaskBusy] = useState(false);
-
-  // Poll for the current assigned task while online.
-  useEffect(() => {
-    let alive = true;
-    const tick = () => api.getMyTask().then((t) => alive && setTask(t)).catch(() => {});
-    tick();
-    const iv = setInterval(tick, 5000);
-    return () => { alive = false; clearInterval(iv); };
-  }, [presence.activeOrderId]);
-
-  // Stream live GPS to the customer while on an accepted DELIVERY run, so their
-  // tracking map shows the real bike position. Stops when the task ends.
-  const streamOrderId = task && task.role === "delivery" && (task.state === "accepted" || task.state === "picked")
-    ? task.orderId : null;
-  useEffect(() => {
-    if (!streamOrderId) return;
-    let stop = null, alive = true, last = 0;
-    import("../lib/location.js").then(({ watchLocation }) => {
-      if (!alive) return;
-      watchLocation((loc) => {
-        const now = Date.now();
-        if (now - last < 8000) return; // throttle to ~1 update / 8s
-        last = now;
-        api.partnerUpdateLocation(streamOrderId, loc.lat, loc.lng).catch(() => {});
-      }).then((s) => { if (alive) stop = s; else s && s(); });
-    });
-    return () => { alive = false; if (stop) stop(); };
-  }, [streamOrderId]);
-
-  async function taskAction(fn) {
-    stopAlarm(); // they're handling it — silence the ring
-    setTaskBusy(true);
-    try { await withMinTime(fn, 700, 1500); const t = await api.getMyTask(); setTask(t); await reload(); }
-    catch (e) { alert(e.message || "Something went wrong."); }
-    finally { setTaskBusy(false); }
-  }
-
   const today = istDateISO();
   const earnings = wallet.ledger.filter((l) => l.kind === "earning");
   const todays = earnings.filter((l) => istParts(l.at).dateISO === today);
@@ -488,16 +516,16 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
         </div>
       </div>
 
-      {task ? (
-        task.state === "assigned" ? (
-          <IncomingOrder task={task} busy={taskBusy} onAction={taskAction} />
-        ) : task.isReturn ? (
-          <ReturnRun task={task} busy={taskBusy} onAction={taskAction} />
-        ) : task.role === "delivery" ? (
-          <DeliveryRun task={task} busy={taskBusy} onAction={taskAction} />
-        ) : (
-          <PickRun task={task} busy={taskBusy} onAction={taskAction} />
-        )
+      {task && task.state === "assigned" ? (
+        // The incoming order to accept. Once accepted, a full-screen run page
+        // (rendered above the whole dashboard) takes over — so nothing else of
+        // the accepted flow lives here in Home.
+        <IncomingOrder task={task} busy={taskBusy} onAction={taskAction} />
+      ) : task ? (
+        <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
+          <span className="emo"><Ic name="scooter" size={26} /></span>
+          Opening your {task.role === "delivery" ? "delivery" : "packing"} page…
+        </div>
       ) : presence.isOnline ? (
         <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
           <span className="emo"><Ic name="signal" size={26} /></span>

@@ -426,3 +426,20 @@
 .pd-scan-msg { border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 700; }
 .pd-scan-msg.ok { background: rgba(16,185,129,0.14); color: var(--p-mint); }
 .pd-scan-msg.err { background: rgba(255,71,87,0.14); color: var(--p-red-bright); }
+
+/* ═══ Full-screen run page (dedicated delivery / packing screen) ═══════════ */
+.pd-runscreen { position: fixed; inset: 0; z-index: 60; background: var(--p-bg);
+  display: flex; flex-direction: column; animation: pd-rs-in 0.22s ease; }
+@keyframes pd-rs-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.pd-runscreen-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; padding-top: max(14px, env(safe-area-inset-top));
+  background: var(--p-panel); border-bottom: 1px solid var(--p-line); }
+.pd-rs-titles { display: flex; flex-direction: column; gap: 2px; }
+.pd-rs-title { font-size: 18px; font-weight: 800; color: var(--p-text); }
+.pd-rs-status { font-size: 12px; font-weight: 700; color: var(--p-red-bright); letter-spacing: 0.04em; }
+.pd-rs-code { font-size: 15px; font-weight: 800; color: var(--p-text); }
+.pd-runscreen-body { flex: 1; overflow-y: auto; padding: 16px;
+  padding-bottom: max(18px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; }
+.pd-run-card { display: flex; flex-direction: column; gap: 4px; background: var(--p-card);
+  border: 1px solid var(--p-line); border-radius: 16px; padding: 8px 16px 14px; }
+.pd-run-foot { margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
