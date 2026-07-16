@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useOrders } from "../lib/hooks.js";
+import { useShowMore } from "../lib/useShowMore.js";
 
 // Customer ratings & feedback, newest first — so the owner can see what people
 // are saying about their orders.
@@ -18,6 +19,8 @@ export default function FeedbackAdmin() {
     rated.forEach((o) => { counts[o.rating - 1] += 1; });
     return { avg: sum / rated.length, count: rated.length, counts };
   }, [rated]);
+
+  const list = useShowMore(rated, 20);
 
   return (
     <div className="fb-wrap">
@@ -50,7 +53,7 @@ export default function FeedbackAdmin() {
           <p className="panel-empty" style={{ padding: 24 }}>No customer feedback yet.</p>
         ) : (
           <div className="fb-list">
-            {rated.map((o) => (
+            {list.shown.map((o) => (
               <div className="fb-item" key={o.id}>
                 <div className="fb-item-top">
                   <span className="fb-stars">{stars(o.rating)}</span>
@@ -64,6 +67,11 @@ export default function FeedbackAdmin() {
                 <div className="fb-cust">{o.customer || "Customer"}{o.userPhone ? ` · ${o.userPhone}` : ""}</div>
               </div>
             ))}
+            {list.more && (
+              <button type="button" className="show-more-btn" onClick={list.toggle}>
+                {list.label}
+              </button>
+            )}
           </div>
         )}
       </section>

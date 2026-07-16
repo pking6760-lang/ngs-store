@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { useShowMore } from "../lib/useShowMore.js";
 import { useAdminProducts, useCategories } from "../lib/hooks.js";
 import AdminPortal from "./AdminPortal.jsx";
 import Dropdown from "./Dropdown.jsx";
@@ -55,6 +56,8 @@ export default function ProductsAdmin() {
       return matchCat && matchText;
     });
   }, [products, search, catFilter]);
+
+  const list = useShowMore(filtered, 30);
 
   const catName = (id) => categories.find((c) => c.id === id)?.name || id;
 
@@ -115,7 +118,7 @@ export default function ProductsAdmin() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
+            {list.shown.map((p) => (
               <tr
                 key={p.id}
                 className="row-clickable"
@@ -154,6 +157,19 @@ export default function ProductsAdmin() {
               <tr>
                 <td colSpan={5} className="empty-cell">
                   No products match your filters.
+                </td>
+              </tr>
+            )}
+            {list.more && (
+              <tr>
+                <td colSpan={5} style={{ padding: 0 }}>
+                  <button
+                    type="button"
+                    className="show-more-btn"
+                    onClick={list.toggle}
+                  >
+                    {list.label}
+                  </button>
                 </td>
               </tr>
             )}

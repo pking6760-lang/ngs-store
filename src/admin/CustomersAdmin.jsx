@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { useShowMore } from "../lib/useShowMore.js";
 import { useCustomers, useOrders, useUserNotifications, useSettings, useAdminProducts } from "../lib/hooks.js";
 import { sendNotification } from "../lib/actions.js";
 import { getOpsConfigRaw } from "../lib/api.js";
@@ -21,6 +22,7 @@ export default function CustomersAdmin() {
   };
 
   const selected = customers.find((c) => c.id === selectedId) || null;
+  const list = useShowMore(customers, 20);
 
   return (
     <>
@@ -30,7 +32,7 @@ export default function CustomersAdmin() {
         </section>
       ) : (
         <div className="customer-list">
-          {customers.map((c) => {
+          {list.shown.map((c) => {
             const s = statsFor(c.id);
             return (
               <button
@@ -55,6 +57,15 @@ export default function CustomersAdmin() {
               </button>
             );
           })}
+          {list.more && (
+            <button
+              type="button"
+              className="show-more-btn"
+              onClick={list.toggle}
+            >
+              {list.label}
+            </button>
+          )}
         </div>
       )}
 

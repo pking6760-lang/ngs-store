@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { useShowMore } from "../lib/useShowMore.js";
 import { useOrders, usePartners, useSettings, useAdminProducts } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import {
@@ -48,7 +49,8 @@ export default function OrdersAdmin() {
   // status changes) by looking the order up fresh each render.
   const selected = selectedId ? orders.find((o) => o.id === selectedId) : null;
 
-  const shown = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  const shown = useShowMore(filtered, 15);
 
   async function openQr(order) {
     if (qrFor === order.id) { setQrFor(null); return; }
@@ -137,13 +139,13 @@ export default function OrdersAdmin() {
         </div>
       </div>
 
-      {shown.length === 0 ? (
+      {filtered.length === 0 ? (
         <section className="panel">
           <p className="panel-empty">No orders in this view yet.</p>
         </section>
       ) : (
         <div className="order-rows">
-          {shown.map((o) => {
+          {shown.shown.map((o) => {
             const isNew = o.accepted === false && o.status !== "Cancelled";
             return (
               <button className="order-row" key={o.id} onClick={() => setSelectedId(o.id)}>
@@ -167,6 +169,11 @@ export default function OrdersAdmin() {
               </button>
             );
           })}
+          {shown.more && (
+            <button type="button" className="show-more-btn" onClick={shown.toggle}>
+              {shown.label}
+            </button>
+          )}
         </div>
       )}
 

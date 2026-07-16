@@ -9,6 +9,7 @@ import { googleMapsLink } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
 import { cleanUpiQrFromImage, loadRazorpay } from "../lib/payments.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { useShowMore } from "../lib/useShowMore.js";
 import ScratchCard from "./ScratchCard.jsx";
 import ProductThumb from "./ProductThumb.jsx";
 
@@ -151,6 +152,7 @@ function MyOrders({ user, onReorder }) {
   const { orders: myOrders, loading, error, reload } = useMyOrders(user?.id);
   const [openId, setOpenId] = useState(null);
   const openOrder = myOrders.find((o) => o.id === openId) || null;
+  const list = useShowMore(myOrders, 8);
   // Back button closes the order detail before the section page.
   useBackGuard(!!openId, () => setOpenId(null));
 
@@ -168,7 +170,7 @@ function MyOrders({ user, onReorder }) {
 
   return (
     <div className="my-orders">
-      {myOrders.map((o) => (
+      {list.shown.map((o) => (
         <button
           className="my-order-card tappable"
           key={o.id}
@@ -209,6 +211,11 @@ function MyOrders({ user, onReorder }) {
           </div>
         </button>
       ))}
+      {list.more && (
+        <button type="button" className="show-more-btn" onClick={list.toggle}>
+          {list.label}
+        </button>
+      )}
 
       {openOrder && (
         <OrderDetail
@@ -404,6 +411,7 @@ function RetryState({ error, onRetry, label }) {
 function WalletTab({ userId }) {
   const { balance, ledger, loading, error, reload } = useWallet(userId);
   const [addOpen, setAddOpen] = useState(false);
+  const list = useShowMore(ledger, 12);
   if (error) return <RetryState error="Couldn't load your wallet." onRetry={reload} label="your wallet" />;
   return (
     <div className="wallet-tab">
@@ -430,7 +438,7 @@ function WalletTab({ userId }) {
         <p className="account-empty">No wallet activity yet.</p>
       ) : (
         <div className="wallet-list">
-          {ledger.map((e) => (
+          {list.shown.map((e) => (
             <div className="wallet-row" key={e.id}>
               <div className="wallet-row-main">
                 <span className="wallet-row-note">{walletLabel(e)}</span>
@@ -441,6 +449,11 @@ function WalletTab({ userId }) {
               </span>
             </div>
           ))}
+          {list.more && (
+            <button type="button" className="show-more-btn" onClick={list.toggle}>
+              {list.label}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -638,6 +651,8 @@ function Inbox({ notes, userId, error, onRetry }) {
     else markUserNotificationsRead(userId);
   }, [userId]);
 
+  const list = useShowMore(notes, 12);
+
   if (error) return <RetryState error="Couldn't load your inbox." onRetry={onRetry} label="your inbox" />;
 
   if (!notes || notes.length === 0) {
@@ -652,7 +667,7 @@ function Inbox({ notes, userId, error, onRetry }) {
 
   return (
     <div className="inbox-list">
-      {notes.map((n) => (
+      {list.shown.map((n) => (
         <div className={`inbox-item ${n.read ? "" : "unread"}`} key={n.id}>
           <div className="inbox-item-title">
             <span className="inbox-item-ic"><MIcon d={PIC.bell} size={15} /></span>
@@ -662,6 +677,11 @@ function Inbox({ notes, userId, error, onRetry }) {
           <div className="inbox-item-time">{formatTime(n.createdAt)}</div>
         </div>
       ))}
+      {list.more && (
+        <button type="button" className="show-more-btn" onClick={list.toggle}>
+          {list.label}
+        </button>
+      )}
     </div>
   );
 }

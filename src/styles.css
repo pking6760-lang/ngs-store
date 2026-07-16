@@ -3967,3 +3967,18 @@ body {
   font-weight: 700;
   text-align: center;
 }
+
+/* Collapse long lists (orders, wallet, inbox) to a few rows + a toggle. */
+.show-more-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1px solid var(--line, #e9ecf1);
+  background: #fff;
+  color: var(--green-dark, #077a45);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.show-more-btn:active { background: var(--green-tint, #e7f6ee); }
