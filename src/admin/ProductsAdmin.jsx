@@ -23,6 +23,13 @@ import CategoryIcon from "../components/CategoryIcon.jsx";
 const NEW_CAT = "__new_category__";
 const ADD_CAT = "__add_category__";
 
+// Money for display: whole rupees show as-is, paise show two decimals (₹1.50),
+// so a ₹1.50 margin never reads as a misleading "₹2".
+function fmtMoney(n) {
+  const v = Number(n) || 0;
+  return Number.isInteger(v) ? String(v) : v.toFixed(2);
+}
+
 const EMPTY = {
   id: "",
   name: "",
@@ -459,11 +466,13 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   const profit = hasMargin ? priceNum - costNum : 0;
   const marginPct = hasMargin && priceNum > 0 ? (profit / priceNum) * 100 : 0;
 
-  // Set the selling price so it lands at a target margin-on-selling from cost.
+  // Set the selling price so it clears a target margin-on-selling from cost,
+  // then round UP to a clean whole rupee — so the price is always a round
+  // figure and the real margin never drops below the target you tapped.
   function setMargin(pct) {
     if (!(costNum >= 0) || form.cost === "" || form.cost == null) return;
     const price = costNum / (1 - pct / 100);
-    update("price", String(Math.round(price)));
+    update("price", String(Math.max(1, Math.ceil(price))));
   }
 
   return (
@@ -606,7 +615,7 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
             {hasMargin ? (
               <div className={`margin-read ${profit < 0 ? "loss" : ""}`}>
                 <span className="margin-lbl">Margin</span>
-                <strong>{profit < 0 ? "–₹" : "₹"}{Math.abs(Math.round(profit))}</strong>
+                <strong>{profit < 0 ? "–₹" : "₹"}{fmtMoney(Math.abs(profit))}</strong>
                 <span className="margin-pct">{marginPct.toFixed(1)}%</span>
                 {profit < 0 && <span className="margin-warn">below cost!</span>}
               </div>
