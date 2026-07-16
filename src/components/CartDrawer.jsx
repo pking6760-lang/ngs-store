@@ -694,13 +694,28 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           <div className="checkout-step">
             <div className="checkout-section">
               <h4>Delivery address</h4>
+
+              {/* Hero action: one tap captures the customer's exact GPS spot —
+                  the fastest and most accurate way for a home delivery. */}
+              <button className="gps-hero" onClick={useMyLocation} disabled={locating}>
+                <span className="gps-hero-ic">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>
+                </span>
+                <span className="gps-hero-txt">
+                  <strong>{locating ? "Getting your location…" : "Use my current location"}</strong>
+                  <small>Fastest &amp; most accurate — one tap</small>
+                </span>
+              </button>
+
+              <div className="loc-or"><span>or type it below</span></div>
+
               <div className="address-autocomplete">
                 <textarea
                   className="checkout-address"
                   rows={3}
                   value={address}
                   onChange={(e) => onAddressChange(e.target.value)}
-                  placeholder="Start typing your area / street, then pick it below"
+                  placeholder="House / flat no, building, street, area, landmark"
                 />
                 {(searching || suggestions.length > 0) && (
                   <div className="address-suggest">
@@ -720,9 +735,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   </div>
                 )}
               </div>
+              <button className="location-btn wide" onClick={() => setShowMap(true)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s7-6.3 7-12A7 7 0 0 0 5 10c0 5.7 7 12 7 12z" /><circle cx="12" cy="10" r="2.5" /></svg>
+                Pin exact spot on map
+              </button>
               <p className="address-hint">
-                Tip: pick your area from the list so we get your exact location,
-                then add your house / flat number.
+                Tip: tap <strong>Use my current location</strong> if you're at
+                home — it's the most reliable. Then add your house / flat number.
               </p>
               <div className="checkout-phone">
                 <span className="checkout-phone-cc">+91</span>
@@ -733,16 +752,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   placeholder="Phone number (for delivery calls)"
                 />
-              </div>
-              <div className="location-actions">
-                <button className="location-btn" onClick={() => setShowMap(true)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s7-6.3 7-12A7 7 0 0 0 5 10c0 5.7 7 12 7 12z" /><circle cx="12" cy="10" r="2.5" /></svg>
-                  Pin on map
-                </button>
-                <button className="location-btn subtle" onClick={useMyLocation} disabled={locating}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>
-                  {locating ? "Locating…" : "Use current GPS"}
-                </button>
               </div>
               {needsLocation && (
                 <div className="area-hint">

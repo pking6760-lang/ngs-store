@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useSettings } from "../lib/hooks.js";
 import { getShopLocations } from "../lib/store.js";
-import { searchAddress } from "../lib/location.js";
+import { searchAddress, getCurrentLocation, reverseGeocode } from "../lib/location.js";
 import * as api from "../lib/api.js";
 import MapPicker from "./MapPicker.jsx";
 
@@ -130,7 +130,24 @@ function AddressForm({ editing, onDone }) {
   const [map, setMap] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [locating, setLocating] = useState(false);
   const searchTimer = useRef(null);
+
+  // One tap → capture the customer's exact GPS spot and fill the address.
+  async function useMyLocation() {
+    setLocating(true); setErr("");
+    try {
+      const loc = await getCurrentLocation();
+      setLocation(loc);
+      try {
+        const a = await reverseGeocode(loc.lat, loc.lng);
+        if (a) setAddress(a);
+      } catch { /* keep coords even if the label lookup fails */ }
+      setSuggestions([]);
+    } catch (e) {
+      setErr(e.message || "Couldn't get your location.");
+    } finally { setLocating(false); }
+  }
 
   // As the customer types their address, look up matching places on the map
   // (debounced). Picking one captures its exact coordinates, so the delivery
@@ -189,6 +206,18 @@ function AddressForm({ editing, onDone }) {
         ))}
       </div>
 
+      <button type="button" className="gps-hero" onClick={useMyLocation} disabled={locating}>
+        <span className="gps-hero-ic">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>
+        </span>
+        <span className="gps-hero-txt">
+          <strong>{locating ? "Getting your location…" : "Use my current location"}</strong>
+          <small>Fastest &amp; most accurate — one tap</small>
+        </span>
+      </button>
+
+      <div className="loc-or"><span>or type it below</span></div>
+
       <label className="addr-field">
         <span>Full address</span>
         <div className="address-autocomplete">
@@ -196,7 +225,7 @@ function AddressForm({ editing, onDone }) {
             rows={3}
             value={address}
             onChange={(e) => onAddressChange(e.target.value)}
-            placeholder="Start typing your area / street, then pick it from the list"
+            placeholder="House / flat no, building, street, area, landmark"
           />
           {(searching || suggestions.length > 0) && (
             <div className="address-suggest">
@@ -217,11 +246,6 @@ function AddressForm({ editing, onDone }) {
           )}
         </div>
       </label>
-
-      <p className="addr-hint-line">
-        Pick your area from the list so we get your exact spot, then add your
-        house / flat number.
-      </p>
 
       <button type="button" className="addr-pin" onClick={() => setMap(true)}>
         <span className="addr-pin-ic"><Ic d={I.pin} size={17} /></span>
