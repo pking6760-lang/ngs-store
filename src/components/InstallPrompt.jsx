@@ -7,8 +7,11 @@ import { useEffect, useState } from "react";
 // It never shows inside the native Capacitor app, or once the PWA is installed
 // (standalone), and it backs off for a few days after the user dismisses it.
 
-const SNOOZE_KEY = "ngs_install_snooze";
-const SNOOZE_DAYS = 3;
+// Forceful "Add to Home Screen": we want it to reappear on EVERY visit until
+// the customer actually installs — not a multi-day snooze. So dismissal is only
+// for the current tab session (sessionStorage); opening the site again re-shows
+// it. Once installed (standalone) it never shows.
+const SESSION_KEY = "ngs_install_dismissed";
 
 function isStandalone() {
   return (
@@ -28,11 +31,10 @@ function isIOS() {
   return iOSDevice || iPadOS;
 }
 function snoozed() {
-  const until = Number(localStorage.getItem(SNOOZE_KEY) || 0);
-  return Date.now() < until;
+  try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch { return false; }
 }
 function snooze() {
-  localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_DAYS * 864e5));
+  try { sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* ignore */ }
 }
 
 export default function InstallPrompt() {
@@ -56,11 +58,21 @@ export default function InstallPrompt() {
     const onInstalled = () => { snooze(); setShow(false); };
     window.addEventListener("appinstalled", onInstalled);
 
-    // iOS never fires beforeinstallprompt — show the manual guide after a beat
-    // so it doesn't fight the first paint.
+    // iOS never fires beforeinstallprompt — show the manual guide quickly.
+    // Android usually fires beforeinstallprompt; if it's throttled and hasn't
+    // fired shortly, still show a manual "browser menu → Install" guide so the
+    // prompt appears on every visit regardless.
     let t = 0;
     if (isIOS()) {
-      t = window.setTimeout(() => { setIos(true); setShow(true); }, 1500);
+      t = window.setTimeout(() => { setIos(true); setShow(true); }, 700);
+    } else {
+      t = window.setTimeout(() => {
+        setShow((cur) => {
+          if (cur) return cur;      // beforeinstallprompt already showed it
+          setIos(false);
+          return true;              // manual fallback (Install button no-ops → guide)
+        });
+      }, 2500);
     }
 
     return () => {
@@ -113,10 +125,26 @@ export default function InstallPrompt() {
             </div>
             <button className="install-done" onClick={dismiss}>Got it</button>
           </div>
-        ) : (
+        ) : deferred ? (
           <div className="install-actions">
             <button className="install-later" onClick={dismiss}>Not now</button>
             <button className="install-cta" onClick={install}>Install app</button>
+          </div>
+        ) : (
+          <div className="install-ios">
+            <div className="install-step">
+              <span className="install-step-ic" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="19" r="1.6" /></svg>
+              </span>
+              <span>Open your browser menu (<b>⋮</b> top-right)</span>
+            </div>
+            <div className="install-step">
+              <span className="install-step-ic" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 8v8M8 12h8" /></svg>
+              </span>
+              <span>Tap <b>Install app</b> / <b>Add to Home screen</b></span>
+            </div>
+            <button className="install-done" onClick={dismiss}>Got it</button>
           </div>
         )}
       </div>

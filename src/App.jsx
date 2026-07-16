@@ -16,6 +16,7 @@ import AddressSheet from "./components/AddressSheet.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
 import { initCustomerPush } from "./lib/customerPush.js";
+import { initWebPush } from "./lib/webPush.js";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -84,7 +85,7 @@ export default function App() {
   // Register this device for push once the customer is signed in (native app
   // only; no-op on the web build).
   useEffect(() => {
-    if (isLoggedIn) initCustomerPush();
+    if (isLoggedIn) { initCustomerPush(); initWebPush(); }
   }, [isLoggedIn]);
   const products = useProducts();
   const settings = useSettings();

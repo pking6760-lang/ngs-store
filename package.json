@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "NGS Store \u2014 quick-commerce grocery delivery app (Blinkit-style)",
+  "description": "NGS Store — quick-commerce grocery delivery app (Blinkit-style)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -22,6 +22,7 @@
     "@supabase/supabase-js": "^2.110.2",
     "capacitor-native-biometric": "^4.2.2",
     "cordova-plugin-bluetooth-serial": "^0.4.7",
+    "firebase": "^10.14.1",
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "qrcode-generator": "^2.0.4",
