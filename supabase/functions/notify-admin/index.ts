@@ -104,6 +104,11 @@ Deno.serve(async (req) => {
     // the shop until the payment is verified (razorpay-verify / -webhook re-post
     // this order with status 'Placed' once it's paid).
     if (order.status === "Awaiting payment") return new Response("held", { status: 200 });
+    // Membership purchases, wallet top-ups and returns are payments, not
+    // deliveries — never ring the shop about them (they'd be a phantom "new order").
+    if (order.is_membership || order.is_topup || order.is_return) {
+      return new Response("not a fulfilment order", { status: 200 });
+    }
 
     const tokens = await getTokens();
     if (!tokens.length) return new Response("no devices", { status: 200 });

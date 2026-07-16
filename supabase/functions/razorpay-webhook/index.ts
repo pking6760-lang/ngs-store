@@ -105,7 +105,10 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ p_order: order.id, p_payment_id: paymentId }),
     });
 
-    if (!wasPaid) await notifyAdmin({ ...order, status: "Placed", payment_status: "paid" });
+    // Only a real delivery order alerts the shop — never a membership / top-up / return.
+    if (!wasPaid && !order.is_membership && !order.is_topup && !order.is_return) {
+      await notifyAdmin({ ...order, status: "Placed", payment_status: "paid" });
+    }
 
     return new Response("ok", { status: 200 });
   } catch (e) {

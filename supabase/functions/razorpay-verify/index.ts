@@ -95,7 +95,10 @@ Deno.serve(async (req) => {
     }
 
     // 4) Alert the shop (only on the first confirmation).
-    if (!wasPaid) await notifyAdmin({ ...order, status: "Placed", payment_status: "paid" });
+    // Only a real delivery order alerts the shop — never a membership / top-up / return.
+    if (!wasPaid && !order.is_membership && !order.is_topup && !order.is_return) {
+      await notifyAdmin({ ...order, status: "Placed", payment_status: "paid" });
+    }
 
     return json({ ok: true, humanCode: order.human_code });
   } catch (e) {
