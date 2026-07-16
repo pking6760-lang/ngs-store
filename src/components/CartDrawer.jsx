@@ -840,32 +840,56 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {locError && <div className="auth-error">{locError}</div>}
             </div>
 
-            <div className="checkout-section">
+            <div className="checkout-section pay-sec">
               <h4>Payment method</h4>
+
+              <div className="pay-group-label">Recommended</div>
               {RAZORPAY_ENABLED ? (
-                <label className={`pay-option ${payment === "razorpay" ? "sel" : ""}`}>
+                <label className={`pay-row ${payment === "razorpay" ? "sel" : ""}`}>
                   <input type="radio" name="pay" checked={payment === "razorpay"} onChange={() => setPayment("razorpay")} />
-                  <span className="pay-option-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>
+                  <span className="pay-row-ic online">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>
                   </span>
-                  <span className="pay-option-text">
+                  <span className="pay-row-txt">
                     <strong>Pay online</strong>
-                    <small>UPI, Cards, Wallets · secure &amp; instant</small>
+                    <small>Secure &amp; instant — via Razorpay</small>
+                    <span className="pay-chips"><span>UPI</span><span>Cards</span><span>Wallets</span><span>Netbanking</span></span>
                   </span>
+                  <span className="pay-radio" aria-hidden="true" />
                 </label>
               ) : (
-                <label className={`pay-option ${payment === "upi" ? "sel" : ""}`}>
+                <label className={`pay-row ${payment === "upi" ? "sel" : ""}`}>
                   <input type="radio" name="pay" checked={payment === "upi"} onChange={() => setPayment("upi")} />
-                  <span className="pay-option-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+                  <span className="pay-row-ic online">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
                   </span>
-                  <span className="pay-option-text">
+                  <span className="pay-row-txt">
                     <strong>UPI</strong>
                     <small>GPay, PhonePe, Paytm, BHIM</small>
                   </span>
+                  <span className="pay-radio" aria-hidden="true" />
                 </label>
               )}
-              <label className={`pay-option ${payment === "cod" ? "sel" : ""} ${codBlocked ? "disabled" : ""}`}>
+
+              {walletBal > 0 && (
+                <>
+                  <div className="pay-group-label">Wallet</div>
+                  <label className={`pay-row ${useWalletCredit ? "sel" : ""}`}>
+                    <input type="checkbox" checked={useWalletCredit} onChange={(e) => setUseWalletCredit(e.target.checked)} />
+                    <span className="pay-row-ic wallet">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M16 12h3"/><path d="M2.5 9h14a2 2 0 0 1 2 2"/></svg>
+                    </span>
+                    <span className="pay-row-txt">
+                      <strong>NGS Wallet</strong>
+                      <small>Balance ₹{walletBal.toFixed(2)} · use ₹{walletCap.toFixed(2)} on this order</small>
+                    </span>
+                    <span className="pay-check" aria-hidden="true" />
+                  </label>
+                </>
+              )}
+
+              <div className="pay-group-label">Pay on delivery</div>
+              <label className={`pay-row ${payment === "cod" ? "sel" : ""} ${codBlocked ? "disabled" : ""}`}>
                 <input
                   type="radio"
                   name="pay"
@@ -873,10 +897,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   disabled={codBlocked}
                   onChange={() => !codBlocked && setPayment("cod")}
                 />
-                <span className="pay-option-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/></svg>
+                <span className="pay-row-ic cod">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/></svg>
                 </span>
-                <span className="pay-option-text">
+                <span className="pay-row-txt">
                   <strong>Cash on delivery</strong>
                   <small>
                     {memberFee > 0
@@ -886,22 +910,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       : "Pay when your order arrives"}
                   </small>
                 </span>
+                <span className="pay-radio" aria-hidden="true" />
               </label>
             </div>
-
-            {walletBal > 0 && (
-              <label className={`wallet-use ${useWalletCredit ? "on" : ""}`}>
-                <input
-                  type="checkbox"
-                  checked={useWalletCredit}
-                  onChange={(e) => setUseWalletCredit(e.target.checked)}
-                />
-                <span className="wallet-use-txt">
-                  <strong>Use NGS Wallet</strong>
-                  <small>Balance ₹{walletBal.toFixed(2)} · applies ₹{walletCap.toFixed(2)} to this order</small>
-                </span>
-              </label>
-            )}
 
             {canJoinPrime && (
               <PrimeAddon price={memPrice} mrp={memMrp} checked={addMembership}
