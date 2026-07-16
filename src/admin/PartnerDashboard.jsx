@@ -738,8 +738,27 @@ function Wallet({ isDelivery, wallet, cfg }) {
   const pct = Math.min(100, Math.round((cash / cap) * 100));
   const bal = wallet.balance;
 
-  const kindLabel = { earning: "Order earned", cod_collected: "Cash collected", cod_deposited: "Cash deposited",
+  const kindLabel = { earning: "Order earned", cod_collected: "Cash collected", cod_deposited: "Cash deposited at shop",
     payout: "Payout", penalty: "Penalty", slot_topup: "Slot top-up", adjustment: "Adjustment" };
+
+  // Two separate stories so the numbers clearly add up:
+  //  • Payout = your order earnings less any penalty (what you'll be paid).
+  //  • Cash handled = COD cash you collect for the shop and hand back; a pure
+  //    pass-through that nets to your cash-in-hand and never changes your payout.
+  const cashKinds = new Set(["cod_collected", "cod_deposited"]);
+  const payoutRows = wallet.ledger.filter((l) => !cashKinds.has(l.kind));
+  const cashRows = wallet.ledger.filter((l) => cashKinds.has(l.kind));
+  const earnedTotal = wallet.ledger.filter((l) => l.kind === "earning").reduce((s, l) => s + l.amount, 0);
+  const penaltyTotal = wallet.ledger.filter((l) => l.kind === "penalty").reduce((s, l) => s + Math.abs(l.amount), 0);
+
+  const time = (at) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", timeZone: IST }).format(new Date(at));
+  const row = (l, value, muted) => (
+    <div className="pd-led" key={l.id}>
+      <div><div className="l-main">{kindLabel[l.kind] || l.kind}</div>
+        <div className="l-sub">{time(l.at)}{l.code ? ` · #${l.code}` : ""}</div></div>
+      <div className={`l-amt ${muted ? "amt-muted" : value >= 0 ? "amt-in" : "amt-out"}`}>{value >= 0 ? "+" : "−"}{money(Math.abs(value))}</div>
+    </div>
+  );
 
   return (
     <>
@@ -747,7 +766,13 @@ function Wallet({ isDelivery, wallet, cfg }) {
         <div className="lbl">Money in your wallet</div>
         <div className="big" style={{ color: bal < 0 ? "var(--p-red-bright)" : undefined }}>{money(bal)}</div>
         <div className="note">{bal < 0 ? "You owe the shop (cash held above your earnings)"
-          : "What the shop owes you — becomes ₹0 after your Monday payout"}</div>
+          : "Your order earnings, less any penalty — paid out every Monday"}</div>
+        {(earnedTotal > 0 || penaltyTotal > 0) && (
+          <div className="pd-wbreak">
+            <span>Earned {money(earnedTotal)}</span>
+            {penaltyTotal > 0 && <span>− Penalty {money(penaltyTotal)}</span>}
+          </div>
+        )}
       </div>
 
       {isDelivery && (
@@ -759,20 +784,20 @@ function Wallet({ isDelivery, wallet, cfg }) {
         </div>
       )}
 
-      <div className="pd-sec"><span>Recent activity</span></div>
+      <div className="pd-sec"><span>Earnings &amp; payout</span></div>
       <div className="pd-wcard" style={{ paddingTop: 4, paddingBottom: 4 }}>
-        {wallet.ledger.length === 0 ? <div className="pd-empty"><span className="emo"><Ic name="wallet" size={26} /></span>No activity yet.</div>
-        : wallet.ledger.slice(0, 30).map((l) => {
-          const inFlow = l.amount >= 0;
-          return (
-            <div className="pd-led" key={l.id}>
-              <div><div className="l-main">{kindLabel[l.kind] || l.kind}</div>
-                <div className="l-sub">{new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", timeZone: IST }).format(new Date(l.at))}</div></div>
-              <div className={`l-amt ${inFlow ? "amt-in" : "amt-out"}`}>{inFlow ? "+" : "−"}{money(Math.abs(l.amount))}</div>
-            </div>
-          );
-        })}
+        {payoutRows.length === 0 ? <div className="pd-empty"><span className="emo"><Ic name="wallet" size={26} /></span>No earnings yet.</div>
+        : payoutRows.slice(0, 30).map((l) => row(l, l.amount, false))}
       </div>
+
+      {isDelivery && cashRows.length > 0 && (
+        <>
+          <div className="pd-sec"><span>Cash handled</span><span className="hint">doesn't change your payout</span></div>
+          <div className="pd-wcard" style={{ paddingTop: 4, paddingBottom: 4 }}>
+            {cashRows.slice(0, 30).map((l) => row(l, l.cashDelta, true))}
+          </div>
+        </>
+      )}
     </>
   );
 }
