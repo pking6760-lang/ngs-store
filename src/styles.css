@@ -1153,6 +1153,7 @@ button {
 .drawer-head {
   position: sticky;
   top: 0;
+  z-index: 40; /* keep the header above positioned cards while the body scrolls */
   background: #fff;
   display: flex;
   align-items: center;
