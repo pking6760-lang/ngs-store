@@ -56,20 +56,13 @@ async function sendFcm(accessToken: string, token: string, title: string, body: 
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${svc.project_id}/messages:send`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    // DATA-ONLY, high priority — wakes our FirebaseMessagingService even when the
+    // partner app is closed so it can ring the full-screen alarm (see notify-admin).
     body: JSON.stringify({
       message: {
         token,
-        notification: { title, body },
-        android: {
-          priority: "high",
-          notification: {
-            sound: "alarm",
-            channel_id: "orders_alarm_v2",
-            notification_priority: "PRIORITY_MAX",
-            default_vibrate_timings: true,
-          },
-        },
-        data: { type: "new_task" },
+        android: { priority: "high" },
+        data: { type: "new_task", title: title ?? "", body: body ?? "" },
       },
     }),
   });

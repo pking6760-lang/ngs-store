@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "../lib/api.js";
 
 // Auth has two modes:
@@ -56,9 +56,21 @@ function BackendAuth({ children }) {
     setPendingEmailState(email);
   }
 
-  async function refresh() {
-    try { setUser(await api.getMyProfile()); } catch { setUser(null); }
+  // soft=true keeps the current profile if the re-read fails (a transient blip
+  // on a focus/pull refresh must never look like a logout); the initial/auth
+  // load uses the hard form so a real sign-out clears the user.
+  async function refresh(soft = false) {
+    try {
+      const p = await api.getMyProfile();
+      if (soft && !p) return; // logged in but the read came back empty → keep what we have
+      setUser(p);
+    } catch { if (!soft) setUser(null); }
   }
+
+  // Track whether someone is signed in so the focus refresh doesn't hammer the
+  // server while logged out.
+  const loggedInRef = useRef(false);
+  loggedInRef.current = !!user;
 
   useEffect(() => {
     let alive = true;
@@ -72,6 +84,24 @@ function BackendAuth({ children }) {
       else setUser(null);
     });
     return () => { alive = false; unsub(); };
+  }, []);
+
+  // Re-read the profile (points, wallet balance, membership) whenever the app
+  // comes back to the foreground or is refocused — so a reward won from a
+  // scratch card, a wallet top-up, or a membership change shows up without
+  // having to close and reopen the app. Soft so a network hiccup never logs out.
+  useEffect(() => {
+    const onWake = () => {
+      if (!loggedInRef.current) return;
+      if (document.visibilityState === "hidden") return;
+      refresh(true);
+    };
+    window.addEventListener("focus", onWake);
+    document.addEventListener("visibilitychange", onWake);
+    return () => {
+      window.removeEventListener("focus", onWake);
+      document.removeEventListener("visibilitychange", onWake);
+    };
   }, []);
 
   const value = useMemo(() => ({
@@ -119,6 +149,9 @@ function BackendAuth({ children }) {
 
     // Points are granted/spent by the server; just re-read the balance.
     async applyRewards() { await refresh(); },
+
+    // Explicit profile re-read for pull-to-refresh (soft: never logs out).
+    async refreshProfile() { await refresh(true); },
 
     // Join / renew NGS Prime — paid from the customer's wallet, server-side.
     async joinMembership() {
@@ -186,6 +219,7 @@ function DemoAuth({ children }) {
 
     cancelOtp() { setPending(null); },
     logout() { setUser(null); },
+    async refreshProfile() { /* demo profile is local — nothing to re-read */ },
 
     updateProfile(patch) {
       if (!user) return { ok: false, error: "Not logged in." };

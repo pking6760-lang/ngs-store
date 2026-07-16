@@ -64,7 +64,7 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [addressOpen, setAddressOpen] = useState(false);
   const { totalCount, items } = useCart();
-  const { user, isLoggedIn, awaitingOtp } = useAuth();
+  const { user, isLoggedIn, awaitingOtp, refreshProfile } = useAuth();
   const [trackOpen, setTrackOpen] = useState(false);
   const [trackId, setTrackId] = useState(null);
 
@@ -123,10 +123,13 @@ export default function App() {
   // settle. The catalog cache updates in place, so prices/stock come back fresh.
   async function handleRefresh() {
     try {
-      window.dispatchEvent(new Event("focus"));
-      reloadOrders?.();
+      window.dispatchEvent(new Event("focus")); // nudges the live hooks (wallet, notifications, catalog)
+      await Promise.all([
+        reloadOrders?.(),
+        refreshProfile?.(), // points / wallet balance / membership on the profile
+      ]);
     } catch { /* ignore */ }
-    await new Promise((r) => setTimeout(r, 450));
+    await new Promise((r) => setTimeout(r, 300));
   }
 
   const searching = query.trim().length > 0;

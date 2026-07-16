@@ -71,20 +71,16 @@ async function sendFcm(accessToken: string, token: string, title: string, body: 
     {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      // DATA-ONLY, high priority. A data-only message wakes the app's own
+      // FirebaseMessagingService even when the app is backgrounded or fully
+      // closed, so it can throw up the full-screen ringing alarm. (A
+      // `notification` block would make Android draw its own silent-ish tray
+      // notification and skip our service in the background — one beep only.)
       body: JSON.stringify({
         message: {
           token,
-          notification: { title, body },
-          android: {
-            priority: "high",
-            notification: {
-              sound: "alarm",
-              channel_id: "orders_alarm_v2",
-              notification_priority: "PRIORITY_MAX",
-              default_vibrate_timings: true,
-            },
-          },
-          data: { type: "new_order" },
+          android: { priority: "high" },
+          data: { type: "new_order", title: title ?? "", body: body ?? "" },
         },
       }),
     },
