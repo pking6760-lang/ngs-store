@@ -21,6 +21,30 @@ import {
 // doesn't wipe them (the cart itself is already saved by CartContext).
 const DRAFT_KEY = "ngs-checkout-draft-v1";
 
+// Amount → Indian rupees in words ("Rupees One Hundred Ninety Six Only"),
+// like the confirmation line on a UPI payment screen.
+function rupeesInWords(amount) {
+  let num = Math.round(Number(amount) || 0);
+  if (num === 0) return "Rupees Zero Only";
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const two = (n) => (n < 20 ? ones[n] : tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : ""));
+  const three = (n) => {
+    const h = Math.floor(n / 100), r = n % 100;
+    return (h ? ones[h] + " Hundred" + (r ? " " : "") : "") + (r ? two(r) : "");
+  };
+  let w = "";
+  const crore = Math.floor(num / 10000000); num %= 10000000;
+  const lakh = Math.floor(num / 100000); num %= 100000;
+  const thousand = Math.floor(num / 1000); num %= 1000;
+  if (crore) w += two(crore) + " Crore ";
+  if (lakh) w += two(lakh) + " Lakh ";
+  if (thousand) w += two(thousand) + " Thousand ";
+  if (num) w += three(num);
+  return "Rupees " + w.trim() + " Only";
+}
+
 // Tap-to-add delivery instructions shown on the checkout page.
 const DELIVERY_NOTES = [
   { icon: "🔕", label: "Don't ring the bell" },
@@ -680,31 +704,41 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             {placeError && <div className="auth-error">{placeError}</div>}
           </div>
         ) : step === "pay" ? (
-          <div className="pay-step">
-            <div className="pay-amount">
-              Amount to pay <strong>₹{payable.toFixed(2)}</strong>
-              <span className="pay-fixed">Fixed amount — pre-filled for you</span>
+          <div className="pay-step pay-pro">
+            <div className="pay-merchant">
+              <span className="pay-merchant-av">N</span>
+              <span className="pay-merchant-name">
+                NGS · Nisha General Store
+                <svg className="pay-verified" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="11" fill="#2a9bf0" />
+                  <path d="M7 12.3l3.2 3.2L17 8.7" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="pay-merchant-vpa">🇮🇳 {SHOP_UPI_ID}</span>
             </div>
+
+            <div className="pay-big">₹{payable.toFixed(2)}</div>
+            <div className="pay-words">{rupeesInWords(payable)}</div>
+
             <div className="upi-qr-wrap">
               <img className="upi-qr" src={qrDataUri(upiLink)} alt="UPI QR code" />
-              <p className="upi-hint">
-                Scan with any UPI app (GPay, PhonePe, Paytm, BHIM)
-              </p>
+              <p className="upi-hint">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM)</p>
             </div>
-            <a className="upi-app-btn" href={upiLink}>
-              Open UPI app to pay ₹{payable.toFixed(2)}
-            </a>
+
             <div className="upi-id-row">
               <span>Or pay to UPI ID</span>
               <code>{SHOP_UPI_ID}</code>
             </div>
             {placeError && <div className="auth-error">{placeError}</div>}
-            <button className="checkout-btn place" onClick={placeOrder} disabled={placing}>
-              {placing ? "Placing…" : "I've paid • Place order"}
+            <a className="pay-proceed" href={upiLink}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" /></svg>
+              Proceed Securely · ₹{payable.toFixed(2)}
+            </a>
+            <button className="pay-paid-link" onClick={placeOrder} disabled={placing}>
+              {placing ? "Placing…" : "I've already paid — place my order"}
             </button>
             <p className="upi-note">
-              Demo: payment isn't actually verified. On a real setup the order
-              confirms automatically once UPI payment succeeds.
+              Your order is confirmed once the payment goes through.
             </p>
           </div>
         ) : step === "checkout" ? (

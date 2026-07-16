@@ -4132,3 +4132,36 @@ body {
   content: ""; position: absolute; left: 5px; top: 1.5px; width: 5px; height: 10px;
   border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
 }
+
+/* ── Premium UPI payment screen (reference-style confirmation) ── */
+.pay-pro { align-items: center; text-align: center; gap: 0; }
+.pay-merchant { display: flex; flex-direction: column; align-items: center; gap: 7px; margin-top: 6px; }
+.pay-merchant-av {
+  width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #fff;
+  background: linear-gradient(140deg, var(--green), var(--green-dark));
+}
+.pay-merchant-name {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 16px; font-weight: 800; color: var(--ink);
+}
+.pay-verified { flex: none; }
+.pay-merchant-vpa {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--muted); font-weight: 600;
+  background: var(--bg-soft, #f2f5f0); border-radius: 999px; padding: 5px 12px;
+}
+.pay-big { font-size: 46px; font-weight: 850; letter-spacing: -0.02em; color: var(--ink); margin: 22px 0 4px; line-height: 1; }
+.pay-words { font-size: 13.5px; color: var(--muted); font-weight: 600; margin-bottom: 22px; }
+.pay-proceed {
+  display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+  margin-top: 14px; padding: 15px; border-radius: 14px; text-decoration: none;
+  background: linear-gradient(140deg, var(--green), var(--green-dark)); color: #fff;
+  font-size: 15.5px; font-weight: 800; box-shadow: 0 10px 24px rgba(10, 145, 85, 0.3);
+}
+.pay-paid-link {
+  margin-top: 12px; background: none; border: none; cursor: pointer;
+  color: var(--green-dark); font-size: 13.5px; font-weight: 700; text-decoration: underline;
+}
+.pay-paid-link:disabled { opacity: 0.6; }
+.pay-pro .upi-qr-wrap { margin-top: 4px; }
