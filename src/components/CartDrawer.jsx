@@ -58,15 +58,19 @@ const IS_IOS =
 // package; on iOS via the app's own URL scheme (targeting a specific app avoids
 // the generic upi:// link being grabbed by the wrong handler like WhatsApp).
 const UPI_APPS = [
-  { id: "gpay", name: "Google Pay", short: "G", bg: "#ffffff", fg: "#1a73e8", bd: "#dfe3ea", pkg: "com.google.android.apps.nbu.paisa.user", ios: "tez://upi/pay" },
-  { id: "phonepe", name: "PhonePe", short: "Pe", bg: "#5f259f", fg: "#ffffff", pkg: "com.phonepe.app", ios: "phonepe://pay" },
-  { id: "paytm", name: "Paytm", short: "P", bg: "#042e5b", fg: "#00baf2", pkg: "net.one97.paytm", ios: "paytmmp://pay" },
-  { id: "bhim", name: "BHIM UPI", short: "B", bg: "#f26522", fg: "#ffffff", pkg: "in.org.npci.upiapp", ios: "upi://pay" },
+  { id: "gpay", name: "Google Pay", short: "G", bg: "#ffffff", fg: "#1a73e8", bd: "#dfe3ea", scheme: "tez://upi/pay" },
+  { id: "phonepe", name: "PhonePe", short: "Pe", bg: "#5f259f", fg: "#ffffff", scheme: "phonepe://pay" },
+  { id: "paytm", name: "Paytm", short: "P", bg: "#042e5b", fg: "#00baf2", scheme: "paytmmp://pay" },
+  { id: "bhim", name: "BHIM UPI", short: "B", bg: "#f26522", fg: "#ffffff", scheme: "upi://pay" },
 ];
+// Use each app's own URL scheme (works from both the Capacitor WebView and a
+// mobile browser). intent:// is avoided because the in-app WebView can't launch
+// it; the app packages are declared in AndroidManifest <queries> so Android 11+
+// is allowed to open them.
 function upiAppHref(upiIntent, app) {
   if (!upiIntent || upiIntent.indexOf("?") < 0) return "#";
   const q = upiIntent.slice(upiIntent.indexOf("?") + 1);
-  return IS_IOS ? `${app.ios}?${q}` : `intent://pay?${q}#Intent;scheme=upi;package=${app.pkg};end`;
+  return `${app.scheme}?${q}`;
 }
 
 // Tap-to-add delivery instructions shown on the checkout page.
