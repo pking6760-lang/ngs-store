@@ -307,6 +307,10 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 14px;
+  /* Keep rows at their natural height. Without this, a search or category with
+     just one or two results lets the single row stretch to fill the tall page,
+     ballooning a card into a big empty white block. */
+  align-content: start;
 }
 .product-row {
   display: grid;
