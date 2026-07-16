@@ -20,6 +20,14 @@ import {
 // Persist the delivery address + phone the customer typed, so a page refresh
 // doesn't wipe them (the cart itself is already saved by CartContext).
 const DRAFT_KEY = "ngs-checkout-draft-v1";
+
+// Tap-to-add delivery instructions shown on the checkout page.
+const DELIVERY_NOTES = [
+  { icon: "🔕", label: "Don't ring the bell" },
+  { icon: "🚪", label: "Leave at the door" },
+  { icon: "📵", label: "Avoid calling" },
+  { icon: "🤝", label: "Hand it to me" },
+];
 function loadDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); }
   catch { return {}; }
@@ -43,6 +51,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [location, setLocation] = useState(() => loadDraft().location || null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
+  // Optional delivery instructions the customer taps — passed to the rider on
+  // the order (appended to the address the partner sees).
+  const [deliveryNotes, setDeliveryNotes] = useState([]);
+  const toggleNote = (n) =>
+    setDeliveryNotes((v) => (v.includes(n) ? v.filter((x) => x !== n) : [...v, n]));
+  // Address stored on the ORDER (with any delivery instructions) — the saved
+  // profile address stays clean (notes are per-order).
+  const orderAddress = () =>
+    address.trim() + (deliveryNotes.length ? `  •  ${deliveryNotes.join(", ")}` : "");
   // razorpay (verified online) | upi (legacy QR, unverified) | cod. When online
   // payments are enabled we default to them and drop the unverified QR option.
   const [payment, setPayment] = useState(RAZORPAY_ENABLED ? "razorpay" : "upi");
@@ -385,7 +402,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         coupon: appliedCode || null,
         location: location ? { ...location, distanceKm: dist } : null,
         payment: "razorpay",
-        address: address.trim(),
+        address: orderAddress(),
         wallet: walletApplied,
         redeemPoints: pointsUsed,
         membership: memberFee > 0,
@@ -462,7 +479,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         coupon: appliedCode || null,
         location: location ? { ...location, distanceKm: dist } : null,
         payment: pay,
-        address: address.trim(),
+        address: orderAddress(),
         wallet: walletApplied,
         redeemPoints: pointsUsed,
         membership: memberFee > 0,
@@ -499,7 +516,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       userId: user?.id,
       customer: user?.name || "You",
       userPhone: cleanPhone || user?.phone || "",
-      address: address.trim(),
+      address: orderAddress(),
       location,
       distanceKm: dist,
       payment,
@@ -692,6 +709,36 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           </div>
         ) : step === "checkout" ? (
           <div className="checkout-step">
+            {/* Delivery ETA + order review — mirrors a quick-commerce checkout. */}
+            <div className="co-eta">
+              <span className="co-eta-ic">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+              </span>
+              <div className="co-eta-txt">
+                <strong>Delivery in ~12 minutes</strong>
+                <small>{lines.reduce((a, l) => a + l.qty, 0)} item{lines.reduce((a, l) => a + l.qty, 0) === 1 ? "" : "s"} in your order</small>
+              </div>
+            </div>
+
+            <div className="checkout-section co-items-sec">
+              <h4>Your order</h4>
+              {lines.map(({ product, qty, unit }) => (
+                <div className="co-item" key={product.id}>
+                  <ProductThumb image={product.image} name={product.name} category={product.category} size={42} radius={9} />
+                  <div className="co-item-main">
+                    <span className="co-item-name">{product.name}</span>
+                    {product.unit && <span className="co-item-unit">{product.unit}</span>}
+                  </div>
+                  <div className="co-item-qty">
+                    <button type="button" onClick={() => remove(product.id)} aria-label="Remove one">−</button>
+                    <span>{qty}</span>
+                    <button type="button" onClick={() => add(product.id, product.stock)} aria-label="Add one">+</button>
+                  </div>
+                  <span className="co-item-price">₹{unit * qty}</span>
+                </div>
+              ))}
+            </div>
+
             <div className="checkout-section">
               <h4>Delivery address</h4>
 
@@ -861,6 +908,23 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 onToggle={() => setAddMembership((v) => !v)} />
             )}
 
+            <div className="checkout-section">
+              <h4>Delivery instructions <span className="co-optional">optional</span></h4>
+              <div className="co-notes">
+                {DELIVERY_NOTES.map((n) => (
+                  <button
+                    type="button"
+                    key={n.label}
+                    className={`co-note ${deliveryNotes.includes(n.label) ? "on" : ""}`}
+                    onClick={() => toggleNote(n.label)}
+                  >
+                    <span className="co-note-ic" aria-hidden="true">{n.icon}</span>
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Fees (delivery / handling / surge) were already itemised on the
                 cart's Bill details — don't repeat them here. Only show the
                 adjustments the customer makes on this screen (points, coupon,
@@ -894,6 +958,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <span>To pay</span>
                 <span>₹{payable.toFixed(2)}</span>
               </div>
+            </div>
+
+            <div className="co-policy">
+              <strong>Cancellation policy</strong>
+              <p>
+                You can cancel free of charge before your order is packed. Once
+                the rider is on the way it may not be cancellable. Prepaid refunds
+                go back to your NGS Wallet.
+              </p>
             </div>
 
             {placeError && <div className="auth-error">{placeError}</div>}
