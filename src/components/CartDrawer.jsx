@@ -679,23 +679,37 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </button>
           </div>
         ) : step === "payqr" && payLink ? (
-          <div className="pay-step">
-            <div className="pay-amount">
-              Amount to pay <strong>₹{payLink.order.total}</strong>
-              <span className="pay-fixed">Secured by Razorpay</span>
+          <div className="pay-step pay-pro">
+            <div className="pay-merchant">
+              <span className="pay-merchant-av">N</span>
+              <span className="pay-merchant-name">
+                NGS · Nisha General Store
+                <svg className="pay-verified" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="11" fill="#2a9bf0" />
+                  <path d="M7 12.3l3.2 3.2L17 8.7" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="pay-merchant-vpa">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /></svg>
+                Secured by Razorpay
+              </span>
             </div>
+
+            <div className="pay-big">₹{Number(payLink.order.total).toFixed(2)}</div>
+            <div className="pay-words">{rupeesInWords(payLink.order.total)}</div>
+
             <div className="upi-qr-wrap">
               <img
                 className={`upi-qr ${payLink.cleanQr ? "clean" : ""}`}
                 src={payLink.cleanQr || payLink.imageDataUrl || payLink.imageUrl}
                 alt="UPI payment QR code"
               />
-              <p className="upi-hint">
-                Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly
-              </p>
+              <p className="upi-hint">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly</p>
             </div>
-            <button className="upi-app-btn" onClick={payOnThisPhone}>
-              Pay with UPI app
+
+            <button className="pay-proceed" onClick={payOnThisPhone}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /><path d="M9 12l2 2 4-4" /></svg>
+              Pay with UPI app · ₹{Number(payLink.order.total).toFixed(2)}
             </button>
             <p className="upi-note">
               Waiting for payment… this screen updates automatically the moment
