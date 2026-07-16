@@ -62,6 +62,7 @@ const PATHS = {
 
   // Actions
   camera: <><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" /><circle cx="12" cy="13.5" r="3.5" /></>,
+  barcode: <><path d="M3 5v14M6.5 5v14M10 5v14M14 5v10M17.5 5v14M21 5v14" /></>,
   tag: <><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h8.6l8 8a2 2 0 0 1 0 2.4z" /><circle cx="7.5" cy="7.5" r="1.4" /></>,
   trash: <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 5v6m4-6v6" />,
   search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,

@@ -376,3 +376,53 @@
 .kyc-req-btn { background: linear-gradient(135deg, var(--p-red), var(--p-red-deep)); color: #fff; border: none;
   border-radius: 10px; padding: 9px 16px; font-weight: 800; font-size: 13px; }
 .kyc-req-btn:disabled { opacity: 0.5; }
+
+/* ═══ Partner run flow: earn banner, sliders, pack checklist ═══════════════ */
+.pd-earn { display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(16,185,129,0.05));
+  border: 1px solid rgba(16,185,129,0.4); border-radius: 14px; padding: 12px 16px; }
+.pd-earn-lbl { font-size: 12px; color: var(--p-sec); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+.pd-earn-amt { font-size: 22px; font-weight: 900; color: var(--p-mint); }
+
+.pd-run { border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  background: linear-gradient(160deg, #16161B, #101014); border: 1px solid var(--p-line);
+  box-shadow: 0 18px 40px -20px rgba(0,0,0,0.7); }
+
+.pd-steps { display: flex; gap: 10px; }
+.pd-step { flex: 1; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700;
+  color: var(--p-muted); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--p-line); }
+.pd-step-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--p-muted); flex: 0 0 auto; }
+.pd-step.on { color: var(--p-text); border-color: rgba(59,130,246,0.6); background: rgba(59,130,246,0.10); }
+.pd-step.on .pd-step-dot { background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+.pd-step.done { color: var(--p-mint); border-color: rgba(16,185,129,0.5); }
+.pd-step.done .pd-step-dot { background: var(--p-mint); }
+
+.pd-slide { position: relative; height: 62px; border-radius: 16px; overflow: hidden; user-select: none;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--p-line); display: flex; align-items: center; justify-content: center; }
+.pd-slide-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 16px; }
+.pd-slide.green .pd-slide-fill { background: linear-gradient(135deg, rgba(16,185,129,0.45), rgba(16,185,129,0.22)); }
+.pd-slide.blue .pd-slide-fill { background: linear-gradient(135deg, rgba(59,130,246,0.45), rgba(59,130,246,0.22)); }
+.pd-slide-lbl { position: relative; z-index: 1; font-weight: 800; font-size: 14px; color: var(--p-text);
+  pointer-events: none; padding-left: 44px; }
+.pd-slide-knob { position: absolute; left: 4px; top: 4px; width: 54px; height: 54px; border-radius: 13px; z-index: 2;
+  display: flex; align-items: center; justify-content: center; color: #fff; cursor: grab; touch-action: none; }
+.pd-slide.green .pd-slide-knob { background: linear-gradient(135deg, #10b981, #059669); }
+.pd-slide.blue .pd-slide-knob { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.pd-slide.armed .pd-slide-lbl { opacity: 0.35; }
+.pd-slide.busy { opacity: 0.7; }
+
+.pd-pack-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--p-sec); }
+.pd-pack-count { font-size: 15px; font-weight: 900; color: var(--p-text); }
+.pd-pack-list { display: flex; flex-direction: column; gap: 8px; }
+.pd-pack-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--p-line); }
+.pd-pack-item.done { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.4); }
+.pd-pack-chk { width: 28px; height: 28px; flex: 0 0 auto; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; background: rgba(255,255,255,0.1); color: var(--p-sec); font-weight: 800; font-size: 13px; }
+.pd-pack-item.done .pd-pack-chk { background: var(--p-mint); color: #04231a; }
+.pd-pack-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--p-text); }
+.pd-pack-nobc { color: var(--p-muted); font-size: 11px; font-style: normal; font-weight: 500; }
+.pd-pack-qty { font-size: 13px; font-weight: 800; color: var(--p-sec); }
+.pd-scan-msg { border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 700; }
+.pd-scan-msg.ok { background: rgba(16,185,129,0.14); color: var(--p-mint); }
+.pd-scan-msg.err { background: rgba(255,71,87,0.14); color: var(--p-red-bright); }

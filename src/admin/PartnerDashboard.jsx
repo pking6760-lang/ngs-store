@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { initPartnerPush } from "../lib/partnerPush.js";
-import { unlockAudio, stopAlarm } from "../lib/sound.js";
+import { unlockAudio, stopAlarm, errorBeep, okBeep } from "../lib/sound.js";
+import { scanBarcode } from "../lib/scanner.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { withMinTime } from "../lib/ux.js";
@@ -113,12 +114,108 @@ function QrGlyph() {
   );
 }
 
-/* ── Live order card ────────────────────────────────────────────────────── */
-function LiveOrder({ task, busy, onAction }) {
+/* ── swipe-to-confirm slider ────────────────────────────────────────────── */
+function SlideAction({ label, onConfirm, busy, tone = "green" }) {
+  const trackRef = useRef(null);
+  const [x, setX] = useState(0);
+  const [armed, setArmed] = useState(false);
+  const st = useRef({ active: false, startX: 0, max: 0, dx: 0 });
+  const KNOB = 54;
+
+  // Reset once the action settles (parent usually swaps the view on success).
+  useEffect(() => { if (!busy) { setX(0); setArmed(false); st.current.dx = 0; } }, [busy]);
+
+  function begin(clientX) {
+    if (busy) return;
+    const track = trackRef.current; if (!track) return;
+    st.current = { active: true, startX: clientX, max: track.clientWidth - KNOB - 8, dx: 0 };
+  }
+  function moveTo(clientX) {
+    const s = st.current; if (!s.active) return;
+    const dx = Math.max(0, Math.min(s.max, clientX - s.startX));
+    s.dx = dx; setX(dx); setArmed(dx >= s.max * 0.88);
+  }
+  function finish() {
+    const s = st.current; if (!s.active) return;
+    s.active = false;
+    if (s.max > 0 && s.dx >= s.max * 0.88) { setX(s.max); onConfirm?.(); }
+    else { setX(0); setArmed(false); s.dx = 0; }
+  }
+  function onMouseDown(e) {
+    begin(e.clientX);
+    const mm = (ev) => moveTo(ev.clientX);
+    const mu = () => { finish(); window.removeEventListener("mousemove", mm); window.removeEventListener("mouseup", mu); };
+    window.addEventListener("mousemove", mm);
+    window.addEventListener("mouseup", mu);
+  }
+
+  return (
+    <div ref={trackRef} className={`pd-slide ${tone} ${armed ? "armed" : ""} ${busy ? "busy" : ""}`}>
+      <div className="pd-slide-fill" style={{ width: x + KNOB }} />
+      <span className="pd-slide-lbl">{busy ? "Working…" : label}</span>
+      <div
+        className="pd-slide-knob"
+        style={{ transform: `translateX(${x}px)`, transition: st.current.active ? "none" : "transform .22s ease" }}
+        onTouchStart={(e) => begin(e.touches[0].clientX)}
+        onTouchMove={(e) => { e.preventDefault(); moveTo(e.touches[0].clientX); }}
+        onTouchEnd={finish}
+        onMouseDown={onMouseDown}
+      >
+        {busy ? <span className="ngs-spin" /> : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EarnBanner({ amount }) {
+  return (
+    <div className="pd-earn">
+      <span className="pd-earn-lbl">You earn on this order</span>
+      <span className="pd-earn-amt">{money(amount)}</span>
+    </div>
+  );
+}
+
+/* ── Incoming order — Accept only (no reject) ───────────────────────────── */
+function IncomingOrder({ task, busy, onAction }) {
   const isReturn = !!task.isReturn;
   const isDelivery = task.role === "delivery";
-  const accepted = task.state === "accepted" || task.state === "picked";
   const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+  return (
+    <div className="pd-liveorder">
+      <div className="lo-head">
+        <span className={`lo-live ${isReturn ? "lo-return" : ""}`}>{isReturn ? "● RETURN PICKUP" : "● NEW ORDER"}</span>
+        <span className="lo-code">#{code}</span>
+      </div>
+      {task.earning > 0 && <EarnBanner amount={task.earning} />}
+      {isDelivery && !isReturn ? (
+        <div className="lo-row">
+          <span className="lo-lbl">Payment</span>
+          {task.paid ? <span className="lo-paid">✓ Prepaid</span>
+            : task.isCod ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
+              : <span className="lo-paid">✓ Prepaid</span>}
+        </div>
+      ) : (
+        <div className="lo-items">
+          <span className="lo-lbl">{isReturn ? "Collect these items back" : "Pack these"}</span>
+          {(task.items || []).map((it, i) => (
+            <div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>
+          ))}
+        </div>
+      )}
+      <button className="pd-btn lo-accept" disabled={busy} onClick={() => onAction(() => api.partnerAccept(task.orderId))}>
+        {busy ? <span className="ngs-spin" /> : isReturn ? <><Ic name="check" size={16} /> Accept return</> : <><Ic name="check" size={16} /> Accept order</>}
+      </button>
+    </div>
+  );
+}
+
+/* ── Delivery run — two swipe steps: Out for delivery → Delivered ────────── */
+function DeliveryRun({ task, busy, onAction }) {
+  const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+  const out = task.state === "out_for_delivery";
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
 
   async function showQr() {
@@ -132,95 +229,169 @@ function LiveOrder({ task, busy, onAction }) {
   }
 
   return (
-    <div className="pd-liveorder">
+    <div className="pd-run">
       <div className="lo-head">
-        <span className={`lo-live ${isReturn ? "lo-return" : ""}`}>{isReturn ? "● RETURN PICKUP" : "● NEW ORDER"}</span>
+        <span className="lo-live">● {out ? "ON THE WAY" : "READY TO GO"}</span>
         <span className="lo-code">#{code}</span>
       </div>
+      {task.earning > 0 && <EarnBanner amount={task.earning} />}
 
-      {isReturn ? (
-        <>
-          <div className="lo-row">
-            <span className="lo-lbl">Collect from</span>
-            {task.location
-              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
-              : <span className="lo-muted">Address shared on accept</span>}
-          </div>
-          <div className="lo-items">
-            <span className="lo-lbl">Collect these items back</span>
-            {(task.items || []).map((it, i) => (
-              <div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>
-            ))}
-          </div>
-          <div className="lo-row">
-            <span className="lo-lbl">Payment</span>
-            <span className="lo-paid">Return — collect nothing</span>
-          </div>
-        </>
-      ) : isDelivery ? (
-        <>
-          <div className="lo-row">
-            <span className="lo-lbl">Deliver to</span>
-            {task.location
-              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
-              : <span className="lo-muted">Location shared at pickup</span>}
-          </div>
-          <div className="lo-row">
-            <span className="lo-lbl">Payment</span>
-            {task.paid
-              ? <span className="lo-paid">✓ Already paid — collect nothing</span>
-              : task.isCod
-                ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
-                : <span className="lo-paid">✓ Prepaid</span>}
-          </div>
+      <div className="lo-row">
+        <span className="lo-lbl">Deliver to</span>
+        {task.location
+          ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
+          : <span className="lo-muted">Location shared at pickup</span>}
+      </div>
+      <div className="lo-row">
+        <span className="lo-lbl">Payment</span>
+        {task.paid ? <span className="lo-paid">✓ Already paid — collect nothing</span>
+          : task.isCod ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
+            : <span className="lo-paid">✓ Prepaid</span>}
+      </div>
 
-          {accepted && !task.paid && task.isCod && (
-            <>
-              <button className="lo-qr-btn" onClick={showQr}>
-                <QrGlyph />
-                <span>{qr && qr !== "error" ? "Hide UPI QR" : "Show UPI QR — customer pays now"}</span>
-              </button>
-              {qr === "loading" && (
-                <div className="lo-qr-wrap">
-                  <div className="qr-spin"><span>Making secure QR…</span></div>
-                </div>
-              )}
-              {qr === "error" && <div className="lo-muted" style={{ textAlign: "center" }}>Couldn't create QR. Collect cash instead.</div>}
-              {qr && qr.url && (
-                <div className="lo-qr-wrap">
-                  <div className="lo-qr"><img src={qr.url} alt="UPI QR" /></div>
-                  <p className="lo-qr-note">Scan with <strong>any UPI app</strong> to pay <strong>{money(task.codAmount)}</strong><br /><span>Confirms automatically</span></p>
-                </div>
-              )}
-            </>
+      {!task.paid && task.isCod && (
+        <>
+          <button className="lo-qr-btn" onClick={showQr}>
+            <QrGlyph />
+            <span>{qr && qr !== "error" ? "Hide UPI QR" : "Show UPI QR — customer pays now"}</span>
+          </button>
+          {qr === "loading" && <div className="lo-qr-wrap"><div className="qr-spin"><span>Making secure QR…</span></div></div>}
+          {qr === "error" && <div className="lo-muted" style={{ textAlign: "center" }}>Couldn't create QR. Collect cash instead.</div>}
+          {qr && qr.url && (
+            <div className="lo-qr-wrap">
+              <div className="lo-qr"><img src={qr.url} alt="UPI QR" /></div>
+              <p className="lo-qr-note">Scan with <strong>any UPI app</strong> to pay <strong>{money(task.codAmount)}</strong><br /><span>Confirms automatically</span></p>
+            </div>
           )}
         </>
-      ) : (
-        <div className="lo-items">
-          <span className="lo-lbl">Pack these</span>
-          {(task.items || []).map((it, i) => (
-            <div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>
-          ))}
-        </div>
       )}
 
-      {!accepted ? (
-        <button className="pd-btn lo-accept" disabled={busy} onClick={() => onAction(() => api.partnerAccept(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : isReturn ? <><Ic name="check" size={16} /> Accept return</> : <><Ic name="check" size={16} /> Accept order</>}
-        </button>
-      ) : isReturn ? (
-        <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkReturned(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : "↩︎ Confirm return picked up"}
-        </button>
-      ) : isDelivery ? (
-        <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkDelivered(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : <><Ic name="box" size={16} /> Mark delivered</>}
-        </button>
+      {/* Two-step progress */}
+      <div className="pd-steps">
+        <div className={`pd-step ${out ? "done" : "on"}`}><span className="pd-step-dot" /> Out for delivery</div>
+        <div className={`pd-step ${out ? "on" : ""}`}><span className="pd-step-dot" /> Delivered</div>
+      </div>
+
+      {!out ? (
+        <SlideAction label="Slide to go — Out for delivery" busy={busy} tone="blue"
+          onConfirm={() => onAction(() => api.partnerMarkOutForDelivery(task.orderId))} />
       ) : (
-        <button className="pd-btn" disabled={busy} onClick={() => onAction(() => api.partnerMarkPacked(task.orderId))}>
-          {busy ? <span className="ngs-spin" /> : <><Ic name="check" size={16} /> Mark packed</>}
+        <SlideAction label="Slide when handed over — Delivered" busy={busy} tone="green"
+          onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId))} />
+      )}
+    </div>
+  );
+}
+
+/* ── Return run — swipe to confirm picked up ────────────────────────────── */
+function ReturnRun({ task, busy, onAction }) {
+  const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+  return (
+    <div className="pd-run">
+      <div className="lo-head"><span className="lo-live lo-return">● RETURN PICKUP</span><span className="lo-code">#{code}</span></div>
+      {task.earning > 0 && <EarnBanner amount={task.earning} />}
+      <div className="lo-row">
+        <span className="lo-lbl">Collect from</span>
+        {task.location
+          ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
+          : <span className="lo-muted">Address shared on accept</span>}
+      </div>
+      <div className="lo-items">
+        <span className="lo-lbl">Collect these items back</span>
+        {(task.items || []).map((it, i) => (<div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>))}
+      </div>
+      <SlideAction label="Slide when collected — Return picked up" busy={busy} tone="green"
+        onConfirm={() => onAction(() => api.partnerMarkReturned(task.orderId))} />
+    </div>
+  );
+}
+
+/* ── Pick run — scan each item; wrong barcode beeps; auto-packs when done ── */
+function PickRun({ task, busy, onAction }) {
+  const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+  const items = task.items || [];
+  const [scanned, setScanned] = useState(() => items.map(() => 0));
+  const [scanning, setScanning] = useState(false);
+  const [msg, setMsg] = useState({ kind: "", text: "" });
+  const packing = useRef(false);
+
+  const totalUnits = items.reduce((s, it) => s + (it.qty || 1), 0);
+  const doneUnits = scanned.reduce((s, n) => s + n, 0);
+  const allDone = totalUnits > 0 && doneUnits >= totalUnits;
+
+  // The moment every unit is scanned, mark packed automatically.
+  useEffect(() => {
+    if (!allDone || packing.current) return;
+    packing.current = true;
+    setMsg({ kind: "ok", text: "All items scanned — packing…" });
+    onAction(() => api.partnerMarkPacked(task.orderId));
+  }, [allDone]);
+
+  async function scanOne() {
+    if (scanning || busy || allDone) return;
+    unlockAudio();
+    setScanning(true);
+    setMsg({ kind: "", text: "" });
+    let raw;
+    try { raw = await scanBarcode(); }
+    catch (e) { setMsg({ kind: "err", text: e.message || "Couldn't open the scanner." }); setScanning(false); return; }
+    setScanning(false);
+    if (!raw) return; // backed out of the scanner
+    const norm = String(raw).trim();
+    const idx = items.findIndex((it, i) => it.barcode && String(it.barcode).trim() === norm && scanned[i] < (it.qty || 1));
+    if (idx === -1) {
+      errorBeep();
+      const known = items.some((it) => it.barcode && String(it.barcode).trim() === norm);
+      setMsg({ kind: "err", text: known ? "⚠️ That item is already fully scanned." : "❌ Wrong product — this barcode isn't in the order." });
+      return;
+    }
+    okBeep();
+    setScanned((prev) => { const next = prev.slice(); next[idx] += 1; return next; });
+    setMsg({ kind: "ok", text: `✓ ${items[idx].name}` });
+  }
+
+  // Products with no barcode on file can't be scanned — let the picker tap them.
+  function tapNoBarcode(i) {
+    const it = items[i];
+    if (it.barcode) return;
+    if (scanned[i] >= (it.qty || 1)) return;
+    okBeep();
+    setScanned((prev) => { const next = prev.slice(); next[i] += 1; return next; });
+  }
+
+  return (
+    <div className="pd-run">
+      <div className="lo-head"><span className="lo-live">● PACKING</span><span className="lo-code">#{code}</span></div>
+      {task.earning > 0 && <EarnBanner amount={task.earning} />}
+
+      <div className="pd-pack-head">
+        <span>Scan every item to pack</span>
+        <span className="pd-pack-count">{doneUnits}/{totalUnits}</span>
+      </div>
+
+      <div className="pd-pack-list">
+        {items.map((it, i) => {
+          const need = it.qty || 1;
+          const got = scanned[i];
+          const complete = got >= need;
+          return (
+            <div className={`pd-pack-item ${complete ? "done" : ""}`} key={i} onClick={() => tapNoBarcode(i)}>
+              <span className="pd-pack-chk">{complete ? <Ic name="check" size={15} /> : got}</span>
+              <span className="pd-pack-name">{it.name}{!it.barcode && <em className="pd-pack-nobc"> · tap to add (no barcode)</em>}</span>
+              <span className="pd-pack-qty">{got}/{need}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {msg.text && <div className={`pd-scan-msg ${msg.kind}`}>{msg.text}</div>}
+
+      {!allDone && (
+        <button className="pd-btn lo-accept" disabled={scanning || busy} onClick={scanOne}>
+          {scanning ? <span className="ngs-spin" /> : <><Ic name="barcode" size={18} /> Scan item</>}
         </button>
       )}
+      {allDone && <div className="pd-scan-msg ok" style={{ textAlign: "center" }}>{busy ? "Marking packed…" : "Packed ✓"}</div>}
     </div>
   );
 }
@@ -318,7 +489,15 @@ function Home({ role, isDelivery, name, wallet, slots, presence, setPresence, re
       </div>
 
       {task ? (
-        <LiveOrder task={task} busy={taskBusy} onAction={taskAction} />
+        task.state === "assigned" ? (
+          <IncomingOrder task={task} busy={taskBusy} onAction={taskAction} />
+        ) : task.isReturn ? (
+          <ReturnRun task={task} busy={taskBusy} onAction={taskAction} />
+        ) : task.role === "delivery" ? (
+          <DeliveryRun task={task} busy={taskBusy} onAction={taskAction} />
+        ) : (
+          <PickRun task={task} busy={taskBusy} onAction={taskAction} />
+        )
       ) : presence.isOnline ? (
         <div className="pd-empty" style={{ border: "1px dashed var(--p-line)", borderRadius: 16, padding: 22 }}>
           <span className="emo"><Ic name="signal" size={26} /></span>

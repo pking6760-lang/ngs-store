@@ -950,8 +950,11 @@ export async function getMyTask() {
   if (!t) return null;
   return {
     orderId: t.order_id, code: t.code, role: t.task_role, state: t.state,
-    isCod: t.is_cod, paid: t.paid, codAmount: t.cod_amount, location: t.location, items: t.items || [],
-    isReturn: !!t.is_return,
+    isCod: t.is_cod, paid: t.paid, codAmount: t.cod_amount, location: t.location,
+    items: (t.items || []).map((it) => ({
+      name: it.name, qty: it.qty, barcode: it.barcode || "", productId: it.productId,
+    })),
+    isReturn: !!t.is_return, earning: Number(t.earning) || 0,
   };
 }
 
@@ -963,6 +966,10 @@ export async function partnerAccept(orderId) {
 export async function partnerMarkPacked(orderId) {
   const { error } = await must().rpc("partner_mark_packed", { p_order: orderId });
   if (error) throw new Error(error.message || "Couldn't mark packed."); return { ok: true };
+}
+export async function partnerMarkOutForDelivery(orderId) {
+  const { error } = await must().rpc("partner_mark_out_for_delivery", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't start delivery."); return { ok: true };
 }
 export async function partnerMarkDelivered(orderId) {
   const { error } = await must().rpc("partner_mark_delivered", { p_order: orderId });
