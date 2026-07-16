@@ -209,6 +209,24 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     if (user?.phone && !phone) setPhone(user.phone);
   }, [step, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Pull the saved default address's coordinates into checkout so an address
+  // saved with a map pin carries its location into the order — otherwise the
+  // partner has no spot to navigate to and the live map never appears.
+  useEffect(() => {
+    if (step !== "checkout" || !BACKEND || location) return;
+    let alive = true;
+    (async () => {
+      try {
+        const addrs = await api.fetchMyAddresses();
+        const def = addrs.find((a) => a.isDefault) || addrs[0];
+        if (!alive || !def) return;
+        if (def.location && def.location.lat != null) setLocation(def.location);
+        if (def.address && !address) setAddress(def.address);
+      } catch { /* fall back to typed address */ }
+    })();
+    return () => { alive = false; };
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Remember the address, phone AND captured GPS location across refreshes, so
   // the customer never has to re-enter them or re-share their location.
   useEffect(() => {

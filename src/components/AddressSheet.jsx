@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { useSettings } from "../lib/hooks.js";
+import { getShopLocations } from "../lib/store.js";
+import { searchAddress } from "../lib/location.js";
 import * as api from "../lib/api.js";
 import MapPicker from "./MapPicker.jsx";
 
@@ -118,12 +121,45 @@ export default function AddressSheet({ open, onClose }) {
 }
 
 function AddressForm({ editing, onDone }) {
+  const settings = useSettings();
   const [label, setLabel] = useState(editing?.label || "home");
   const [address, setAddress] = useState(editing?.address || "");
   const [location, setLocation] = useState(editing?.location || null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [map, setMap] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef(null);
+
+  // As the customer types their address, look up matching places on the map
+  // (debounced). Picking one captures its exact coordinates, so the delivery
+  // partner can navigate and the customer's live map works.
+  function onAddressChange(value) {
+    setAddress(value);
+    setErr("");
+    // Keep any captured pin as the customer refines the text (e.g. adds a flat
+    // number) — appending detail shouldn't drop the coordinates they picked.
+    clearTimeout(searchTimer.current);
+    if (value.trim().length < 3) { setSuggestions([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const shop = getShopLocations(settings)[0];
+        const res = await searchAddress(value, shop ? { lat: shop.lat, lng: shop.lng } : null);
+        setSuggestions(res);
+      } catch { setSuggestions([]); }
+      finally { setSearching(false); }
+    }, 350);
+  }
+
+  // Customer picks a place → fill the address and capture its coordinates.
+  function pickSuggestion(s) {
+    setAddress(s.label);
+    setLocation({ lat: s.lat, lng: s.lng });
+    setSuggestions([]);
+    setErr("");
+  }
 
   async function save() {
     if (!address.trim()) { setErr("Please enter your address."); return; }
@@ -153,23 +189,53 @@ function AddressForm({ editing, onDone }) {
         ))}
       </div>
 
+      <label className="addr-field">
+        <span>Full address</span>
+        <div className="address-autocomplete">
+          <textarea
+            rows={3}
+            value={address}
+            onChange={(e) => onAddressChange(e.target.value)}
+            placeholder="Start typing your area / street, then pick it from the list"
+          />
+          {(searching || suggestions.length > 0) && (
+            <div className="address-suggest">
+              {searching && suggestions.length === 0 && (
+                <div className="address-suggest-loading">Searching the map…</div>
+              )}
+              {suggestions.map((s, i) => (
+                <button
+                  type="button"
+                  className="address-suggest-item"
+                  key={i}
+                  onClick={() => pickSuggestion(s)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </label>
+
+      <p className="addr-hint-line">
+        Pick your area from the list so we get your exact spot, then add your
+        house / flat number.
+      </p>
+
       <button type="button" className="addr-pin" onClick={() => setMap(true)}>
         <span className="addr-pin-ic"><Ic d={I.pin} size={17} /></span>
         <span>
-          <strong>Pin your exact location on the map</strong>
+          <strong>Or pin your exact location on the map</strong>
           <small>Helps the delivery partner reach you faster</small>
         </span>
       </button>
 
-      <label className="addr-field">
-        <span>Full address</span>
-        <textarea
-          rows={3}
-          value={address}
-          onChange={(e) => { setAddress(e.target.value); setErr(""); }}
-          placeholder="House / flat no, building, street, area, landmark"
-        />
-      </label>
+      {location && (
+        <div className="addr-captured">
+          <Ic d={I.check} size={15} sw={2.4} /> Location captured — delivery can reach this spot
+        </div>
+      )}
 
       {err && <div className="auth-error">{err}</div>}
 

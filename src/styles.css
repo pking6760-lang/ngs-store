@@ -542,6 +542,14 @@ button {
   font-size: 14px; font-family: inherit; width: 100%; resize: vertical; background: #fff;
 }
 .addr-field textarea:focus { outline: none; border-color: var(--green); }
+.addr-field .address-autocomplete { width: 100%; }
+.addr-hint-line { font-size: 12px; color: var(--muted); margin: -8px 2px 14px; line-height: 1.4; }
+.addr-captured {
+  display: flex; align-items: center; gap: 7px;
+  margin: 12px 0 4px; padding: 10px 12px; border-radius: 10px;
+  background: var(--green-tint, #e7f6ee); color: var(--green-dark, #077a45);
+  font-size: 12.5px; font-weight: 700;
+}
 .addr-body .checkout-btn { width: 100%; }
 .pd-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; }
 .pd-hero-img {
