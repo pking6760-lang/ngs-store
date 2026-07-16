@@ -2873,3 +2873,16 @@ body {
 .pe-sub { font-size: 12px; color: #6a7684; font-weight: 600; margin: -4px 0 10px; }
 .pe-note { margin: 10px 0 0; font-size: 11.5px; color: #6a7684; line-height: 1.4; }
 .pe-note b { color: #43505f; }
+
+/* Collapsible sections in customer detail — cut down scrolling */
+.customer-sec .sec-count {
+  display: inline-block; margin-left: 8px; padding: 1px 8px;
+  border-radius: 999px; background: #eef1f5; color: #6a7684;
+  font-size: 11px; font-weight: 800; vertical-align: middle;
+}
+.show-more-btn {
+  width: 100%; margin-top: 8px; padding: 9px; border-radius: 10px;
+  border: 1px solid var(--a-line, #e3e8ef); background: #fff;
+  color: var(--a-accent, #3b5bdb); font-size: 13px; font-weight: 800; cursor: pointer;
+}
+.show-more-btn:hover { background: #f6f8fb; }

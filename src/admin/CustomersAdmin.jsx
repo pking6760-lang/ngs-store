@@ -76,6 +76,8 @@ function CustomerDetail({ customer, orders, onClose }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sent, setSent] = useState(false);
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [showAllNotes, setShowAllNotes] = useState(false);
 
   const valid = orders.filter((o) => o.status !== "Cancelled");
   const totalSpend = valid.reduce((s, o) => s + (o.total || 0), 0);
@@ -229,26 +231,36 @@ function CustomerDetail({ customer, orders, onClose }) {
             )}
           </div>
 
-          <h4 className="customer-sec">Order history</h4>
+          <h4 className="customer-sec">
+            Order history
+            {orders.length > 0 && <span className="sec-count">{orders.length}</span>}
+          </h4>
           {orders.length === 0 ? (
             <p className="panel-empty">No orders yet.</p>
           ) : (
-            <div className="customer-orders">
-              {orders.map((o) => (
-                <div className="customer-order" key={o.id}>
-                  <div>
-                    <span className="order-id">#{o.id}</span>
-                    <span className="order-time">{fmtDate(o.createdAt)}</span>
-                  </div>
-                  <span className="customer-order-right">
-                    <span className={`status-badge status-${slug(o.status)}`}>
-                      {o.status}
+            <>
+              <div className="customer-orders">
+                {(showAllOrders ? orders : orders.slice(0, 5)).map((o) => (
+                  <div className="customer-order" key={o.id}>
+                    <div>
+                      <span className="order-id">#{o.id}</span>
+                      <span className="order-time">{fmtDate(o.createdAt)}</span>
+                    </div>
+                    <span className="customer-order-right">
+                      <span className={`status-badge status-${slug(o.status)}`}>
+                        {o.status}
+                      </span>
+                      <b>₹{o.total}</b>
                     </span>
-                    <b>₹{o.total}</b>
-                  </span>
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+              {orders.length > 5 && (
+                <button type="button" className="show-more-btn" onClick={() => setShowAllOrders((v) => !v)}>
+                  {showAllOrders ? "Show less" : `Show all ${orders.length} orders`}
+                </button>
+              )}
+            </>
           )}
 
           <h4 className="customer-sec">Send a notification / offer</h4>
@@ -277,9 +289,12 @@ function CustomerDetail({ customer, orders, onClose }) {
 
           {notes.length > 0 && (
             <>
-              <h4 className="customer-sec">Sent notifications</h4>
+              <h4 className="customer-sec">
+                Sent notifications
+                <span className="sec-count">{notes.length}</span>
+              </h4>
               <div className="notify-history">
-                {notes.map((n) => (
+                {(showAllNotes ? notes : notes.slice(0, 3)).map((n) => (
                   <div className="notify-item" key={n.id}>
                     <div className="notify-item-title">
                       {n.title}
@@ -290,6 +305,11 @@ function CustomerDetail({ customer, orders, onClose }) {
                   </div>
                 ))}
               </div>
+              {notes.length > 3 && (
+                <button type="button" className="show-more-btn" onClick={() => setShowAllNotes((v) => !v)}>
+                  {showAllNotes ? "Show less" : `Show all ${notes.length}`}
+                </button>
+              )}
             </>
           )}
         </div>
