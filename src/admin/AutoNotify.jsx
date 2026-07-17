@@ -10,7 +10,8 @@ const BUCKETS = [
   ["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"], ["night", "Night"],
   ["early_morning", "Early morning"], ["late_night", "Late night"], ["lunch", "Lunch"], ["dinner", "Dinner"],
   ["sunday", "Sunday"], ["saturday", "Saturday"],
-  ["spring", "Spring"], ["summer", "Summer"], ["autumn", "Autumn"], ["winter", "Winter"], ["rain", "Rain / Monsoon"],
+  ["spring", "Spring"], ["summer", "Summer"], ["autumn", "Autumn"], ["winter", "Winter"],
+  ["rain", "Rain / Monsoon · weather"], ["hot", "Too hot · weather"], ["cold", "Cold day · weather"],
   ["new_year", "New Year"], ["holi", "Holi"], ["diwali", "Diwali"], ["dhanteras", "Dhanteras"],
   ["dussehra", "Dussehra"], ["govardhan", "Govardhan Puja"], ["bhai_dooj", "Bhai Dooj"],
   ["chhath", "Chhath Puja"], ["rakhi", "Raksha Bandhan"], ["janmashtami", "Janmashtami"],
@@ -22,11 +23,12 @@ const bucketLabel = (b) => LABEL[b] || b;
 
 const AI_PROMPT = `You are writing push notifications for "NGS – Nisha General Store", a local grocery delivery shop in Sultanpur, New Delhi.
 Generate 60 short, engaging notifications in Hindi–English mix (Hinglish). Each has:
-- a punchy TITLE that ENDS with exactly ONE emoji that clearly MATCHES that category/theme (e.g. morning ☀️, afternoon 🌤️, evening 🌆, night 🌙, sunday 🎉, saturday 🛍️, rain/monsoon 🌧️, spring 🌸, summer 🌞, autumn 🍂, winter ❄️, diwali 🪔, holi 🌈, dhanteras 🪙, dussehra 🏹, new_year 🎆, rakhi 🎀, chhath 🌅, birthday 🎂, gift 🎁, party 🥳, win-back 💚).
+- a punchy TITLE that ENDS with exactly ONE emoji that clearly MATCHES that category/theme (e.g. morning ☀️, afternoon 🌤️, evening 🌆, night 🌙, sunday 🎉, saturday 🛍️, rain/monsoon 🌧️, hot/heatwave 🥵, cold 🥶, spring 🌸, summer 🌞, autumn 🍂, winter ❄️, diwali 🪔, holi 🌈, dhanteras 🪙, dussehra 🏹, new_year 🎆, rakhi 🎀, chhath 🌅, birthday 🎂, gift 🎁, party 🥳, win-back 💚).
 - a 1-line BODY (max ~90 characters) that nudges the customer to order groceries, and may include ONE more fitting emoji.
 Warm, friendly, local, non-repetitive. No prices, no fake discounts. Every emoji must fit the message — no random or mismatched emojis.
+For weather categories, write for that live condition: rain = "barish, ghar baithe mangao", hot = "garmi, thanda pani/cold drinks/ice cream", cold = "sardi, garam chai/soup".
 Return ONLY a JSON array of objects: {"bucket":"<category>","title":"<title>","body":"<body>"}.
-Use these categories (bucket), several messages each: morning, afternoon, evening, night, sunday, saturday, rain, spring, summer, autumn, winter, diwali, holi, dhanteras, dussehra, new_year, rakhi, chhath, birthday, sad, party, gift.`;
+Use these categories (bucket), several messages each: morning, afternoon, evening, night, sunday, saturday, rain, hot, cold, spring, summer, autumn, winter, diwali, holi, dhanteras, dussehra, new_year, rakhi, chhath, birthday, sad, party, gift.`;
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const hourLabel = (h) => { const ap = h < 12 ? "AM" : "PM"; let hh = h % 12; if (hh === 0) hh = 12; return `${hh}:00 ${ap}`; };
@@ -50,7 +52,7 @@ export default function AutoNotify() {
   return (
     <section className="panel">
       <h3>Auto notifications</h3>
-      <p className="panel-sub">A bank of ready messages that send themselves at the right time — mornings, festivals, weekends and more.</p>
+      <p className="panel-sub">A bank of ready messages that send themselves at the right time — mornings, festivals, weekends and more. The weather groups (Rain, Too hot, Cold) send automatically based on each customer's live local weather — just keep a few messages in each.</p>
 
       <div className="seg-toggle" role="tablist">
         <button className={`seg ${tab === "bank" ? "seg-on" : ""}`} onClick={() => setTab("bank")}>Message bank</button>
