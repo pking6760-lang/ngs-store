@@ -4088,7 +4088,16 @@ body {
 /* Pin the price+ADD row to the bottom of every (equal-height) card so all ADD
    buttons line up across the rail; the flexible space sits between the name
    and the price and reads as intentional breathing room. */
-.product-footer { margin-top: auto; padding-top: 10px; align-items: flex-end; gap: 8px; }
+/* Footer is a column: an optional full-width value line (Prime chip / save
+   pill) sits above the price+ADD row. The price+ADD row is always the last
+   child, so with the footer pinned to the card bottom every ADD button lines
+   up across the rail — and the chip has the full card width, never truncates. */
+.product-footer { margin-top: auto; padding-top: 10px; flex-direction: column; align-items: stretch; gap: 5px; }
+.foot-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.foot-main > .product-price { flex: 1 1 auto; min-width: 0; }
+.foot-main > .add-btn,
+.foot-main > .qty-stepper { flex: 0 0 auto; }
+.add-btn.has-packs { padding-left: 12px; padding-right: 12px; }
 
 /* ── Professional checkout: ETA banner, order review, instructions, policy ── */
 .checkout-step { display: flex; flex-direction: column; gap: 12px; }

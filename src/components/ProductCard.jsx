@@ -81,55 +81,58 @@ export default function ProductCard({ product, badge }) {
         <BulkPackSheet product={product} onClose={() => setShowPacks(false)} />
       )}
       <div className="product-footer">
-        <div className="product-price">
-          <div className="price-line">
-            <span className="price-now">₹{price}</span>
-            {product.mrp > price && (
-              <span className="price-mrp">₹{product.mrp}</span>
-            )}
+        {/* Value line spans the full card width directly above the price/ADD
+            row — the Prime chip can never truncate or collide, and because the
+            price/ADD row stays the footer's last child, every ADD button still
+            lines up along the bottom of the rail. */}
+        {showPrimeHint && !outOfStock ? (
+          <span className="prime-hint">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
+            </svg>
+            ₹{primePrice} with Prime
+          </span>
+        ) : savings > 0 && !outOfStock ? (
+          <span className="save-pill">Save ₹{savings}</span>
+        ) : null}
+        <div className="foot-main">
+          <div className="product-price">
+            <div className="price-line">
+              <span className="price-now">₹{price}</span>
+              {product.mrp > price && (
+                <span className="price-mrp">₹{product.mrp}</span>
+              )}
+            </div>
           </div>
-          {/* Prime price sits right under the real price as a slim value chip —
-              never dangles, reads as "unlock this rate". Falls back to a plain
-              savings pill when there's no Prime advantage to show. */}
-          {showPrimeHint && !outOfStock ? (
-            <span className="prime-hint">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
-              </svg>
-              ₹{primePrice} with Prime
-            </span>
-          ) : savings > 0 && !outOfStock ? (
-            <span className="save-pill">Save ₹{savings}</span>
-          ) : null}
+          {outOfStock ? (
+            <button className="add-btn out" disabled>
+              Sold out
+            </button>
+          ) : qty === 0 && bulkTier && bulkHelps ? (
+            <button className="add-btn has-packs" onClick={() => setShowPacks(true)}>
+              ADD
+              <span className="add-packs-tag">packs ›</span>
+            </button>
+          ) : qty === 0 ? (
+            <button className="add-btn" onClick={() => add(product.id, product.stock)}>
+              ADD
+            </button>
+          ) : (
+            <div className="qty-stepper">
+              <button onClick={() => remove(product.id)} aria-label="Remove one">
+                −
+              </button>
+              <span>{qty}</span>
+              <button
+                onClick={() => add(product.id, product.stock)}
+                disabled={atMax}
+                aria-label="Add one"
+              >
+                +
+              </button>
+            </div>
+          )}
         </div>
-        {outOfStock ? (
-          <button className="add-btn out" disabled>
-            Sold out
-          </button>
-        ) : qty === 0 && bulkTier && bulkHelps ? (
-          <button className="add-btn has-packs" onClick={() => setShowPacks(true)}>
-            ADD
-            <span className="add-packs-tag">packs ›</span>
-          </button>
-        ) : qty === 0 ? (
-          <button className="add-btn" onClick={() => add(product.id, product.stock)}>
-            ADD
-          </button>
-        ) : (
-          <div className="qty-stepper">
-            <button onClick={() => remove(product.id)} aria-label="Remove one">
-              −
-            </button>
-            <span>{qty}</span>
-            <button
-              onClick={() => add(product.id, product.stock)}
-              disabled={atMax}
-              aria-label="Add one"
-            >
-              +
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
