@@ -4153,6 +4153,57 @@ body {
 .foot-main > .qty-stepper { flex: 0 0 auto; }
 .add-btn.has-packs { padding-left: 12px; padding-right: 12px; }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Sectioned product card — built from distinct blocks so it reads as premium
+   and modular: a framed image panel, a highlighted Prime block, and a
+   separate "buy bar" holding the price + Add. All blocks share one anatomy so
+   cards stay equal height and compact (no dead white gap).
+   ══════════════════════════════════════════════════════════════════════════ */
+.product-card { gap: 8px; }
+/* Block 1 — framed image panel */
+.product-card .product-image { border: 1px solid #eef1ed; }
+/* Block 3 — Prime / savings deal block (full-width, reserved height) */
+.product-meta { min-height: 28px; }
+.product-meta:empty { min-height: 28px; }
+.product-meta .prime-hint {
+  width: 100%;
+  align-self: stretch;
+  justify-content: flex-start;
+  gap: 5px;
+  margin-top: 0;
+  padding: 5px 10px;
+  border-radius: 9px;
+  font-size: 10.5px;
+}
+.product-meta .save-pill {
+  width: 100%;
+  align-self: stretch;
+  padding: 5px 10px;
+  border-radius: 9px;
+  font-size: 10.5px;
+  background: #eef7f0;
+  border: 1px solid #d6ebdc;
+  color: var(--green-dark);
+}
+/* Block 4 — buy bar (distinct tinted container) */
+.foot-main {
+  align-items: center;
+  background: #f6faf6;
+  border: 1px solid #e7f0e8;
+  border-radius: 12px;
+  padding: 7px 8px 7px 11px;
+}
+.foot-main .price-now { font-size: 16px; }
+/* Solid, filled Add button inside the buy bar */
+.foot-main .add-btn {
+  border: none;
+  color: #fff;
+  background: linear-gradient(140deg, var(--green), var(--green-dark));
+  box-shadow: 0 4px 11px rgba(11, 138, 76, 0.26);
+}
+.foot-main .add-btn:hover { box-shadow: 0 6px 15px rgba(11, 138, 76, 0.34); }
+.foot-main .add-btn .add-packs-tag { opacity: 0.9; }
+
 /* ── Professional checkout: ETA banner, order review, instructions, policy ── */
 .checkout-step { display: flex; flex-direction: column; gap: 12px; }
 .co-eta {
