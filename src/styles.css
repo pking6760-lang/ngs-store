@@ -331,10 +331,10 @@ button {
   overflow-x: auto;
   padding-bottom: 8px;
   scrollbar-width: thin;
-  /* Cards stretch to equal height; each card pins its price+ADD row to the
-     bottom (see .product-footer margin-top:auto) so every ADD button lines
-     up across the rail — the breathing room sits between name and price. */
-  align-items: stretch;
+  /* Cards hug their own content (no stretch) and every card shares the same
+     fixed anatomy — image, 2-line name, one reserved deal line, price+ADD — so
+     they come out equal height AND compact, with no dead white gap. */
+  align-items: start;
 }
 
 /* ─── Product card ───────────────────────────────────────── */
@@ -4058,9 +4058,24 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* Keep the tag line's height reserved so prices align across cards whether or
-   not an item is a bestseller (the weight moved onto the image). */
-.product-unit { min-height: 18px; display: flex; align-items: center; }
+/* Bestseller badge on the image (top-right) — keeps it off the deal line so
+   every card keeps the same height. */
+.product-best-tag {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.96);
+  color: #e0700c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+.product-unit { display: none; }
 
 /* ── Keep the ADD / qty-stepper inside the card on narrow phones ──────────── */
 /* The control is fixed-width; the price column shrinks (and its MRP wraps below
@@ -4125,11 +4140,13 @@ body {
 /* Pin the price+ADD row to the bottom of every (equal-height) card so all ADD
    buttons line up across the rail; the flexible space sits between the name
    and the price and reads as intentional breathing room. */
-/* Footer is a column: an optional full-width value line (Prime chip / save
-   pill) sits above the price+ADD row. The price+ADD row is always the last
-   child, so with the footer pinned to the card bottom every ADD button lines
-   up across the rail — and the chip has the full card width, never truncates. */
-.product-footer { margin-top: auto; padding-top: 10px; flex-direction: column; align-items: stretch; gap: 5px; }
+/* Footer packs directly under the name (no margin-top:auto → no dead gap). It
+   holds one reserved deal line then the price+ADD row. Because every card has
+   the same reserved deal line, all cards are the same height and their ADD
+   buttons line up — without stretching a void into short cards. */
+.product-footer { margin-top: 8px; padding-top: 0; flex-direction: column; align-items: stretch; gap: 6px; }
+.product-meta { min-height: 20px; display: flex; align-items: center; }
+.product-meta:empty { min-height: 20px; }
 .foot-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
 .foot-main > .product-price { flex: 1 1 auto; min-width: 0; }
 .foot-main > .add-btn,

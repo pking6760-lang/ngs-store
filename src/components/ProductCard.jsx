@@ -60,7 +60,12 @@ export default function ProductCard({ product, badge }) {
         />
         {/* Show the "Best price" tag only when there's no discount ribbon, so the
             two never collide in the same corner on a narrow card. */}
-        {badge && !outOfStock && discount === 0 && (
+        {/* Bestseller lives on the image (top-right) so it never adds a
+            variable row that would unbalance card heights. */}
+        {product.hot && !lowStock && !outOfStock && (
+          <span className="product-best-tag">★ Bestseller</span>
+        )}
+        {badge && !outOfStock && discount === 0 && !product.hot && (
           <span className="product-best">{badge}</span>
         )}
         {product.unit && !lowStock && !outOfStock && (
@@ -74,29 +79,25 @@ export default function ProductCard({ product, badge }) {
         {outOfStock && <span className="sold-out-tag">Out of stock</span>}
       </div>
       <div className="product-name">{product.name}</div>
-      <div className="product-unit">
-        {product.hot && !lowStock && !outOfStock && (
-          <span className="product-hot">Bestseller</span>
-        )}
-      </div>
       {showPacks && (
         <BulkPackSheet product={product} onClose={() => setShowPacks(false)} />
       )}
       <div className="product-footer">
-        {/* Value line spans the full card width directly above the price/ADD
-            row — the Prime chip can never truncate or collide, and because the
-            price/ADD row stays the footer's last child, every ADD button still
-            lines up along the bottom of the rail. */}
-        {showPrimeHint && !outOfStock ? (
-          <span className="prime-hint">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
-            </svg>
-            ₹{primePrice} with Prime
-          </span>
-        ) : savings > 0 && !outOfStock ? (
-          <span className="save-pill">Save ₹{savings}</span>
-        ) : null}
+        {/* One reserved deal line (Prime price / savings) — always present so
+            every card has the same anatomy: image → name → deal → price/ADD.
+            Cards pack their content top-down with no dead white gap. */}
+        <div className="product-meta">
+          {showPrimeHint && !outOfStock ? (
+            <span className="prime-hint">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
+              </svg>
+              ₹{primePrice} with Prime
+            </span>
+          ) : savings > 0 && !outOfStock ? (
+            <span className="save-pill">Save ₹{savings}</span>
+          ) : null}
+        </div>
         <div className="foot-main">
           <div className="product-price">
             <div className="price-line">
