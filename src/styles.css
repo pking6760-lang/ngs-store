@@ -3925,11 +3925,13 @@ body {
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
 
 /* ── Prime price hint (shown to guests / non-Prime on each card) ──────────── */
+/* Prime pill sits on its own full-width row below the price/ADD row so its
+   nowrap width can never collide with the ADD / "Save on packs" column. */
+.prime-row { margin-top: 6px; }
 .prime-hint {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 4px;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;

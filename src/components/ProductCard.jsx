@@ -91,14 +91,6 @@ export default function ProductCard({ product, badge }) {
           {savings > 0 && !outOfStock && (
             <span className="save-pill">Save ₹{savings}</span>
           )}
-          {showPrimeHint && !outOfStock && (
-            <span className="prime-hint">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
-              </svg>
-              ₹{primePrice} with Prime
-            </span>
-          )}
         </div>
         {outOfStock ? (
           <button className="add-btn out" disabled>
@@ -131,6 +123,16 @@ export default function ProductCard({ product, badge }) {
           </div>
         )}
       </div>
+      {showPrimeHint && !outOfStock && (
+        <div className="prime-row">
+          <span className="prime-hint">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
+            </svg>
+            ₹{primePrice} with Prime
+          </span>
+        </div>
+      )}
     </div>
   );
 }
