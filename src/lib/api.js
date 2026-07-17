@@ -1214,6 +1214,7 @@ export async function fetchNotifCampaigns() {
   return (data || []).map((c) => ({
     id: c.id, label: c.label, bucket: c.bucket, hour: c.hour_ist,
     dow: c.dow, onDate: c.on_date, enabled: c.enabled, lastRun: c.last_run,
+    recurMd: c.recur_md,
   }));
 }
 export async function updateNotifCampaign(id, patch) {
@@ -1221,6 +1222,7 @@ export async function updateNotifCampaign(id, patch) {
   if (patch.enabled !== undefined) p.enabled = patch.enabled;
   if (patch.hour !== undefined) p.hour_ist = patch.hour;
   if (patch.onDate !== undefined) p.on_date = patch.onDate || null;
+  if (patch.recurMd !== undefined) p.recur_md = patch.recurMd;
   const { error } = await must().from("notification_campaigns").update(p).eq("id", id);
   if (error) throw error; return { ok: true };
 }

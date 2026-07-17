@@ -2939,3 +2939,6 @@ body {
 .an-camp-when { display:flex; align-items:center; gap:6px; }
 .an-mini { padding:6px 8px; font-size:12.5px; }
 .an-tag { font-size:12px; font-weight:700; color:#3B5BDB; background:#eef2ff; padding:5px 9px; border-radius:8px; }
+.an-when-date { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.an-tag-year { color:#0b8a4c; background:#e9f8ef; white-space:nowrap; }
+.an-tag.an-warn { color:#e8590c; background:#fff2e8; }
