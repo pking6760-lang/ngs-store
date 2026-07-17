@@ -331,9 +331,10 @@ button {
   overflow-x: auto;
   padding-bottom: 8px;
   scrollbar-width: thin;
-  /* Each card hugs its own content instead of stretching to the tallest
-     sibling — otherwise short cards get a dead white block at the bottom. */
-  align-items: start;
+  /* Cards stretch to equal height; each card pins its price+ADD row to the
+     bottom (see .product-footer margin-top:auto) so every ADD button lines
+     up across the rail — the breathing room sits between name and price. */
+  align-items: stretch;
 }
 
 /* ─── Product card ───────────────────────────────────────── */
@@ -756,10 +757,25 @@ button {
   padding: 7px 16px;
   border-radius: 8px;
 }
-/* ADD + "N options" caption for products with pack choices. */
-.add-wrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.add-wrap .add-btn { width: 100%; }
-.add-opts { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: .01em; }
+/* ADD button for products with bulk packs: a slim "packs ›" cue stacks under
+   the label so the hint lives inside the button instead of dangling beside it. */
+.add-btn.has-packs {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  line-height: 1.05;
+}
+.add-packs-tag {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+.add-btn.has-packs:hover .add-packs-tag { opacity: 0.9; }
 .add-btn:hover {
   background: var(--green);
   color: #fff;
@@ -3928,22 +3944,26 @@ body {
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
 
 /* ── Prime price hint (shown to guests / non-Prime on each card) ──────────── */
-/* Prime pill sits on its own full-width row below the price/ADD row so its
-   nowrap width can never collide with the ADD / "Save on packs" column. */
-.prime-row { margin-top: 6px; }
+/* Slim value chip that sits directly under the real price inside the footer's
+   price column — self-aligned left, never dangles, can't collide with ADD. */
 .prime-hint {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
+  gap: 3px;
+  margin-top: 3px;
+  max-width: 100%;
+  padding: 2px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: #8a5a00;
   background: linear-gradient(135deg, #fff4d6, #ffe9b0);
   border: 1px solid #f2d488;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .prime-hint svg { color: #d09414; flex: 0 0 auto; }
 
@@ -4055,7 +4075,9 @@ body {
 .product-image { height: 132px; }
 .product-name {
   margin-top: 9px;
-  min-height: 0;
+  /* Reserve two lines so every card's price row starts at the same height and
+     lines up across the rail, whether the name is one line or two. */
+  min-height: 2.6em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -4063,7 +4085,10 @@ body {
 }
 .product-unit { margin: 0; }
 .product-unit:empty { display: none; }
-.product-footer { margin-top: 8px; padding-top: 0; align-items: center; }
+/* Pin the price+ADD row to the bottom of every (equal-height) card so all ADD
+   buttons line up across the rail; the flexible space sits between the name
+   and the price and reads as intentional breathing room. */
+.product-footer { margin-top: auto; padding-top: 10px; align-items: flex-end; gap: 8px; }
 
 /* ── Professional checkout: ETA banner, order review, instructions, policy ── */
 .checkout-step { display: flex; flex-direction: column; gap: 12px; }

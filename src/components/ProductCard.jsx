@@ -88,21 +88,29 @@ export default function ProductCard({ product, badge }) {
               <span className="price-mrp">₹{product.mrp}</span>
             )}
           </div>
-          {savings > 0 && !outOfStock && (
+          {/* Prime price sits right under the real price as a slim value chip —
+              never dangles, reads as "unlock this rate". Falls back to a plain
+              savings pill when there's no Prime advantage to show. */}
+          {showPrimeHint && !outOfStock ? (
+            <span className="prime-hint">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
+              </svg>
+              ₹{primePrice} with Prime
+            </span>
+          ) : savings > 0 && !outOfStock ? (
             <span className="save-pill">Save ₹{savings}</span>
-          )}
+          ) : null}
         </div>
         {outOfStock ? (
           <button className="add-btn out" disabled>
             Sold out
           </button>
         ) : qty === 0 && bulkTier && bulkHelps ? (
-          <div className="add-wrap">
-            <button className="add-btn" onClick={() => setShowPacks(true)}>
-              ADD
-            </button>
-            <span className="add-opts">Save on packs</span>
-          </div>
+          <button className="add-btn has-packs" onClick={() => setShowPacks(true)}>
+            ADD
+            <span className="add-packs-tag">packs ›</span>
+          </button>
         ) : qty === 0 ? (
           <button className="add-btn" onClick={() => add(product.id, product.stock)}>
             ADD
@@ -123,16 +131,6 @@ export default function ProductCard({ product, badge }) {
           </div>
         )}
       </div>
-      {showPrimeHint && !outOfStock && (
-        <div className="prime-row">
-          <span className="prime-hint">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
-            </svg>
-            ₹{primePrice} with Prime
-          </span>
-        </div>
-      )}
     </div>
   );
 }
