@@ -331,6 +331,9 @@ button {
   overflow-x: auto;
   padding-bottom: 8px;
   scrollbar-width: thin;
+  /* Each card hugs its own content instead of stretching to the tallest
+     sibling — otherwise short cards get a dead white block at the bottom. */
+  align-items: start;
 }
 
 /* ─── Product card ───────────────────────────────────────── */
