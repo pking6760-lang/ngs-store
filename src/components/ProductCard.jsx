@@ -41,6 +41,15 @@ export default function ProductCard({ product, badge }) {
 
   return (
     <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
+      {/* Folded corner ribbon — a card-level element (not clipped by the image)
+          that hugs the left edge and tucks behind the card via the ::after
+          fold, so it reads as wrapping from behind rather than sitting on top
+          of the product. */}
+      {discount > 0 && !outOfStock && (
+        <span className="product-ribbon">
+          <b>{discount}%</b> OFF
+        </span>
+      )}
       <div className="product-image">
         <ProductThumb
           image={product.image}
@@ -53,13 +62,6 @@ export default function ProductCard({ product, badge }) {
             two never collide in the same corner on a narrow card. */}
         {badge && !outOfStock && discount === 0 && (
           <span className="product-best">{badge}</span>
-        )}
-        {discount > 0 && !outOfStock && (
-          <span className="product-badge">
-            <span className="product-badge-inner">
-              <b>{discount}%</b> OFF
-            </span>
-          </span>
         )}
         {product.unit && !lowStock && !outOfStock && (
           <span className="product-weight">{product.unit}</span>
