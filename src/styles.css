@@ -2760,6 +2760,8 @@ input:focus-visible {
   padding: 9px;
   box-sizing: border-box;
   color: #2e3d34;
+  /* Uniform soft background for every tile (like the reference). */
+  background: #eef4f1;
   box-shadow: inset 0 0 0 1px rgba(16, 40, 20, 0.05);
 }
 /* Photo shows whole (contain) so the product reads clearly, like the reference. */

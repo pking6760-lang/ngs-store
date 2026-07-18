@@ -402,7 +402,7 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
               className="category-tile"
               onClick={() => onCategoryClick(c)}
             >
-              <span className="category-thumb" style={{ background: c.color }}>
+              <span className="category-thumb">
                 {c.image
                   ? <img className="category-img" src={c.image} alt="" loading="lazy" />
                   : <CategoryIcon id={c.id} name={c.name} size={40} />}
