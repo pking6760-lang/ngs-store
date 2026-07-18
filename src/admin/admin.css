@@ -991,7 +991,12 @@ body {
 }
 .scan-status.busy { color: #2B44A8; }
 .scan-status.ok { color: #1b7a3d; }
-.scan-status.miss { color: #b45309; }
+.scan-status.miss { color: #b45309; flex-wrap: wrap; }
+.scan-open-existing {
+  border: 1px solid #f4c9a0; background: #fff5ec; color: #b45309;
+  font-weight: 800; font-size: 12px; padding: 4px 12px; border-radius: 8px; cursor: pointer;
+}
+.scan-open-existing:hover { background: #ffe9d5; }
 .name-search { display: flex; gap: 8px; }
 .name-search input { flex: 1; min-width: 0; }
 .name-search-btn {

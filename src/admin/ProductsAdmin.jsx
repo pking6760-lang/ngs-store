@@ -187,8 +187,11 @@ export default function ProductsAdmin() {
       {editing && (
         <AdminPortal>
           <ProductModal
+            key={editing.id || "new"}
             product={editing}
             categories={categories}
+            products={products}
+            onOpenExisting={(p) => setEditing(p)}
             onClose={() => setEditing(null)}
             onSave={async (prod) => {
               await upsertProduct(prod);
@@ -357,8 +360,25 @@ function CategoryManager({ categories, products, onClose }) {
   );
 }
 
-function ProductModal({ product, categories, onClose, onSave, onDelete }) {
+function ProductModal({ product, categories, products = [], onOpenExisting, onClose, onSave, onDelete }) {
   const isNew = !product.id;
+
+  // Find an EXISTING product that clashes with this one so we never create a
+  // duplicate. A clash = same barcode, OR same name AND same size (a same-name
+  // item in a DIFFERENT size — e.g. 455 ml vs 910 ml — is a real separate
+  // product, so it's allowed). Excludes the product being edited.
+  function findDuplicate({ barcode, name, unit }) {
+    const bc = (barcode || "").trim();
+    const nm = (name || "").trim().toLowerCase();
+    const un = (unit || "").trim().toLowerCase();
+    return products.find((p) => {
+      if (p.id === product.id) return false;
+      if (bc && (p.barcode || "").trim() === bc) return true;
+      if (nm && (p.name || "").trim().toLowerCase() === nm &&
+          un && (p.unit || "").trim().toLowerCase() === un) return true;
+      return false;
+    });
+  }
   const [form, setForm] = useState(product);
   const [imgBusy, setImgBusy] = useState(false);
   const [imgError, setImgError] = useState("");
@@ -402,6 +422,12 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   async function onScanned(code) {
     setScanErr("");
     update("barcode", code); // save the scanned barcode on the product
+    // Already in the shop's catalogue? Don't add a duplicate — point to it.
+    const dup = findDuplicate({ barcode: code });
+    if (dup) {
+      setLookup({ busy: false, ok: false, dup, msg: `“${dup.name}” is already in your list.` });
+      return;
+    }
     setLookup({ busy: true, msg: `Looking up ${code}…` });
     const res = await lookupProductByBarcode(code, categories.map((c) => c.name));
     applyLookup(res);
@@ -476,6 +502,14 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
   async function submit(e) {
     e.preventDefault();
     if (saveBusy) return;
+    // Safety net: never save a NEW product that clashes with an existing one.
+    if (isNew) {
+      const dup = findDuplicate({ barcode: form.barcode, name: form.name, unit: form.unit });
+      if (dup) {
+        setLookup({ busy: false, ok: false, dup, msg: `“${dup.name}” is already in your list — open it to edit instead of adding a duplicate.` });
+        return;
+      }
+    }
     const price = Number(form.price) || 0;
     const mrp = Number(form.mrp) || price;
     let categoryId = form.category;
@@ -560,6 +594,11 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
               <p className={`scan-status ${lookup.busy ? "busy" : lookup.ok ? "ok" : "miss"}`}>
                 {lookup.busy && <span className="ngs-spin" aria-hidden />}
                 {lookup.msg}
+                {lookup.dup && onOpenExisting && (
+                  <button type="button" className="scan-open-existing" onClick={() => onOpenExisting(lookup.dup)}>
+                    Open it
+                  </button>
+                )}
               </p>
             )}
           </div>
