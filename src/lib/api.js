@@ -7,6 +7,7 @@
 // price, a total, or a points balance. Reads are protected by Row-Level
 // Security, so a customer only ever sees their own orders/points/profile.
 import { supabase, isBackendConfigured } from "./supabase.js";
+import { fileToResizedBlob } from "./image.js";
 
 export { isBackendConfigured };
 
@@ -657,6 +658,20 @@ export async function getMyPartner() {
     .from("partners").select("*").eq("user_id", u.user.id).maybeSingle();
   if (error) throw error;
   return mapPartner(data);
+}
+
+// Upload a product photo to the public product-images bucket → returns its CDN
+// URL. Images live in Storage (served + cached by the CDN, loaded lazily per
+// card), NOT as base64 in the products row — so the product list stays tiny
+// no matter how many photos are added.
+export async function uploadProductImage(file) {
+  const blob = await fileToResizedBlob(file);
+  const name = `p${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const { error } = await must().storage
+    .from("product-images").upload(name, blob, { contentType: "image/jpeg", upsert: true });
+  if (error) throw error;
+  const { data } = must().storage.from("product-images").getPublicUrl(name);
+  return data.publicUrl;
 }
 
 // Upload one KYC photo to the private bucket → returns its storage path.

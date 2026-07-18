@@ -10,9 +10,8 @@ import {
   addCategory,
   deleteCategory,
 } from "../lib/actions.js";
-import { fileToResizedDataUrl } from "../lib/image.js";
 import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory, proposeNewCategory } from "../lib/productLookup.js";
-import { smartReprice } from "../lib/api.js";
+import { smartReprice, uploadProductImage } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { Ic } from "./AdminIcons.jsx";
@@ -418,10 +417,12 @@ function ProductModal({ product, categories, onClose, onSave, onDelete }) {
     setImgBusy(true);
     setImgError("");
     try {
-      const dataUrl = await fileToResizedDataUrl(file);
-      update("image", dataUrl);
+      // Upload to Storage and keep only the CDN URL — never embed base64 in
+      // the products row (that bloated the list payload and stalled the app).
+      const url = await uploadProductImage(file);
+      update("image", url);
     } catch (err) {
-      setImgError(err.message);
+      setImgError(err.message || "Couldn't upload that photo.");
     } finally {
       setImgBusy(false);
     }

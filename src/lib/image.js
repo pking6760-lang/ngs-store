@@ -34,6 +34,44 @@ export function fileToResizedDataUrl(file, max = 600, quality = 0.82) {
   });
 }
 
+// Same downscale, but output a JPEG Blob (for uploading to Storage instead of
+// embedding a huge base64 string in the database row).
+export function fileToResizedBlob(file, max = 600, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith("image/")) {
+      reject(new Error("Please choose an image file."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Couldn't read that file."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("That image couldn't be loaded."));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > max) {
+          height = Math.round((height * max) / width);
+          width = max;
+        } else if (height > max) {
+          width = Math.round((width * max) / height);
+          height = max;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("Couldn't process that image."))),
+          "image/jpeg",
+          quality
+        );
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // Download an image by URL (e.g. an Open Food Facts product photo) and turn it
 // into the same small, self-contained data URL a manual upload produces — so a
 // barcode-filled product doesn't depend on an external CDN staying up. The
