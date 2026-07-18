@@ -324,7 +324,7 @@ export default function Dashboard({ onNavigate }) {
             {topCategories.map((c) => (
               <div className="cat-bar-row" key={c.id}>
                 <span className="cat-bar-label">
-                  <CategoryIcon id={c.id} size={16} /> {c.name}
+                  <CategoryIcon id={c.id} name={c.name} size={16} /> {c.name}
                 </span>
                 <div className="cat-bar-track">
                   <div

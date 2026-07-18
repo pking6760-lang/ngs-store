@@ -292,7 +292,7 @@ function CategoryManager({ categories, products, onClose }) {
                     className="cat-list-swatch"
                     style={{ background: c.color }}
                   >
-                    <CategoryIcon id={c.id} size={18} />
+                    <CategoryIcon id={c.id} name={c.name} size={18} />
                   </span>
                   <span className="cat-list-name">{c.name}</span>
                   <span className="cat-list-count">{count} items</span>

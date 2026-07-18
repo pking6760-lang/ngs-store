@@ -403,7 +403,7 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
               style={{ background: c.color }}
               onClick={() => onCategoryClick(c)}
             >
-              <span className="category-icon"><CategoryIcon id={c.id} /></span>
+              <span className="category-icon"><CategoryIcon id={c.id} name={c.name} /></span>
               <span className="category-name">{c.name}</span>
             </button>
           ))}
@@ -445,7 +445,7 @@ function CategoryView({ category, products, sort, onSortChange, onBack }) {
           ← Back
         </button>
         <h2 className="section-title cat-title">
-          <CategoryIcon id={category.id} size={20} /> {category.name}
+          <CategoryIcon id={category.id} name={category.name} size={20} /> {category.name}
         </h2>
         <span className="count-pill">{list.length} items</span>
       </div>
