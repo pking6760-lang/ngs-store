@@ -32,8 +32,6 @@ export default function BulkPackSheet({ product, onClose }) {
   const selUnit = tierUnitPrice(product, sel, user, settings.rewards);
   const selTotal = selUnit * sel;
   const selSave = mrp * sel - selTotal;
-  const unit1 = tierUnitPrice(product, 1, user, settings.rewards);
-  const disc = mrp > unit1 ? Math.round(((mrp - unit1) / mrp) * 100) : 0;
 
   function add() {
     setQty(product.id, Math.min(sel, stock));
@@ -49,7 +47,6 @@ export default function BulkPackSheet({ product, onClose }) {
         <div className="pd-hero">
           <div className="pd-hero-img">
             <ProductThumb image={product.image} name={product.name} category={product.category} fill radius={16} />
-            {disc > 0 && <span className="pd-hero-off">{disc}% OFF</span>}
           </div>
           <div className="pd-hero-info">
             <div className="pd-hero-name">{product.name}</div>
