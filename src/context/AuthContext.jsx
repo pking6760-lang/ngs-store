@@ -9,6 +9,20 @@ import * as api from "../lib/api.js";
 const BACKEND = api.isBackendConfigured;
 const USERS_KEY = "ngs-users-v1";
 const SESSION_KEY = "ngs-current-user-v1";
+// Last-known profile, cached so a returning customer is shown as logged-in
+// INSTANTLY on open (no waiting for a network profile fetch). We verify the
+// session + refresh the profile in the background right after.
+const PROFILE_KEY = "ngs-profile-v1";
+function readCachedProfile() {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || "null"); }
+  catch { return null; }
+}
+function writeCachedProfile(p) {
+  try {
+    if (p) localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+    else localStorage.removeItem(PROFILE_KEY);
+  } catch { /* ignore */ }
+}
 // Remember the "we've sent you a code, waiting for it" state so that if the
 // customer switches to their email app (and the mobile browser reloads the
 // tab when they come back) they land straight back on the code screen instead
@@ -46,7 +60,9 @@ export function AuthProvider({ children }) {
 
 /* ─── Backend auth (Supabase email OTP) ─────────────────────────────────── */
 function BackendAuth({ children }) {
-  const [user, setUser] = useState(null);
+  // Seed from the cached profile so the app renders logged-in on the very first
+  // frame — no logged-out flash, no waiting on the network.
+  const [user, setUser] = useState(readCachedProfile);
   const [ready, setReady] = useState(false);
   const [pendingEmail, setPendingEmailState] = useState(readPending);
 
@@ -64,7 +80,8 @@ function BackendAuth({ children }) {
       const p = await api.getMyProfile();
       if (soft && !p) return; // logged in but the read came back empty → keep what we have
       setUser(p);
-    } catch { if (!soft) setUser(null); }
+      writeCachedProfile(p);  // keep the instant-login cache fresh
+    } catch { if (!soft) { setUser(null); writeCachedProfile(null); } }
   }
 
   // Track whether someone is signed in so the focus refresh doesn't hammer the
@@ -74,14 +91,25 @@ function BackendAuth({ children }) {
 
   useEffect(() => {
     let alive = true;
-    api.getSession().then(async (s) => {
+    api.getSession().then((s) => {
       if (!alive) return;
-      if (s) { await refresh(); setPendingEmail(null); }
+      if (s) {
+        // Session is valid → we're logged in. Update the profile in the
+        // BACKGROUND (soft, so a slow/failed network never blanks the UI). The
+        // cached profile already rendered instantly above.
+        refresh(true);
+        setPendingEmail(null);
+      } else {
+        // No session → genuinely logged out. Clear the optimistic cache.
+        setUser(null);
+        writeCachedProfile(null);
+      }
       setReady(true);
     });
     const unsub = api.onAuthChange(async (session) => {
-      if (session) { await refresh(); setPendingEmail(null); }
-      else setUser(null);
+      // Soft on sign-in / token-refresh so it never flashes to logged-out.
+      if (session) { refresh(true); setPendingEmail(null); }
+      else { setUser(null); writeCachedProfile(null); }
     });
     return () => { alive = false; unsub(); };
   }, []);
@@ -137,7 +165,7 @@ function BackendAuth({ children }) {
 
     cancelOtp() { setPendingEmail(null); },
 
-    async logout() { await api.signOut(); setUser(null); },
+    async logout() { await api.signOut(); setUser(null); writeCachedProfile(null); },
 
     async updateProfile(patch) {
       try {
