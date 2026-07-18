@@ -9,9 +9,10 @@ import {
   deleteProduct,
   addCategory,
   deleteCategory,
+  updateCategory,
 } from "../lib/actions.js";
 import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory, proposeNewCategory } from "../lib/productLookup.js";
-import { smartReprice, uploadProductImage } from "../lib/api.js";
+import { smartReprice, uploadProductImage, uploadCategoryImage } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { Ic } from "./AdminIcons.jsx";
@@ -221,18 +222,49 @@ export default function ProductsAdmin() {
 
 function CategoryManager({ categories, products, onClose }) {
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState("");
+  const [newImg, setNewImg] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false); // holds the id being uploaded, or "new"
+
+  async function upload(file) {
+    if (!file) return null;
+    try { return await uploadCategoryImage(file); }
+    catch (e) { setError(e.message || "Couldn't upload that image."); return null; }
+  }
+
+  async function pickNewImage(e) {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    setBusy("new"); setError("");
+    const url = await upload(file);
+    if (url) setNewImg(url);
+    setBusy(false);
+  }
+
+  async function setCatImage(cat, e) {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    setBusy(cat.id); setError("");
+    const url = await upload(file);
+    if (url) { const r = await updateCategory(cat.id, { image: url }); if (!r.ok) setError(r.error); }
+    setBusy(false);
+  }
+
+  async function clearCatImage(cat) {
+    setError("");
+    const r = await updateCategory(cat.id, { image: "" });
+    if (!r.ok) setError(r.error);
+  }
 
   async function add(e) {
     e.preventDefault();
-    const res = await addCategory({ name, icon }, categories);
+    const res = await addCategory({ name, image: newImg }, categories);
     if (!res.ok) {
       setError(res.error);
       return;
     }
     setName("");
-    setIcon("");
+    setNewImg("");
     setError("");
   }
 
@@ -261,13 +293,12 @@ function CategoryManager({ categories, products, onClose }) {
 
         <div className="cat-manager">
           <form className="cat-add" onSubmit={add}>
-            <input
-              className="cat-icon-input"
-              value={icon}
-              onChange={(e) => setIcon(e.target.value.slice(0, 2))}
-              aria-label="Category icon"
-              maxLength={2}
-            />
+            <label className="cat-add-photo" title="Add a photo (optional)">
+              {newImg
+                ? <img src={newImg} alt="" />
+                : <span>{busy === "new" ? "…" : "＋ Photo"}</span>}
+              <input type="file" accept="image/*" hidden onChange={pickNewImage} />
+            </label>
             <input
               className="cat-name-input"
               value={name}
@@ -281,6 +312,7 @@ function CategoryManager({ categories, products, onClose }) {
               Add
             </button>
           </form>
+          <p className="cat-hint">Add a photo for a more professional look — or leave it and we’ll show a matching icon.</p>
           {error && <div className="auth-error">{error}</div>}
 
           <ul className="cat-list">
@@ -292,10 +324,21 @@ function CategoryManager({ categories, products, onClose }) {
                     className="cat-list-swatch"
                     style={{ background: c.color }}
                   >
-                    <CategoryIcon id={c.id} name={c.name} size={18} />
+                    {c.image
+                      ? <img className="cat-list-img" src={c.image} alt="" />
+                      : <CategoryIcon id={c.id} name={c.name} size={18} />}
                   </span>
                   <span className="cat-list-name">{c.name}</span>
                   <span className="cat-list-count">{count} items</span>
+                  <label className="cat-list-photo" title={c.image ? "Change photo" : "Add photo"}>
+                    {busy === c.id ? "…" : <Ic name="camera" size={16} />}
+                    <input type="file" accept="image/*" hidden onChange={(e) => setCatImage(c, e)} />
+                  </label>
+                  {c.image && (
+                    <button type="button" className="cat-list-del" onClick={() => clearCatImage(c)} aria-label={`Remove ${c.name} photo`} title="Remove photo">
+                      <Ic name="x" size={15} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="cat-list-del"

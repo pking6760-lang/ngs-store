@@ -2757,6 +2757,9 @@ input:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(16,40,20,0.05), 0 3px 8px rgba(16,40,20,0.08);
   color: #2e3d34;
 }
+/* A custom category photo fills the tile's icon box. */
+.category-icon { overflow: hidden; }
+.category-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 .category-name { font-size: 12.5px; font-weight: 750; letter-spacing: -0.01em; }
 .cat-title { display: flex; align-items: center; gap: 8px; }
 .cat-title svg { color: var(--green-dark, #178a3a); flex: none; }

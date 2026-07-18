@@ -403,7 +403,11 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
               style={{ background: c.color }}
               onClick={() => onCategoryClick(c)}
             >
-              <span className="category-icon"><CategoryIcon id={c.id} name={c.name} /></span>
+              <span className="category-icon">
+                {c.image
+                  ? <img className="category-img" src={c.image} alt="" loading="lazy" />
+                  : <CategoryIcon id={c.id} name={c.name} />}
+              </span>
               <span className="category-name">{c.name}</span>
             </button>
           ))}

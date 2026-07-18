@@ -33,7 +33,7 @@ export async function deleteProduct(id) {
 }
 
 /* ─── Categories ────────────────────────────────────────── */
-export async function addCategory({ name, icon }, existing = []) {
+export async function addCategory({ name, icon, image }, existing = []) {
   const clean = (name || "").trim();
   if (!clean) return { ok: false, error: "Please enter a category name." };
   if (!BACKEND) return store.addCategory({ name, icon });
@@ -41,9 +41,16 @@ export async function addCategory({ name, icon }, existing = []) {
     return { ok: false, error: "That category already exists." };
   const base = clean.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const category = { id: (base || "cat") + "-" + Math.random().toString(36).slice(2, 6),
-    name: clean, icon: (icon || "").trim() || "🏷️",
+    name: clean, icon: (icon || "").trim() || "🏷️", image_url: image || null,
     color: CATEGORY_COLORS[existing.length % CATEGORY_COLORS.length], sort: existing.length };
   try { await api.addCategory(category); return { ok: true, category }; }
+  catch (e) { return { ok: false, error: e.message }; }
+}
+
+// Set a category's photo (or clear it with image = "").
+export async function updateCategory(id, patch) {
+  if (!BACKEND) return { ok: true };
+  try { await api.updateCategory(id, patch); return { ok: true }; }
   catch (e) { return { ok: false, error: e.message }; }
 }
 // Reassign products out of the category, then delete it (keeps the FK valid).

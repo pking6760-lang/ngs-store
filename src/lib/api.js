@@ -75,7 +75,7 @@ function mapProduct(r) {
     bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [] };
 }
 function mapCategory(r) {
-  return { id: r.id, name: r.name, icon: r.icon, color: r.color };
+  return { id: r.id, name: r.name, icon: r.icon, color: r.color, image: r.image_url || "" };
 }
 function mapCoupon(r) {
   return { code: r.code, type: r.type, value: num(r.value),
@@ -1060,6 +1060,28 @@ export async function addCategory(cat) {
   if (error) throw error;
   pingLocal("categories");
   return { ok: true };
+}
+
+export async function updateCategory(id, patch) {
+  const p = {};
+  if (patch.name !== undefined) p.name = patch.name;
+  if (patch.icon !== undefined) p.icon = patch.icon;
+  if (patch.image !== undefined) p.image_url = patch.image || null;
+  const { error } = await must().from("categories").update(p).eq("id", id);
+  if (error) throw error;
+  pingLocal("categories");
+  return { ok: true };
+}
+
+// Upload a category photo to the product-images CDN bucket → returns its URL.
+export async function uploadCategoryImage(file) {
+  const blob = await fileToResizedBlob(file, 400);   // categories are small tiles
+  const name = `cat${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const { error } = await must().storage
+    .from("product-images").upload(name, blob, { contentType: "image/jpeg", upsert: true });
+  if (error) throw error;
+  const { data } = must().storage.from("product-images").getPublicUrl(name);
+  return data.publicUrl;
 }
 
 export async function deleteCategory(id) {
