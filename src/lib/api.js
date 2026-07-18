@@ -660,6 +660,13 @@ export async function getMyPartner() {
   return mapPartner(data);
 }
 
+// Admin: app health snapshot (photos-in-DB, list payload size, storage ready…).
+export async function fetchAppHealth() {
+  const { data, error } = await must().rpc("app_health");
+  if (error) throw error;
+  return data;
+}
+
 // Upload a product photo to the public product-images bucket → returns its CDN
 // URL. Images live in Storage (served + cached by the CDN, loaded lazily per
 // card), NOT as base64 in the products row — so the product list stays tiny
