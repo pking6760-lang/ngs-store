@@ -344,7 +344,14 @@ function HomeSkeleton() {
 function HomeView({ products, categories, offer, onCategoryClick }) {
   if (products.length === 0) return <HomeSkeleton />;
   const byCategory = (id) => products.filter((p) => p.category === id);
-  const bestPrices = products.filter((p) => p.bait).slice(0, 12);
+  // Best Prices: biggest genuine deals first (highest % off MRP), then any other
+  // flagged deals — so the products you've discounted lead the section.
+  const bestPrices = products
+    .filter((p) => p.bait)
+    .map((p) => ({ p, off: p.mrp > p.price ? (p.mrp - p.price) / p.mrp : 0 }))
+    .sort((a, b) => b.off - a.off)
+    .slice(0, 12)
+    .map((x) => x.p);
   const almostGone = products
     .filter((p) => typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && p.inStock !== false)
     .sort((a, b) => a.stock - b.stock)
