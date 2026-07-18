@@ -405,7 +405,7 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
               <span className="category-thumb">
                 {c.image
                   ? <img className="category-img" src={c.image} alt="" loading="lazy" />
-                  : <CategoryIcon id={c.id} name={c.name} size={40} />}
+                  : <CategoryIcon id={c.id} name={c.name} size={46} />}
               </span>
               <span className="category-name">{c.name}</span>
             </button>
