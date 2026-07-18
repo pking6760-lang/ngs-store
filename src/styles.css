@@ -1465,8 +1465,8 @@ button {
     height: 40px;
   }
   .category-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px 9px;
   }
   .product-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -2738,29 +2738,40 @@ input:focus-visible {
 .banner-emoji { font-size: 52px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.16)); }
 
 /* ─── Category tiles ─── */
-.category-grid { gap: 12px; }
+/* Big-image category tiles (Blinkit-style): a large photo tile with the name
+   BELOW it, so the product image feels prominent instead of a tiny icon. */
+.category-grid { gap: 12px 10px; }
 .category-tile {
   position: relative;
-  border: 1px solid rgba(16, 40, 20, 0.05);
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  gap: 7px;
+  transition: transform 0.16s ease;
+}
+.category-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: 18px;
-  padding: 16px 10px 14px;
-  gap: 9px;
-  box-shadow: var(--shadow);
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
-}
-.category-tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
-.category-tile:active { transform: translateY(-1px) scale(0.99); }
-.category-icon {
-  display: grid; place-items: center;
-  width: 52px; height: 52px; border-radius: 15px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 0 0 1px rgba(16,40,20,0.05), 0 3px 8px rgba(16,40,20,0.08);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 9px;
+  box-sizing: border-box;
   color: #2e3d34;
+  box-shadow: inset 0 0 0 1px rgba(16, 40, 20, 0.05);
 }
-/* A custom category photo fills the tile's icon box. */
-.category-icon { overflow: hidden; }
-.category-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
-.category-name { font-size: 12.5px; font-weight: 750; letter-spacing: -0.01em; }
+/* Photo shows whole (contain) so the product reads clearly, like the reference. */
+.category-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.category-tile:hover .category-thumb { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.category-tile:active { transform: translateY(-1px) scale(0.99); }
+.category-name {
+  font-size: 11.5px; font-weight: 700; letter-spacing: -0.01em;
+  text-align: center; line-height: 1.22; color: var(--ink, #15201a);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: 2.4em;
+}
 .cat-title { display: flex; align-items: center; gap: 8px; }
 .cat-title svg { color: var(--green-dark, #178a3a); flex: none; }
 
