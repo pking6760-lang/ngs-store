@@ -13,13 +13,19 @@ const CATEGORY_COLORS = [
 
 /* ─── Products ──────────────────────────────────────────── */
 function productToDb(p) {
-  return { id: p.id, name: p.name, unit: p.unit || "", price: Number(p.price) || 0,
-    mrp: p.mrp != null ? Number(p.mrp) : null, icon: p.icon || "",
+  const price = Number(p.price) || 0;
+  const mrp = p.mrp != null ? Number(p.mrp) : null;
+  // Owner set their OWN selling price (below MRP) → lock it from auto-pricing.
+  // Selling price == MRP → leave automation on.
+  const manual = mrp != null && price > 0 && price < mrp;
+  return { id: p.id, name: p.name, unit: p.unit || "", price,
+    mrp, icon: p.icon || "",
     barcode: p.barcode ? String(p.barcode).replace(/\D/g, "") || null : null,
     image_url: p.image || null, category: p.category,
     stock: p.stock === "" || p.stock == null ? null : Number(p.stock),
     free_delivery_exempt: p.freeDeliveryExempt === true,
     no_rewards: p.noRewards === true,
+    manual_price: manual,
     active: p.active !== false };
 }
 export async function upsertProduct(p) {

@@ -28,10 +28,16 @@ export default function BulkPackSheet({ product, onClose }) {
     if (q === 1 || u < lastUnit) { packs.push(q); lastUnit = u; }
   }
 
+  // The customer's "first price" is the SELLING price. MRP is only the crossed
+  // price on a single unit (the MRP discount). Bulk packs, though, discount
+  // FROM the selling price — so a pack's saving is measured against buying that
+  // many units at the normal selling price, not against MRP.
+  const refTotal = (q) => (q === 1 ? mrp : base) * q;
+
   const [sel, setSel] = useState(inCart && packs.includes(inCart) ? inCart : packs[0]);
   const selUnit = tierUnitPrice(product, sel, user, settings.rewards);
   const selTotal = selUnit * sel;
-  const selSave = mrp * sel - selTotal;
+  const selSave = refTotal(sel) - selTotal;
 
   function add() {
     setQty(product.id, Math.min(sel, stock));
@@ -63,7 +69,8 @@ export default function BulkPackSheet({ product, onClose }) {
           {packs.map((q) => {
             const unit = tierUnitPrice(product, q, user, settings.rewards);
             const total = unit * q;
-            const save = mrp * q - total;
+            const ref = refTotal(q);
+            const save = ref - total;
             const on = sel === q;
             return (
               <button
@@ -79,7 +86,7 @@ export default function BulkPackSheet({ product, onClose }) {
                 </span>
                 <span className="pd-pack-price">
                   ₹{total}
-                  {save > 0 && <s>₹{mrp * q}</s>}
+                  {save > 0 && <s>₹{ref}</s>}
                 </span>
               </button>
             );
