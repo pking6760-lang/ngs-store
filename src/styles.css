@@ -3470,6 +3470,8 @@ input:focus-visible {
   padding: 11px; font-size: 13px; font-weight: 700; color: #333;
 }
 .sub-pay-btn.on { border-color: #1f7a44; background: #eaf6ee; color: #1f7a44; }
+.sub-pay-btn.low, .sub-pay-btn:disabled { opacity: .5; }
+.sub-pay-hint { font-size: 12px; color: #c0700c; margin: 8px 2px 0; line-height: 1.4; }
 .sub-note { font-size: 12px; color: #7a8a7f; line-height: 1.5; margin: 12px 0 4px; }
 .sub-days-custom { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px; }
 .sub-days-custom input {

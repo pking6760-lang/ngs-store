@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createSubscriptionOrder, createRazorpayOrder, verifyRazorpayPayment } from "../lib/api.js";
+import { useEffect, useMemo, useState } from "react";
+import { createSubscriptionOrder, createRazorpayOrder, verifyRazorpayPayment, walletBalance } from "../lib/api.js";
 import { loadRazorpay, RAZORPAY_ENABLED } from "../lib/payments.js";
 import { toast } from "../lib/toast.js";
 
@@ -13,19 +13,39 @@ const HOURS = [6, 7, 8, 9, 10, 11, 12, 17, 18, 19, 20];
 export default function SubscribeSheet({ open, onClose, items, summaryProducts, dailyTotal, deliveryFee = 10, address, location, payment, user, onCreated }) {
   const [days, setDays] = useState(7);
   const [hour, setHour] = useState(8);
-  const [pay, setPay] = useState(RAZORPAY_ENABLED ? "wallet" : "wallet");
+  const [pay, setPay] = useState("wallet");
   const [busy, setBusy] = useState(false);
+  const [walletBal, setWalletBal] = useState(null); // null = still loading
+
+  const perItems = Math.round(dailyTotal || 0);
+  const fee = Math.round(deliveryFee || 0);
+  const perDay = perItems + fee;          // items + convenience fee
+  const total = perDay * days;
+  const walletKnown = walletBal != null;
+  const walletEnough = !walletKnown || walletBal >= total;
 
   const summary = useMemo(() => {
     const byId = Object.fromEntries((summaryProducts || []).map((p) => [p.id, p]));
     return (items || []).map((it) => ({ name: byId[it.id]?.name || "Item", qty: it.qty }));
   }, [items, summaryProducts]);
 
+  // Load the wallet balance when the sheet opens, so we can show it and never
+  // strand the customer on a payment method that can't cover the plan.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    setWalletBal(null);
+    walletBalance().then((b) => { if (alive) setWalletBal(Number(b) || 0); })
+      .catch(() => { if (alive) setWalletBal(0); });
+    return () => { alive = false; };
+  }, [open]);
+
+  // If the wallet can't cover the plan, switch to online automatically.
+  useEffect(() => {
+    if (walletKnown && !walletEnough && pay === "wallet" && RAZORPAY_ENABLED) setPay("razorpay");
+  }, [walletKnown, walletEnough, pay]);
+
   if (!open) return null;
-  const perItems = Math.round(dailyTotal || 0);
-  const fee = Math.round(deliveryFee || 0);
-  const perDay = perItems + fee;          // items + daily doorstep charge
-  const total = perDay * days;
 
   async function start() {
     if (busy) return;
@@ -97,7 +117,8 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
               </button>
             ))}
             <label className={`sub-freq-btn sub-days-custom ${!DAY_PRESETS.includes(days) ? "on" : ""}`}>
-              <input type="number" min="1" max="30" value={days}
+              <input type="number" min="1" max="30" placeholder="Other"
+                value={DAY_PRESETS.includes(days) ? "" : days}
                 onChange={(e) => setDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
               <span>days</span>
             </label>
@@ -110,11 +131,23 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
 
           <div className="sub-field-lbl">Pay in advance by</div>
           <div className="sub-pay">
-            <button className={`sub-pay-btn ${pay === "wallet" ? "on" : ""}`} onClick={() => setPay("wallet")}>NGS Wallet</button>
+            <button
+              className={`sub-pay-btn ${pay === "wallet" ? "on" : ""} ${walletKnown && !walletEnough ? "low" : ""}`}
+              disabled={walletKnown && !walletEnough}
+              onClick={() => setPay("wallet")}
+            >
+              NGS Wallet{walletKnown ? ` · ₹${Math.round(walletBal)}` : ""}
+            </button>
             {RAZORPAY_ENABLED && (
               <button className={`sub-pay-btn ${pay === "razorpay" ? "on" : ""}`} onClick={() => setPay("razorpay")}>Pay online</button>
             )}
           </div>
+          {walletKnown && !walletEnough && (
+            <p className="sub-pay-hint">
+              Wallet has ₹{Math.round(walletBal)} — not enough for this plan.{" "}
+              {RAZORPAY_ENABLED ? "Paying online instead." : "Add money to your wallet to start."}
+            </p>
+          )}
 
           <div className="sub-total">
             <div className="sub-total-line"><span>Items</span><span>₹{perItems}/day</span></div>
