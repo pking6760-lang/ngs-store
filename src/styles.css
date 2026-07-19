@@ -4082,7 +4082,7 @@ body {
    deal line so every card keeps the same height. */
 .product-best-tag {
   position: absolute;
-  top: 7px;
+  bottom: 7px;
   right: 7px;
   z-index: 3;
   display: inline-flex;
