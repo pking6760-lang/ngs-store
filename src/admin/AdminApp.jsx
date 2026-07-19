@@ -203,18 +203,33 @@ function AdminSection({ view, onOpen }) {
   );
 }
 
-// Store open/close + delivery-mode (normal / surge) toggles.
+// Sensible defaults if a store has no automation config saved yet.
+const DEFAULT_AUTOMATION = {
+  hours: { on: true, open: 8, close: 23 }, rain: { on: true }, peak: { on: true, min: 4, mult: 3 },
+};
+const hourText = (h) => {
+  const n = Number(h); if (Number.isNaN(n)) return "--";
+  const ap = n < 12 ? "am" : "pm"; let hh = n % 12; if (hh === 0) hh = 12;
+  return `${hh}${ap}`;
+};
+
+// Store open/close + delivery-mode (normal / surge) toggles, plus the auto-pilot
+// panel that opens/closes the store on a schedule and surges on rain / peak.
 export function StoreControls() {
   const settings = useSettings();
   const [busy, setBusy] = useState(false);
   // Optimistic override so the button flips the instant it's tapped, before the
   // save round-trips. Cleared once the saved settings come back.
   const [pending, setPending] = useState(null);
+  const [showAuto, setShowAuto] = useState(false);
 
   const storeOpen = pending?.storeOpen ?? settings.storeOpen;
   const surge = (pending?.deliveryMode ?? settings.deliveryMode) === "surge";
+  const auto = pending?.automation ?? settings.automation ?? DEFAULT_AUTOMATION;
+  const hoursOn = !!auto?.hours?.on, rainOn = !!auto?.rain?.on, peakOn = !!auto?.peak?.on;
+  const autoCount = (hoursOn ? 1 : 0) + (rainOn ? 1 : 0) + (peakOn ? 1 : 0);
 
-  async function change(patch) {
+  async function save(patch) {
     if (busy) return;
     setBusy(true);
     setPending((p) => ({ ...p, ...patch }));
@@ -229,26 +244,103 @@ export function StoreControls() {
       setTimeout(() => setPending(null), 400);
     }
   }
+  const setAuto = (next) => save({ automation: next });
+  const patchHours = (p) => setAuto({ ...auto, hours: { ...(auto.hours || {}), ...p } });
 
   return (
-    <div className="store-controls">
-      <button
-        className={`store-toggle ${storeOpen ? "open" : "closed"}`}
-        disabled={busy}
-        onClick={() => change({ storeOpen: !storeOpen })}
-      >
-        <span className="store-dot" />
-        {storeOpen ? "Store OPEN" : "Store CLOSED"}
+    <div className="store-controls-wrap">
+      <div className="store-controls">
+        <button
+          className={`store-toggle ${storeOpen ? "open" : "closed"}`}
+          disabled={busy}
+          onClick={() => save({ storeOpen: !storeOpen })}
+        >
+          <span className="store-dot" />
+          {storeOpen ? "Store OPEN" : "Store CLOSED"}
+          {hoursOn && <span className="ap-badge">AUTO</span>}
+        </button>
+        <button
+          className={`surge-toggle ${surge ? "on" : ""}`}
+          disabled={busy}
+          onClick={() => save({ deliveryMode: surge ? "normal" : "surge" })}
+          title="Turn on during rain / bad weather / peak — members pay delivery too"
+        >
+          <Ic name={surge ? "rain" : "sun"} size={17} />
+          {surge ? "Surge ON" : "Normal day"}
+          {(rainOn || peakOn) && <span className="ap-badge">AUTO</span>}
+        </button>
+      </div>
+
+      <button className="ap-open" onClick={() => setShowAuto((v) => !v)}>
+        <span>⚙ Auto-pilot · {autoCount} on</span>
+        <span className="ap-caret">{showAuto ? "▲" : "▼"}</span>
       </button>
-      <button
-        className={`surge-toggle ${surge ? "on" : ""}`}
-        disabled={busy}
-        onClick={() => change({ deliveryMode: surge ? "normal" : "surge" })}
-        title="Turn on during rain / bad weather / peak — members pay delivery too"
-      >
-        <Ic name={surge ? "rain" : "sun"} size={17} />
-        {surge ? "Surge ON" : "Normal day"}
-      </button>
+
+      {showAuto && (
+        <div className="ap-panel">
+          <div className="ap-row">
+            <div className="ap-row-main">
+              <strong>Auto open &amp; close</strong>
+              <span className="ap-sub">
+                {hoursOn ? `Open ${hourText(auto.hours?.open)} – ${hourText(auto.hours?.close)} daily` : "Off — you open/close by hand"}
+              </span>
+            </div>
+            <button
+              className={`ap-switch ${hoursOn ? "on" : ""}`}
+              disabled={busy}
+              onClick={() => patchHours({ on: !hoursOn })}
+              aria-label="Toggle auto hours"
+            ><span /></button>
+          </div>
+          {hoursOn && (
+            <div className="ap-hours">
+              <label>Open
+                <select value={auto.hours?.open ?? 8} disabled={busy}
+                  onChange={(e) => patchHours({ open: Number(e.target.value) })}>
+                  {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hourText(h)}</option>)}
+                </select>
+              </label>
+              <label>Close
+                <select value={auto.hours?.close ?? 23} disabled={busy}
+                  onChange={(e) => patchHours({ close: Number(e.target.value) })}>
+                  {Array.from({ length: 25 }, (_, h) => <option key={h} value={h}>{h === 24 ? "12am" : hourText(h)}</option>)}
+                </select>
+              </label>
+            </div>
+          )}
+
+          <div className="ap-row">
+            <div className="ap-row-main">
+              <strong>Surge when raining</strong>
+              <span className="ap-sub">Higher delivery fee while it's raining at the shop</span>
+            </div>
+            <button
+              className={`ap-switch ${rainOn ? "on" : ""}`}
+              disabled={busy}
+              onClick={() => setAuto({ ...auto, rain: { ...(auto.rain || {}), on: !rainOn } })}
+              aria-label="Toggle rain surge"
+            ><span /></button>
+          </div>
+
+          <div className="ap-row">
+            <div className="ap-row-main">
+              <strong>Surge when busy</strong>
+              <span className="ap-sub">Auto-surge when orders spike, back to normal when it calms</span>
+            </div>
+            <button
+              className={`ap-switch ${peakOn ? "on" : ""}`}
+              disabled={busy}
+              onClick={() => setAuto({ ...auto, peak: { ...(auto.peak || {}), on: !peakOn } })}
+              aria-label="Toggle peak surge"
+            ><span /></button>
+          </div>
+
+          <p className="ap-note">
+            When you flip Store or Surge by hand, auto-pilot pauses that switch for 2 hours,
+            then takes over again.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

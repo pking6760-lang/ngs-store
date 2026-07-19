@@ -93,14 +93,16 @@ function mapSettings(r) {
     freeDeliveryAbove: num(r.free_delivery_above), handlingFee: num(r.handling_fee),
     surgeFee: num(r.surge_fee), maxDistanceKm: num(r.max_distance_km),
     codCustomerLimit: num(r.cod_customer_limit),
-    shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold };
+    shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold,
+    automation: r.automation || null };
 }
 function settingsToDb(p) {
   const map = { storeOpen: "store_open", deliveryMode: "delivery_mode",
     offerBanner: "offer_banner", rewards: "rewards", deliveryFee: "delivery_fee",
     freeDeliveryAbove: "free_delivery_above", handlingFee: "handling_fee",
     surgeFee: "surge_fee", maxDistanceKm: "max_distance_km",
-    shopLocations: "shop_locations", lowStockThreshold: "low_stock_threshold" };
+    shopLocations: "shop_locations", lowStockThreshold: "low_stock_threshold",
+    automation: "automation" };
   const out = {};
   for (const k in p) if (map[k]) out[map[k]] = p[k];
   return out;

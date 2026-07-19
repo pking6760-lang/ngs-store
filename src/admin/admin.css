@@ -1412,6 +1412,112 @@ body {
   border-color: #f0d9a8;
 }
 
+/* ─── Auto-pilot (store open/close + rain/peak surge) ─────── */
+.store-controls-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: 16px;
+}
+.store-controls-wrap .store-controls { margin: 0; }
+.ap-badge {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .12);
+  color: inherit;
+  margin-left: 2px;
+}
+.ap-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #444;
+}
+.ap-caret { font-size: 10px; opacity: .6; }
+.ap-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 6px 12px;
+}
+.ap-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f1f1;
+}
+.ap-row:last-of-type { border-bottom: none; }
+.ap-row-main { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
+.ap-row-main strong { font-size: 13px; font-weight: 800; }
+.ap-sub { font-size: 11px; color: #888; }
+.ap-switch {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d9d9d9;
+  border: none;
+  position: relative;
+  transition: background .15s;
+}
+.ap-switch span {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+  transition: transform .15s;
+}
+.ap-switch.on { background: #34a853; }
+.ap-switch.on span { transform: translateX(18px); }
+.ap-hours {
+  display: flex;
+  gap: 10px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid #f1f1f1;
+}
+.ap-hours label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+}
+.ap-hours select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fff;
+}
+.ap-note {
+  font-size: 10.5px;
+  color: #999;
+  line-height: 1.4;
+  margin: 6px 0 2px;
+}
+@media (max-width: 700px) {
+  .store-controls-wrap { width: 100%; margin: 0; order: 3; }
+}
+
 /* ─── Member / status chips in orders ────────────────────── */
 .member-chip {
   display: inline-block;
