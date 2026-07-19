@@ -118,7 +118,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
 
           <div className="sub-total">
             <div className="sub-total-line"><span>Items</span><span>₹{perItems}/day</span></div>
-            <div className="sub-total-line"><span>Daily doorstep charge</span><span>₹{fee}/day</span></div>
+            <div className="sub-total-line"><span>Convenience fee</span><span>₹{fee}/day</span></div>
             <div className="sub-total-row"><span>₹{perDay}/day × {days} days</span><strong>₹{total}</strong></div>
             <div className="sub-total-note">First delivery tomorrow. Add items to any day's delivery from the cart.</div>
           </div>
