@@ -3412,6 +3412,94 @@ input:focus-visible {
 .rating-thanks { font-size: 13px; color: var(--green-dark); font-weight: 700; margin-top: 6px; }
 .checkout-btn.reorder { margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
+/* ─── Subscriptions: "get this daily" ──────────────────────── */
+.checkout-btn.repeat {
+  margin-top: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #fff; color: #1f7a44;
+  border: 1.5px solid #bfe6cd;
+}
+.checkout-btn.repeat:disabled { opacity: .55; }
+
+.sub-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  margin: 0 auto; max-width: 520px; width: 100%;
+  background: #fff; border-radius: 22px 22px 0 0;
+  box-shadow: 0 -8px 30px rgba(0,0,0,.18);
+  max-height: 88vh; display: flex; flex-direction: column;
+  animation: sheet-up .22s ease;
+}
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sub-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 8px;
+}
+.sub-head h3 { font-size: 17px; font-weight: 800; }
+.sub-body { padding: 6px 18px 4px; overflow-y: auto; }
+.sub-items, .sub-card-items {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+}
+.sub-item-chip {
+  background: #f1f6f2; color: #2c4a37; border: 1px solid #dce9e0;
+  font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
+}
+.sub-field-lbl {
+  font-size: 12px; font-weight: 800; color: #6b7b70;
+  text-transform: uppercase; letter-spacing: .3px; margin: 12px 0 7px;
+}
+.sub-freq { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sub-freq-btn {
+  border: 1.5px solid var(--line, #e2e6e3); background: #fff; border-radius: 12px;
+  padding: 10px; font-size: 13px; font-weight: 700; color: #333;
+}
+.sub-freq-btn.on { border-color: #1f7a44; background: #eaf6ee; color: #1f7a44; }
+.sub-days { display: flex; gap: 6px; margin-top: 8px; }
+.sub-day {
+  flex: 1; aspect-ratio: 1; max-width: 42px; border-radius: 50%;
+  border: 1.5px solid var(--line, #e2e6e3); background: #fff;
+  font-size: 12px; font-weight: 800; color: #555;
+}
+.sub-day.on { border-color: #1f7a44; background: #1f7a44; color: #fff; }
+.sub-select {
+  width: 100%; border: 1.5px solid var(--line, #e2e6e3); border-radius: 12px;
+  padding: 11px 12px; font-size: 14px; font-weight: 700; background: #fff;
+}
+.sub-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sub-pay-btn {
+  border: 1.5px solid var(--line, #e2e6e3); background: #fff; border-radius: 12px;
+  padding: 11px; font-size: 13px; font-weight: 700; color: #333;
+}
+.sub-pay-btn.on { border-color: #1f7a44; background: #eaf6ee; color: #1f7a44; }
+.sub-note { font-size: 12px; color: #7a8a7f; line-height: 1.5; margin: 12px 0 4px; }
+.sub-foot { padding: 10px 18px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid #f0f2f0; }
+.sub-start {
+  width: 100%; border: none; background: #1f7a44; color: #fff;
+  border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 800;
+}
+.sub-start:disabled { opacity: .6; }
+.sub-cancel-hint { text-align: center; font-size: 11px; color: #9aa79f; margin-top: 8px; }
+
+/* Manage subscriptions (account) */
+.subs-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+.sub-card {
+  border: 1px solid var(--line, #e2e6e3); border-radius: 16px; padding: 14px;
+  background: #fff;
+}
+.sub-card.paused { opacity: .72; }
+.sub-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sub-card-sched { font-size: 14px; font-weight: 800; color: #223; }
+.sub-status { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 999px; }
+.sub-status.on { background: #eaf6ee; color: #1f7a44; }
+.sub-status.off { background: #f2f2f2; color: #888; }
+.sub-card-meta { font-size: 12px; color: #7a8a7f; margin-bottom: 12px; }
+.sub-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sub-card-actions button {
+  border: 1.5px solid var(--line, #e2e6e3); background: #fff; border-radius: 10px;
+  padding: 8px 14px; font-size: 13px; font-weight: 700; color: #333;
+}
+.sub-card-actions button.danger { color: #c0392b; border-color: #f0cfca; }
+.account-loading { text-align: center; color: #8a978d; padding: 24px; font-size: 14px; }
+
 /* ════════════════════════════════════════════════════════════
    Palette refinement — a grounded sage canvas (less stark white)
    with crisp white cards lifting off it. Simple, modern, warmer.

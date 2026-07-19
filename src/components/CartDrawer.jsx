@@ -12,6 +12,7 @@ import { tierUnitPrice } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
+import SubscribeSheet from "./SubscribeSheet.jsx";
 import gpayLogo from "../assets/upi/gpay.png";
 import phonepeLogo from "../assets/upi/phonepe.png";
 import paytmLogo from "../assets/upi/paytm.png";
@@ -102,6 +103,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [placed, setPlaced] = useState(null);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState("");
+  const [subOpen, setSubOpen] = useState(false);   // "get this daily" sheet
   const [address, setAddress] = useState(() => loadDraft().address || "");
   const [phone, setPhone] = useState(() => loadDraft().phone || "");
   const [location, setLocation] = useState(() => loadDraft().location || null);
@@ -1104,6 +1106,22 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 ? `Pay ₹${payable.toFixed(2)} with UPI`
                 : `Place order • ₹${payable.toFixed(2)}`}
             </button>
+
+            {/* Turn this cart into a recurring auto-order */}
+            {isLoggedIn && !belowMin && !outOfArea && !needsLocation && (
+              <button
+                type="button"
+                className="checkout-btn repeat"
+                onClick={() => setSubOpen(true)}
+                disabled={placing}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v4h-4" />
+                </svg>
+                Get this delivered daily
+              </button>
+            )}
           </div>
         ) : lines.length === 0 ? (
           <div className="cart-empty">
@@ -1422,6 +1440,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           setLocError("");
           setShowMap(false);
         }}
+      />
+      <SubscribeSheet
+        open={subOpen}
+        onClose={() => setSubOpen(false)}
+        items={lines.map(({ product, qty }) => ({ id: product.id, qty }))}
+        summaryProducts={lines.map((l) => l.product)}
+        address={address}
+        location={location ? { ...location, distanceKm: dist } : null}
+        payment={payment}
+        userId={user?.id}
       />
     </>
   );

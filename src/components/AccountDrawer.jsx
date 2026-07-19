@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
-import { useMyOrders, useSettings, useUserNotifications, useWallet } from "../lib/hooks.js";
+import { useMyOrders, useSettings, useUserNotifications, useWallet, useProducts } from "../lib/hooks.js";
+import { toast } from "../lib/toast.js";
 import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
@@ -17,6 +18,7 @@ import ProductThumb from "./ProductThumb.jsx";
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
   { id: "orders", label: "My Orders" },
+  { id: "subscriptions", label: "Subscriptions" },
   { id: "inbox", label: "Inbox" },
   { id: "rewards", label: "Rewards" },
   { id: "refer", label: "Refer & earn" },
@@ -121,6 +123,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
               />
             )}
             {tab === "wallet" && <WalletTab userId={user?.id} />}
+            {tab === "subscriptions" && <Subscriptions onShop={() => { onClose(); }} />}
             {tab === "inbox" && <Inbox notes={notes} userId={user?.id} error={notesError} onRetry={reloadNotes} />}
             {tab === "rewards" && <Rewards user={user} />}
             {tab === "refer" && <Referral user={user} />}
@@ -145,6 +148,98 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
         </div>
       </aside>
     </>
+  );
+}
+
+const SUB_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const subHour = (h) => { const ap = h < 12 ? "am" : "pm"; let hh = h % 12; if (hh === 0) hh = 12; return `${hh}${ap}`; };
+function subSchedule(s) {
+  const d = s.dow;
+  let freq;
+  if (!d || d.length === 7) freq = "Every day";
+  else if (d.length === 6 && !d.includes(0)) freq = "Mon–Sat";
+  else if (d.length === 2 && d.includes(0) && d.includes(6)) freq = "Weekends";
+  else freq = d.map((x) => SUB_DAYS[x]).join(", ");
+  return `${freq} · ${subHour(s.hour)}`;
+}
+function subNext(s) {
+  if (!s.active) return "Paused";
+  const now = new Date();
+  const days = s.dow && s.dow.length ? s.dow : [0, 1, 2, 3, 4, 5, 6];
+  let skipped = false;
+  for (let i = 0; i < 8; i++) {
+    const dow = (now.getDay() + i) % 7;
+    if (!days.includes(dow)) continue;
+    if (i === 0 && now.getHours() >= s.hour) continue; // today's slot has passed
+    if (s.skipNext && !skipped) { skipped = true; continue; } // this one is skipped
+    const when = i === 0 ? "today" : i === 1 ? "tomorrow" : SUB_DAYS[dow];
+    return `Next: ${when} ~${subHour(s.hour)}`;
+  }
+  return "";
+}
+
+// Manage daily auto-orders: pause/resume, skip the next one, or cancel.
+function Subscriptions({ onShop }) {
+  const products = useProducts();
+  const [subs, setSubs] = useState(null);
+  const [busy, setBusy] = useState("");
+  const nameOf = (id) => products.find((p) => p.id === id)?.name || "Item";
+
+  async function load() {
+    try { setSubs(await api.fetchMySubscriptions()); } catch { setSubs([]); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function act(id, fn) {
+    setBusy(id);
+    try { await fn(); await load(); }
+    catch (e) { toast(e.message || "Couldn't update."); }
+    finally { setBusy(""); }
+  }
+
+  if (subs === null) return <p className="account-loading">Loading…</p>;
+  if (subs.length === 0) {
+    return (
+      <div className="account-empty">
+        <p>No subscriptions yet</p>
+        <span>Add items to your cart and tap “Get this delivered daily” at checkout.</span>
+        <button className="checkout-btn" onClick={onShop}>Browse products</button>
+      </div>
+    );
+  }
+  return (
+    <div className="subs-list">
+      {subs.map((s) => (
+        <div className={`sub-card ${s.active ? "" : "paused"}`} key={s.id}>
+          <div className="sub-card-top">
+            <span className="sub-card-sched">{subSchedule(s)}</span>
+            <span className={`sub-status ${s.active ? "on" : "off"}`}>{s.active ? "Active" : "Paused"}</span>
+          </div>
+          <div className="sub-items">
+            {s.items.map((it, i) => (
+              <span key={i} className="sub-item-chip">{nameOf(it.id)} × {it.qty}</span>
+            ))}
+          </div>
+          <div className="sub-card-meta">
+            {subNext(s)}{s.active && s.skipNext ? " · skipping next" : ""} · {s.payment === "wallet" ? "Wallet" : "Cash on delivery"}
+          </div>
+          <div className="sub-card-actions">
+            <button disabled={busy === s.id} onClick={() => act(s.id, () => api.updateSubscription(s.id, { active: !s.active }))}>
+              {s.active ? "Pause" : "Resume"}
+            </button>
+            {s.active && (
+              <button disabled={busy === s.id} onClick={() => act(s.id, () => api.updateSubscription(s.id, { skipNext: !s.skipNext }))}>
+                {s.skipNext ? "Un-skip" : "Skip next"}
+              </button>
+            )}
+            <button className="danger" disabled={busy === s.id}
+              onClick={() => { if (confirm("Cancel this subscription?")) act(s.id, () => api.deleteSubscription(s.id)); }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

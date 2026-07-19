@@ -286,6 +286,45 @@ export async function saveCart(items) {
   try { await must().rpc("save_cart", { p_items: items || {} }); } catch { /* ignore */ }
 }
 
+// ── Subscriptions (daily auto-orders) ───────────────────────────────────────
+function mapSubscription(r) {
+  return {
+    id: r.id, items: Array.isArray(r.items) ? r.items : [],
+    address: r.address || "", location: r.location || null,
+    payment: r.payment_method || "cod",
+    dow: Array.isArray(r.dow) ? r.dow : null,   // null = every day
+    hour: r.deliver_hour ?? 8,
+    active: !!r.active, skipNext: !!r.skip_next, pausedUntil: r.paused_until || null,
+    lastRun: r.last_run || null, createdAt: r.created_at,
+  };
+}
+export async function fetchMySubscriptions() {
+  const { data, error } = await must()
+    .from("subscriptions").select("*").order("created_at", { ascending: false });
+  if (error) return [];
+  return (data || []).map(mapSubscription);
+}
+export async function createSubscription({ userId, items, address, location, payment, dow, hour }) {
+  const { data, error } = await must().from("subscriptions").insert({
+    user_id: userId, items, address: address || null, location: location || null,
+    payment_method: payment || "cod", dow: dow && dow.length ? dow : null, deliver_hour: hour ?? 8,
+  }).select().single();
+  if (error) throw error;
+  return mapSubscription(data);
+}
+export async function updateSubscription(id, patch) {
+  const map = { active: "active", skipNext: "skip_next", items: "items",
+    payment: "payment_method", dow: "dow", hour: "deliver_hour", pausedUntil: "paused_until" };
+  const out = { updated_at: new Date().toISOString() };
+  for (const k in patch) if (map[k]) out[map[k]] = patch[k];
+  const { error } = await must().from("subscriptions").update(out).eq("id", id);
+  if (error) throw error;
+}
+export async function deleteSubscription(id) {
+  const { error } = await must().from("subscriptions").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // "Buy again": the products the signed-in customer has bought before, most
 // useful first, filtered to what's still buyable. Empty for guests / new users.
 export async function fetchBuyAgain(limit = 15) {
