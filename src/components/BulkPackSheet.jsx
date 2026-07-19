@@ -28,11 +28,10 @@ export default function BulkPackSheet({ product, onClose }) {
     if (q === 1 || u < lastUnit) { packs.push(q); lastUnit = u; }
   }
 
-  // The customer's "first price" is the SELLING price. MRP is only the crossed
-  // price on a single unit (the MRP discount). Bulk packs, though, discount
-  // FROM the selling price — so a pack's saving is measured against buying that
-  // many units at the normal selling price, not against MRP.
-  const refTotal = (q) => (q === 1 ? mrp : base) * q;
+  // The crossed-out reference on every pack is the MRP total (MRP × quantity),
+  // so the customer sees the full saving off MRP. (Bulk per-unit prices are
+  // still derived from the selling price upstream, in build_bulk_tiers.)
+  const refTotal = (q) => mrp * q;
 
   const [sel, setSel] = useState(inCart && packs.includes(inCart) ? inCart : packs[0]);
   const selUnit = tierUnitPrice(product, sel, user, settings.rewards);
