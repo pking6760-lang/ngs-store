@@ -77,6 +77,15 @@ export default function SmartPricing() {
     } catch (e) { setMsg(e.message); }
   }
 
+  // Same for the Bestseller badge: pin = always, hide = never, tap again = auto.
+  async function overrideHot(p, value) {
+    const next = p.hotOverride === value ? null : value;
+    try {
+      await api.setHotOverride(p.id, next);
+      await api.smartReprice();
+    } catch (e) { setMsg(e.message); }
+  }
+
   if (!cfg) return <p className="sp-loading">Loading pricing rules…</p>;
 
   const groups = ORDER.map((t) => ({
@@ -204,20 +213,36 @@ export default function SmartPricing() {
                   </span>
                 )}
               </div>
-              {g.tier !== "unpriced" && (
-                <div className="sp-item-bait">
+              <div className="sp-item-ctrls">
+                {g.tier !== "unpriced" && (
+                  <div className="sp-ctrl-row">
+                    <span className="sp-ctrl-lbl">Deal</span>
+                    <button
+                      className={`sp-bait-btn pin ${p.baitOverride === "pin" ? "on" : ""} ${p.bait && p.baitOverride !== "hide" ? "live" : ""}`}
+                      onClick={() => override(p, "pin")}
+                      title="Always in Best Prices" aria-label="Always in Best Prices"
+                    ><Ic name="broadcast" size={15} /></button>
+                    <button
+                      className={`sp-bait-btn hide ${p.baitOverride === "hide" ? "on" : ""}`}
+                      onClick={() => override(p, "hide")}
+                      title="Never in Best Prices" aria-label="Never in Best Prices"
+                    ><Ic name="x" size={15} /></button>
+                  </div>
+                )}
+                <div className="sp-ctrl-row">
+                  <span className="sp-ctrl-lbl">★ Best</span>
                   <button
-                    className={`sp-bait-btn pin ${p.baitOverride === "pin" ? "on" : ""} ${p.bait && p.baitOverride !== "hide" ? "live" : ""}`}
-                    onClick={() => override(p, "pin")}
-                    title="Always advertise" aria-label="Always advertise"
-                  ><Ic name="broadcast" size={16} /></button>
+                    className={`sp-bait-btn pin ${p.hotOverride === "pin" ? "on" : ""} ${p.hot && p.hotOverride !== "hide" ? "live" : ""}`}
+                    onClick={() => overrideHot(p, "pin")}
+                    title="Always show Bestseller" aria-label="Always Bestseller"
+                  ><Ic name="crown" size={15} /></button>
                   <button
-                    className={`sp-bait-btn hide ${p.baitOverride === "hide" ? "on" : ""}`}
-                    onClick={() => override(p, "hide")}
-                    title="Never advertise" aria-label="Never advertise"
-                  ><Ic name="x" size={16} /></button>
+                    className={`sp-bait-btn hide ${p.hotOverride === "hide" ? "on" : ""}`}
+                    onClick={() => overrideHot(p, "hide")}
+                    title="Never show Bestseller" aria-label="Never Bestseller"
+                  ><Ic name="x" size={15} /></button>
                 </div>
-              )}
+              </div>
             </div>
           ))}
         </div>

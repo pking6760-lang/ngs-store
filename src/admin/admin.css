@@ -937,10 +937,15 @@ body {
 .sp-item-bulk { display: block; font-size: 10px; font-weight: 700; color: #0c8168; margin-top: 2px; }
 .sp-note { font-size: 11.5px; color: #8a93a0; margin: 8px 0 0; line-height: 1.5; }
 .sp-item-bait { display: flex; gap: 5px; flex-shrink: 0; }
+.sp-item-ctrls { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.sp-ctrl-row { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+.sp-ctrl-lbl { font-size: 10px; font-weight: 800; color: #7a828c; width: 40px; text-align: right; }
 .sp-bait-btn {
-  width: 34px; height: 34px; border-radius: 9px; border: 1px solid #E2E8EF;
+  width: 32px; height: 32px; border-radius: 9px; border: 1px solid #E2E8EF;
   background: #f5f7fa; font-size: 15px; cursor: pointer; opacity: .55;
+  display: inline-flex; align-items: center; justify-content: center; color: #495057;
 }
+.sp-bait-btn.pin.live { color: #e0700c; }
 .sp-bait-btn.live { opacity: 1; border-color: #ffd8a8; background: #fff4e6; }
 .sp-bait-btn.pin.on { opacity: 1; border-color: #12B886; background: #e6fcf5; }
 .sp-bait-btn.hide.on { opacity: 1; border-color: #f6c9c6; background: #fdeaea; }

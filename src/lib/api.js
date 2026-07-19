@@ -906,6 +906,14 @@ export async function setBaitOverride(productId, value) {
   pingLocal("products");
   return { ok: true };
 }
+// Owner override for the Bestseller badge: 'pin' | 'hide' | null (auto).
+export async function setHotOverride(productId, value) {
+  const { error } = await must().from("product_costs")
+    .upsert({ product_id: productId, hot_override: value });
+  if (error) throw new Error(error.message || "Couldn't update.");
+  pingLocal("products");
+  return { ok: true };
+}
 
 export async function getOpsConfigRaw() {
   const { data, error } = await must().from("ops_config").select("*").eq("id", 1).maybeSingle();
@@ -1027,6 +1035,7 @@ export async function fetchProductPrivate() {
       velocityScore: r.velocity_score ?? 0,
       sold: { d1: r.sold_1d ?? 0, d3: r.sold_3d ?? 0, d7: r.sold_7d ?? 0, d14: r.sold_14d ?? 0, d30: r.sold_30d ?? 0 },
       baitOverride: r.bait_override || null,
+      hotOverride: r.hot_override || null,
     };
   });
   return m;
@@ -1044,6 +1053,7 @@ export async function fetchAdminProducts() {
       velocityScore: x.velocityScore ?? 0,
       sold: x.sold || { d1: 0, d3: 0, d7: 0, d14: 0, d30: 0 },
       baitOverride: x.baitOverride || null,
+      hotOverride: x.hotOverride || null,
     };
   });
 }
