@@ -94,7 +94,8 @@ function mapSettings(r) {
     surgeFee: num(r.surge_fee), maxDistanceKm: num(r.max_distance_km),
     codCustomerLimit: num(r.cod_customer_limit),
     shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold,
-    automation: r.automation || null };
+    automation: r.automation || null,
+    subDeliveryFee: r.sub_delivery_fee != null ? num(r.sub_delivery_fee) : 10 };
 }
 function settingsToDb(p) {
   const map = { storeOpen: "store_open", deliveryMode: "delivery_mode",

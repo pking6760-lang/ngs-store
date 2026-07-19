@@ -10,7 +10,7 @@ const DAY_PRESETS = [7, 15, 30];
 const hourText = (h) => { const ap = h < 12 ? "am" : "pm"; let hh = h % 12; if (hh === 0) hh = 12; return `${hh}:00 ${ap}`; };
 const HOURS = [6, 7, 8, 9, 10, 11, 12, 17, 18, 19, 20];
 
-export default function SubscribeSheet({ open, onClose, items, summaryProducts, dailyTotal, address, location, payment, user, onCreated }) {
+export default function SubscribeSheet({ open, onClose, items, summaryProducts, dailyTotal, deliveryFee = 10, address, location, payment, user, onCreated }) {
   const [days, setDays] = useState(7);
   const [hour, setHour] = useState(8);
   const [pay, setPay] = useState(RAZORPAY_ENABLED ? "wallet" : "wallet");
@@ -22,7 +22,9 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
   }, [items, summaryProducts]);
 
   if (!open) return null;
-  const perDay = Math.round(dailyTotal || 0);
+  const perItems = Math.round(dailyTotal || 0);
+  const fee = Math.round(deliveryFee || 0);
+  const perDay = perItems + fee;          // items + daily doorstep charge
   const total = perDay * days;
 
   async function start() {
@@ -115,8 +117,10 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
           </div>
 
           <div className="sub-total">
+            <div className="sub-total-line"><span>Items</span><span>₹{perItems}/day</span></div>
+            <div className="sub-total-line"><span>Daily doorstep charge</span><span>₹{fee}/day</span></div>
             <div className="sub-total-row"><span>₹{perDay}/day × {days} days</span><strong>₹{total}</strong></div>
-            <div className="sub-total-note">Free delivery every day. First delivery tomorrow.</div>
+            <div className="sub-total-note">First delivery tomorrow. Add items to any day's delivery from the cart.</div>
           </div>
         </div>
 

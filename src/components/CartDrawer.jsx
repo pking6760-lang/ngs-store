@@ -1447,6 +1447,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         items={lines.map(({ product, qty }) => ({ id: product.id, qty }))}
         summaryProducts={lines.map((l) => l.product)}
         dailyTotal={itemTotal}
+        deliveryFee={settings.subDeliveryFee ?? 10}
         address={orderAddress ? orderAddress() : address}
         location={location ? { ...location, distanceKm: dist } : null}
         user={user}
