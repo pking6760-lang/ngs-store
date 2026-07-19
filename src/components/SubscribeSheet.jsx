@@ -193,7 +193,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                   </button>
                 ))}
                 <label className={`sub-freq-btn sub-days-custom ${!DAY_PRESETS.includes(days) ? "on" : ""}`}>
-                  <input type="number" min="1" max="30" placeholder="Other"
+                  <input type="number" min="1" max="30" placeholder="Custom"
                     value={DAY_PRESETS.includes(days) ? "" : days}
                     onChange={(e) => setDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
                   <span>days</span>
