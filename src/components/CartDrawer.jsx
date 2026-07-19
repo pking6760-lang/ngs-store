@@ -847,6 +847,28 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               ))}
             </div>
 
+            {/* Subscribe: prominent, right under the order — not buried at the end */}
+            {isLoggedIn && !belowMin && !outOfArea && !needsLocation && (
+              <button
+                type="button"
+                className="sub-promo"
+                onClick={() => setSubOpen(true)}
+                disabled={placing}
+              >
+                <span className="sub-promo-ic">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v4h-4" />
+                  </svg>
+                </span>
+                <span className="sub-promo-text">
+                  <strong>Get this delivered daily</strong>
+                  <span>Subscribe &amp; prepay — milk at your door every morning</span>
+                </span>
+                <span className="sub-promo-arrow">→</span>
+              </button>
+            )}
+
             <div className="checkout-section">
               <h4>Delivery address</h4>
 
@@ -1106,22 +1128,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 ? `Pay ₹${payable.toFixed(2)} with UPI`
                 : `Place order • ₹${payable.toFixed(2)}`}
             </button>
-
-            {/* Turn this cart into a recurring auto-order */}
-            {isLoggedIn && !belowMin && !outOfArea && !needsLocation && (
-              <button
-                type="button"
-                className="checkout-btn repeat"
-                onClick={() => setSubOpen(true)}
-                disabled={placing}
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v4h-4" />
-                </svg>
-                Subscribe &amp; prepay
-              </button>
-            )}
           </div>
         ) : lines.length === 0 ? (
           <div className="cart-empty">
