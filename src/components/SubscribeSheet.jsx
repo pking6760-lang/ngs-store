@@ -1,26 +1,19 @@
 import { useMemo, useState } from "react";
-import { createSubscription } from "../lib/api.js";
+import { createSubscriptionOrder, createRazorpayOrder, verifyRazorpayPayment } from "../lib/api.js";
+import { loadRazorpay, RAZORPAY_ENABLED } from "../lib/payments.js";
 import { toast } from "../lib/toast.js";
 
-// Bottom sheet to turn the current cart into a daily/weekly auto-order.
-// Reuses the checkout's address + location + payment; the customer only picks
-// how often and at what time.
-const FREQ = [
-  { id: "daily", label: "Every day", dow: null },
-  { id: "weekdays", label: "Mon–Sat", dow: [1, 2, 3, 4, 5, 6] },
-  { id: "weekends", label: "Weekends", dow: [0, 6] },
-  { id: "custom", label: "Pick days", dow: [] },
-];
-const DAYS = [["S", 0], ["M", 1], ["T", 2], ["W", 3], ["T", 4], ["F", 5], ["S", 6]];
+// Prepaid subscription sheet: choose how many days, pay the whole plan upfront
+// (Wallet or Online). Deliveries start tomorrow; the first order is created the
+// moment payment lands, the rest the evening before each day.
+const DAY_PRESETS = [7, 15, 30];
 const hourText = (h) => { const ap = h < 12 ? "am" : "pm"; let hh = h % 12; if (hh === 0) hh = 12; return `${hh}:00 ${ap}`; };
-// Grocery-friendly delivery hours.
 const HOURS = [6, 7, 8, 9, 10, 11, 12, 17, 18, 19, 20];
 
-export default function SubscribeSheet({ open, onClose, items, summaryProducts, address, location, payment, userId, onCreated }) {
-  const [freq, setFreq] = useState("daily");
-  const [custom, setCustom] = useState([]);      // selected dow when freq = custom
+export default function SubscribeSheet({ open, onClose, items, summaryProducts, dailyTotal, address, location, payment, user, onCreated }) {
+  const [days, setDays] = useState(7);
   const [hour, setHour] = useState(8);
-  const [pay, setPay] = useState(payment === "wallet" ? "wallet" : "cod");
+  const [pay, setPay] = useState(RAZORPAY_ENABLED ? "wallet" : "wallet");
   const [busy, setBusy] = useState(false);
 
   const summary = useMemo(() => {
@@ -29,24 +22,51 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
   }, [items, summaryProducts]);
 
   if (!open) return null;
-
-  const toggleDay = (d) =>
-    setCustom((c) => (c.includes(d) ? c.filter((x) => x !== d) : [...c, d].sort()));
+  const perDay = Math.round(dailyTotal || 0);
+  const total = perDay * days;
 
   async function start() {
     if (busy) return;
-    const chosen = FREQ.find((f) => f.id === freq);
-    const dow = freq === "custom" ? custom : chosen.dow;
-    if (freq === "custom" && custom.length === 0) { toast("Pick at least one day."); return; }
     if (!items || items.length === 0) { toast("Your cart is empty."); return; }
+    if (days < 1) { toast("Choose how many days."); return; }
     setBusy(true);
     try {
-      await createSubscription({ userId, items, address, location, payment: pay, dow, hour });
-      toast("Subscription started 🔁 We'll auto-order for you.");
-      onCreated && onCreated();
-      onClose();
+      const order = await createSubscriptionOrder({ items, days, hour, address, location, pay });
+      if (pay === "wallet") {
+        toast("Plan started 🥛 First delivery tomorrow!");
+        onCreated && onCreated();
+        onClose();
+        return;
+      }
+      // Online: pay the advance via Razorpay, then the plan activates server-side.
+      const rp = await createRazorpayOrder(order.dbId);
+      const Razorpay = await loadRazorpay();
+      const rzp = new Razorpay({
+        key: rp.keyId, order_id: rp.orderId, amount: rp.amount, currency: rp.currency || "INR",
+        name: "NGS Nisha General Store", description: `${days}-day plan`,
+        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
+        theme: { color: "#0a9155" },
+        handler: async (resp) => {
+          try {
+            await verifyRazorpayPayment({
+              orderId: order.dbId,
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+            });
+            toast("Plan started 🥛 First delivery tomorrow!");
+            onCreated && onCreated();
+            onClose();
+          } catch {
+            toast("Payment received — your plan will start shortly.");
+            onClose();
+          }
+        },
+      });
+      rzp.on("payment.failed", (r) => toast(r?.error?.description || "Payment failed."));
+      rzp.open();
     } catch (e) {
-      toast(e.message || "Couldn't start the subscription.");
+      toast(e.message || "Couldn't start the plan.");
     } finally {
       setBusy(false);
     }
@@ -56,7 +76,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sub-head">
-          <h3>Get this delivered 🔁</h3>
+          <h3>Subscribe &amp; prepay 🔁</h3>
           <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
@@ -67,50 +87,44 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
             ))}
           </div>
 
-          <div className="sub-field-lbl">How often</div>
+          <div className="sub-field-lbl">How many days</div>
           <div className="sub-freq">
-            {FREQ.map((f) => (
-              <button
-                key={f.id}
-                className={`sub-freq-btn ${freq === f.id ? "on" : ""}`}
-                onClick={() => setFreq(f.id)}
-              >{f.label}</button>
+            {DAY_PRESETS.map((d) => (
+              <button key={d} className={`sub-freq-btn ${days === d ? "on" : ""}`} onClick={() => setDays(d)}>
+                {d} days
+              </button>
             ))}
+            <label className={`sub-freq-btn sub-days-custom ${!DAY_PRESETS.includes(days) ? "on" : ""}`}>
+              <input type="number" min="1" max="30" value={days}
+                onChange={(e) => setDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
+              <span>days</span>
+            </label>
           </div>
-          {freq === "custom" && (
-            <div className="sub-days">
-              {DAYS.map(([lbl, d]) => (
-                <button
-                  key={d}
-                  className={`sub-day ${custom.includes(d) ? "on" : ""}`}
-                  onClick={() => toggleDay(d)}
-                >{lbl}</button>
-              ))}
-            </div>
-          )}
 
           <div className="sub-field-lbl">Deliver around</div>
           <select className="sub-select" value={hour} onChange={(e) => setHour(Number(e.target.value))}>
             {HOURS.map((h) => <option key={h} value={h}>{hourText(h)}</option>)}
           </select>
 
-          <div className="sub-field-lbl">Pay by</div>
+          <div className="sub-field-lbl">Pay in advance by</div>
           <div className="sub-pay">
-            <button className={`sub-pay-btn ${pay === "cod" ? "on" : ""}`} onClick={() => setPay("cod")}>Cash on delivery</button>
             <button className={`sub-pay-btn ${pay === "wallet" ? "on" : ""}`} onClick={() => setPay("wallet")}>NGS Wallet</button>
+            {RAZORPAY_ENABLED && (
+              <button className={`sub-pay-btn ${pay === "razorpay" ? "on" : ""}`} onClick={() => setPay("razorpay")}>Pay online</button>
+            )}
           </div>
 
-          <p className="sub-note">
-            We'll place this order automatically on your chosen days and send you a heads-up each time.
-            {pay === "wallet" && " If your wallet is short, we'll switch that day to cash."}
-          </p>
+          <div className="sub-total">
+            <div className="sub-total-row"><span>₹{perDay}/day × {days} days</span><strong>₹{total}</strong></div>
+            <div className="sub-total-note">Free delivery every day. First delivery tomorrow.</div>
+          </div>
         </div>
 
         <div className="sub-foot">
           <button className="sub-start" disabled={busy} onClick={start}>
-            {busy ? "Starting…" : "Start subscription"}
+            {busy ? "Starting…" : `Pay ₹${total} & start`}
           </button>
-          <p className="sub-cancel-hint">Cancel or skip anytime from Account → Subscriptions.</p>
+          <p className="sub-cancel-hint">Cancel anytime from Account → Subscriptions; unused days are refunded to your wallet.</p>
         </div>
       </div>
     </div>

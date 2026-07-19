@@ -151,34 +151,25 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
   );
 }
 
-const SUB_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const subHour = (h) => { const ap = h < 12 ? "am" : "pm"; let hh = h % 12; if (hh === 0) hh = 12; return `${hh}${ap}`; };
-function subSchedule(s) {
-  const d = s.dow;
-  let freq;
-  if (!d || d.length === 7) freq = "Every day";
-  else if (d.length === 6 && !d.includes(0)) freq = "Mon–Sat";
-  else if (d.length === 2 && d.includes(0) && d.includes(6)) freq = "Weekends";
-  else freq = d.map((x) => SUB_DAYS[x]).join(", ");
-  return `${freq} · ${subHour(s.hour)}`;
-}
-function subNext(s) {
-  if (!s.active) return "Paused";
-  const now = new Date();
-  const days = s.dow && s.dow.length ? s.dow : [0, 1, 2, 3, 4, 5, 6];
-  let skipped = false;
-  for (let i = 0; i < 8; i++) {
-    const dow = (now.getDay() + i) % 7;
-    if (!days.includes(dow)) continue;
-    if (i === 0 && now.getHours() >= s.hour) continue; // today's slot has passed
-    if (s.skipNext && !skipped) { skipped = true; continue; } // this one is skipped
-    const when = i === 0 ? "today" : i === 1 ? "tomorrow" : SUB_DAYS[dow];
-    return `Next: ${when} ~${subHour(s.hour)}`;
-  }
-  return "";
+const SUB_STATUS = {
+  active: { label: "Active", cls: "on" }, pending: { label: "Awaiting payment", cls: "off" },
+  completed: { label: "Completed", cls: "off" }, cancelled: { label: "Cancelled", cls: "off" },
+};
+const dateText = (d) => {
+  if (!d) return "";
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+};
+// Next undelivered day = start + daysDone (the daily orders already created cover
+// start … start+daysDone-1).
+function subNextDelivery(s) {
+  if (s.status !== "active" || !s.startDate || s.daysDone >= s.daysTotal) return "";
+  const dt = new Date(s.startDate + "T00:00:00");
+  dt.setDate(dt.getDate() + s.daysDone);
+  return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
-// Manage daily auto-orders: pause/resume, skip the next one, or cancel.
+// Manage prepaid plans: see progress + next delivery, cancel (unused days refund).
 function Subscriptions({ onShop }) {
   const products = useProducts();
   const [subs, setSubs] = useState(null);
@@ -190,10 +181,12 @@ function Subscriptions({ onShop }) {
   }
   useEffect(() => { load(); }, []);
 
-  async function act(id, fn) {
-    setBusy(id);
-    try { await fn(); await load(); }
-    catch (e) { toast(e.message || "Couldn't update."); }
+  async function cancel(s) {
+    const left = Math.max(s.daysTotal - s.daysDone, 0);
+    if (!confirm(`Cancel this plan? ${left} unused day(s) — ₹${Math.round(left * s.dailyTotal)} — will be refunded to your wallet.`)) return;
+    setBusy(s.id);
+    try { await api.cancelSubscription(s.id); await load(); }
+    catch (e) { toast(e.message || "Couldn't cancel."); }
     finally { setBusy(""); }
   }
 
@@ -202,43 +195,40 @@ function Subscriptions({ onShop }) {
     return (
       <div className="account-empty">
         <p>No subscriptions yet</p>
-        <span>Add items to your cart and tap “Get this delivered daily” at checkout.</span>
+        <span>Add items to your cart and tap “Subscribe &amp; prepay” at checkout to get daily deliveries.</span>
         <button className="checkout-btn" onClick={onShop}>Browse products</button>
       </div>
     );
   }
   return (
     <div className="subs-list">
-      {subs.map((s) => (
-        <div className={`sub-card ${s.active ? "" : "paused"}`} key={s.id}>
-          <div className="sub-card-top">
-            <span className="sub-card-sched">{subSchedule(s)}</span>
-            <span className={`sub-status ${s.active ? "on" : "off"}`}>{s.active ? "Active" : "Paused"}</span>
-          </div>
-          <div className="sub-items">
-            {s.items.map((it, i) => (
-              <span key={i} className="sub-item-chip">{nameOf(it.id)} × {it.qty}</span>
-            ))}
-          </div>
-          <div className="sub-card-meta">
-            {subNext(s)}{s.active && s.skipNext ? " · skipping next" : ""} · {s.payment === "wallet" ? "Wallet" : "Cash on delivery"}
-          </div>
-          <div className="sub-card-actions">
-            <button disabled={busy === s.id} onClick={() => act(s.id, () => api.updateSubscription(s.id, { active: !s.active }))}>
-              {s.active ? "Pause" : "Resume"}
-            </button>
-            {s.active && (
-              <button disabled={busy === s.id} onClick={() => act(s.id, () => api.updateSubscription(s.id, { skipNext: !s.skipNext }))}>
-                {s.skipNext ? "Un-skip" : "Skip next"}
-              </button>
+      {subs.map((s) => {
+        const st = SUB_STATUS[s.status] || SUB_STATUS.pending;
+        const next = subNextDelivery(s);
+        return (
+          <div className={`sub-card ${s.status === "active" ? "" : "paused"}`} key={s.id}>
+            <div className="sub-card-top">
+              <span className="sub-card-sched">{s.daysTotal}-day plan · ₹{Math.round(s.amount)}</span>
+              <span className={`sub-status ${st.cls}`}>{st.label}</span>
+            </div>
+            <div className="sub-items">
+              {s.items.map((it, i) => (
+                <span key={i} className="sub-item-chip">{nameOf(it.id)} × {it.qty}</span>
+              ))}
+            </div>
+            <div className="sub-card-meta">
+              Day {Math.min(s.daysDone, s.daysTotal)} of {s.daysTotal}
+              {next ? ` · next delivery ${next}` : ""}
+              {" · "}{s.payMethod === "wallet" ? "Wallet" : "Prepaid"}
+            </div>
+            {(s.status === "active" || s.status === "pending") && (
+              <div className="sub-card-actions">
+                <button className="danger" disabled={busy === s.id} onClick={() => cancel(s)}>Cancel plan</button>
+              </div>
             )}
-            <button className="danger" disabled={busy === s.id}
-              onClick={() => { if (confirm("Cancel this subscription?")) act(s.id, () => api.deleteSubscription(s.id)); }}>
-              Cancel
-            </button>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

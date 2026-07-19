@@ -1119,7 +1119,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v4h-4" />
                 </svg>
-                Get this delivered daily
+                Subscribe &amp; prepay
               </button>
             )}
           </div>
@@ -1446,10 +1446,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         onClose={() => setSubOpen(false)}
         items={lines.map(({ product, qty }) => ({ id: product.id, qty }))}
         summaryProducts={lines.map((l) => l.product)}
-        address={address}
+        dailyTotal={itemTotal}
+        address={orderAddress ? orderAddress() : address}
         location={location ? { ...location, distanceKm: dist } : null}
-        payment={payment}
-        userId={user?.id}
+        user={user}
       />
     </>
   );

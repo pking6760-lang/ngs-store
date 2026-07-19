@@ -286,16 +286,17 @@ export async function saveCart(items) {
   try { await must().rpc("save_cart", { p_items: items || {} }); } catch { /* ignore */ }
 }
 
-// ── Subscriptions (daily auto-orders) ───────────────────────────────────────
+// ── Subscriptions (prepaid daily plans) ─────────────────────────────────────
 function mapSubscription(r) {
   return {
     id: r.id, items: Array.isArray(r.items) ? r.items : [],
     address: r.address || "", location: r.location || null,
-    payment: r.payment_method || "cod",
-    dow: Array.isArray(r.dow) ? r.dow : null,   // null = every day
     hour: r.deliver_hour ?? 8,
-    active: !!r.active, skipNext: !!r.skip_next, pausedUntil: r.paused_until || null,
-    lastRun: r.last_run || null, createdAt: r.created_at,
+    daysTotal: r.days_total, daysDone: r.days_done,
+    dailyTotal: Number(r.daily_total) || 0, amount: Number(r.amount) || 0,
+    payMethod: r.pay_method || "wallet", status: r.status,
+    startDate: r.start_date || null, lastDelivery: r.last_delivery || null,
+    createdAt: r.created_at,
   };
 }
 export async function fetchMySubscriptions() {
@@ -304,24 +305,18 @@ export async function fetchMySubscriptions() {
   if (error) return [];
   return (data || []).map(mapSubscription);
 }
-export async function createSubscription({ userId, items, address, location, payment, dow, hour }) {
-  const { data, error } = await must().from("subscriptions").insert({
-    user_id: userId, items, address: address || null, location: location || null,
-    payment_method: payment || "cod", dow: dow && dow.length ? dow : null, deliver_hour: hour ?? 8,
-  }).select().single();
+// Buy a prepaid plan. Returns the advance-payment order ({ dbId, total, ... }).
+// Wallet plans come back already paid+active; razorpay plans need a payment step.
+export async function createSubscriptionOrder({ items, days, hour, address, location, pay }) {
+  const { data, error } = await must().rpc("create_subscription_order", {
+    p_items: items, p_days: days, p_hour: hour,
+    p_address: address || null, p_location: location || null, p_pay: pay || "wallet",
+  });
   if (error) throw error;
-  return mapSubscription(data);
+  return { dbId: data.id, total: Number(data.total) || 0, status: data.status, payMethod: data.payment_method };
 }
-export async function updateSubscription(id, patch) {
-  const map = { active: "active", skipNext: "skip_next", items: "items",
-    payment: "payment_method", dow: "dow", hour: "deliver_hour", pausedUntil: "paused_until" };
-  const out = { updated_at: new Date().toISOString() };
-  for (const k in patch) if (map[k]) out[map[k]] = patch[k];
-  const { error } = await must().from("subscriptions").update(out).eq("id", id);
-  if (error) throw error;
-}
-export async function deleteSubscription(id) {
-  const { error } = await must().from("subscriptions").delete().eq("id", id);
+export async function cancelSubscription(id) {
+  const { error } = await must().rpc("cancel_subscription", { p_id: id });
   if (error) throw error;
 }
 
