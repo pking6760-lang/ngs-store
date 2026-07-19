@@ -15,6 +15,7 @@ import CategoryIcon from "./components/CategoryIcon.jsx";
 import AddressSheet from "./components/AddressSheet.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
+import { fetchBuyAgain } from "./lib/api.js";
 import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
 import { shop } from "./data/shop.js";
@@ -87,6 +88,20 @@ export default function App() {
   useEffect(() => {
     if (isLoggedIn) { initCustomerPush(); initWebPush(); }
   }, [isLoggedIn]);
+
+  // "Buy again": ids of what this customer has bought before. We keep just the
+  // ordered ids and resolve them against the live catalog so prices/stock in the
+  // row are always current. Empty (and hidden) for guests.
+  const [buyAgainIds, setBuyAgainIds] = useState([]);
+  useEffect(() => {
+    if (!isLoggedIn) { setBuyAgainIds([]); return; }
+    let alive = true;
+    fetchBuyAgain(15)
+      .then((rows) => { if (alive) setBuyAgainIds(rows.map((r) => r.id)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [isLoggedIn, user?.id]);
+
   const products = useProducts();
   const settings = useSettings();
   const categories = useCategories();
@@ -236,6 +251,7 @@ export default function App() {
             products={products}
             categories={categories}
             offer={settings.offerBanner}
+            buyAgainIds={buyAgainIds}
             onCategoryClick={setActiveCategory}
           />
         )}
@@ -341,9 +357,15 @@ function HomeSkeleton() {
   );
 }
 
-function HomeView({ products, categories, offer, onCategoryClick }) {
+function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick }) {
   if (products.length === 0) return <HomeSkeleton />;
   const byCategory = (id) => products.filter((p) => p.category === id);
+  // Resolve the buy-again ids against the live catalog (fresh price/stock), keep
+  // the server's recency order, drop anything no longer buyable.
+  const buyAgain = buyAgainIds
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p) => p && p.active !== false)
+    .slice(0, 12);
   // Best Prices: biggest genuine deals first (highest % off MRP), then any other
   // flagged deals — so the products you've discounted lead the section.
   const bestPrices = products
@@ -377,6 +399,17 @@ function HomeView({ products, categories, offer, onCategoryClick }) {
           </div>
         ))}
       </div>
+
+      {buyAgain.length > 0 && (
+        <section className="section">
+          <h2 className="section-title">Buy again</h2>
+          <div className="product-row">
+            {buyAgain.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {bestPrices.length > 0 && (
         <section className="section best-prices">

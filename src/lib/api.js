@@ -278,6 +278,14 @@ export async function fetchAddonSuggestions(excludeIds = [], limit = 8) {
   return (data || []).map(mapProduct);
 }
 
+// "Buy again": the products the signed-in customer has bought before, most
+// useful first, filtered to what's still buyable. Empty for guests / new users.
+export async function fetchBuyAgain(limit = 15) {
+  const { data, error } = await must().rpc("my_buy_again", { p_limit: limit });
+  if (error) return [];
+  return (data || []).map(mapProduct);
+}
+
 export async function fetchProducts() {
   const { data, error } = await must()
     .from("products").select("*").order("created_at", { ascending: true });
