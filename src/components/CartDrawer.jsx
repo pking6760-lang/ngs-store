@@ -112,8 +112,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // Optional delivery instructions the customer taps — passed to the rider on
   // the order (appended to the address the partner sees).
   const [deliveryNotes, setDeliveryNotes] = useState([]);
+  // "Leave at the door" and "Hand it to me" are opposites — picking one clears
+  // the other. The rest can be combined freely.
   const toggleNote = (n) =>
-    setDeliveryNotes((v) => (v.includes(n) ? v.filter((x) => x !== n) : [...v, n]));
+    setDeliveryNotes((v) => {
+      if (v.includes(n)) return v.filter((x) => x !== n);
+      const OPPOSITES = ["Leave at the door", "Hand it to me"];
+      const base = OPPOSITES.includes(n) ? v.filter((x) => !OPPOSITES.includes(x)) : v;
+      return [...base, n];
+    });
   // Address stored on the ORDER (with any delivery instructions) — the saved
   // profile address stays clean (notes are per-order).
   const orderAddress = () =>
