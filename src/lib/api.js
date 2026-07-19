@@ -314,11 +314,17 @@ export async function createSubscriptionOrder({ items, days, hour, address, loca
     p_address: address || null, p_location: location || null, p_pay: pay || "wallet",
   });
   if (error) throw error;
-  return { dbId: data.id, total: Number(data.total) || 0, status: data.status, payMethod: data.payment_method };
+  return { dbId: data.id, subscriptionId: data.subscription_id, total: Number(data.total) || 0,
+    status: data.status, payMethod: data.payment_method };
 }
 export async function cancelSubscription(id) {
   const { error } = await must().rpc("cancel_subscription", { p_id: id });
   if (error) throw error;
+}
+// Leave the online-pay screen without paying → drop the unpaid pending plan.
+export async function discardPendingSubscription(id) {
+  if (!id) return;
+  try { await must().rpc("discard_pending_subscription", { p_id: id }); } catch { /* ignore */ }
 }
 
 // "Buy again": the products the signed-in customer has bought before, most
@@ -529,6 +535,9 @@ export async function fetchMyOrders() {
     .eq("is_membership", false)
     // Wallet top-ups are payments, not orders — they show in the Wallet history.
     .eq("is_topup", false)
+    // Subscription advance payments are not delivery orders (the daily deliveries
+    // they create show normally).
+    .eq("is_subscription", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);

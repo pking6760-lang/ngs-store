@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createSubscriptionOrder, createRazorpayOrder, verifyRazorpayPayment, walletBalance,
-  createOrderQr, fetchOrderState, cancelPendingOrder,
+  createOrderQr, fetchOrderState, discardPendingSubscription,
 } from "../lib/api.js";
 import { loadRazorpay, RAZORPAY_ENABLED, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import UpiPayScreen from "./UpiPayScreen.jsx";
@@ -151,7 +151,9 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
   }
 
   function handleClose() {
-    if (mode === "pay" && order?.dbId) cancelPendingOrder(order.dbId).catch(() => {});
+    // Left the pay screen without paying → drop the unpaid plan + its order so it
+    // never lingers in Subscriptions.
+    if (mode === "pay" && order?.subscriptionId) discardPendingSubscription(order.subscriptionId);
     onClose();
   }
 

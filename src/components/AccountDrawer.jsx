@@ -177,7 +177,9 @@ function Subscriptions({ onShop }) {
   const nameOf = (id) => products.find((p) => p.id === id)?.name || "Item";
 
   async function load() {
-    try { setSubs(await api.fetchMySubscriptions()); } catch { setSubs([]); }
+    // Hide never-paid "pending" plans — only real (paid) plans belong here.
+    try { setSubs((await api.fetchMySubscriptions()).filter((s) => s.status !== "pending")); }
+    catch { setSubs([]); }
   }
   useEffect(() => { load(); }, []);
 
