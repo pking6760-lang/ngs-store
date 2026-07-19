@@ -280,6 +280,12 @@ export async function fetchAddonSuggestions(excludeIds = [], limit = 8) {
   return (data || []).map(mapProduct);
 }
 
+// Mirror the signed-in customer's cart to the server so an abandoned cart can be
+// nudged later. Fire-and-forget; never blocks the UI. No-op for guests (RLS).
+export async function saveCart(items) {
+  try { await must().rpc("save_cart", { p_items: items || {} }); } catch { /* ignore */ }
+}
+
 // "Buy again": the products the signed-in customer has bought before, most
 // useful first, filtered to what's still buyable. Empty for guests / new users.
 export async function fetchBuyAgain(limit = 15) {

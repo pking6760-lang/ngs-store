@@ -15,7 +15,7 @@ import CategoryIcon from "./components/CategoryIcon.jsx";
 import AddressSheet from "./components/AddressSheet.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
-import { fetchBuyAgain } from "./lib/api.js";
+import { fetchBuyAgain, saveCart } from "./lib/api.js";
 import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
 import { shop } from "./data/shop.js";
@@ -101,6 +101,15 @@ export default function App() {
       .catch(() => {});
     return () => { alive = false; };
   }, [isLoggedIn, user?.id]);
+
+  // Mirror the cart to the server (debounced) so an abandoned cart can be nudged
+  // later. Only when signed in; emptying the cart on checkout syncs {} and clears
+  // the server copy so no stale nudge fires.
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const t = setTimeout(() => { saveCart(items); }, 2500);
+    return () => clearTimeout(t);
+  }, [items, isLoggedIn]);
 
   const products = useProducts();
   const settings = useSettings();
