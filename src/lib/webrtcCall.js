@@ -4,18 +4,36 @@
 import { supabase } from "./supabase.js";
 
 // STUN is free and covers most networks. TURN (a relay) is needed on the ~10-15%
-// of mobile/symmetric-NAT networks where P2P can't connect — paste free-tier
-// TURN creds into these env vars and every call will connect.
-const ICE_SERVERS = [
-  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] },
-];
-const TURN_URL = import.meta.env.VITE_TURN_URL;
-if (TURN_URL) {
-  ICE_SERVERS.push({
-    urls: TURN_URL.split(","),
-    username: import.meta.env.VITE_TURN_USER || "",
-    credential: import.meta.env.VITE_TURN_CRED || "",
-  });
+// of mobile/symmetric-NAT networks where P2P can't connect. Configure TURN one of
+// two ways (both free-tier friendly):
+//   • Dynamic (recommended): VITE_METERED_APP + VITE_METERED_KEY → fetch fresh,
+//     short-lived TURN credentials from Metered's Open Relay at call time.
+//   • Static: VITE_TURN_URL(,url2) + VITE_TURN_USER + VITE_TURN_CRED.
+// With neither set, calls fall back to STUN-only (works on most, not all, nets).
+const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }];
+let iceCache = null, iceCacheAt = 0;
+
+async function getIceServers() {
+  const now = Date.now();
+  if (iceCache && now - iceCacheAt < 5 * 60 * 1000) return iceCache;   // creds are time-limited; refresh every 5 min
+  const app = import.meta.env.VITE_METERED_APP;
+  const key = import.meta.env.VITE_METERED_KEY;
+  if (app && key) {
+    try {
+      const r = await fetch(`https://${app}.metered.live/api/v1/turn/credentials?apiKey=${key}`);
+      const list = await r.json();
+      if (Array.isArray(list) && list.length) { iceCache = list; iceCacheAt = now; return list; }
+    } catch { /* fall through to static / STUN */ }
+  }
+  const servers = [...STUN];
+  if (import.meta.env.VITE_TURN_URL) {
+    servers.push({
+      urls: import.meta.env.VITE_TURN_URL.split(","),
+      username: import.meta.env.VITE_TURN_USER || "",
+      credential: import.meta.env.VITE_TURN_CRED || "",
+    });
+  }
+  iceCache = servers; iceCacheAt = now; return servers;
 }
 
 export function isCallSupported() {
@@ -87,7 +105,8 @@ export function createVoiceCall({ callId, isCaller, onStatus, onRemoteStream }) 
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: false,
     });
-    pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceCandidatePoolSize: 2 });
+    const iceServers = await getIceServers();
+    pc = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: 2 });
     localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
     remoteStream = new MediaStream();
     pc.ontrack = (e) => {
