@@ -113,18 +113,25 @@ export default function AdminApp() {
 function AdminHome({ name, onOpen, onLogout }) {
   const orders = useOrders();
   const partners = usePartners();
+  // Pending = orders that still need action now. A future "Scheduled"
+  // subscription order isn't actionable until its delivery day, and the prepaid
+  // plan "master" isn't a fulfilment order at all — exclude both (kept in sync
+  // with the Overview dashboard so the two screens never disagree).
   const activeOrders = orders.filter(
     (o) => o.status !== "Delivered" && o.status !== "Cancelled" && o.status !== "Returned"
+      && o.status !== "Scheduled" && !o.isSubscription
   ).length;
   const pendingPartners = partners.filter((p) => p.status === "pending").length;
   const badge = { orders: activeOrders, partners: pendingPartners };
 
   // Today's figures for the glanceable hero strip (reset automatically each day).
+  // The ₹ prepayment for a plan lives on its master order; revenue is recognised
+  // per daily order instead, so exclude the master to avoid double-counting.
   const isToday = (iso) => {
     const d = new Date(iso), n = new Date();
     return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
   };
-  const todays = orders.filter((o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn);
+  const todays = orders.filter((o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn && !o.isSubscription);
   const todaysRevenue = todays.reduce((s, o) => s + (o.total || 0), 0);
 
   return (
