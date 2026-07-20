@@ -2553,6 +2553,15 @@ body {
 }
 .od-call.inapp { background: #e7f7ee; color: #17784a; }
 .od-call-row .od-call { margin-top: 0; }
+.od-custlink {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+  background: #f4f6fb; border: 1px solid var(--a-line, #e4e8f2); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; font-weight: 700; color: #3B5BDB; cursor: pointer;
+}
+.od-custlink .od-custid {
+  font-weight: 800; color: #223; background: #fff; border: 1px solid #e4e8f2;
+  border-radius: 6px; padding: 2px 8px; font-variant-numeric: tabular-nums;
+}
 .od-map { display: inline-block; margin-top: 8px; color: #3B5BDB; font-weight: 700; font-size: 13.5px; text-decoration: none; }
 .od-muted { font-size: 12.5px; color: #888; margin-top: 6px; }
 .od-bill { margin-top: 10px; border-top: 1px dashed #e6e6ea; padding-top: 10px; }

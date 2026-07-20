@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
-import { useOrders, usePartners, useSettings, useAdminProducts } from "../lib/hooks.js";
+import { useOrders, usePartners, useSettings, useAdminProducts, useCustomers } from "../lib/hooks.js";
 import { ORDER_STATUSES } from "../lib/store.js";
 import {
   updateOrderStatus, markCashReceived, acceptOrder, rejectOrder,
@@ -27,7 +27,7 @@ const SHOP = {
   phone: "",
 };
 
-export default function OrdersAdmin() {
+export default function OrdersAdmin({ onOpen }) {
   const orders = useOrders();
   const partners = usePartners();
   // Who handled a step: a staff member (name + employee ID), or the owner
@@ -257,6 +257,7 @@ export default function OrdersAdmin() {
             onPrint={printReceipt}
             onChangePrinter={() => openPicker(selected)}
             printMsg={printMsg}
+            onOpenCustomer={(uid) => { closeDetail(); onOpen && onOpen("customers", uid); }}
           />
         </AdminPortal>
       )}
@@ -284,8 +285,10 @@ export default function OrdersAdmin() {
   );
 }
 
-function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
+function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg, onOpenCustomer }) {
   const { callParty } = useCall();
+  const customers = useCustomers();
+  const custCode = customers.find((c) => c.id === o.userId)?.customerCode || null;
   const detailSettings = useSettings();
   const redeemPer = Number(detailSettings.rewards?.redeemPer) || 10;
   // What this order handed back as a scratch reward (one prize) + its ₹ cost.
@@ -388,6 +391,12 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
               <strong>{o.customer || "Customer"}</strong>
               {o.member && <span className="member-chip">Prime</span>}
             </div>
+            {o.userId && onOpenCustomer && (
+              <button className="od-custlink" onClick={() => onOpenCustomer(o.userId)}>
+                <span className="od-custid">{custCode ? `#${custCode}` : "Customer"}</span>
+                View profile →
+              </button>
+            )}
             <div className="od-call-row">
               <button className="od-call inapp" onClick={() => callParty(o.dbId, o.customer)}>📞 Call in app</button>
               {o.userPhone && (

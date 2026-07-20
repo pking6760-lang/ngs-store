@@ -55,6 +55,9 @@ export default function AdminApp() {
   const [role, setRole] = useState(() => sessionStorage.getItem(ROLE_KEY) || null);
   const [name, setName] = useState(() => sessionStorage.getItem(NAME_KEY) || "");
   const [view, setView] = useState("menu");
+  // Optional target when opening a section — e.g. a customer id to jump into.
+  const [navArg, setNavArg] = useState(null);
+  const openSection = (v, arg = null) => { setNavArg(arg); setView(v); };
 
   // Hardware Back: close the open section/modal, exit only at the home menu.
   useEffect(() => { initHardwareBack(() => toast("Press back again to exit")); }, []);
@@ -100,9 +103,9 @@ export default function AdminApp() {
   return (
     <div className="adm">
       {view === "menu" ? (
-        <AdminHome name={name} onOpen={setView} onLogout={logout} />
+        <AdminHome name={name} onOpen={openSection} onLogout={logout} />
       ) : (
-        <AdminSection view={view} onOpen={setView} />
+        <AdminSection view={view} navArg={navArg} onOpen={openSection} />
       )}
       {/* Forced new-order screen with alarm (admin only). */}
       <IncomingOrder />
@@ -178,7 +181,7 @@ function AdminHome({ name, onOpen, onLogout }) {
   );
 }
 
-function AdminSection({ view, onOpen }) {
+function AdminSection({ view, navArg, onOpen }) {
   const label = TILES.find((t) => t.id === view)?.label || "";
   const loading = useReveal(view, 320, 680);
   return (
@@ -195,8 +198,8 @@ function AdminSection({ view, onOpen }) {
             {view === "dashboard" && <Dashboard onNavigate={onOpen} />}
             {view === "products" && <ProductsAdmin />}
             {view === "pricing" && <SmartPricing />}
-            {view === "orders" && <OrdersAdmin />}
-            {view === "customers" && <CustomersAdmin />}
+            {view === "orders" && <OrdersAdmin onOpen={onOpen} />}
+            {view === "customers" && <CustomersAdmin initialCustomerId={navArg} />}
             {view === "feedback" && <FeedbackAdmin />}
             {view === "partners" && <PartnersAdmin />}
             {view === "delivery" && <DeliveryAdmin />}

@@ -7,10 +7,13 @@ import { getOpsConfigRaw, fetchCustomerBalance, adminCreditWallet } from "../lib
 import { toast } from "../lib/toast.js";
 import AdminPortal from "./AdminPortal.jsx";
 
-export default function CustomersAdmin() {
+export default function CustomersAdmin({ initialCustomerId = null }) {
   const customers = useCustomers();
   const orders = useOrders();
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(initialCustomerId);
+  // Deep-link: opening Customers with a target (e.g. tapped from an order) jumps
+  // straight into that customer's profile.
+  useEffect(() => { if (initialCustomerId) setSelectedId(initialCustomerId); }, [initialCustomerId]);
   useBackGuard(!!selectedId, () => setSelectedId(null));
 
   // Quick per-customer stats for the list.
