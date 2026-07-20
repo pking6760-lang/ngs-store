@@ -2491,6 +2491,17 @@ body {
   background: #eef6fc; border: 1px solid #d5e8f6; border-radius: 12px; padding: 11px 14px;
 }
 .od-deliver-banner.sub { color: #5b21b6; background: #f5f0fe; border-color: #e4d8fb; }
+
+/* "Not yet" lock shown in place of packing/delivery actions for a scheduled
+   subscription order whose delivery day hasn't arrived. */
+.od-scheduled-lock {
+  font-size: 13.5px; font-weight: 700; color: #55607a; line-height: 1.5;
+  background: #f4f6fa; border: 1px dashed #cdd5e4; border-radius: 12px; padding: 14px;
+}
+.od-scheduled-lock strong { color: #14608f; }
+.od-scheduled-lock span {
+  display: block; margin-top: 4px; font-weight: 500; font-size: 12.5px; color: #7a8394;
+}
 .od-return-items { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 10px; }
 .od-return-item {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;

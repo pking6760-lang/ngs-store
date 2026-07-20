@@ -322,6 +322,9 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
       pickerPay, driverPay, coupon, refund, profit: Math.round(profit), missingCost };
   }, [detailProducts, detailOps, o, rewardCost]);
   const curIdx = ORDER_STATUSES.indexOf(o.status);
+  // A scheduled subscription order whose delivery day hasn't arrived yet: packing
+  // and delivery must stay locked until the drop date (it flips to Placed then).
+  const futureScheduled = o.status === "Scheduled" && o.deliverOn && o.deliverOn > istToday();
   // The owner does a track only when no staff partner is assigned to it.
   const ownerPacks = !o.pickerId;
   const ownerDelivers = !o.riderId;
@@ -533,6 +536,12 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
             )}
             {o.status === "Cancelled" ? (
               <div className="order-cancel-tag">✖ Cancelled</div>
+            ) : futureScheduled ? (
+              <div className="od-scheduled-lock">
+                🔒 Scheduled for <strong>{deliverDateLabel(o.deliverOn)}</strong>
+                {o.deliverHour != null ? ` · around ${hourLabel(o.deliverHour)}` : ""}.
+                <span>Packing &amp; delivery open on the delivery day. Nothing to do yet — the order turns active that morning.</span>
+              </div>
             ) : o.status === "Delivered" ? (
               <div className="order-done-tag">✓ Delivered — order complete</div>
             ) : (
@@ -576,7 +585,7 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
           )}
 
           {!o.isSubscription && <ReturnSection order={o} />}
-          {!o.isSubscription && <RefundSection order={o} />}
+          {!o.isSubscription && !futureScheduled && <RefundSection order={o} />}
         </div>
       </div>
       {/* Hidden on screen; the print stylesheet reveals only this at 58mm. */}
@@ -797,4 +806,15 @@ function hourLabel(h) {
   const ampm = h < 12 ? "AM" : "PM";
   const hr = h % 12 === 0 ? 12 : h % 12;
   return `${hr} ${ampm}`;
+}
+// Today's date in the shop's timezone (IST) as "YYYY-MM-DD" — compares directly
+// against orders.deliver_on (also an ISO date), so string < works.
+function istToday() {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
 }
