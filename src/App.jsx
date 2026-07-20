@@ -316,6 +316,7 @@ export default function App() {
             offer={settings.offerBanner}
             buyAgainIds={buyAgainIds}
             onCategoryClick={setActiveCategory}
+            onPromo={handlePromo}
           />
         )}
       </main>
@@ -420,7 +421,7 @@ function HomeSkeleton() {
   );
 }
 
-function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick }) {
+function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo }) {
   if (products.length === 0) return <HomeSkeleton />;
   const byCategory = (id) => products.filter((p) => p.category === id);
   // Resolve the buy-again ids against the live catalog (fresh price/stock), keep
@@ -447,7 +448,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
         <div className="offer-strip">{offer}</div>
       )}
 
-      <PromoCarousel slides={banners} onSelect={handlePromo} />
+      <PromoCarousel slides={banners} onSelect={onPromo} />
 
       {buyAgain.length > 0 && (
         <section className="section">
