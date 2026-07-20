@@ -162,13 +162,19 @@ const dateText = (d) => {
 };
 // Next undelivered day = start + daysDone (the daily orders already created cover
 // start … start+daysDone-1).
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 function subNextDelivery(s) {
-  // Orders are created a day AHEAD, so the soonest undelivered delivery is
-  // start + (daysDone - 1), not start + daysDone.
+  // Next delivery = the daysDone-th date from start that isn't a skipped day
+  // (orders are created a day ahead, so the latest-created one is the next drop).
   if (s.status !== "active" || !s.startDate || s.daysDone < 1 || s.daysDone > s.daysTotal) return "";
-  const dt = new Date(s.startDate + "T00:00:00");
-  dt.setDate(dt.getDate() + s.daysDone - 1);
-  return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const skips = new Set(s.skipDates || []);
+  const d = new Date(s.startDate + "T00:00:00");
+  let count = 0;
+  for (let i = 0; i < 400; i++) {
+    if (!skips.has(isoLocal(d))) { count++; if (count === s.daysDone) return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }); }
+    d.setDate(d.getDate() + 1);
+  }
+  return "";
 }
 
 // Manage prepaid plans: see progress + next delivery, cancel (unused days refund).
@@ -191,6 +197,15 @@ function Subscriptions({ onShop }) {
     setBusy(s.id);
     try { await api.cancelSubscription(s.id); await load(); }
     catch (e) { toast(e.message || "Couldn't cancel."); }
+    finally { setBusy(""); }
+  }
+
+  async function skip(s) {
+    const next = subNextDelivery(s);
+    if (!confirm(`Skip your next delivery${next ? ` (${next})` : ""}? You're not charged — the day moves to the end, so you still get all ${s.daysTotal} deliveries.`)) return;
+    setBusy(s.id);
+    try { await api.skipNextDelivery(s.id); await load(); toast("Skipped — your milk resumes the next day."); }
+    catch (e) { toast(e.message || "Couldn't skip that day."); }
     finally { setBusy(""); }
   }
 
@@ -227,6 +242,9 @@ function Subscriptions({ onShop }) {
             </div>
             {(s.status === "active" || s.status === "pending") && (
               <div className="sub-card-actions">
+                {s.status === "active" && (
+                  <button disabled={busy === s.id} onClick={() => skip(s)}>Skip next delivery</button>
+                )}
                 <button className="danger" disabled={busy === s.id} onClick={() => cancel(s)}>Cancel plan</button>
               </div>
             )}

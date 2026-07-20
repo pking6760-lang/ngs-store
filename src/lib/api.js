@@ -297,6 +297,7 @@ function mapSubscription(r) {
     dailyTotal: Number(r.daily_total) || 0, amount: Number(r.amount) || 0,
     payMethod: r.pay_method || "wallet", status: r.status,
     startDate: r.start_date || null, lastDelivery: r.last_delivery || null,
+    skipDates: Array.isArray(r.skip_dates) ? r.skip_dates : [],
     createdAt: r.created_at,
   };
 }
@@ -320,6 +321,13 @@ export async function createSubscriptionOrder({ items, days, hour, address, loca
 export async function cancelSubscription(id) {
   const { error } = await must().rpc("cancel_subscription", { p_id: id });
   if (error) throw error;
+}
+// Skip the plan's next delivery (not home that day). Returns the skipped date;
+// the plan extends so no day is lost.
+export async function skipNextDelivery(id) {
+  const { data, error } = await must().rpc("skip_next_delivery", { p_id: id });
+  if (error) throw new Error(error.message || "Couldn't skip that day.");
+  return data;
 }
 // The customer's nearest upcoming subscription delivery (to offer "add to it").
 export async function fetchUpcomingDelivery() {
