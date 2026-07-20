@@ -38,6 +38,7 @@ const banners = [
     icon: (<svg {...svgProps}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>),
     grad: "linear-gradient(135deg, #0a9155, #045f36)",
     fg: "#ffffff",
+    action: "browse",
   },
   {
     id: "b2",
@@ -47,6 +48,7 @@ const banners = [
     icon: (<svg {...svgProps}><path d="M1 4h12v11H1zM13 8h4l4 4v3h-8" /><circle cx="5.5" cy="18" r="1.7" /><circle cx="16.5" cy="18" r="1.7" /></svg>),
     grad: "linear-gradient(135deg, #2f6fb0, #133a63)",
     fg: "#ffffff",
+    action: "cart",
   },
   {
     id: "b3",
@@ -56,6 +58,7 @@ const banners = [
     icon: (<svg {...svgProps}><path d="M8 2h8l-1 3v3l2 4v9a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-9l2-4V5z" /><path d="M9 13h6" /></svg>),
     grad: "linear-gradient(135deg, #e08a12, #a5520a)",
     fg: "#ffffff",
+    action: "milk",
   },
   {
     id: "b4",
@@ -65,6 +68,7 @@ const banners = [
     icon: (<svg {...svgProps}><path d="M3 7l4 4 5-7 5 7 4-4v11H3z" /><path d="M3 20h18" /></svg>),
     grad: "linear-gradient(135deg, #7c3aed, #4c1d95)",
     fg: "#ffffff",
+    action: "prime",
   },
   {
     id: "b5",
@@ -74,6 +78,7 @@ const banners = [
     icon: (<svg {...svgProps}><rect x="2" y="5" width="20" height="14" rx="2.5" /><path d="M2 10h20" /><path d="M6 15h4" /></svg>),
     grad: "linear-gradient(135deg, #0d9488, #0b5e57)",
     fg: "#ffffff",
+    action: "wallet",
   },
 ];
 
@@ -173,6 +178,23 @@ export default function App() {
   function openWallet() {
     setAccountTab("wallet");
     setAccountOpen(true);
+  }
+
+  // Tap targets for the home promo carousel — each goes somewhere real.
+  function handlePromo(action) {
+    switch (action) {
+      case "browse": goHome(); break;                         // show the full catalog
+      case "cart": setCartOpen(true); break;                  // free-delivery → checkout
+      case "milk": goHome(); setQuery("milk"); break;         // find milk to subscribe
+      case "prime":                                           // Prime → membership / login
+        if (isLoggedIn) { setAccountTab("membership"); setAccountOpen(true); }
+        else setAuthOpen(true);
+        break;
+      case "wallet":                                          // payments → wallet / login
+        if (isLoggedIn) openWallet(); else setAuthOpen(true);
+        break;
+      default: break;
+    }
   }
 
   function openAddress() {
@@ -425,7 +447,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
         <div className="offer-strip">{offer}</div>
       )}
 
-      <PromoCarousel slides={banners} />
+      <PromoCarousel slides={banners} onSelect={handlePromo} />
 
       {buyAgain.length > 0 && (
         <section className="section">

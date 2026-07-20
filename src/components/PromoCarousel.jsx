@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from "react";
 // Professional auto-sliding promo carousel: advances left→right on a timer,
 // loops, pauses on touch/hover and when the tab is hidden, and is swipeable.
 // One full-width slide at a time with animated dot indicators.
-export default function PromoCarousel({ slides, interval = 4200 }) {
+export default function PromoCarousel({ slides, interval = 4200, onSelect }) {
   const [i, setI] = useState(0);
   const n = slides.length;
   const paused = useRef(false);
-  const touch = useRef({ x: 0, dx: 0, active: false });
+  const touch = useRef({ x: 0, dx: 0, active: false, moved: false });
   const resumeT = useRef(null);
 
   const go = (idx) => setI(((idx % n) + n) % n);
@@ -29,13 +29,23 @@ export default function PromoCarousel({ slides, interval = 4200 }) {
     return () => { document.removeEventListener("visibilitychange", onVis); if (resumeT.current) clearTimeout(resumeT.current); };
   }, []);
 
-  function onTouchStart(e) { paused.current = true; touch.current = { x: e.touches[0].clientX, dx: 0, active: true }; }
-  function onTouchMove(e) { if (touch.current.active) touch.current.dx = e.touches[0].clientX - touch.current.x; }
+  function onTouchStart(e) { paused.current = true; touch.current = { x: e.touches[0].clientX, dx: 0, active: true, moved: false }; }
+  function onTouchMove(e) {
+    if (!touch.current.active) return;
+    touch.current.dx = e.touches[0].clientX - touch.current.x;
+    if (Math.abs(touch.current.dx) > 8) touch.current.moved = true;
+  }
   function onTouchEnd() {
     const dx = touch.current.dx; touch.current.active = false;
     if (dx < -40) go(i + 1);
     else if (dx > 40) go(i - 1);
     holdPause();
+  }
+
+  // Tap (not swipe) → open the slide's destination.
+  function onSlideClick(action) {
+    if (touch.current.moved) { touch.current.moved = false; return; }  // was a swipe, ignore
+    onSelect?.(action);
   }
 
   return (
@@ -49,7 +59,15 @@ export default function PromoCarousel({ slides, interval = 4200 }) {
     >
       <div className="promo-track" style={{ transform: `translateX(-${i * 100}%)` }}>
         {slides.map((b) => (
-          <div className="promo-slide" key={b.id} style={{ background: b.grad, color: b.fg }}>
+          <div
+            className="promo-slide"
+            key={b.id}
+            role="button"
+            tabIndex={0}
+            style={{ background: b.grad, color: b.fg }}
+            onClick={() => onSlideClick(b.action)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect?.(b.action); }}
+          >
             <div className="promo-text">
               {b.kicker && <span className="promo-kicker">{b.kicker}</span>}
               <h3>{b.title}</h3>
