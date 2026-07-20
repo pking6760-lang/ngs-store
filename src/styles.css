@@ -3538,7 +3538,19 @@ input:focus-visible {
   border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 800;
 }
 .sub-start:disabled { opacity: .6; }
+.sub-start.danger { background: #c0392b; }
 .sub-cancel-hint { text-align: center; font-size: 11px; color: #9aa79f; margin-top: 8px; }
+
+/* Skip / cancel sheets */
+.skip-lead { font-size: 13px; line-height: 1.5; color: #556; margin: 0 0 14px; }
+.skip-preview { margin-top: 14px; background: #f6faf7; border: 1px solid #e2efe7; border-radius: 14px; padding: 12px 14px; }
+.skip-dates { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.skip-date-chip {
+  font-size: 12px; font-weight: 700; color: #1f7a44; background: #eaf6ee;
+  border: 1px solid #cfe8d8; border-radius: 999px; padding: 4px 11px;
+}
+.skip-resume { font-size: 12.5px; line-height: 1.5; color: #55665c; margin: 0; }
+.skip-resume strong { color: #1f7a44; }
 
 /* Manage subscriptions (account) */
 .subs-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }

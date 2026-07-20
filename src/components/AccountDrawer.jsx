@@ -176,12 +176,140 @@ function subNextDelivery(s) {
   }
   return "";
 }
+// The next `count` upcoming delivery dates (non-skipped days at positions
+// daysDone, daysDone+1, …), capped by how many deliveries remain on the plan.
+function upcomingDeliveries(s, count) {
+  if (s.status !== "active" || !s.startDate || s.daysDone < 1) return [];
+  const skips = new Set(s.skipDates || []);
+  const remaining = Math.max(s.daysTotal - s.daysDone + 1, 0);
+  const want = Math.min(count, remaining);
+  const out = [];
+  const d = new Date(s.startDate + "T00:00:00");
+  let pos = 0;
+  for (let i = 0; i < 500 && out.length < want; i++) {
+    if (!skips.has(isoLocal(d))) { pos++; if (pos >= s.daysDone) out.push(new Date(d)); }
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+const skipDateText = (d) => d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+
+const SKIP_PRESETS = [1, 2, 3, 5, 7];
+// "Away for a few days" — skip the next N deliveries. Each moves to the end of
+// the plan (customer keeps every day they paid for). Backend: skip_deliveries.
+function SkipSheet({ sub, onClose, onDone }) {
+  const [days, setDays] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const dates = upcomingDeliveries(sub, days);
+  const n = dates.length;
+  const after = upcomingDeliveries(sub, days + 1);
+  const resume = after.length > n ? after[n] : null;
+
+  async function confirm() {
+    setBusy(true);
+    try { const done = await api.skipDeliveries(sub.id, days); onDone(done); }
+    catch (e) { toast(e.message || "Couldn't skip those days."); setBusy(false); }
+  }
+
+  return (
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sub-head">
+          <h3>Going away? Pause deliveries</h3>
+          <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="sub-body">
+          <p className="skip-lead">
+            Skip the days you'll be away — you're not charged for them, and every
+            skipped day moves to the end, so you still get all {sub.daysTotal} deliveries you paid for.
+          </p>
+
+          <div className="sub-field-lbl">How many days away?</div>
+          <div className="sub-freq">
+            {SKIP_PRESETS.map((d) => (
+              <button key={d} className={`sub-freq-btn ${days === d ? "on" : ""}`} onClick={() => setDays(d)}>
+                {d} {d === 1 ? "day" : "days"}
+              </button>
+            ))}
+            <label className={`sub-freq-btn sub-days-custom ${!SKIP_PRESETS.includes(days) ? "on" : ""}`}>
+              <input type="number" min="1" max="14" placeholder="Custom"
+                value={SKIP_PRESETS.includes(days) ? "" : days}
+                onChange={(e) => setDays(Math.max(1, Math.min(14, Number(e.target.value) || 1)))} />
+              <span>days</span>
+            </label>
+          </div>
+
+          {n > 0 ? (
+            <div className="skip-preview">
+              <div className="sub-field-lbl">Skipping {n} {n === 1 ? "delivery" : "deliveries"}</div>
+              <div className="skip-dates">
+                {dates.map((d, i) => <span key={i} className="skip-date-chip">{skipDateText(d)}</span>)}
+              </div>
+              <p className="skip-resume">
+                {resume
+                  ? <>Deliveries resume <strong>{skipDateText(resume)}</strong>. Your plan now ends {n} day{n === 1 ? "" : "s"} later.</>
+                  : <>These are your last {n} day{n === 1 ? "" : "s"} — the plan finishes after them.</>}
+              </p>
+            </div>
+          ) : (
+            <p className="skip-resume">No upcoming deliveries left to skip on this plan.</p>
+          )}
+        </div>
+        <div className="sub-foot">
+          <button className="sub-start" disabled={busy || n === 0} onClick={confirm}>
+            {busy ? "Skipping…" : `Skip ${n} ${n === 1 ? "delivery" : "deliveries"}`}
+          </button>
+          <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>Keep my deliveries</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cancel a plan: unused days refunded to wallet. Professional confirm sheet.
+function CancelSheet({ sub, onClose, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const left = Math.max(sub.daysTotal - sub.daysDone, 0);
+  const refund = Math.round(left * sub.dailyTotal);
+
+  async function confirm() {
+    setBusy(true);
+    try { await api.cancelSubscription(sub.id); onDone(); }
+    catch (e) { toast(e.message || "Couldn't cancel."); setBusy(false); }
+  }
+
+  return (
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sub-head">
+          <h3>Cancel this plan?</h3>
+          <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="sub-body">
+          <p className="skip-lead">We'll stop future deliveries right away. Deliveries already made aren't affected.</p>
+          <div className="sub-total">
+            <div className="sub-total-line"><span>Unused days</span><span>{left} day{left === 1 ? "" : "s"}</span></div>
+            <div className="sub-total-row"><span>Refund to your wallet</span><strong>₹{refund}</strong></div>
+            <div className="sub-total-note">Refunded instantly to your NGS Wallet — use it on any order.</div>
+          </div>
+        </div>
+        <div className="sub-foot">
+          <button className="sub-start danger" disabled={busy} onClick={confirm}>
+            {busy ? "Cancelling…" : refund > 0 ? `Cancel & refund ₹${refund}` : "Cancel plan"}
+          </button>
+          <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>Keep my plan</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Manage prepaid plans: see progress + next delivery, cancel (unused days refund).
 function Subscriptions({ onShop }) {
   const products = useProducts();
   const [subs, setSubs] = useState(null);
-  const [busy, setBusy] = useState("");
+  const [skipFor, setSkipFor] = useState(null);
+  const [cancelFor, setCancelFor] = useState(null);
   const nameOf = (id) => products.find((p) => p.id === id)?.name || "Item";
 
   async function load() {
@@ -191,22 +319,15 @@ function Subscriptions({ onShop }) {
   }
   useEffect(() => { load(); }, []);
 
-  async function cancel(s) {
-    const left = Math.max(s.daysTotal - s.daysDone, 0);
-    if (!confirm(`Cancel this plan? ${left} unused day(s) — ₹${Math.round(left * s.dailyTotal)} — will be refunded to your wallet.`)) return;
-    setBusy(s.id);
-    try { await api.cancelSubscription(s.id); await load(); }
-    catch (e) { toast(e.message || "Couldn't cancel."); }
-    finally { setBusy(""); }
+  async function onSkipped(done) {
+    setSkipFor(null);
+    await load();
+    toast(done > 1 ? `${done} deliveries skipped — they move to the end of your plan.` : "Skipped — your milk resumes the next day.");
   }
-
-  async function skip(s) {
-    const next = subNextDelivery(s);
-    if (!confirm(`Skip your next delivery${next ? ` (${next})` : ""}? You're not charged — the day moves to the end, so you still get all ${s.daysTotal} deliveries.`)) return;
-    setBusy(s.id);
-    try { await api.skipNextDelivery(s.id); await load(); toast("Skipped — your milk resumes the next day."); }
-    catch (e) { toast(e.message || "Couldn't skip that day."); }
-    finally { setBusy(""); }
+  async function onCancelled() {
+    setCancelFor(null);
+    await load();
+    toast("Plan cancelled — refund added to your wallet.");
   }
 
   if (subs === null) return <p className="account-loading">Loading…</p>;
@@ -243,14 +364,16 @@ function Subscriptions({ onShop }) {
             {(s.status === "active" || s.status === "pending") && (
               <div className="sub-card-actions">
                 {s.status === "active" && (
-                  <button disabled={busy === s.id} onClick={() => skip(s)}>Skip next delivery</button>
+                  <button onClick={() => setSkipFor(s)}>Going away? Pause</button>
                 )}
-                <button className="danger" disabled={busy === s.id} onClick={() => cancel(s)}>Cancel plan</button>
+                <button className="danger" onClick={() => setCancelFor(s)}>Cancel plan</button>
               </div>
             )}
           </div>
         );
       })}
+      {skipFor && <SkipSheet sub={skipFor} onClose={() => setSkipFor(null)} onDone={onSkipped} />}
+      {cancelFor && <CancelSheet sub={cancelFor} onClose={() => setCancelFor(null)} onDone={onCancelled} />}
     </div>
   );
 }

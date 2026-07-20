@@ -329,6 +329,12 @@ export async function skipNextDelivery(id) {
   if (error) throw new Error(error.message || "Couldn't skip that day.");
   return data;
 }
+// Skip the next N deliveries ("away for a few days"). Returns how many were skipped.
+export async function skipDeliveries(id, count) {
+  const { data, error } = await must().rpc("skip_deliveries", { p_id: id, p_count: count });
+  if (error) throw new Error(error.message || "Couldn't skip those days.");
+  return Number(data) || 0;
+}
 // The customer's nearest upcoming subscription delivery (to offer "add to it").
 export async function fetchUpcomingDelivery() {
   const { data, error } = await must()
