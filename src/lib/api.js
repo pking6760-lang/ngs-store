@@ -1027,6 +1027,20 @@ export async function partnerWalletAdjust(userId, amount, note) {
   return { ok: true };
 }
 
+// Admin: a CUSTOMER's current wallet balance (RLS lets admins read any wallet).
+export async function fetchCustomerBalance(userId) {
+  const { data, error } = await must().from("customer_wallet").select("amount").eq("user_id", userId);
+  if (error) return 0;
+  return (data || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+}
+// Admin: give (positive) or deduct (negative) a customer's wallet money. Returns
+// the new balance.
+export async function adminCreditWallet(userId, amount, note) {
+  const { data, error } = await must().rpc("admin_customer_wallet_credit", { p_user: userId, p_amount: amount, p_note: note || null });
+  if (error) throw new Error(error.message || "Couldn't update wallet.");
+  return Number(data) || 0;
+}
+
 // The partner's current assigned task (minimal fields, privacy-scoped).
 export async function getMyTask() {
   const { data, error } = await must().rpc("get_my_task");

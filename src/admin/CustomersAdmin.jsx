@@ -3,7 +3,8 @@ import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
 import { useCustomers, useOrders, useUserNotifications, useSettings, useAdminProducts } from "../lib/hooks.js";
 import { sendNotification } from "../lib/actions.js";
-import { getOpsConfigRaw } from "../lib/api.js";
+import { getOpsConfigRaw, fetchCustomerBalance, adminCreditWallet } from "../lib/api.js";
+import { toast } from "../lib/toast.js";
 import AdminPortal from "./AdminPortal.jsx";
 
 export default function CustomersAdmin() {
@@ -79,6 +80,56 @@ export default function CustomersAdmin() {
         </AdminPortal>
       )}
     </>
+  );
+}
+
+// Give (or deduct) a customer's NGS Wallet money. Admin-only (server-enforced).
+function WalletCredit({ customerId }) {
+  const [balance, setBalance] = useState(null);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    try { setBalance(await fetchCustomerBalance(customerId)); } catch { setBalance(0); }
+  }
+  useEffect(() => { load(); }, [customerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function apply(sign) {
+    const val = Math.abs(Number(amount) || 0) * sign;
+    if (!val) { toast("Enter an amount."); return; }
+    setBusy(true);
+    try {
+      const bal = await adminCreditWallet(customerId, val, note);
+      setBalance(bal);
+      setAmount(""); setNote("");
+      toast(`Wallet ${sign > 0 ? "credited" : "debited"} — new balance ₹${Math.round(bal)}`);
+    } catch (e) { toast(e.message || "Couldn't update wallet."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="wallet-credit">
+      <div className="wc-head">
+        <span>NGS Wallet</span>
+        <strong>{balance == null ? "…" : `₹${Math.round(balance)}`}</strong>
+      </div>
+      <div className="wc-quick">
+        {[100, 200, 500, 1000].map((q) => (
+          <button key={q} type="button" disabled={busy} onClick={() => setAmount(String(q))}>+₹{q}</button>
+        ))}
+      </div>
+      <div className="wc-row">
+        <input type="number" min="0" placeholder="Amount ₹" value={amount}
+          onChange={(e) => setAmount(e.target.value)} />
+        <input type="text" placeholder="Note (optional)" value={note}
+          onChange={(e) => setNote(e.target.value)} />
+      </div>
+      <div className="wc-actions">
+        <button type="button" className="wc-add" disabled={busy} onClick={() => apply(1)}>Add money</button>
+        <button type="button" className="wc-sub" disabled={busy} onClick={() => apply(-1)}>Deduct</button>
+      </div>
+    </div>
   );
 }
 
@@ -192,6 +243,9 @@ function CustomerDetail({ customer, orders, onClose }) {
               <span>Points</span>
             </div>
           </div>
+
+          <WalletCredit customerId={customer.id} />
+
 
           <div className="customer-fields">
             {customer.email && (

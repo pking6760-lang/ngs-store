@@ -2244,6 +2244,20 @@ body {
 .customer-hero-name { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .customer-hero-phone { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .customer-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+
+/* Admin: credit a customer's wallet */
+.wallet-credit { background: #f5faf6; border: 1px solid #dcecdf; border-radius: 14px; padding: 12px 14px; margin-bottom: 16px; }
+.wc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.wc-head span { font-size: 12px; font-weight: 800; color: #6b7b70; text-transform: uppercase; letter-spacing: .3px; }
+.wc-head strong { font-size: 20px; font-weight: 800; color: #1f7a44; }
+.wc-quick { display: flex; gap: 6px; margin-bottom: 8px; }
+.wc-quick button { flex: 1; border: 1px solid #cfe6d6; background: #fff; border-radius: 9px; padding: 7px; font-size: 13px; font-weight: 700; color: #1f7a44; }
+.wc-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.wc-row input { flex: 1; min-width: 0; border: 1px solid var(--line, #e2e6e3); border-radius: 9px; padding: 9px 11px; font-size: 14px; }
+.wc-actions { display: flex; gap: 8px; }
+.wc-add { flex: 2; border: none; background: #1f7a44; color: #fff; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 800; }
+.wc-sub { flex: 1; border: 1px solid #f0cfca; background: #fff; color: #c0392b; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 700; }
+.wc-add:disabled, .wc-sub:disabled, .wc-quick button:disabled { opacity: .55; }
 .cstat {
   background: var(--bg-soft, #f4f6f9); border-radius: 12px; padding: 14px 10px; text-align: center;
 }
