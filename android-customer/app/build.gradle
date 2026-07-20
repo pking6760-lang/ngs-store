@@ -7,8 +7,8 @@ android {
         applicationId "com.ngsstore.customer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 71
-        versionName "8.0"
+        versionCode 72
+        versionName "8.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -35,6 +35,10 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    // Our NgsFcmService receives FCM directly (data-only incoming-call pushes),
+    // so we need firebase-messaging on the app classpath (the Capacitor push
+    // plugin keeps it as a private 'implementation' dependency).
+    implementation "com.google.firebase:firebase-messaging:23.3.1"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
