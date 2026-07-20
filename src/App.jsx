@@ -18,6 +18,7 @@ import PullToRefresh from "./components/PullToRefresh.jsx";
 import { fetchBuyAgain, saveCart } from "./lib/api.js";
 import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
+import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -191,6 +192,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <CallAlertsPrompt show={isLoggedIn} />
       <PullToRefresh
         onRefresh={handleRefresh}
         disabled={cartOpen || accountOpen || authOpen || addressOpen || trackOpen}

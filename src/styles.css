@@ -4520,3 +4520,23 @@ body {
   animation: paySpin 0.8s linear infinite;
 }
 @keyframes paySpin { to { transform: rotate(360deg); } }
+
+/* Call-alerts banner (customer web — enable browser notifications) */
+.ca-banner {
+  display: flex; align-items: center; gap: 10px;
+  margin: 8px 12px 0; padding: 10px 12px;
+  background: #eef6ff; border: 1px solid #cfe4fb; border-radius: 12px;
+  font-size: 13px; color: #1c3d5a; line-height: 1.35;
+}
+.ca-banner.ios { background: #fff7e6; border-color: #f3e2bd; color: #6b4e1a; }
+.ca-banner .ca-ic { font-size: 18px; flex: none; }
+.ca-banner .ca-txt { flex: 1; }
+.ca-banner .ca-enable {
+  flex: none; border: none; background: #2b7de0; color: #fff; font-weight: 800;
+  font-size: 13px; padding: 8px 16px; border-radius: 9px; cursor: pointer;
+}
+.ca-banner .ca-enable:disabled { opacity: .6; }
+.ca-banner .ca-x {
+  flex: none; border: none; background: transparent; color: #7a93a8;
+  font-size: 14px; cursor: pointer; padding: 4px;
+}
