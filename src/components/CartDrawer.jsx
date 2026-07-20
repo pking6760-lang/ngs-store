@@ -8,7 +8,7 @@ import { saveOrder, applyCouponFrom, decrementStock, getShopLocations } from "..
 import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
-import { tierUnitPrice } from "../lib/bulk.js";
+import { tierUnitPrice, bulkUnitPrice } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
@@ -163,6 +163,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   }, [lines, setQty]);
 
   const itemTotal = lines.reduce((sum, l) => sum + l.unit * l.qty, 0);
+  // Subscriptions bill at the STANDARD price (never member/Prime price), matching
+  // the server (bulk_unit_price). Use this for the subscribe sheet's daily total.
+  const subItemsTotal = lines.reduce((sum, l) => sum + bulkUnitPrice(l.product, l.qty) * l.qty, 0);
   // Minimum order value — checkout is blocked below it (server enforces too).
   const minOrder = Number(settings.rewards?.minOrderValue) || 0;
   const belowMin = itemTotal > 0 && itemTotal < minOrder;
@@ -1459,7 +1462,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         onClose={() => setSubOpen(false)}
         items={lines.map(({ product, qty }) => ({ id: product.id, qty }))}
         summaryProducts={lines.map((l) => l.product)}
-        dailyTotal={itemTotal}
+        dailyTotal={subItemsTotal}
         deliveryFee={settings.subDeliveryFee ?? 10}
         address={orderAddress ? orderAddress() : address}
         location={location ? { ...location, distanceKm: dist } : null}

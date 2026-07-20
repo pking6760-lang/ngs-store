@@ -163,9 +163,11 @@ const dateText = (d) => {
 // Next undelivered day = start + daysDone (the daily orders already created cover
 // start … start+daysDone-1).
 function subNextDelivery(s) {
-  if (s.status !== "active" || !s.startDate || s.daysDone >= s.daysTotal) return "";
+  // Orders are created a day AHEAD, so the soonest undelivered delivery is
+  // start + (daysDone - 1), not start + daysDone.
+  if (s.status !== "active" || !s.startDate || s.daysDone < 1 || s.daysDone > s.daysTotal) return "";
   const dt = new Date(s.startDate + "T00:00:00");
-  dt.setDate(dt.getDate() + s.daysDone);
+  dt.setDate(dt.getDate() + s.daysDone - 1);
   return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 

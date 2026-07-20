@@ -236,7 +236,11 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
             </div>
 
             <div className="sub-foot">
-              <button className="sub-start" disabled={busy} onClick={start}>
+              <button
+                className="sub-start"
+                disabled={busy || (walletKnown && !walletEnough && !RAZORPAY_ENABLED)}
+                onClick={start}
+              >
                 {busy ? "Starting…" : `Pay ₹${total} & start`}
               </button>
               <p className="sub-cancel-hint">Cancel anytime from Account → Subscriptions; unused days are refunded to your wallet.</p>

@@ -22,12 +22,19 @@ const json = (body: unknown, status = 200) =>
 
 const sbHeaders = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` };
 
-function callerId(authHeader: string | null): string | null {
+async function verifiedUid(authHeader: string | null): Promise<string | null> {
   if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
   try {
-    const payload = authHeader.replace(/^Bearer\s+/i, "").split(".")[1];
-    if (!payload) return null;
-    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")))?.sub ?? null;
+    // Validate the JWT SERVER-SIDE (verifies the signature) rather than trusting
+    // a decoded payload — so a forged token can't impersonate another customer.
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: SERVICE_ROLE },
+    });
+    if (!res.ok) return null;
+    const u = await res.json();
+    return u?.id ?? null;
   } catch { return null; }
 }
 
@@ -45,7 +52,7 @@ Deno.serve(async (req) => {
     const { orderId } = await req.json().catch(() => ({}));
     if (!orderId) return json({ error: "Missing order." }, 400);
 
-    const uid = callerId(req.headers.get("Authorization"));
+    const uid = await verifiedUid(req.headers.get("Authorization"));
     if (!uid) return json({ error: "Please sign in again." }, 401);
 
     const oRes = await fetch(

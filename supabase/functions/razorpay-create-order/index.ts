@@ -24,14 +24,19 @@ const sbHeaders = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}
 // Identify the signed-in caller from the JWT they sent (the "sub" claim is the
 // user id), so we only let a customer pay for their OWN order. supabase-js sends
 // the session access token in the Authorization header.
-function callerId(authHeader: string | null): string | null {
+async function verifiedUid(authHeader: string | null): Promise<string | null> {
   if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
   try {
-    const token = authHeader.replace(/^Bearer\s+/i, "");
-    const payload = token.split(".")[1];
-    if (!payload) return null;
-    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-    return json?.sub ?? null;
+    // Validate the JWT SERVER-SIDE (verifies the signature) rather than trusting
+    // a decoded payload — so a forged token can't impersonate another customer.
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: SERVICE_ROLE },
+    });
+    if (!res.ok) return null;
+    const u = await res.json();
+    return u?.id ?? null;
   } catch { return null; }
 }
 
@@ -43,7 +48,7 @@ Deno.serve(async (req) => {
     const { orderId } = await req.json().catch(() => ({}));
     if (!orderId) return json({ error: "Missing order." }, 400);
 
-    const uid = callerId(req.headers.get("Authorization"));
+    const uid = await verifiedUid(req.headers.get("Authorization"));
     if (!uid) return json({ error: "Please sign in again." }, 401);
 
     // Read the order (service role) — this total is the trusted amount.
