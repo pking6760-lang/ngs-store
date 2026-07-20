@@ -1103,6 +1103,7 @@ export async function getMyRound() {
   return (data || []).map((r) => ({
     orderId: r.order_id, code: r.code, state: r.state,
     location: r.location, address: r.address || "", customer: r.customer || "Customer",
+    phone: r.phone || "",
     items: (r.items || []).map((it) => ({ name: it.name, qty: it.qty })),
     earning: Number(r.earning) || 0, total: Number(r.total) || 0,
   }));

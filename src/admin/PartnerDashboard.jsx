@@ -581,11 +581,18 @@ function MilkRound({ isDelivery }) {
               </div>
               <div className="r-amt amt-pos">+{money(s.earning)}</div>
             </div>
-            {s.location && (
-              <a className="lo-nav" href={googleMapsLink(s.location)} target="_blank" rel="noopener noreferrer">
-                <Ic name="pin" size={14} /> Navigate
-              </a>
-            )}
+            <div className="milk-stop-actions">
+              {s.phone && (
+                <a className="lo-nav call" href={`tel:+91${s.phone}`}>
+                  <Ic name="phone" size={14} /> Call {s.phone}
+                </a>
+              )}
+              {s.location && (
+                <a className="lo-nav" href={googleMapsLink(s.location)} target="_blank" rel="noopener noreferrer">
+                  <Ic name="pin" size={14} /> Navigate
+                </a>
+              )}
+            </div>
             <SlideAction label="Slide when delivered" busy={busyId === s.orderId} tone="green" onConfirm={() => deliver(s)} />
           </div>
         ))}
