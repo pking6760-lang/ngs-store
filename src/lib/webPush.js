@@ -47,8 +47,15 @@ export async function initWebPush() {
     if (token) {
       try { await supabase.rpc("save_customer_token", { p_token: token }); } catch { /* retry next visit */ }
     }
-    // Foreground message → show a lightweight notification.
+    // Foreground message.
     onMessage(messaging, (payload) => {
+      const d = payload.data || {};
+      if (d.type === "incoming_call") {
+        // The app is open — let the CallProvider ring in-app (it also catches
+        // this instantly over Realtime; this is a belt-and-braces nudge).
+        try { window.dispatchEvent(new CustomEvent("ngs-incoming-call", { detail: d })); } catch { /* ignore */ }
+        return;
+      }
       const n = payload.notification || {};
       try {
         new Notification(n.title || "NGS Store", { body: n.body || "", icon: "/icon-192.png" });

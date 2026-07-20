@@ -1109,6 +1109,34 @@ export async function getMyRound() {
   }));
 }
 
+/* ─── In-app voice calls ────────────────────────────────────────────────── */
+
+// Call the other party on an order (masked — the callee is resolved server-side,
+// so you never see their number). Returns the call row { id, ... }.
+export async function callOrderParty(orderId) {
+  const { data, error } = await must().rpc("call_order_party", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't start the call.");
+  return Array.isArray(data) ? data[0] : data;
+}
+export async function setCallStatus(callId, status) {
+  const { error } = await must().rpc("set_call_status", { p_call: callId, p_status: status });
+  if (error) throw new Error(error.message || "Call update failed.");
+  return { ok: true };
+}
+// Any call currently ringing me (picked up when the app opens from a call push).
+export async function fetchRingingCall() {
+  const { data: u } = await must().auth.getUser();
+  if (!u?.user) return null;
+  const cutoff = new Date(Date.now() - 40000).toISOString();
+  const { data, error } = await supabase
+    .from("calls").select("*")
+    .eq("callee_id", u.user.id).eq("status", "ringing")
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false }).limit(1);
+  if (error) return null;
+  return (data && data[0]) || null;
+}
+
 // Order lifecycle (used once dispatch is wired).
 export async function partnerAccept(orderId) {
   const { error } = await must().rpc("partner_accept", { p_order: orderId });

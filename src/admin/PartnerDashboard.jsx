@@ -9,6 +9,7 @@ import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { withMinTime } from "../lib/ux.js";
 import { Ic } from "./AdminIcons.jsx";
+import { useCall } from "../components/CallProvider.jsx";
 
 /* ── date helpers (IST) ─────────────────────────────────────────────────── */
 const IST = "Asia/Kolkata";
@@ -543,6 +544,7 @@ function PickBody({ task, busy, onAction }) {
 // shown as one list. Prepaid, so no cash — each stop just slides to Delivered
 // and pays 70% of its handling. Self-fetches so it stays live on the Home tab.
 function MilkRound({ isDelivery }) {
+  const { callParty } = useCall();
   const [stops, setStops] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const load = useCallback(() => api.getMyRound().then(setStops).catch(() => setStops([])), []);
@@ -582,11 +584,9 @@ function MilkRound({ isDelivery }) {
               <div className="r-amt amt-pos">+{money(s.earning)}</div>
             </div>
             <div className="milk-stop-actions">
-              {s.phone && (
-                <a className="lo-nav call" href={`tel:+91${s.phone}`}>
-                  <Ic name="phone" size={14} /> Call {s.phone}
-                </a>
-              )}
+              <button className="lo-nav call" onClick={() => callParty(s.orderId, s.customer)}>
+                <Ic name="phone" size={14} /> Call
+              </button>
               {s.location && (
                 <a className="lo-nav" href={googleMapsLink(s.location)} target="_blank" rel="noopener noreferrer">
                   <Ic name="pin" size={14} /> Navigate

@@ -41,7 +41,19 @@ export async function initCustomerPush() {
       try { await supabase.rpc("save_customer_token", { p_token: token.value }); } catch { /* retry next launch */ }
     });
     await PushNotifications.addListener("registrationError", () => {});
-    // App open when a push arrives → let the OS show it (no custom handling).
+    // App open when a push arrives → let the OS show it, except an incoming call:
+    // wake the in-app ring immediately.
+    await PushNotifications.addListener("pushNotificationReceived", (n) => {
+      if (n?.data?.type === "incoming_call") {
+        try { window.dispatchEvent(new CustomEvent("ngs-incoming-call", { detail: n.data })); } catch { /* ignore */ }
+      }
+    });
+    // Tapping the call notification (app was backgrounded) → open + ring.
+    await PushNotifications.addListener("pushNotificationActionPerformed", (a) => {
+      if (a?.notification?.data?.type === "incoming_call") {
+        try { window.dispatchEvent(new CustomEvent("ngs-incoming-call", { detail: a.notification.data })); } catch { /* ignore */ }
+      }
+    });
 
     await PushNotifications.register();
   } catch {

@@ -14,6 +14,23 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
+  const d = payload.data || {};
+  // Incoming in-app voice call (data-only). Ring loudly with Answer/Decline and
+  // keep it up until acted on. Tapping opens the app, which shows the call.
+  if (d.type === "incoming_call") {
+    self.registration.showNotification("📞 " + (d.callerName || "Incoming call"), {
+      body: "Tap to answer in the app",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: "ngs-incoming-call",
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [400, 200, 400, 200, 400],
+      data: { url: "https://ngsstore.in/", type: "incoming_call", callId: d.callId || "" },
+      actions: [{ action: "answer", title: "Answer" }, { action: "decline", title: "Decline" }],
+    });
+    return;
+  }
   const n = payload.notification || {};
   const link = (payload.fcmOptions && payload.fcmOptions.link) || "https://ngsstore.in/";
   self.registration.showNotification(n.title || "NGS Store", {
@@ -26,10 +43,17 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  if (event.action === "decline") return; // just dismiss; caller times out
   const url = (event.notification.data && event.notification.data.url) || "https://ngsstore.in/";
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-      for (const c of list) { if ("focus" in c) return c.focus(); }
+      for (const c of list) {
+        if ("focus" in c) {
+          // Nudge the open tab to re-check for a ringing call immediately.
+          try { c.postMessage({ type: "ngs-incoming-call" }); } catch (e) { /* ignore */ }
+          return c.focus();
+        }
+      }
       return clients.openWindow(url);
     })
   );

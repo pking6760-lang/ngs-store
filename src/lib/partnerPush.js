@@ -46,9 +46,19 @@ export async function initPartnerPush() {
       try { await supabase.rpc("save_partner_token", { p_token: token.value }); } catch { /* retry next launch */ }
     });
     await PushNotifications.addListener("registrationError", () => {});
-    // App OPEN when the push arrives → sound the looping alarm until handled.
-    await PushNotifications.addListener("pushNotificationReceived", () => {
+    // App OPEN when a push arrives. An incoming voice call rings in-app (not the
+    // order siren); everything else sounds the looping order alarm.
+    await PushNotifications.addListener("pushNotificationReceived", (n) => {
+      if (n?.data?.type === "incoming_call") {
+        try { window.dispatchEvent(new CustomEvent("ngs-incoming-call", { detail: n.data })); } catch { /* ignore */ }
+        return;
+      }
       try { startAlarm(); } catch { /* ignore */ }
+    });
+    await PushNotifications.addListener("pushNotificationActionPerformed", (a) => {
+      if (a?.notification?.data?.type === "incoming_call") {
+        try { window.dispatchEvent(new CustomEvent("ngs-incoming-call", { detail: a.notification.data })); } catch { /* ignore */ }
+      }
     });
 
     await PushNotifications.register();

@@ -5,6 +5,7 @@ import AppSplash from "./components/AppSplash.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { CallProvider } from "./components/CallProvider.jsx";
 import "./styles.css";
 
 createRoot(document.getElementById("root")).render(
@@ -13,7 +14,9 @@ createRoot(document.getElementById("root")).render(
       <AppSplash variant="customer" tagline="Nisha General Store" />
       <AuthProvider>
         <CartProvider>
-          <App />
+          <CallProvider>
+            <App />
+          </CallProvider>
         </CartProvider>
       </AuthProvider>
     </ErrorBoundary>
