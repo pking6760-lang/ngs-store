@@ -67,7 +67,7 @@ export default function App() {
   const [accountTab, setAccountTab] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [addressOpen, setAddressOpen] = useState(false);
-  const { totalCount, items } = useCart();
+  const { totalCount, items, deleteItem } = useCart();
   const { user, isLoggedIn, awaitingOtp, refreshProfile } = useAuth();
   const [trackOpen, setTrackOpen] = useState(false);
   const [trackId, setTrackId] = useState(null);
@@ -115,6 +115,17 @@ export default function App() {
   const products = useProducts();
   const settings = useSettings();
   const categories = useCategories();
+
+  // Prune phantom cart entries: an id left in the cart whose product is no longer
+  // in the catalog (deleted / deactivated / out of stock) would otherwise show as
+  // "1 item · ₹0" in the bar — a ghost that can never be checked out. Once the
+  // catalog is loaded, drop any cart id that doesn't resolve to a live product.
+  useEffect(() => {
+    if (!products || products.length === 0) return; // catalog not loaded yet
+    const valid = new Set(products.map((p) => p.id));
+    const ghosts = Object.keys(items).filter((id) => !valid.has(id));
+    if (ghosts.length) ghosts.forEach((id) => deleteItem(id));
+  }, [products, items, deleteItem]);
 
   // The customer's current live order (if any) → floating tracker on the home page.
   const { orders: myOrders, reload: reloadOrders } = useMyOrders(user?.id);
