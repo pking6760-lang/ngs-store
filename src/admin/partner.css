@@ -198,7 +198,9 @@
 .lo-code { font-weight: 800; font-size: 16px; }
 .lo-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--p-line); }
 .lo-lbl { font-size: 12px; color: var(--p-sec); text-transform: uppercase; letter-spacing: 0.06em; }
-.lo-nav { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.1); color: #fff; text-decoration: none; padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+.lo-nav { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.1); color: #fff; text-decoration: none; padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; }
+.lo-actions { display: inline-flex; gap: 8px; align-items: center; }
+.lo-nav.call { color: var(--p-mint); background: rgba(52,211,153,0.12); }
 .lo-cod { display: inline-flex; align-items: center; gap: 5px; color: var(--p-amber); font-weight: 800; font-size: 15px; }
 .lo-paid { color: var(--p-mint); font-weight: 700; font-size: 13px; }
 .lo-muted { color: var(--p-muted); font-size: 12px; }

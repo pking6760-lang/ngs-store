@@ -78,6 +78,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Buzz the phone on the incoming-order alarm screen -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Fingerprint / biometric login -->

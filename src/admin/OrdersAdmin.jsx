@@ -10,6 +10,7 @@ import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
 import { createOrderQr, adminRefundToWallet, adminCreateReturn, getOpsConfigRaw } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
+import { useCall } from "../components/CallProvider.jsx";
 import AdminPortal from "./AdminPortal.jsx";
 import Receipt from "./Receipt.jsx";
 import { StatusPill } from "./Dashboard.jsx";
@@ -284,6 +285,7 @@ export default function OrdersAdmin() {
 }
 
 function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg }) {
+  const { callParty } = useCall();
   const detailSettings = useSettings();
   const redeemPer = Number(detailSettings.rewards?.redeemPer) || 10;
   // What this order handed back as a scratch reward (one prize) + its ₹ cost.
@@ -386,9 +388,12 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
               <strong>{o.customer || "Customer"}</strong>
               {o.member && <span className="member-chip">Prime</span>}
             </div>
-            {o.userPhone && (
-              <a className="od-call" href={`tel:+91${o.userPhone}`}>Call +91 {o.userPhone}</a>
-            )}
+            <div className="od-call-row">
+              <button className="od-call inapp" onClick={() => callParty(o.dbId, o.customer)}>📞 Call in app</button>
+              {o.userPhone && (
+                <a className="od-call" href={`tel:+91${o.userPhone}`}>Phone +91 {o.userPhone}</a>
+              )}
+            </div>
           </section>
 
           <section className="od-section">

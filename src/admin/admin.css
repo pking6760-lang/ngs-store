@@ -2545,11 +2545,14 @@ body {
 }
 .od-section h4 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #999; }
 .od-row { font-size: 14.5px; color: #222; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.od-call-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
 .od-call {
-  display: inline-block; margin-top: 10px;
+  display: inline-block;
   background: #eef2ff; color: #3B5BDB; font-weight: 800; font-size: 14px;
-  padding: 10px 14px; border-radius: 10px; text-decoration: none;
+  padding: 10px 14px; border-radius: 10px; text-decoration: none; border: none; cursor: pointer;
 }
+.od-call.inapp { background: #e7f7ee; color: #17784a; }
+.od-call-row .od-call { margin-top: 0; }
 .od-map { display: inline-block; margin-top: 8px; color: #3B5BDB; font-weight: 700; font-size: 13.5px; text-decoration: none; }
 .od-muted { font-size: 12.5px; color: #888; margin-top: 6px; }
 .od-bill { margin-top: 10px; border-top: 1px dashed #e6e6ea; padding-top: 10px; }

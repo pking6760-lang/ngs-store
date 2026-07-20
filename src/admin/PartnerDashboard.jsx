@@ -359,6 +359,7 @@ function AcceptingBody({ task, busy, autoFailed, onAccept }) {
 
 /* Delivery body — two swipe steps: Out for delivery → Delivered (no accept). */
 function DeliveryBody({ task, busy, onAction }) {
+  const { callParty } = useCall();
   const out = task.state === "out_for_delivery";
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
 
@@ -378,9 +379,12 @@ function DeliveryBody({ task, busy, onAction }) {
       <div className="pd-run-card">
         <div className="lo-row" style={{ borderTop: "none" }}>
           <span className="lo-lbl">Deliver to</span>
-          {task.location
-            ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
-            : <span className="lo-muted">Location shared at pickup</span>}
+          <span className="lo-actions">
+            <button className="lo-nav call" onClick={() => callParty(task.orderId)}><Ic name="phone" size={14} /> Call</button>
+            {task.location
+              ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
+              : <span className="lo-muted">Location shared at pickup</span>}
+          </span>
         </div>
         <div className="lo-row">
           <span className="lo-lbl">Payment</span>
