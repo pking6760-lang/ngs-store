@@ -39,14 +39,21 @@ export default function Dashboard({ onNavigate }) {
   const stats = useMemo(() => {
     // "Today's" figures — computed from each order's date, so they reset to
     // zero automatically at the start of a new day.
-    // Exclude the prepaid subscription "master" order — it's a deferred
-    // prepayment (₹ for the whole plan), not today's sale. Revenue is recognised
-    // as each daily order is created (matches the DB owner_daily_summary), so
-    // counting the master too would double-count the plan.
-    const todaysOrders = orders.filter(
-      (o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn && !o.isSubscription
+    const todaysAll = orders.filter(
+      (o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn
     );
-    const revenue = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    // A daily plan order (subscription_id set, not the master) is just fulfilment
+    // of money already collected up-front — never counts as new revenue.
+    const isSubDaily = (o) => o.subscriptionId && !o.isSubscription;
+    // Revenue = cash received today: normal orders + the prepaid plan "master"
+    // (its full amount is booked the day the customer subscribes). The daily
+    // orders it later spawns are excluded so the plan is never counted twice.
+    const revenueOrders = todaysAll.filter((o) => !isSubDaily(o));
+    const revenue = revenueOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    // Margin & cost accrue as the milk is actually delivered, so profit is built
+    // from the daily fulfilment orders (which carry the items + cost) plus normal
+    // orders. The master has no line items, so it's excluded from the profit math.
+    const todaysOrders = todaysAll.filter((o) => !o.isSubscription);
     // Gross product profit = (selling − buying cost) × qty over today's items
     // whose cost is known. It's a margin estimate (fees/payouts not deducted).
     let grossMargin = 0, sold = 0;
@@ -95,7 +102,7 @@ export default function Dashboard({ onNavigate }) {
         && o.status !== "Scheduled" && !o.isSubscription
     ).length;
     return {
-      orders: todaysOrders.length,
+      orders: revenueOrders.length,
       revenue,
       profit: Math.round(profit),
       marginPct: sold > 0 ? (profit / sold) * 100 : null,

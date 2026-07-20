@@ -125,13 +125,15 @@ function AdminHome({ name, onOpen, onLogout }) {
   const badge = { orders: activeOrders, partners: pendingPartners };
 
   // Today's figures for the glanceable hero strip (reset automatically each day).
-  // The ₹ prepayment for a plan lives on its master order; revenue is recognised
-  // per daily order instead, so exclude the master to avoid double-counting.
+  // A prepaid plan is booked in full the day it's bought (the "master" order);
+  // the daily orders it later spawns are just fulfilment of that money, so they
+  // never count as revenue again. Kept in sync with the Overview dashboard.
   const isToday = (iso) => {
     const d = new Date(iso), n = new Date();
     return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
   };
-  const todays = orders.filter((o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn && !o.isSubscription);
+  const isSubDaily = (o) => o.subscriptionId && !o.isSubscription;
+  const todays = orders.filter((o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn && !isSubDaily(o));
   const todaysRevenue = todays.reduce((s, o) => s + (o.total || 0), 0);
 
   return (
