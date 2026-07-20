@@ -13,6 +13,18 @@ import { useBackGuard } from "../lib/useBackGuard.js";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import SubscribeSheet from "./SubscribeSheet.jsx";
+import AddToDeliverySheet from "./AddToDeliverySheet.jsx";
+
+// "2026-07-21" → "today" / "tomorrow" / "Mon 21 Jul" (device time = IST for India).
+function deliveryDayLabel(dateStr) {
+  if (!dateStr) return "soon";
+  const d = new Date(dateStr + "T00:00:00");
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d - today) / 86400000);
+  if (diff <= 0) return "today";
+  if (diff === 1) return "tomorrow";
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
 import gpayLogo from "../assets/upi/gpay.png";
 import phonepeLogo from "../assets/upi/phonepe.png";
 import paytmLogo from "../assets/upi/paytm.png";
@@ -104,6 +116,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState("");
   const [subOpen, setSubOpen] = useState(false);   // "get this daily" sheet
+  const [upcoming, setUpcoming] = useState(null);  // next subscription delivery
+  const [addOpen, setAddOpen] = useState(false);   // "add to that delivery" sheet
   const [address, setAddress] = useState(() => loadDraft().address || "");
   const [phone, setPhone] = useState(() => loadDraft().phone || "");
   const [location, setLocation] = useState(() => loadDraft().location || null);
@@ -121,6 +135,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       const base = OPPOSITES.includes(n) ? v.filter((x) => !OPPOSITES.includes(x)) : v;
       return [...base, n];
     });
+
+  // Is there a subscription delivery coming up they can add items to?
+  useEffect(() => {
+    if (!open || !isLoggedIn) { setUpcoming(null); return; }
+    let alive = true;
+    api.fetchUpcomingDelivery().then((u) => { if (alive) setUpcoming(u); }).catch(() => {});
+    return () => { alive = false; };
+  }, [open, isLoggedIn]);
   // Address stored on the ORDER (with any delivery instructions) — the saved
   // profile address stays clean (notes are per-order).
   const orderAddress = () =>
@@ -224,6 +246,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const DELIVERY_FEE = settings.deliveryFee ?? 25;
   const FREE_DELIVERY_ABOVE = settings.freeDeliveryAbove ?? 199;
   const HANDLING_FEE = settings.handlingFee ?? 5;
+  // "Add to tomorrow's delivery" estimate: standard prices, normal free-delivery
+  // rule on non-exempt items, NO handling (the subscription's fee covers the trip).
+  const addonQualify = lines.reduce((s, l) => s + (l.product.freeDeliveryExempt ? 0 : bulkUnitPrice(l.product, l.qty) * l.qty), 0);
+  const addonDelivery = addonQualify >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_FEE;
+  const addonTotal = subItemsTotal + addonDelivery;
   const SURGE_FEE = settings.surgeFee ?? 0;
   let deliveryFee =
     qualifyingTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
@@ -1173,6 +1200,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
             )}
 
+            {upcoming && (
+              <button className="next-delivery-card" type="button" onClick={() => setAddOpen(true)}>
+                <span className="ndc-ic">🥛</span>
+                <span className="ndc-text">
+                  <strong>Delivery coming {deliveryDayLabel(upcoming.deliverOn)}</strong>
+                  <span>Add these items to it — arrives together, no extra trip</span>
+                </span>
+                <span className="ndc-arrow">＋</span>
+              </button>
+            )}
+
             <div className="cart-lines">
               {lines.map(({ product, qty, unit }) => {
                 const nextTier = (product.bulkTiers || []).find((t) => t.q > qty);
@@ -1467,6 +1505,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         address={orderAddress ? orderAddress() : address}
         location={location ? { ...location, distanceKm: dist } : null}
         user={user}
+      />
+      <AddToDeliverySheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        upcoming={upcoming}
+        dayLabel={upcoming ? deliveryDayLabel(upcoming.deliverOn) : ""}
+        items={lines.map(({ product, qty }) => ({ id: product.id, qty }))}
+        summaryProducts={lines.map((l) => l.product)}
+        itemsTotal={subItemsTotal}
+        delivery={addonDelivery}
+        total={addonTotal}
+        freeAbove={FREE_DELIVERY_ABOVE}
+        onAdded={() => { clear(); setAddOpen(false); setUpcoming(null); }}
       />
     </>
   );

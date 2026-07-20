@@ -321,6 +321,26 @@ export async function cancelSubscription(id) {
   const { error } = await must().rpc("cancel_subscription", { p_id: id });
   if (error) throw error;
 }
+// The customer's nearest upcoming subscription delivery (to offer "add to it").
+export async function fetchUpcomingDelivery() {
+  const { data, error } = await must()
+    .from("orders")
+    .select("id, deliver_on, human_code, order_items(name, qty, icon)")
+    .not("subscription_id", "is", null)
+    .eq("is_subscription", false)
+    .eq("status", "Scheduled")
+    .order("deliver_on", { ascending: true })
+    .limit(1);
+  if (error || !data || !data.length) return null;
+  const o = data[0];
+  return { id: o.id, deliverOn: o.deliver_on, code: o.human_code, items: o.order_items || [] };
+}
+// Add items (prepaid from wallet) to the next subscription delivery.
+export async function addToDelivery(items) {
+  const { data, error } = await must().rpc("add_to_delivery", { p_items: items });
+  if (error) throw new Error(error.message || "Couldn't add to your delivery.");
+  return { dbId: data.id, total: Number(data.total) || 0 };
+}
 // Leave the online-pay screen without paying → drop the unpaid pending plan.
 export async function discardPendingSubscription(id) {
   if (!id) return;
