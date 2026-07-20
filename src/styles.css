@@ -274,6 +274,83 @@ button {
 }
 .banner-icon svg { display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18)); }
 
+/* ─── Promo carousel (auto-sliding hero banners) ─────────────── */
+.promo-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 26px -12px rgba(20, 40, 30, 0.35);
+  touch-action: pan-y;
+}
+.promo-track {
+  display: flex;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.promo-slide {
+  flex: 0 0 100%;
+  min-width: 100%;
+  min-height: 132px;
+  padding: 22px 24px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+/* subtle sheen for depth */
+.promo-slide::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 55%;
+  height: 180%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.14), transparent 70%);
+  pointer-events: none;
+}
+.promo-text { position: relative; z-index: 1; max-width: 72%; }
+.promo-kicker {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 9px;
+}
+.promo-slide h3 { font-size: 21px; font-weight: 800; line-height: 1.15; letter-spacing: -0.2px; }
+.promo-slide p { font-size: 13.5px; opacity: 0.92; margin-top: 6px; line-height: 1.35; }
+.promo-icon { position: relative; z-index: 1; flex: none; }
+.promo-icon svg { display: block; opacity: 0.95; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.22)); }
+.promo-dots {
+  position: absolute;
+  bottom: 11px;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  z-index: 2;
+}
+.promo-dot {
+  width: 7px; height: 7px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.promo-dot.on { width: 22px; background: #ffffff; }
+@media (prefers-reduced-motion: reduce) {
+  .promo-track { transition: none; }
+}
+
 /* ─── Category grid ──────────────────────────────────────── */
 .category-grid {
   display: grid;

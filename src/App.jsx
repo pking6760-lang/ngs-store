@@ -19,41 +19,60 @@ import { fetchBuyAgain, saveCart } from "./lib/api.js";
 import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
 import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
+import PromoCarousel from "./components/PromoCarousel.jsx";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
   width: 66, height: 66, viewBox: "0 0 24 24", fill: "none",
   stroke: "currentColor", strokeWidth: 1.35, strokeLinecap: "round", strokeLinejoin: "round",
 };
+// Home promo slides — every message maps to a REAL NGS feature (no invented
+// discounts). Auto-sliding carousel; all gradients are dark so white text +
+// dots read cleanly on each.
 const banners = [
   {
     id: "b1",
-    title: "Free delivery over ₹199",
-    subtitle: "On daily essentials, every order",
-    icon: (
-      <svg {...svgProps}><path d="M1 4h12v11H1zM13 8h4l4 4v3h-8" /><circle cx="5.5" cy="18" r="1.7" /><circle cx="16.5" cy="18" r="1.7" /></svg>
-    ),
-    grad: "linear-gradient(135deg, #0a9155, #056b3c)",
+    kicker: "12-minute delivery",
+    title: "Groceries at your door, fast",
+    subtitle: "Fresh daily essentials, delivered in minutes",
+    icon: (<svg {...svgProps}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>),
+    grad: "linear-gradient(135deg, #0a9155, #045f36)",
     fg: "#ffffff",
   },
   {
     id: "b2",
-    title: "Up to 40% off snacks",
-    subtitle: "Stock up for the week",
-    icon: (
-      <svg {...svgProps}><path d="M20.6 13.6 13 21.2a2 2 0 0 1-2.8 0L3 14V4a1 1 0 0 1 1-1h7l8.6 8.6a2 2 0 0 1 0 2z" /><circle cx="7.5" cy="7.5" r="1.4" /></svg>
-    ),
-    grad: "linear-gradient(135deg, #f6c445, #e39a00)",
-    fg: "#3a2a00",
+    kicker: "No delivery fee",
+    title: "Free delivery over ₹199",
+    subtitle: "On every daily-essentials order",
+    icon: (<svg {...svgProps}><path d="M1 4h12v11H1zM13 8h4l4 4v3h-8" /><circle cx="5.5" cy="18" r="1.7" /><circle cx="16.5" cy="18" r="1.7" /></svg>),
+    grad: "linear-gradient(135deg, #2f6fb0, #133a63)",
+    fg: "#ffffff",
   },
   {
     id: "b3",
-    title: "Groceries in 12 minutes",
-    subtitle: "Fresh stock, delivered fast",
-    icon: (
-      <svg {...svgProps}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
-    ),
-    grad: "linear-gradient(135deg, #2f6fb0, #16406e)",
+    kicker: "Never run out",
+    title: "Daily milk subscription",
+    subtitle: "Prepay once — milk at your door every morning",
+    icon: (<svg {...svgProps}><path d="M8 2h8l-1 3v3l2 4v9a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-9l2-4V5z" /><path d="M9 13h6" /></svg>),
+    grad: "linear-gradient(135deg, #e08a12, #a5520a)",
+    fg: "#ffffff",
+  },
+  {
+    id: "b4",
+    kicker: "NGS Prime",
+    title: "Save up to 15% on every item",
+    subtitle: "Member prices, all day, every order",
+    icon: (<svg {...svgProps}><path d="M3 7l4 4 5-7 5 7 4-4v11H3z" /><path d="M3 20h18" /></svg>),
+    grad: "linear-gradient(135deg, #7c3aed, #4c1d95)",
+    fg: "#ffffff",
+  },
+  {
+    id: "b5",
+    kicker: "Pay your way",
+    title: "UPI, NGS Wallet or Cash",
+    subtitle: "Pay online in seconds, or at your doorstep",
+    icon: (<svg {...svgProps}><rect x="2" y="5" width="20" height="14" rx="2.5" /><path d="M2 10h20" /><path d="M6 15h4" /></svg>),
+    grad: "linear-gradient(135deg, #0d9488, #0b5e57)",
     fg: "#ffffff",
   },
 ];
@@ -406,21 +425,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
         <div className="offer-strip">{offer}</div>
       )}
 
-      <div className="banner-row">
-        {banners.map((b) => (
-          <div
-            className="banner"
-            key={b.id}
-            style={{ background: b.grad, color: b.fg }}
-          >
-            <div className="banner-text">
-              <h3>{b.title}</h3>
-              <p>{b.subtitle}</p>
-            </div>
-            <div className="banner-icon">{b.icon}</div>
-          </div>
-        ))}
-      </div>
+      <PromoCarousel slides={banners} />
 
       {buyAgain.length > 0 && (
         <section className="section">
