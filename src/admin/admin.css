@@ -628,6 +628,8 @@ body {
 /* "Delivered" keeps the universal success-green (semantic, not brand accent). */
 .s-delivered { background: #e7f7e9; color: #1b7a3d; }
 .s-return { background: #fef3c7; color: #b45309; }
+.s-scheduled { background: #eef6fc; color: #14608f; }
+.s-sub { background: #f5f0fe; color: #6d28d9; }
 
 /* ─── Orders list ────────────────────────────────────────── */
 .orders-list {
@@ -2453,6 +2455,42 @@ body {
   font-size: 10px; font-weight: 800; color: #b45309;
   background: #fef3c7; border-radius: 999px; padding: 2px 7px; margin-right: 4px;
 }
+.row-sub {
+  font-size: 10px; font-weight: 800; color: #6d28d9;
+  background: #f1ebfe; border-radius: 999px; padding: 2px 7px; margin-right: 4px;
+}
+.row-milk {
+  font-size: 10px; font-weight: 800; color: #1d6fb8;
+  background: #e6f2fb; border-radius: 999px; padding: 2px 7px; margin-right: 4px;
+}
+.order-row-deliver {
+  margin-top: 8px; font-size: 12.5px; font-weight: 700; color: #1d6fb8;
+  background: #eef6fc; border: 1px solid #d5e8f6; border-radius: 9px; padding: 6px 10px;
+}
+
+/* Search bar (orders) */
+.order-search {
+  position: relative; flex: 1; min-width: 220px; display: flex; align-items: center;
+}
+.order-search-ic {
+  position: absolute; left: 12px; font-size: 17px; color: #9aa2b1; pointer-events: none;
+}
+.order-search-input {
+  width: 100%; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 34px 10px 34px; font-size: 14px; background: #fff; outline: none;
+}
+.order-search-input:focus { border-color: var(--a-primary); }
+.order-search-clear {
+  position: absolute; right: 8px; width: 24px; height: 24px; border: none;
+  background: #eef1f5; border-radius: 50%; color: #6b7280; font-size: 12px; cursor: pointer;
+}
+
+/* Delivery banner in the order detail */
+.od-deliver-banner {
+  margin: 10px 0 4px; font-size: 13.5px; color: #14608f;
+  background: #eef6fc; border: 1px solid #d5e8f6; border-radius: 12px; padding: 11px 14px;
+}
+.od-deliver-banner.sub { color: #5b21b6; background: #f5f0fe; border-color: #e4d8fb; }
 .od-return-items { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 10px; }
 .od-return-item {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;

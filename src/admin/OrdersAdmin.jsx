@@ -40,6 +40,7 @@ export default function OrdersAdmin() {
     return happened ? "Admin" : null;
   };
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   // Doorstep QR state (for the detail view).
   const [qrFor, setQrFor] = useState(null);
@@ -49,8 +50,33 @@ export default function OrdersAdmin() {
   // status changes) by looking the order up fresh each render.
   const selected = selectedId ? orders.find((o) => o.id === selectedId) : null;
 
-  const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  // The prepaid plan "master" order (is_subscription) isn't a delivery — it lives
+  // in its own Subscriptions tab, never in the fulfilment lists.
+  const filtered = useMemo(() => {
+    const base = orders.filter((o) => !o.isSubscription);
+    let view;
+    if (filter === "Subscriptions") view = orders.filter((o) => o.isSubscription);
+    else if (filter === "Returned") view = base.filter((o) => o.isReturn || o.status === "Returned");
+    else if (filter === "all") view = base;
+    else view = base.filter((o) => o.status === filter && !o.isReturn);
+    const q = search.trim().toLowerCase();
+    if (!q) return view;
+    return view.filter((o) =>
+      String(o.id).toLowerCase().includes(q) ||
+      (o.customer || "").toLowerCase().includes(q) ||
+      String(o.userPhone || "").includes(q)
+    );
+  }, [orders, filter, search]);
   const shown = useShowMore(filtered, 15);
+
+  // Live badge counts for the filter chips.
+  const counts = useMemo(() => {
+    const base = orders.filter((o) => !o.isSubscription);
+    return {
+      Scheduled: base.filter((o) => o.status === "Scheduled" && !o.isReturn).length,
+      Subscriptions: orders.filter((o) => o.isSubscription).length,
+    };
+  }, [orders]);
 
   async function openQr(order) {
     if (qrFor === order.id) { setQrFor(null); return; }
@@ -131,17 +157,44 @@ export default function OrdersAdmin() {
   return (
     <>
       <div className="toolbar">
+        <div className="order-search">
+          <span className="order-search-ic" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            className="order-search-input"
+            placeholder="Search order #, name or phone"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="order-search-clear" onClick={() => setSearch("")} aria-label="Clear search">✕</button>
+          )}
+        </div>
         <div className="filter-chips">
           <Chip active={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
+          <Chip active={filter === "Scheduled"} onClick={() => setFilter("Scheduled")}>
+            Scheduled{counts.Scheduled ? ` (${counts.Scheduled})` : ""}
+          </Chip>
           {ORDER_STATUSES.map((s) => (
             <Chip key={s} active={filter === s} onClick={() => setFilter(s)}>{s}</Chip>
           ))}
+          <Chip active={filter === "Cancelled"} onClick={() => setFilter("Cancelled")}>Cancelled</Chip>
+          <Chip active={filter === "Returned"} onClick={() => setFilter("Returned")}>Returned</Chip>
+          <Chip active={filter === "Subscriptions"} onClick={() => setFilter("Subscriptions")}>
+            Subscriptions{counts.Subscriptions ? ` (${counts.Subscriptions})` : ""}
+          </Chip>
         </div>
       </div>
 
       {filtered.length === 0 ? (
         <section className="panel">
-          <p className="panel-empty">No orders in this view yet.</p>
+          <p className="panel-empty">
+            {search.trim()
+              ? `No orders match “${search.trim()}”.`
+              : filter === "Subscriptions"
+                ? "No active subscription plans yet."
+                : "No orders in this view yet."}
+          </p>
         </section>
       ) : (
         <div className="order-rows">
@@ -151,7 +204,10 @@ export default function OrdersAdmin() {
               <button className="order-row" key={o.id} onClick={() => setSelectedId(o.id)}>
                 <div className="order-row-top">
                   <span className="order-row-id">
-                    {o.isReturn && <span className="row-return">↩︎ RETURN</span>} #{o.id}
+                    {o.isReturn && <span className="row-return">↩︎ RETURN</span>}
+                    {o.isSubscription && <span className="row-sub">🔁 PLAN</span>}
+                    {!o.isSubscription && o.subscriptionId && <span className="row-milk">🥛 DAILY</span>}
+                    {" "}#{o.id}
                   </span>
                   <span className="order-row-total">₹{o.total}</span>
                 </div>
@@ -163,6 +219,15 @@ export default function OrdersAdmin() {
                     <StatusPill status={o.status} />
                   </span>
                 </div>
+                {o.status === "Scheduled" && o.deliverOn && (
+                  <div className="order-row-deliver">
+                    🗓 Delivery {deliverDateLabel(o.deliverOn)}
+                    {o.deliverHour != null ? ` · around ${hourLabel(o.deliverHour)}` : ""}
+                  </div>
+                )}
+                {o.isSubscription && (
+                  <div className="order-row-deliver">🔁 Prepaid plan · {o.count} item{o.count === 1 ? "" : "s"} a day</div>
+                )}
                 {o.status === "Delivered" && (
                   <div className="order-row-rider">{handlerLabel(o.riderId, true)}</div>
                 )}
@@ -286,6 +351,17 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
 
         <div className="od-body">
           <div className="od-payline"><PaymentTag order={o} /></div>
+          {o.status === "Scheduled" && o.deliverOn && (
+            <div className="od-deliver-banner">
+              🗓 <strong>Delivery {deliverDateLabel(o.deliverOn)}</strong>
+              {o.deliverHour != null ? ` · around ${hourLabel(o.deliverHour)}` : ""}
+            </div>
+          )}
+          {o.isSubscription && (
+            <div className="od-deliver-banner sub">
+              🔁 <strong>Prepaid subscription plan.</strong> The daily orders are created automatically the day before each delivery — you'll see them in the Scheduled tab.
+            </div>
+          )}
           {(deliveredBy || packedBy) && (
             <div className="od-handled">
               {packedBy && <div className="od-handled-row"><span>Packed by</span><strong>{packedBy}</strong></div>}
@@ -436,6 +512,7 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
             </section>
           )}
 
+          {!o.isSubscription && (
           <section className="od-section">
             <h4>{o.isReturn ? "Return status" : "Update order"}</h4>
             {o.isReturn ? (
@@ -496,9 +573,10 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
              </>
             )}
           </section>
+          )}
 
-          <ReturnSection order={o} />
-          <RefundSection order={o} />
+          {!o.isSubscription && <ReturnSection order={o} />}
+          {!o.isSubscription && <RefundSection order={o} />}
         </div>
       </div>
       {/* Hidden on screen; the print stylesheet reveals only this at 58mm. */}
@@ -702,4 +780,21 @@ function formatTime(iso) {
   } catch {
     return "";
   }
+}
+
+// "2026-07-21" → "Tue, 21 Jul"
+function deliverDateLabel(iso) {
+  try {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  } catch {
+    return iso || "";
+  }
+}
+// 8 → "8 AM", 17 → "5 PM"
+function hourLabel(h) {
+  if (h == null) return "";
+  const ampm = h < 12 ? "AM" : "PM";
+  const hr = h % 12 === 0 ? 12 : h % 12;
+  return `${hr} ${ampm}`;
 }

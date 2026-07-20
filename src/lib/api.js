@@ -134,6 +134,10 @@ function mapOrder(r) {
     scratchPoints: r.scratch_points || 0, scratchWallet: num(r.scratch_wallet),
     deliveryState: r.delivery_state, pickerState: r.picker_state,
     riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at, packedAt: r.packed_at,
+    // Subscriptions: the master prepaid plan order (isSubscription) vs the daily
+    // milk orders it spawns (subscriptionId set, deliverOn/deliverHour = the drop).
+    isSubscription: !!r.is_subscription, subscriptionId: r.subscription_id,
+    deliverOn: r.deliver_on, deliverHour: r.deliver_hour,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
 }
 function mapProfile(r) {

@@ -39,8 +39,12 @@ export default function Dashboard({ onNavigate }) {
   const stats = useMemo(() => {
     // "Today's" figures — computed from each order's date, so they reset to
     // zero automatically at the start of a new day.
+    // Exclude the prepaid subscription "master" order — it's a deferred
+    // prepayment (₹ for the whole plan), not today's sale. Revenue is recognised
+    // as each daily order is created (matches the DB owner_daily_summary), so
+    // counting the master too would double-count the plan.
     const todaysOrders = orders.filter(
-      (o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn
+      (o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn && !o.isSubscription
     );
     const revenue = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
     // Gross product profit = (selling − buying cost) × qty over today's items
@@ -88,6 +92,7 @@ export default function Dashboard({ onNavigate }) {
     // Pending = anything not yet delivered (still needs action), any day.
     const pending = orders.filter(
       (o) => o.status !== "Delivered" && o.status !== "Cancelled" && o.status !== "Returned"
+        && o.status !== "Scheduled" && !o.isSubscription
     ).length;
     return {
       orders: todaysOrders.length,
@@ -153,7 +158,8 @@ export default function Dashboard({ onNavigate }) {
       .slice(0, 4);
   }, [products, categories]);
 
-  const recent = orders.slice(0, 5);
+  // The subscription master isn't a fulfilment order — keep it out of the feed.
+  const recent = orders.filter((o) => !o.isSubscription).slice(0, 5);
 
   return (
     <>
@@ -380,6 +386,8 @@ export function StatusPill({ status }) {
       Cancelled: "s-cancelled",
       "Return requested": "s-return",
       Returned: "s-return",
+      Scheduled: "s-scheduled",
+      Subscription: "s-sub",
     }[status] || "s-placed";
   return <span className={`status-pill ${cls}`}>{status}</span>;
 }
