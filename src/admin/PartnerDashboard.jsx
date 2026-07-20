@@ -539,6 +539,61 @@ function PickBody({ task, busy, onAction }) {
 }
 
 /* ── Home ───────────────────────────────────────────────────────────────── */
+// The subscription "milk round": every stop for today assigned to this driver,
+// shown as one list. Prepaid, so no cash — each stop just slides to Delivered
+// and pays 70% of its handling. Self-fetches so it stays live on the Home tab.
+function MilkRound({ isDelivery }) {
+  const [stops, setStops] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const load = useCallback(() => api.getMyRound().then(setStops).catch(() => setStops([])), []);
+  useEffect(() => {
+    if (!isDelivery) return;
+    load();
+    const iv = setInterval(load, 8000);
+    const unsub = api.subscribeTable ? api.subscribeTable("orders", load) : null;
+    return () => { clearInterval(iv); unsub && unsub(); };
+  }, [isDelivery, load]);
+
+  if (!isDelivery || !stops || stops.length === 0) return null;
+  const total = stops.reduce((s, x) => s + x.earning, 0);
+
+  async function deliver(stop) {
+    setBusyId(stop.orderId);
+    try { await withMinTime(() => api.partnerMarkDelivered(stop.orderId), 500, 1000); okBeep(); await load(); }
+    catch (e) { errorBeep(); alert(e.message || "Couldn't mark delivered."); }
+    finally { setBusyId(null); }
+  }
+
+  return (
+    <div className="milk-round">
+      <div className="pd-sec">
+        <span><Ic name="scooter" size={13} /> Milk round · {stops.length} stop{stops.length === 1 ? "" : "s"}</span>
+        <span className="hint">earn {money(total)}</span>
+      </div>
+      <div className="milk-list">
+        {stops.map((s, i) => (
+          <div className="milk-stop" key={s.orderId}>
+            <div className="milk-stop-top">
+              <div className="milk-stop-info">
+                <div className="milk-stop-name"><span className="milk-num">{i + 1}</span>{s.customer} · #{s.code}</div>
+                <div className="milk-stop-items">{s.items.map((it) => `${it.name} ×${it.qty}`).join(", ")}</div>
+                {s.address && <div className="milk-stop-addr">{s.address}</div>}
+              </div>
+              <div className="r-amt amt-pos">+{money(s.earning)}</div>
+            </div>
+            {s.location && (
+              <a className="lo-nav" href={googleMapsLink(s.location)} target="_blank" rel="noopener noreferrer">
+                <Ic name="pin" size={14} /> Navigate
+              </a>
+            )}
+            <SlideAction label="Slide when delivered" busy={busyId === s.orderId} tone="green" onConfirm={() => deliver(s)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, taskBusy, taskAction }) {
   const [busy, setBusy] = useState(false);
   const today = istDateISO();
@@ -590,6 +645,8 @@ function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, ta
           <div className="t-val">{todays.length}</div>
         </div>
       </div>
+
+      <MilkRound isDelivery={isDelivery} />
 
       {task ? (
         // Any active order is handled by the full-screen run page rendered above

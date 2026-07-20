@@ -1095,6 +1095,19 @@ export async function getMyTask() {
   };
 }
 
+// The driver's subscription "milk round" for today — every stop assigned to them
+// (prepaid, so no cash to collect). Each stop pays 70% of its handling.
+export async function getMyRound() {
+  const { data, error } = await must().rpc("get_my_round");
+  if (error) return [];
+  return (data || []).map((r) => ({
+    orderId: r.order_id, code: r.code, state: r.state,
+    location: r.location, address: r.address || "", customer: r.customer || "Customer",
+    items: (r.items || []).map((it) => ({ name: it.name, qty: it.qty })),
+    earning: Number(r.earning) || 0, total: Number(r.total) || 0,
+  }));
+}
+
 // Order lifecycle (used once dispatch is wired).
 export async function partnerAccept(orderId) {
   const { error } = await must().rpc("partner_accept", { p_order: orderId });

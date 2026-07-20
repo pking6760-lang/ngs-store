@@ -93,6 +93,28 @@
 .pd-empty .emo { width: 58px; height: 58px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
   background: var(--p-card2); border: 1px solid var(--p-line); color: var(--p-sec); }
 
+/* Milk round (subscription batch delivery) */
+.milk-round { margin-top: 6px; }
+.milk-round .pd-sec span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--p-text); }
+.milk-round .pd-sec .hint { color: var(--p-mint); font-weight: 700; }
+.milk-list { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.milk-stop {
+  background: var(--p-card); border: 1px solid var(--p-line); border-radius: 16px;
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.milk-stop-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.milk-stop-info { min-width: 0; }
+.milk-stop-name { font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.milk-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 800;
+  background: var(--p-red); color: #fff; flex: none;
+}
+.milk-stop-items { font-size: 12px; color: var(--p-sec); margin-top: 3px; }
+.milk-stop-addr { font-size: 11.5px; color: var(--p-muted); margin-top: 3px; line-height: 1.35; }
+.milk-stop .r-amt { color: var(--p-mint); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.milk-stop .lo-nav { align-self: flex-start; }
+
 /* Wallet cards */
 .pd-wcard { background: var(--p-card); border: 1px solid var(--p-line); border-radius: 20px; padding: 18px; }
 .pd-wcard .lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--p-sec); font-weight: 700; }
