@@ -335,11 +335,11 @@ export async function fetchUpcomingDelivery() {
   const o = data[0];
   return { id: o.id, deliverOn: o.deliver_on, code: o.human_code, items: o.order_items || [] };
 }
-// Add items (prepaid from wallet) to the next subscription delivery.
-export async function addToDelivery(items) {
-  const { data, error } = await must().rpc("add_to_delivery", { p_items: items });
+// Add items to the next subscription delivery, prepaid by wallet or online.
+export async function addToDelivery(items, pay = "wallet") {
+  const { data, error } = await must().rpc("add_to_delivery", { p_items: items, p_pay: pay });
   if (error) throw new Error(error.message || "Couldn't add to your delivery.");
-  return { dbId: data.id, total: Number(data.total) || 0 };
+  return { dbId: data.id, total: Number(data.total) || 0, status: data.status };
 }
 // Leave the online-pay screen without paying → drop the unpaid pending plan.
 export async function discardPendingSubscription(id) {

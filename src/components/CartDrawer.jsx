@@ -1517,6 +1517,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         delivery={addonDelivery}
         total={addonTotal}
         freeAbove={FREE_DELIVERY_ABOVE}
+        user={user}
         onAdded={() => { clear(); setAddOpen(false); setUpcoming(null); }}
       />
     </>
