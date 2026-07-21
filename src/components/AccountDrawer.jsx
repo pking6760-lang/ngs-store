@@ -203,12 +203,33 @@ function SkipSheet({ sub, onClose, onDone }) {
   const [busy, setBusy] = useState(false);
   const custom = mode === "custom";
   const pickPreset = (d) => { setMode("preset"); setDays(d); };
+  // You can skip up to every delivery still left on the plan (each one moves to
+  // the end), so the ceiling follows the plan — not an arbitrary 14.
+  const maxSkip = Math.max(sub.daysTotal - sub.daysDone + 1, 1);
   // Fine-tune with a stepper (no OS keyboard, so the date preview below stays
-  // visible while you dial the number). Range 1–14.
-  const stepCustom = (delta) => {
+  // visible while you dial the number).
+  // Hold a stepper button to repeat, speeding up — so reaching a full-month
+  // pause is a press, not thirty taps. Self-terminates at the bound (a disabled
+  // button may never fire pointer-up), and one quick tap = one step.
+  const holdRef = useRef(null);
+  const endHold = () => { clearTimeout(holdRef.current); holdRef.current = null; };
+  const startHold = (delta) => {
     setMode("custom");
-    setDays((d) => Math.max(1, Math.min(14, d + delta)));
+    let wait = 320;
+    const tick = () => {
+      let atBound = false;
+      setDays((d) => {
+        const next = Math.max(1, Math.min(maxSkip, d + delta));
+        if (next === d) atBound = true;    // hit floor/ceiling — stop repeating
+        return next;
+      });
+      if (atBound) { endHold(); return; }
+      wait = Math.max(45, wait - 40);      // accelerate
+      holdRef.current = setTimeout(tick, wait);
+    };
+    tick();
   };
+  useEffect(() => endHold, []);            // clear any pending repeat on unmount
   const dates = upcomingDeliveries(sub, days);
   const n = dates.length;
   const after = upcomingDeliveries(sub, days + 1);
@@ -242,10 +263,14 @@ function SkipSheet({ sub, onClose, onDone }) {
             ))}
             <div className={`sub-freq-btn sub-days-stepper ${custom ? "on" : ""}`}>
               <button type="button" className="step-btn" aria-label="Fewer days"
-                onClick={() => stepCustom(-1)} disabled={days <= 1}>−</button>
-              <span className="step-val"><strong>{days}</strong> days</span>
+                disabled={days <= 1}
+                onPointerDown={() => startHold(-1)} onPointerUp={endHold}
+                onPointerLeave={endHold} onPointerCancel={endHold}>−</button>
+              <span className="step-val"><strong>{days}</strong> {days === 1 ? "day" : "days"}</span>
               <button type="button" className="step-btn" aria-label="More days"
-                onClick={() => stepCustom(1)} disabled={days >= 14}>+</button>
+                disabled={days >= maxSkip}
+                onPointerDown={() => startHold(1)} onPointerUp={endHold}
+                onPointerLeave={endHold} onPointerCancel={endHold}>+</button>
             </div>
           </div>
 
