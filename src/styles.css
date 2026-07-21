@@ -4700,8 +4700,9 @@ body {
 /* A slim palette band under the header on EVERY screen — the seasonal signal. */
 :root[data-festival] .header { position: relative; }
 :root[data-festival] .header::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
   background: var(--fest-stripe, var(--fest-accent, var(--yellow, #f6c445)));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);   /* gives the band edge presence on white */
   pointer-events: none;
 }
 

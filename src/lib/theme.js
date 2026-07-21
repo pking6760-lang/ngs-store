@@ -87,12 +87,38 @@ function pickPattern(t) {
   return "sparkles";
 }
 
-// A hard-stop gradient from a list of colours → a crisp banded strip (flag,
-// festive bunting, rangoli edge…). Used for the thin band under the header.
+// On a thin band sitting on the near-white page, a pure-white segment would be
+// invisible. So for these bands (only) we render a near-white colour as a
+// subtle off-white that reads as a visible white tile.
+function visibleOnWhite(hex) {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex || "");
+  if (!m) return hex;
+  const h = m[1];
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.9 ? "#e6e6e6" : hex;
+}
+// A hard-stop gradient from a list of colours → a crisp banded strip, with a
+// fine neutral hairline between each colour. Hairlines + off-white substitution
+// mean a white (or near-background) segment never disappears into a white page —
+// e.g. the white of a tricolour band stays readable.
 export function stripeGradient(colors, angle = "90deg") {
   const n = colors.length;
   if (!n) return "";
-  const stops = colors.map((col, i) => `${col} ${((i / n) * 100).toFixed(3)}% ${(((i + 1) / n) * 100).toFixed(3)}%`);
+  const cols = colors.map(visibleOnWhite);
+  if (n === 1) return cols[0];
+  const line = "rgba(60,60,60,.4)"; // hairline divider, visible on any background
+  const w = 100 / n, sep = Math.min(0.9, w * 0.14); // divider half-width in %
+  const stops = [];
+  for (let i = 0; i < n; i++) {
+    const start = i === 0 ? 0 : i * w + sep;
+    const end = i === n - 1 ? 100 : (i + 1) * w - sep;
+    stops.push(`${cols[i]} ${start.toFixed(2)}% ${end.toFixed(2)}%`);
+    if (i < n - 1) {
+      const b = (i + 1) * w;
+      stops.push(`${line} ${(b - sep).toFixed(2)}% ${(b + sep).toFixed(2)}%`);
+    }
+  }
   return `linear-gradient(${angle}, ${stops.join(", ")})`;
 }
 // A smooth blend across the palette → the festive ribbon background.
