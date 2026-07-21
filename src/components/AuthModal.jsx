@@ -91,8 +91,8 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
     else setError(res.error);
   }
 
-  // Demo phone code is 4 digits; the email OTP from Supabase is 8 digits.
-  const codeLen = email ? 8 : 4;
+  // Demo phone code is 4 digits; the email OTP from Supabase is 6 digits.
+  const codeLen = email ? 6 : 4;
 
   return (
     <div className="modal-overlay" onClick={onBackdrop}>
