@@ -25,11 +25,11 @@ RETURN ONLY THIS JSON OBJECT (no markdown, no code fence, no commentary):
   "emoji": "one emoji that represents it",
   "startsOn": "YYYY-MM-DD - switch the theme ON a few days before",
   "endsOn": "YYYY-MM-DD - switch it OFF on or just after the day",
-  "greeting": "short warm greeting for the poster; Hinglish welcome; up to one emoji",
+  "greeting": "the big warm line on the poster — how Nisha would actually greet a regular this festival (Hinglish welcome); up to one emoji",
   "banner": {
-    "kicker": "2-3 word tag, e.g. Happy Diwali",
-    "title": "one punchy festive line tying the festival to fresh groceries",
-    "subtitle": "one warm supporting line; local; no prices; no fake discounts"
+    "kicker": "a real greeting people say, e.g. Shubh Deepavali / Jai Hind / Rang Barse — never 'Festival Special'",
+    "title": "one human line connecting THIS festival to stocking up, with a little personality — specific to the festival, not reusable",
+    "subtitle": "one sincere, local supporting line; no prices, no discounts"
   },
   "decoration": "garland style - 'tricolor' (flag bunting) for flag days ONLY (Independence / Republic Day); 'marigold' (flower garland) for every other festival",
   "motif": "poster backdrop - 'mandala' (rangoli ring), 'rays' (sunburst) or 'arch' (temple archway); pick what fits the festival",
@@ -53,8 +53,17 @@ THE COLOURS ARE YOUR CALL
 - Contrast: white text must read clearly on "primary", "primaryDark", "headerFrom" and "headerTo" - so none of those may be pale or pastel.
 - Only "bg" and "tint" are pale; every other colour is confident. "palette" is REQUIRED and must be EXACTLY 3 main colours — no more (e.g. Independence Day = saffron, white, green only; do not add a 4th like blue).
 
-COPY
-Warm, classy and specific to the festival + fresh groceries. Hinglish welcome. Never invent prices or discounts.
+COPY — this is what stops it feeling AI-generated, so take it seriously
+Write in the voice of Nisha, who runs a warm neighbourhood kirana in Sultanpur — like she is greeting a regular customer face to face, not a corporate app. Natural Hinglish is perfect; keep it simple and human.
+- Make it SPECIFIC to THIS festival. Name its real moments — its food, rituals and feelings — so the line could not be pasted onto any other festival. Hooks to draw from: Diwali (diye, mithai, safai, ghar ki raunak), Dhanteras (sona-chandi, nayi shuruaat, bartan), Holi (gujiya, rang, thandai), Raksha Bandhan (bhai-behen, rakhi, mooh meetha), Navratri (vrat ka saamaan, garba), Eid (sewaiyan, dawat), Independence / Republic Day (tiranga, desh, azaadi), New Year (nayi shuruaat).
+- Every festival's copy MUST be different from every other. If a line would fit any festival, rewrite it.
+- BAN these AI clichés and anything that smells like them: "Celebrate the spirit of…", "Experience the joy of…", "delivered in minutes", "Elevate your…", "your one-stop…", "make this <festival> special", "spread the joy/cheer", "Tis the season", "essentials, delivered". No stacked exclamation marks (one at most). No prices or discounts.
+- Warm, real, a little personality — not stiff, not salesy, not generic.
+
+VOICE — how different two festivals should feel (do NOT copy these; write fresh for the festival you are given):
+- Diwali → kicker "Shubh Deepavali", title "Ghar chamka lo, baaki hum le aate hain", subtitle "Diye, mithai aur roz ka saamaan — sab ek hi jagah."
+- Raksha Bandhan → kicker "Happy Rakhi", title "Bhai ka favourite mithai, ghar tak", subtitle "Rakhi ki thali ka kuch chhoot gaya? Abhi mangwa lo."
+- Independence Day → kicker "Jai Hind", title "Har ghar tiranga, har ghar taazgi", subtitle "Desh ki shaan ke saath, roz ka saamaan."
 
 DATES (today is ${TODAY_ISO})
 Schedule the NEXT upcoming occurrence. Fixed each year: Independence Day 15 Aug, Republic Day 26 Jan, Gandhi Jayanti 2 Oct, New Year 1 Jan. Variable (Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan, Navratri, Eid, Janmashtami...): use the correct date for the upcoming year; give your best estimate if unsure (the shopkeeper can fine-tune it in the app).
