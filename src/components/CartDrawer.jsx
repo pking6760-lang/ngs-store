@@ -252,16 +252,23 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const addonDelivery = addonQualify >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_FEE;
   const addonTotal = subItemsTotal + addonDelivery;
   const SURGE_FEE = settings.surgeFee ?? 0;
+  // Prime perk (free delivery + no handling) is funded by item margin. Milk &
+  // dairy (freeDeliveryExempt) have almost none, so waiving both fees would put
+  // the shop in loss. The perk applies only when the cart has no such items, OR
+  // the qualifying (non-exempt) total already earns free delivery on its own —
+  // mirrors the server (place_order). A milk-only Prime order pays like a guest.
+  const hasThin = itemTotal > qualifyingTotal; // cart contains milk/dairy
+  const freePerk = isMember && (!hasThin || qualifyingTotal >= FREE_DELIVERY_ABOVE);
   let deliveryFee =
     qualifyingTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
   let freeReason = deliveryFee === 0 && itemTotal > 0 ? "order" : null;
-  if (isMember && itemTotal > 0 && deliveryFee > 0) {
+  if (freePerk && itemTotal > 0 && deliveryFee > 0) {
     deliveryFee = 0;
     freeReason = "member";
   }
 
-  // Members pay no handling charge (part of the Prime bundle).
-  const handling = itemTotal === 0 || isMember ? 0 : HANDLING_FEE;
+  // Handling is waived only when the Prime perk applies (so milk/dairy keeps it).
+  const handling = itemTotal === 0 || freePerk ? 0 : HANDLING_FEE;
   // Surge / bad-weather premium — applies to everyone while surge mode is on.
   const surgeFee = isSurge && itemTotal > 0 ? SURGE_FEE : 0;
 
@@ -1413,8 +1420,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               <div className="bill-row">
                 <span>Handling charge</span>
-                <span>{handling === 0 && isMember ? <span className="free">FREE · Prime</span> : `₹${handling}`}</span>
+                <span>{handling === 0 && freePerk ? <span className="free">FREE · Prime</span> : `₹${handling}`}</span>
               </div>
+              {isMember && !freePerk && hasThin && (
+                <div className="bill-note">
+                  Milk &amp; dairy carry a delivery &amp; handling charge even on Prime. Tip: a milk <strong>subscription</strong> delivers daily for less.
+                </div>
+              )}
               {surgeFee > 0 && (
                 <div className="bill-row">
                   <span>Surge charge <small>(bad weather / peak)</small></span>
