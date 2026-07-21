@@ -4652,10 +4652,12 @@ body {
   .fest-p { animation: none; display: none; }
 }
 
+.fest-greet { margin: 10px 0 2px; display: flex; flex-direction: column; gap: 4px; }
+.fest-stripe { height: 6px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 .fest-ribbon {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  margin: 10px 0 2px; padding: 9px 14px; border-radius: 14px;
-  background: linear-gradient(100deg, var(--fest-header-from, var(--green)), var(--fest-header-to, var(--green-dark)));
+  padding: 9px 14px; border-radius: 14px;
+  background: var(--fest-ribbon, linear-gradient(100deg, var(--fest-header-from, var(--green)), var(--fest-header-to, var(--green-dark))));
   color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.14);
   position: relative; overflow: hidden;
 }
@@ -4671,7 +4673,11 @@ body {
 .fest-ribbon-txt em { font-style: normal; font-size: 12px; opacity: .92; margin-top: 1px; }
 @media (prefers-reduced-motion: reduce) { .fest-ribbon::after { animation: none; } }
 
-/* A slim festive accent line under the header when a theme is on. */
-:root[data-festival] .header {
-  box-shadow: 0 2px 0 0 var(--fest-accent, var(--yellow, #f6c445)), var(--shadow, 0 1px 3px rgba(20,26,32,.06));
+/* A festive line under the header on EVERY screen. For a multi-colour festival
+   it's the real tricolour band; otherwise a single accent line. */
+:root[data-festival] .header { position: relative; }
+:root[data-festival] .header::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  background: var(--fest-stripe, var(--fest-accent, var(--yellow, #f6c445)));
+  pointer-events: none;
 }

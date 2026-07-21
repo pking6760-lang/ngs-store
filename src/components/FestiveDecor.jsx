@@ -66,22 +66,34 @@ export default function FestiveDecor({ theme }) {
   );
 }
 
-// A slim festive greeting shown at the top of the home screen.
+// A slim festive greeting at the top of home. For a multi-colour festival
+// (Independence Day, Republic Day, Holi…) the theme carries a `stripe` array,
+// so we frame the greeting with a real tricolour flag-band above and below and
+// keep the greeting itself on a solid, readable colour.
 export function FestiveRibbon({ theme }) {
   if (!theme?.id) return null;
   const b = theme.banner || {};
+  const c = theme.colors || {};
   const lead = theme.greeting || b.kicker;
   const sub = b.title || b.subtitle;
   if (!lead && !sub) return null;
   const badge = theme.emoji || "✨";
+  const stripe = Array.isArray(c.stripe) ? c.stripe.filter(Boolean) : [];
+  const tricolor = stripe.length >= 2;
+  const ribbonStyle = tricolor ? { background: c.primary || c.headerFrom || "#12306e" } : undefined;
+  const band = <div className="fest-stripe" style={{ background: "var(--fest-stripe)" }} aria-hidden="true" />;
   return (
-    <div className="fest-ribbon" role="note">
-      <span className="fest-ribbon-badge">{badge}</span>
-      <span className="fest-ribbon-txt">
-        {lead && <strong>{lead}</strong>}
-        {sub && <em>{sub}</em>}
-      </span>
-      <span className="fest-ribbon-badge">{badge}</span>
+    <div className="fest-greet">
+      {tricolor && band}
+      <div className="fest-ribbon" style={ribbonStyle} role="note">
+        <span className="fest-ribbon-badge">{badge}</span>
+        <span className="fest-ribbon-txt">
+          {lead && <strong>{lead}</strong>}
+          {sub && <em>{sub}</em>}
+        </span>
+        <span className="fest-ribbon-badge">{badge}</span>
+      </div>
+      {tricolor && band}
     </div>
   );
 }

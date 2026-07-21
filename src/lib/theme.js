@@ -19,7 +19,15 @@ const VAR_MAP = {
   tint:        ["--green-tint", "--gold-tint"],
   bg:          ["--bg-soft"],
 };
-const FEST_VARS = ["--fest-header-from", "--fest-header-to", "--fest-accent"];
+const FEST_VARS = ["--fest-header-from", "--fest-header-to", "--fest-accent", "--fest-stripe", "--fest-ribbon"];
+
+// A hard-stop gradient from a list of colours → a crisp flag-like band.
+export function stripeGradient(colors, angle = "90deg") {
+  const n = colors.length;
+  if (!n) return "";
+  const stops = colors.map((col, i) => `${col} ${((i / n) * 100).toFixed(3)}% ${(((i + 1) / n) * 100).toFixed(3)}%`);
+  return `linear-gradient(${angle}, ${stops.join(", ")})`;
+}
 
 let applied = []; // brand vars we overrode, so we can revert cleanly
 
@@ -42,10 +50,24 @@ export function applyTheme(t) {
   });
 
   const from = c.headerFrom || c.primary || "";
+  const via = c.headerVia || "";
   const to = c.headerTo || c.primaryDark || c.primary || "";
   if (from) el.style.setProperty("--fest-header-from", from);
   if (to) el.style.setProperty("--fest-header-to", to);
   if (c.accent) el.style.setProperty("--fest-accent", c.accent);
+
+  // Multi-colour festivals (Independence Day, Republic Day, Holi…) carry a
+  // `stripe` array → a real tricolour band under the header + a matching ribbon.
+  const stripe = Array.isArray(c.stripe) ? c.stripe.filter(Boolean) : [];
+  if (stripe.length >= 2) {
+    el.style.setProperty("--fest-stripe", stripeGradient(stripe));
+    // Ribbon becomes the tricolour band (softened) so it reads as the flag.
+    el.style.setProperty("--fest-ribbon", stripeGradient(stripe, "100deg"));
+  } else {
+    // Single-colour festivals: ribbon is the header gradient (2 or 3 stops).
+    const grad = via ? `linear-gradient(100deg, ${from}, ${via}, ${to})` : `linear-gradient(100deg, ${from}, ${to})`;
+    if (from) el.style.setProperty("--fest-ribbon", grad);
+  }
 
   el.setAttribute("data-festival", t.decoration || "on");
 }

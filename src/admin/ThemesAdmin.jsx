@@ -30,12 +30,14 @@ Return ONLY a JSON object (no explanation, no markdown) with EXACTLY these keys:
     "tint":        "<a very light tint of the theme for soft backgrounds>",
     "bg":          "<a very light, near-white page background with a warm festival hint>",
     "headerFrom":  "<gradient start for the greeting ribbon — usually = primary>",
-    "headerTo":    "<gradient end for the greeting ribbon — usually = primaryDark or a warm second colour>"
+    "headerTo":    "<gradient end for the greeting ribbon — usually = primaryDark or a warm second colour>",
+    "stripe":      ["<ONLY for flag / multi-colour festivals: the 2-4 flag colours in order. OMIT this key entirely for single-colour festivals like Diwali.>"]
   }
 }
 
 Rules:
 - All colours are #RRGGBB hex. primary MUST have white text readable on it (dark/saturated), never a pale colour.
+- MULTI-COLOUR / FLAG FESTIVALS: Independence Day & Republic Day are TRICOLOUR — you MUST include "stripe": ["#FF9933","#FFFFFF","#138808"] (saffron, white, India-green) so the app shows a real tricolour band, not one flat colour. For these set primary to Ashoka-Chakra navy "#0A3D91", accent to saffron, decoration "tricolor". Holi is multi-colour too — give it a stripe of 3-4 bright colours. Do NOT add "stripe" to single-colour festivals (Diwali, Dhanteras, Dussehra…).
 - Pick a decoration that truly fits (Diwali → diyas; Independence/Republic Day → tricolor; Dussehra → bow; Dhanteras → coins; Holi → petals; New Year → confetti; winter → snow).
 - Use the CORRECT date for the festival's NEXT occurrence.
 - Independence Day = 15 Aug, Republic Day = 26 Jan, Gandhi Jayanti = 2 Oct (fixed every year). Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan shift each year — use this year's real date.
@@ -180,12 +182,17 @@ function ThemePreview({ t, note }) {
   const c = t.colors || {};
   const b = t.banner || {};
   const primary = c.primary || "#0a9155";
+  const stripe = Array.isArray(c.stripe) ? c.stripe.filter(Boolean) : [];
+  const tri = stripe.length >= 2;
+  const bandBg = tri ? `linear-gradient(90deg, ${stripe.map((col, i) => `${col} ${(i / stripe.length) * 100}% ${((i + 1) / stripe.length) * 100}%`).join(", ")})` : null;
   return (
     <div className="theme-prev" style={{ background: c.bg || "#f4f6f9" }}>
       <div className="theme-prev-note">{note}: <strong>{t.emoji} {t.name || "Theme"}</strong></div>
-      <div className="theme-prev-header" style={{ background: `linear-gradient(100deg, ${c.headerFrom || primary}, ${c.headerTo || c.primaryDark || primary})` }}>
+      {tri && <div style={{ height: 6, background: bandBg }} />}
+      <div className="theme-prev-header" style={{ background: tri ? primary : `linear-gradient(100deg, ${c.headerFrom || primary}, ${c.headerTo || c.primaryDark || primary})` }}>
         <span>{t.greeting || b.kicker || "Festive greeting"}</span>
       </div>
+      {tri && <div style={{ height: 6, background: bandBg }} />}
       <div className="theme-prev-body">
         <div className="theme-prev-title">{b.title || "Festive line"}</div>
         <div className="theme-prev-sub">{b.subtitle || ""}</div>
