@@ -20,7 +20,7 @@ import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
 import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
 import PromoCarousel from "./components/PromoCarousel.jsx";
-import { FestiveHero, FestiveToran } from "./components/FestiveDecor.jsx";
+import { FestiveMasthead } from "./components/FestiveDecor.jsx";
 import { applyTheme } from "./lib/theme.js";
 import { shop } from "./data/shop.js";
 
@@ -453,8 +453,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
     .slice(0, 12);
   return (
     <>
-      <FestiveToran theme={theme} />
-      <FestiveHero theme={theme} />
+      <FestiveMasthead theme={theme} />
 
       {offer && offer.trim() && (
         <div className="offer-strip">{offer}</div>

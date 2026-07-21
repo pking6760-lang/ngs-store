@@ -4639,54 +4639,63 @@ body {
    banner + a slim palette band under the header on every screen. No emoji
    confetti — a real, tasteful campaign look.
    ════════════════════════════════════════════════════════════ */
-/* Decorative garland (toran / bunting) hung across the top, full-bleed. */
-.fest-toran {
-  height: 52px; margin: -6px -20px 6px; pointer-events: none;
-  background-repeat: repeat-x; background-position: center top; background-size: auto 52px;
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,.16));
-}
-.fest-hero {
+/* ── Festive masthead: garland + an integrated, composed poster (full-bleed) ─ */
+.fest-mast {
   position: relative; isolation: isolate; overflow: hidden;
-  margin: 4px 0 6px; padding: 24px 18px 20px; border-radius: 20px;
-  background: var(--fest-ribbon, linear-gradient(125deg, var(--green), var(--green-dark)));
-  color: #fff; box-shadow: 0 14px 34px rgba(0,0,0,.20), inset 0 0 0 1px rgba(255,255,255,.08);
-  text-align: center;
+  margin: -6px -20px 12px;                       /* full-bleed, connected to header */
+  background: var(--fest-ribbon, linear-gradient(130deg, var(--green), var(--green-dark)));
+  color: #fff;
+  border-bottom-left-radius: 22px; border-bottom-right-radius: 22px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.16);
 }
-/* Ornamental sunburst flourishes in the hero's top corners. */
-.fest-hero-corner {
-  position: absolute; z-index: 0; width: 92px; height: 92px; top: -30px; opacity: .16; pointer-events: none;
-  background: repeating-conic-gradient(from 0deg, #fff 0 3.6deg, transparent 3.6deg 15deg);
-  -webkit-mask: radial-gradient(circle, #000 0 30%, transparent 58%);
-          mask: radial-gradient(circle, #000 0 30%, transparent 58%);
+.fest-mast::before {                              /* contrast scrim over the whole poster */
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.40));
 }
-.fest-hero-corner.tl { left: -28px; }
-.fest-hero-corner.tr { right: -28px; }
-/* Contrast scrim so the greeting reads on any palette (bright, pale or dark). */
-.fest-hero::before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,.42)); }
-/* Subtle dotted motif for texture (premium, not noisy). */
-.fest-hero-motif {
-  position: absolute; inset: 0; z-index: 0; opacity: .12; pointer-events: none;
-  background-image: radial-gradient(rgba(255,255,255,.95) 1.1px, transparent 1.4px);
-  background-size: 15px 15px;
+.fest-mast-garland {
+  position: relative; z-index: 2; height: 50px; margin-top: 6px;
+  background-repeat: repeat-x; background-position: center top; background-size: auto 50px;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,.18));
 }
-/* Warm light glow behind the emblem. */
-.fest-hero-glow {
-  position: absolute; z-index: 0; top: -46%; left: 50%; transform: translateX(-50%);
-  width: 230px; height: 230px; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle, var(--fest-accent, #ffd36b) 0%, transparent 62%);
-  opacity: .55;
+.fest-poster { position: relative; z-index: 1; padding: 8px 20px 24px; text-align: center; }
+.fest-poster-motif {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-repeat: no-repeat; background-position: center 52%; background-size: 270px 270px;
+  opacity: .85;
 }
-.fest-hero-in { position: relative; z-index: 1; }
-.fest-hero-emblem {
+.motif-arch .fest-poster-motif { background-position: center bottom; background-size: 300px 300px; }
+.fest-poster-corner {
+  position: absolute; z-index: 0; width: 66px; height: 66px; opacity: .14; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, #fff 0 3.4deg, transparent 3.4deg 14deg);
+  -webkit-mask: radial-gradient(circle, #000 0 32%, transparent 60%);
+          mask: radial-gradient(circle, #000 0 32%, transparent 60%);
+}
+.fest-poster-corner.tl { top: -20px; left: -18px; }
+.fest-poster-corner.tr { top: -20px; right: -18px; }
+.fest-poster-corner.bl { bottom: -14px; left: -18px; }
+.fest-poster-corner.br { bottom: -14px; right: -18px; }
+.fest-poster-in { position: relative; z-index: 1; }
+.fest-poster-emblem {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 48px; height: 48px; border-radius: 50%; font-size: 25px; margin-bottom: 11px;
-  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.4);
-  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  width: 46px; height: 46px; border-radius: 50%; font-size: 24px; margin-bottom: 9px;
+  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.42);
+  box-shadow: 0 4px 14px rgba(0,0,0,.20);
 }
-.fest-hero-greet { font-size: 23px; font-weight: 900; letter-spacing: .3px; line-height: 1.14; text-shadow: 0 2px 8px rgba(0,0,0,.38); }
-.fest-hero-sub { font-size: 13px; font-weight: 600; opacity: .96; margin-top: 6px; text-shadow: 0 1px 4px rgba(0,0,0,.32); }
-/* Gold / palette trim along the bottom edge. */
-.fest-hero-trim { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; z-index: 1; background: var(--fest-stripe, var(--fest-accent, #ffd36b)); }
+.fest-poster-kicker {
+  display: block; font-size: 11px; font-weight: 800; letter-spacing: 3px;
+  text-transform: uppercase; opacity: .92; text-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+.fest-poster-title {
+  font-size: 25px; font-weight: 900; letter-spacing: .3px; line-height: 1.12;
+  margin: 5px 0 0; text-shadow: 0 2px 10px rgba(0,0,0,.42);
+}
+.fest-poster-div { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 9px auto; opacity: .9; }
+.fest-poster-div i { display: block; width: 32px; height: 1px; background: currentColor; opacity: .55; }
+.fest-poster-div b { font-size: 12px; line-height: 1; }
+.fest-poster-sub {
+  font-size: 12.5px; font-weight: 600; opacity: .96; max-width: 280px; margin: 0 auto;
+  text-shadow: 0 1px 4px rgba(0,0,0,.32); line-height: 1.4;
+}
 
 /* A slim palette band under the header on EVERY screen — the seasonal signal. */
 :root[data-festival] .header { position: relative; }
