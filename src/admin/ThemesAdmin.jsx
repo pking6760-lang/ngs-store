@@ -15,7 +15,7 @@ I will name a festival or occasion. Design the complete theme and return it as O
 
 WHAT THE APP DOES WITH YOUR THEME (design for the real thing, not a flat banner)
 - A festive masthead sits at the top of home: an ornamental backdrop (your "motif") behind an editorial poster - a small spaced uppercase kicker, the greeting, an ornament divider, then a subtitle - framed by a hanging garland (your "decoration").
-- Your "palette" re-skins the WHOLE app cohesively: a colour band under the header on every screen, the accent bar on every section title, and the masthead blend; it also draws the garland. Use the festival's true, recognisable colours (3-5).
+- Your "palette" re-skins the WHOLE app cohesively: a colour band under the header on every screen, the accent bar on every section title, and the masthead blend; it also draws the garland. Use EXACTLY 3 main colours — the festival's true signature colours (for flag days that means the flag's 3 colours, nothing extra).
 - Your "primary" colours the header, all buttons, the cart bar and price chips (white text sits on it). Your "accent" highlights savings and badges.
 - Your "pattern" scatters the festival's own little motif faintly through the BACKGROUND of every page, so the festival is felt everywhere - subtly, never busy.
 
@@ -43,7 +43,7 @@ RETURN ONLY THIS JSON OBJECT (no markdown, no code fence, no commentary):
     "bg":          "#RRGGBB - a near-white page canvas with a faint festival hint",
     "headerFrom":  "#RRGGBB - masthead gradient start, usually = primary",
     "headerTo":    "#RRGGBB - masthead gradient end, = primaryDark or a warm second colour",
-    "palette":     ["#RRGGBB", "... 3 to 5 authentic signature colours of THIS festival, in order"]
+    "palette":     ["#RRGGBB", "#RRGGBB", "#RRGGBB - EXACTLY 3 main signature colours of THIS festival, in order; for flag days use the flag's 3 colours only"]
   }
 }
 
@@ -51,7 +51,7 @@ THE COLOURS ARE YOUR CALL
 - I am giving you NO colours. You choose every hex yourself, authentically from the festival - its flowers, flags, sweets, lamps, fabrics, deities and mood. Two festivals must never come out looking the same; do not default to red/gold unless the festival genuinely is red/gold.
 - Harmonious set: one deep anchor plus festive companions - tasteful and premium; no neon, no muddy greys.
 - Contrast: white text must read clearly on "primary", "primaryDark", "headerFrom" and "headerTo" - so none of those may be pale or pastel.
-- Only "bg" and "tint" are pale; every other colour is confident. "palette" is required and carries the festival's identity.
+- Only "bg" and "tint" are pale; every other colour is confident. "palette" is REQUIRED and must be EXACTLY 3 main colours — no more (e.g. Independence Day = saffron, white, green only; do not add a 4th like blue).
 
 COPY
 Warm, classy and specific to the festival + fresh groceries. Hinglish welcome. Never invent prices or discounts.

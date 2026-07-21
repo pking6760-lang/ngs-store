@@ -101,14 +101,14 @@ export function blendGradient(colors, angle = "100deg") {
   return `linear-gradient(${angle}, ${colors.join(", ")})`;
 }
 // Every festival's colours: an explicit `palette`, else the flag-style
-// `stripe` (back-compat), else built from primary+accent so even a minimal
-// theme still reads as multi-colour.
+// `stripe` (back-compat), else built from primary+accent. Capped at 3 MAIN
+// colours — a clean tricolour-style band, never a busy 4-5 colour smear.
 export function themePalette(c = {}) {
   const p = Array.isArray(c.palette) ? c.palette.filter(Boolean)
           : Array.isArray(c.stripe) ? c.stripe.filter(Boolean) : [];
-  if (p.length >= 2) return p;
+  if (p.length >= 2) return p.slice(0, 3);
   const built = [c.primary, c.accent, c.primaryDark || c.accentDeep].filter(Boolean);
-  return built.length >= 2 ? built : [];
+  return built.length >= 2 ? built.slice(0, 3) : [];
 }
 
 let applied = []; // brand vars we overrode, so we can revert cleanly
