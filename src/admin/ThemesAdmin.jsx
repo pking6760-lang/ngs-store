@@ -31,16 +31,23 @@ Return ONLY a JSON object (no explanation, no markdown) with EXACTLY these keys:
     "bg":          "<a very light, near-white page background with a warm festival hint>",
     "headerFrom":  "<gradient start for the greeting ribbon — usually = primary>",
     "headerTo":    "<gradient end for the greeting ribbon — usually = primaryDark or a warm second colour>",
-    "stripe":      ["<ONLY for flag / multi-colour festivals: the 2-4 flag colours in order. OMIT this key entirely for single-colour festivals like Diwali.>"]
+    "palette":     ["<REQUIRED. 3-5 signature colours of THIS festival, in order. These paint a colour band under the header on every screen and the festive greeting ribbon, so the app looks genuinely multi-colour — never one flat colour.>"]
   }
 }
 
 Rules:
 - All colours are #RRGGBB hex. primary MUST have white text readable on it (dark/saturated), never a pale colour.
-- MULTI-COLOUR / FLAG FESTIVALS: Independence Day & Republic Day are TRICOLOUR — you MUST include "stripe": ["#FF9933","#FFFFFF","#138808"] (saffron, white, India-green) so the app shows a real tricolour band, not one flat colour. For these set primary to Ashoka-Chakra navy "#0A3D91", accent to saffron, decoration "tricolor". Holi is multi-colour too — give it a stripe of 3-4 bright colours. Do NOT add "stripe" to single-colour festivals (Diwali, Dhanteras, Dussehra…).
-- Pick a decoration that truly fits (Diwali → diyas; Independence/Republic Day → tricolor; Dussehra → bow; Dhanteras → coins; Holi → petals; New Year → confetti; winter → snow).
-- Use the CORRECT date for the festival's NEXT occurrence.
-- Independence Day = 15 Aug, Republic Day = 26 Jan, Gandhi Jayanti = 2 Oct (fixed every year). Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan shift each year — use this year's real date.
+- "palette" is REQUIRED for EVERY festival — 3 to 5 colours that capture that festival's real look. Examples:
+  · Diwali → ["#C21807","#FF7A00","#FFC300","#8E1E9E"] (crimson, orange, gold, magenta)
+  · Dhanteras → ["#B8860B","#FFC300","#C21807","#1F7A44"] (gold, bright gold, red, green)
+  · Dussehra → ["#C21807","#FF7A00","#FFC300"] (red, orange, gold)
+  · Holi → ["#E5147E","#FFC300","#12A05C","#2B57C0","#8E1E9E"] (pink, yellow, green, blue, purple)
+  · Independence / Republic Day → ["#FF9933","#FFFFFF","#138808"] (saffron, white, India-green); set primary to navy "#0A3D91"
+  · New Year → ["#0A3D91","#C0A000","#C21807","#12A05C"] (festive multi)
+  · Raksha Bandhan → ["#E5147E","#FFC300","#C21807"]
+- primary/accent should be TWO different colours from the palette so buttons and highlights don't look the same.
+- Pick a decoration that fits (Diwali → diyas; Independence/Republic Day → tricolor; Dussehra → bow; Dhanteras → coins; Holi → petals; New Year → confetti; winter → snow).
+- Use the CORRECT date for the festival's NEXT occurrence. Independence Day = 15 Aug, Republic Day = 26 Jan, Gandhi Jayanti = 2 Oct (fixed). Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan shift each year — use this year's real date.
 - Keep it elegant and premium, not garish.
 
 The festival is: `;
@@ -182,17 +189,22 @@ function ThemePreview({ t, note }) {
   const c = t.colors || {};
   const b = t.banner || {};
   const primary = c.primary || "#0a9155";
-  const stripe = Array.isArray(c.stripe) ? c.stripe.filter(Boolean) : [];
-  const tri = stripe.length >= 2;
-  const bandBg = tri ? `linear-gradient(90deg, ${stripe.map((col, i) => `${col} ${(i / stripe.length) * 100}% ${((i + 1) / stripe.length) * 100}%`).join(", ")})` : null;
+  // Every festival's palette (explicit, or flag stripe, or primary+accent).
+  const raw = Array.isArray(c.palette) ? c.palette : Array.isArray(c.stripe) ? c.stripe : [];
+  const pal = raw.filter(Boolean);
+  const palette = pal.length >= 2 ? pal : [c.primary, c.accent, c.primaryDark].filter(Boolean);
+  const multi = palette.length >= 2;
+  const bandBg = multi ? `linear-gradient(90deg, ${palette.map((col, i) => `${col} ${(i / palette.length) * 100}% ${((i + 1) / palette.length) * 100}%`).join(", ")})` : null;
+  const ribbonBg = multi ? `linear-gradient(100deg, ${palette.join(", ")})` : `linear-gradient(100deg, ${c.headerFrom || primary}, ${c.headerTo || c.primaryDark || primary})`;
   return (
     <div className="theme-prev" style={{ background: c.bg || "#f4f6f9" }}>
       <div className="theme-prev-note">{note}: <strong>{t.emoji} {t.name || "Theme"}</strong></div>
-      {tri && <div style={{ height: 6, background: bandBg }} />}
-      <div className="theme-prev-header" style={{ background: tri ? primary : `linear-gradient(100deg, ${c.headerFrom || primary}, ${c.headerTo || c.primaryDark || primary})` }}>
-        <span>{t.greeting || b.kicker || "Festive greeting"}</span>
+      {multi && <div style={{ height: 7, background: bandBg }} />}
+      <div className="theme-prev-header" style={{ background: ribbonBg, position: "relative" }}>
+        <span style={{ position: "relative", zIndex: 1, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{t.greeting || b.kicker || "Festive greeting"}</span>
+        <span style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.30)" }} />
       </div>
-      {tri && <div style={{ height: 6, background: bandBg }} />}
+      {multi && <div style={{ height: 7, background: bandBg }} />}
       <div className="theme-prev-body">
         <div className="theme-prev-title">{b.title || "Festive line"}</div>
         <div className="theme-prev-sub">{b.subtitle || ""}</div>

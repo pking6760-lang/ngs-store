@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { themePalette } from "../lib/theme.js";
 
 // Falling festive decorations + a greeting ribbon, driven by the active theme.
 // Pure emoji (no image assets), pointer-events:none, so it never blocks taps.
@@ -66,10 +67,10 @@ export default function FestiveDecor({ theme }) {
   );
 }
 
-// A slim festive greeting at the top of home. For a multi-colour festival
-// (Independence Day, Republic Day, Holi…) the theme carries a `stripe` array,
-// so we frame the greeting with a real tricolour flag-band above and below and
-// keep the greeting itself on a solid, readable colour.
+// A festive greeting at the top of home. EVERY festival is multi-colour: its
+// palette drives a colour band above and below, and the ribbon itself is a
+// blend of those colours (with a scrim so the white text stays readable on any
+// palette — bright Holi, warm Diwali, saffron/white/green flag, all fine).
 export function FestiveRibbon({ theme }) {
   if (!theme?.id) return null;
   const b = theme.banner || {};
@@ -78,14 +79,13 @@ export function FestiveRibbon({ theme }) {
   const sub = b.title || b.subtitle;
   if (!lead && !sub) return null;
   const badge = theme.emoji || "✨";
-  const stripe = Array.isArray(c.stripe) ? c.stripe.filter(Boolean) : [];
-  const tricolor = stripe.length >= 2;
-  const ribbonStyle = tricolor ? { background: c.primary || c.headerFrom || "#12306e" } : undefined;
+  const palette = themePalette(c);
+  const multi = palette.length >= 2;
   const band = <div className="fest-stripe" style={{ background: "var(--fest-stripe)" }} aria-hidden="true" />;
   return (
     <div className="fest-greet">
-      {tricolor && band}
-      <div className="fest-ribbon" style={ribbonStyle} role="note">
+      {multi && band}
+      <div className="fest-ribbon" role="note">
         <span className="fest-ribbon-badge">{badge}</span>
         <span className="fest-ribbon-txt">
           {lead && <strong>{lead}</strong>}
@@ -93,7 +93,7 @@ export function FestiveRibbon({ theme }) {
         </span>
         <span className="fest-ribbon-badge">{badge}</span>
       </div>
-      {tricolor && band}
+      {multi && band}
     </div>
   );
 }
