@@ -4628,61 +4628,50 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════
-   Festival themes — falling decorations, greeting ribbon, chrome.
-   Colours come from --fest-* vars set by lib/theme.js at runtime.
+   Festival mode — premium seasonal skin.
+   The whole-app recolour (buttons, chips, badges…) is driven by the brand
+   CSS variables in lib/theme.js. Below is the festive centrepiece: a hero
+   banner + a slim palette band under the header on every screen. No emoji
+   confetti — a real, tasteful campaign look.
    ════════════════════════════════════════════════════════════ */
-.fest-decor {
-  position: fixed; inset: 0; pointer-events: none; overflow: hidden;
-  z-index: 40; /* above content, below modals/sheets/cart-bar */
+.fest-hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  margin: 12px 0 6px; padding: 24px 18px 20px; border-radius: 20px;
+  background: var(--fest-ribbon, linear-gradient(125deg, var(--green), var(--green-dark)));
+  color: #fff; box-shadow: 0 14px 34px rgba(0,0,0,.20), inset 0 0 0 1px rgba(255,255,255,.08);
+  text-align: center;
 }
-.fest-p {
-  position: absolute; top: -12vh; line-height: 1;
-  will-change: transform, opacity; opacity: 0;
-  animation-name: fest-fall; animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,.12));
+/* Contrast scrim so the greeting reads on any palette (bright, pale or dark). */
+.fest-hero::before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,.42)); }
+/* Subtle dotted motif for texture (premium, not noisy). */
+.fest-hero-motif {
+  position: absolute; inset: 0; z-index: 0; opacity: .12; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,.95) 1.1px, transparent 1.4px);
+  background-size: 15px 15px;
 }
-@keyframes fest-fall {
-  0%   { transform: translate3d(0, -12vh, 0) rotate(0deg); opacity: 0; }
-  8%   { opacity: .95; }
-  92%  { opacity: .95; }
-  100% { transform: translate3d(var(--drift, 0px), 112vh, 0) rotate(calc(var(--spin,1) * 220deg)); opacity: 0; }
+/* Warm light glow behind the emblem. */
+.fest-hero-glow {
+  position: absolute; z-index: 0; top: -46%; left: 50%; transform: translateX(-50%);
+  width: 230px; height: 230px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--fest-accent, #ffd36b) 0%, transparent 62%);
+  opacity: .55;
 }
-@media (prefers-reduced-motion: reduce) {
-  .fest-p { animation: none; display: none; }
+.fest-hero-in { position: relative; z-index: 1; }
+.fest-hero-emblem {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; border-radius: 50%; font-size: 25px; margin-bottom: 11px;
+  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.4);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
 }
+.fest-hero-greet { font-size: 23px; font-weight: 900; letter-spacing: .3px; line-height: 1.14; text-shadow: 0 2px 8px rgba(0,0,0,.38); }
+.fest-hero-sub { font-size: 13px; font-weight: 600; opacity: .96; margin-top: 6px; text-shadow: 0 1px 4px rgba(0,0,0,.32); }
+/* Gold / palette trim along the bottom edge. */
+.fest-hero-trim { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; z-index: 1; background: var(--fest-stripe, var(--fest-accent, #ffd36b)); }
 
-.fest-greet { margin: 10px 0 2px; display: flex; flex-direction: column; gap: 4px; }
-.fest-stripe { height: 7px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.14); }
-.fest-ribbon {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 10px 14px; border-radius: 14px;
-  background: var(--fest-ribbon, linear-gradient(100deg, var(--fest-header-from, var(--green)), var(--fest-header-to, var(--green-dark))));
-  color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.14);
-  position: relative; overflow: hidden;
-}
-/* Scrim: keeps the white greeting readable over ANY palette (bright Holi,
-   pale saffron/white/green, warm Diwali…). */
-.fest-ribbon::before {
-  content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.30); pointer-events: none;
-}
-.fest-ribbon::after {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.28) 50%, transparent 80%);
-  transform: translateX(-100%); animation: fest-shimmer 3.4s ease-in-out infinite;
-}
-@keyframes fest-shimmer { to { transform: translateX(100%); } }
-.fest-ribbon-badge { font-size: 20px; flex: none; position: relative; z-index: 1; }
-.fest-ribbon-txt { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.25; min-width: 0; position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0,0,0,.45); }
-.fest-ribbon-txt strong { font-size: 15px; font-weight: 800; letter-spacing: .2px; }
-.fest-ribbon-txt em { font-style: normal; font-size: 12px; opacity: .95; margin-top: 1px; }
-@media (prefers-reduced-motion: reduce) { .fest-ribbon::after { animation: none; } }
-
-/* A festive line under the header on EVERY screen. For a multi-colour festival
-   it's the real tricolour band; otherwise a single accent line. */
+/* A slim palette band under the header on EVERY screen — the seasonal signal. */
 :root[data-festival] .header { position: relative; }
 :root[data-festival] .header::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
   background: var(--fest-stripe, var(--fest-accent, var(--yellow, #f6c445)));
   pointer-events: none;
 }

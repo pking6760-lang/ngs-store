@@ -20,7 +20,7 @@ import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
 import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
 import PromoCarousel from "./components/PromoCarousel.jsx";
-import FestiveDecor, { FestiveRibbon } from "./components/FestiveDecor.jsx";
+import { FestiveHero } from "./components/FestiveDecor.jsx";
 import { applyTheme } from "./lib/theme.js";
 import { shop } from "./data/shop.js";
 
@@ -252,7 +252,6 @@ export default function App() {
 
   return (
     <div className="app">
-      <FestiveDecor theme={activeTheme} />
       <CallAlertsPrompt show={isLoggedIn} />
       <PullToRefresh
         onRefresh={handleRefresh}
@@ -454,7 +453,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
     .slice(0, 12);
   return (
     <>
-      <FestiveRibbon theme={theme} />
+      <FestiveHero theme={theme} />
 
       {offer && offer.trim() && (
         <div className="offer-strip">{offer}</div>

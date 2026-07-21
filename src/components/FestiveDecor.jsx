@@ -1,99 +1,29 @@
-import { useMemo } from "react";
 import { themePalette } from "../lib/theme.js";
 
-// Falling festive decorations + a greeting ribbon, driven by the active theme.
-// Pure emoji (no image assets), pointer-events:none, so it never blocks taps.
-
-const SETS = {
-  diyas: ["🪔", "✨", "🪔", "🟡"],
-  lanterns: ["🏮", "✨", "🏮"],
-  flags: ["🇮🇳", "🧡", "🤍", "💚"],
-  tricolor: ["🇮🇳", "🧡", "🤍", "💚"],
-  confetti: ["🎉", "🎊", "✨", "🎈"],
-  crackers: ["🎆", "🎇", "✨"],
-  fireworks: ["🎆", "🎇", "✨"],
-  petals: ["🌸", "🌼", "🍃"],
-  flowers: ["🌸", "🌼", "🌺"],
-  marigold: ["🌼", "🟠", "🌿"],
-  rangoli: ["🪔", "🌸", "✨"],
-  sparkles: ["✨", "⭐", "🌟"],
-  snow: ["❄️", "🌨️", "✨"],
-  leaves: ["🍂", "🍁", "🍃"],
-  hearts: ["💚", "💛", "❤️"],
-  coins: ["🪙", "✨", "💰"], // Dhanteras
-  bow: ["🏹", "✨"],          // Dussehra
-};
-const emojiFor = (name) => SETS[String(name || "").toLowerCase()] || ["✨", "🌟"];
-
-// Deterministic spread so particles don't re-shuffle on every render.
-function buildParticles(decoration) {
-  const set = emojiFor(decoration);
-  const N = 18;
-  return Array.from({ length: N }, (_, i) => ({
-    ch: set[i % set.length],
-    left: (i * 61 + 9) % 100,
-    delay: +(((i * 7) % 20) / 2).toFixed(2),
-    dur: 7 + (i % 6),
-    size: 15 + (i % 4) * 6,
-    drift: (i % 2 ? 1 : -1) * (12 + (i % 3) * 10),
-    spin: i % 2 ? 1 : -1,
-  }));
-}
-
-export default function FestiveDecor({ theme }) {
-  const decoration = theme?.decoration;
-  const on = !!theme?.id && decoration !== "none";
-  const particles = useMemo(() => (on ? buildParticles(decoration) : []), [on, decoration]);
-  if (!particles.length) return null;
-  return (
-    <div className="fest-decor" aria-hidden="true">
-      {particles.map((p, i) => (
-        <span
-          key={i}
-          className="fest-p"
-          style={{
-            left: p.left + "%",
-            animationDelay: p.delay + "s",
-            animationDuration: p.dur + "s",
-            fontSize: p.size + "px",
-            "--drift": p.drift + "px",
-            "--spin": p.spin,
-          }}
-        >
-          {p.ch}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// A festive greeting at the top of home. EVERY festival is multi-colour: its
-// palette drives a colour band above and below, and the ribbon itself is a
-// blend of those colours (with a scrim so the white text stays readable on any
-// palette — bright Holi, warm Diwali, saffron/white/green flag, all fine).
-export function FestiveRibbon({ theme }) {
+// A premium festival hero shown at the top of home. No falling emoji, no
+// gimmicks — a rich palette gradient, a soft light glow, a subtle motif
+// texture, an emblem badge and elegant typography, finished with a gold/palette
+// trim. The whole-app recolour (buttons, chips, badges, header band) is handled
+// by lib/theme.js; this is the festive centrepiece.
+export function FestiveHero({ theme }) {
   if (!theme?.id) return null;
   const b = theme.banner || {};
   const c = theme.colors || {};
-  const lead = theme.greeting || b.kicker;
-  const sub = b.title || b.subtitle;
-  if (!lead && !sub) return null;
-  const badge = theme.emoji || "✨";
-  const palette = themePalette(c);
-  const multi = palette.length >= 2;
-  const band = <div className="fest-stripe" style={{ background: "var(--fest-stripe)" }} aria-hidden="true" />;
+  const greeting = theme.greeting || b.kicker;
+  const line = b.title || b.subtitle;
+  if (!greeting && !line) return null;
+  const emblem = theme.emoji || "✨";
+  const multi = themePalette(c).length >= 2;
   return (
-    <div className="fest-greet">
-      {multi && band}
-      <div className="fest-ribbon" role="note">
-        <span className="fest-ribbon-badge">{badge}</span>
-        <span className="fest-ribbon-txt">
-          {lead && <strong>{lead}</strong>}
-          {sub && <em>{sub}</em>}
-        </span>
-        <span className="fest-ribbon-badge">{badge}</span>
+    <div className={`fest-hero ${multi ? "multi" : ""}`} role="banner">
+      <span className="fest-hero-glow" aria-hidden="true" />
+      <span className="fest-hero-motif" aria-hidden="true" />
+      <div className="fest-hero-in">
+        <span className="fest-hero-emblem">{emblem}</span>
+        {greeting && <div className="fest-hero-greet">{greeting}</div>}
+        {line && <div className="fest-hero-sub">{line}</div>}
       </div>
-      {multi && band}
+      <span className="fest-hero-trim" aria-hidden="true" />
     </div>
   );
 }
