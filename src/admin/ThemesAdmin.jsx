@@ -14,7 +14,7 @@ You are a senior brand & visual designer. Design a limited-time FESTIVAL THEME (
 HOW THE THEME IS USED (design EXACTLY for this — the app renders all of it)
 - "palette" is the heart of the theme. It drives, on EVERY screen: (a) a decorative garland hung across the top of home, (b) a thin colour band under the header, (c) the vertical accent bar on every section title, and (d) the blended background of the festive greeting hero. It also frames the hero. So "palette" MUST be the festival's real, recognisable signature colours, 3-5, in a pleasing order.
 - "primary" colours the header, all buttons, the cart bar and price chips — WHITE text sits on it, so it MUST be deep/saturated (never pale).
-- "accent" does double duty: it highlights savings/badges AND tints a faint sparkle texture watermark shown behind content on every page. So make "accent" a warm, clearly-festive colour that is DIFFERENT from "primary" (gold/saffron/amber work well); not too pale (it must read as a watermark) and not so dark it muddies.
+- "accent" does double duty: it highlights savings/badges AND tints a faint sparkle texture watermark shown behind content on every page. So make "accent" a warm, clearly-festive colour that is DIFFERENT from "primary"; not too pale (it must read as a watermark) and not so dark it muddies.
 - "tint" is the soft fill behind chips, section pills and light backgrounds. "bg" is the near-white page canvas.
 - "decoration" ONLY chooses the garland style across the top: "tricolor" (or "flags") gives a triangular flag bunting — use it ONLY for flag days (Independence / Republic Day); "marigold" gives a hanging marigold flower garland — use it for EVERY other festival.
 - greeting + banner copy appear inside the hero banner.
@@ -58,35 +58,14 @@ DATES
 - Fixed every year: Independence Day 15 Aug, Republic Day 26 Jan, Gandhi Jayanti 2 Oct, New Year 1 Jan.
 - Lunar/variable (Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan, Navratri, Eid, Janmashtami…): use the correct real date for the upcoming year; if unsure, give your best estimate (the shopkeeper can fine-tune the dates in the app).
 
-WORKED EXAMPLE (this is the quality bar — match this structure and polish)
-Input festival: Diwali
-Output:
-{
-  "name": "Diwali",
-  "emoji": "🪔",
-  "startsOn": "2025-10-18",
-  "endsOn": "2025-10-23",
-  "greeting": "Shubh Deepavali 🪔",
-  "banner": {
-    "kicker": "Happy Diwali",
-    "title": "Light up every plate this Diwali",
-    "subtitle": "Fresh groceries & festive essentials, delivered in minutes"
-  },
-  "decoration": "marigold",
-  "colors": {
-    "primary": "#B01030",
-    "primaryDark": "#7C0A22",
-    "accent": "#F5B301",
-    "accentDeep": "#B26A00",
-    "tint": "#FDECEF",
-    "bg": "#FFF8F0",
-    "headerFrom": "#B01030",
-    "headerTo": "#E0700C",
-    "palette": ["#B01030", "#E0700C", "#F5B301", "#8E1E9E"]
-  }
-}
+YOU CHOOSE THE COLOURS (this is the whole point)
+- I am NOT giving you any colours. YOU decide every hex value yourself, authentically, from the festival itself — the colours people truly associate with it: its traditional flowers, flags, sweets, lights, fabrics, deities and overall mood. Two different festivals must never come out looking the same.
+- Just obey the DESIGN RULES above for harmony, contrast and roles — the exact colours are entirely your call. Do not default to a generic red/gold unless that festival genuinely is red/gold.
 
-Now design the theme, at that same quality, for this festival or occasion:
+FORMAT (shape only — the #... are placeholders; fill in YOUR colours, copy, emoji and dates for the actual festival):
+{ "name": "...", "emoji": "...", "startsOn": "YYYY-MM-DD", "endsOn": "YYYY-MM-DD", "greeting": "...", "banner": { "kicker": "...", "title": "...", "subtitle": "..." }, "decoration": "marigold", "colors": { "primary": "#...", "primaryDark": "#...", "accent": "#...", "accentDeep": "#...", "tint": "#...", "bg": "#...", "headerFrom": "#...", "headerTo": "#...", "palette": ["#...", "#...", "#..."] } }
+
+Now design the complete theme — choosing all colours yourself — for this festival or occasion:
 `;
 
 const DECOR_LABEL = {
