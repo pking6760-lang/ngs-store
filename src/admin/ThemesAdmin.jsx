@@ -18,6 +18,7 @@ HOW THE THEME IS USED (design EXACTLY for this — the app renders all of it)
 - "tint" is the soft fill behind chips, section pills and light backgrounds. "bg" is the near-white page canvas.
 - "decoration" ONLY chooses the garland style across the top: "tricolor" (or "flags") gives a triangular flag bunting — use it ONLY for flag days (Independence / Republic Day); "marigold" gives a hanging marigold flower garland — use it for EVERY other festival.
 - "motif" chooses the ornamental backdrop drawn behind the greeting: "mandala" (rangoli ring), "rays" (sunburst) or "arch" (temple archway). Pick the one that fits — so different festivals get visibly different posters, not the same layout recoloured.
+- "pattern" chooses the festival's OWN motif scattered faintly across the WHOLE app background (not just the poster): splash (Holi), flags (flag days), diyas (Diwali/Dussehra), coins (Dhanteras), petals (flower festivals) or sparkles. This is what makes each festival feel present everywhere, subtly.
 - greeting (the big line) and the banner kicker/title/subtitle are composed into an editorial poster: kicker (small, spaced, uppercase) → greeting → ornament → subtitle. Write them to read as a designed masthead.
 
 OUTPUT
@@ -35,6 +36,7 @@ Return ONLY one valid minified-or-pretty JSON object — no markdown, no code fe
   },
   "decoration": "<garland style: 'tricolor' for flag days (Independence / Republic Day) renders flag bunting; 'marigold' for every other festival renders a marigold flower garland.>",
   "motif": "<ornamental backdrop behind the greeting poster — 'mandala' (a rangoli ring, good for most festivals), 'rays' (a sunburst, good for national / celebration days), or 'arch' (a temple archway, good for regal / religious festivals). Pick the one that best fits the festival's spirit.>",
+  "pattern": "<the festival's OWN motif scattered faintly across the whole app background — 'splash' (Holi colour splashes), 'flags' (flag-day tricolour flags), 'diyas' (Diwali/Dussehra lamps), 'coins' (Dhanteras), 'petals' (flower festivals) or 'sparkles' (generic). Choose what truly represents THIS festival.>",
   "colors": {
     "primary":     "<deep, saturated brand colour; WHITE text must be clearly legible on it>",
     "primaryDark": "<a darker shade of primary, for gradients/pressed states>",
@@ -65,7 +67,7 @@ YOU CHOOSE THE COLOURS (this is the whole point)
 - Just obey the DESIGN RULES above for harmony, contrast and roles — the exact colours are entirely your call. Do not default to a generic red/gold unless that festival genuinely is red/gold.
 
 FORMAT (shape only — the #... are placeholders; fill in YOUR colours, copy, emoji and dates for the actual festival):
-{ "name": "...", "emoji": "...", "startsOn": "YYYY-MM-DD", "endsOn": "YYYY-MM-DD", "greeting": "...", "banner": { "kicker": "...", "title": "...", "subtitle": "..." }, "decoration": "marigold", "motif": "mandala", "colors": { "primary": "#...", "primaryDark": "#...", "accent": "#...", "accentDeep": "#...", "tint": "#...", "bg": "#...", "headerFrom": "#...", "headerTo": "#...", "palette": ["#...", "#...", "#..."] } }
+{ "name": "...", "emoji": "...", "startsOn": "YYYY-MM-DD", "endsOn": "YYYY-MM-DD", "greeting": "...", "banner": { "kicker": "...", "title": "...", "subtitle": "..." }, "decoration": "marigold", "motif": "mandala", "pattern": "diyas", "colors": { "primary": "#...", "primaryDark": "#...", "accent": "#...", "accentDeep": "#...", "tint": "#...", "bg": "#...", "headerFrom": "#...", "headerTo": "#...", "palette": ["#...", "#...", "#..."] } }
 
 Now design the complete theme — choosing all colours yourself — for this festival or occasion:
 `;

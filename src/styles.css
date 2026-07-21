@@ -4718,7 +4718,7 @@ body {
 :root[data-festival] .cart-drawer,
 :root[data-festival] .account-drawer {
   background-image: var(--fest-pattern);
-  background-size: 46px 46px;
+  background-size: var(--fest-pattern-size, 46px 46px);
 }
 
 /* 2 · Every page/drawer header (Subscriptions, Inbox, Account, Cart, Wallet…)
