@@ -11,11 +11,13 @@ const TODAY_ISO = new Date().toISOString().slice(0, 10);
 const THEME_PROMPT = `ROLE
 You are a senior brand & visual designer. Design a limited-time FESTIVAL THEME (a complete seasonal skin) for the customer app of "NGS - Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Aim for the quality of a top consumer app's festival campaign (think Zomato/Swiggy/Blinkit during Diwali): cohesive, premium, culturally authentic — never gaudy or clip-arty.
 
-HOW THE THEME IS USED (design for this)
-- "palette" repaints a decorative garland hung across the top and a colour band under the header, and blends into the festive hero banner. It must be the festival's real signature colours.
-- "primary" colours the header, buttons and price chips (white text sits on it, so it MUST be deep/saturated). "accent" highlights savings/badges and must be a DIFFERENT palette colour so buttons and highlights don't look identical.
-- "decoration" chooses the garland style: a triangular flag bunting for flag days, or a marigold flower garland for every other festival.
-- The greeting + banner copy appear in the hero banner.
+HOW THE THEME IS USED (design EXACTLY for this — the app renders all of it)
+- "palette" is the heart of the theme. It drives, on EVERY screen: (a) a decorative garland hung across the top of home, (b) a thin colour band under the header, (c) the vertical accent bar on every section title, and (d) the blended background of the festive greeting hero. It also frames the hero. So "palette" MUST be the festival's real, recognisable signature colours, 3-5, in a pleasing order.
+- "primary" colours the header, all buttons, the cart bar and price chips — WHITE text sits on it, so it MUST be deep/saturated (never pale).
+- "accent" does double duty: it highlights savings/badges AND tints a faint sparkle texture watermark shown behind content on every page. So make "accent" a warm, clearly-festive colour that is DIFFERENT from "primary" (gold/saffron/amber work well); not too pale (it must read as a watermark) and not so dark it muddies.
+- "tint" is the soft fill behind chips, section pills and light backgrounds. "bg" is the near-white page canvas.
+- "decoration" ONLY chooses the garland style across the top: "tricolor" (or "flags") gives a triangular flag bunting — use it ONLY for flag days (Independence / Republic Day); "marigold" gives a hanging marigold flower garland — use it for EVERY other festival.
+- greeting + banner copy appear inside the hero banner.
 
 OUTPUT
 Return ONLY one valid minified-or-pretty JSON object — no markdown, no code fence, no commentary. Exactly these keys:
@@ -30,7 +32,7 @@ Return ONLY one valid minified-or-pretty JSON object — no markdown, no code fe
     "title": "<one punchy festive line, tie the festival to fresh groceries>",
     "subtitle": "<one supporting line; friendly, local, no prices, no fake discounts>"
   },
-  "decoration": "<ONE of: marigold, diyas, flowers, rangoli, lanterns, tricolor, flags, leaves, none. Use tricolor/flags ONLY for flag days (Independence/Republic Day); use marigold (or diyas/flowers/rangoli) for all other festivals.>",
+  "decoration": "<garland style: 'tricolor' for flag days (Independence / Republic Day) renders flag bunting; 'marigold' for every other festival renders a marigold flower garland.>",
   "colors": {
     "primary":     "<deep, saturated brand colour; WHITE text must be clearly legible on it>",
     "primaryDark": "<a darker shade of primary, for gradients/pressed states>",
