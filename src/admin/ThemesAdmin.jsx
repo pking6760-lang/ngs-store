@@ -9,67 +9,57 @@ import { Ic } from "./AdminIcons.jsx";
 // the AI schedules the NEXT occurrence correctly.
 const TODAY_ISO = new Date().toISOString().slice(0, 10);
 const THEME_PROMPT = `ROLE
-You are a senior brand & visual designer. Design a limited-time FESTIVAL THEME (a complete seasonal skin) for the customer app of "NGS - Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Aim for the quality of a top consumer app's festival campaign (think Zomato/Swiggy/Blinkit during Diwali): cohesive, premium, culturally authentic — never gaudy or clip-arty.
+You are a senior brand designer creating a limited-time festival skin for the customer app of "NGS - Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Match the polish of a top app's festival campaign (Zomato / Swiggy / Blinkit at Diwali): cohesive, premium and culturally authentic - never gaudy or clip-arty.
 
-HOW THE THEME IS USED (design EXACTLY for this — the app renders all of it)
-- "palette" is the heart of the theme. It drives, on EVERY screen: (a) a decorative garland hung across the top of home, (b) a thin colour band under the header, (c) the vertical accent bar on every section title, and (d) the blended background of the festive greeting hero. It also frames the hero. So "palette" MUST be the festival's real, recognisable signature colours, 3-5, in a pleasing order.
-- "primary" colours the header, all buttons, the cart bar and price chips — WHITE text sits on it, so it MUST be deep/saturated (never pale).
-- "accent" does double duty: it highlights savings/badges AND tints a faint sparkle texture watermark shown behind content on every page. So make "accent" a warm, clearly-festive colour that is DIFFERENT from "primary"; not too pale (it must read as a watermark) and not so dark it muddies.
-- "tint" is the soft fill behind chips, section pills and light backgrounds. "bg" is the near-white page canvas.
-- "decoration" ONLY chooses the garland style across the top: "tricolor" (or "flags") gives a triangular flag bunting — use it ONLY for flag days (Independence / Republic Day); "marigold" gives a hanging marigold flower garland — use it for EVERY other festival.
-- "motif" chooses the ornamental backdrop drawn behind the greeting: "mandala" (rangoli ring), "rays" (sunburst) or "arch" (temple archway). Pick the one that fits — so different festivals get visibly different posters, not the same layout recoloured.
-- "pattern" chooses the festival's OWN motif scattered faintly across the WHOLE app background (not just the poster): splash (Holi), flags (flag days), diyas (Diwali/Dussehra), coins (Dhanteras), petals (flower festivals) or sparkles. This is what makes each festival feel present everywhere, subtly.
-- greeting (the big line) and the banner kicker/title/subtitle are composed into an editorial poster: kicker (small, spaced, uppercase) → greeting → ornament → subtitle. Write them to read as a designed masthead.
+I will name a festival or occasion. Design the complete theme and return it as ONE JSON object.
 
-OUTPUT
-Return ONLY one valid minified-or-pretty JSON object — no markdown, no code fence, no commentary. Exactly these keys:
+WHAT THE APP DOES WITH YOUR THEME (design for the real thing, not a flat banner)
+- A festive masthead sits at the top of home: an ornamental backdrop (your "motif") behind an editorial poster - a small spaced uppercase kicker, the greeting, an ornament divider, then a subtitle - framed by a hanging garland (your "decoration").
+- Your "palette" re-skins the WHOLE app cohesively: a colour band under the header on every screen, the accent bar on every section title, and the masthead blend; it also draws the garland. Use the festival's true, recognisable colours (3-5).
+- Your "primary" colours the header, all buttons, the cart bar and price chips (white text sits on it). Your "accent" highlights savings and badges.
+- Your "pattern" scatters the festival's own little motif faintly through the BACKGROUND of every page, so the festival is felt everywhere - subtly, never busy.
+
+RETURN ONLY THIS JSON OBJECT (no markdown, no code fence, no commentary):
 {
-  "name": "<festival name>",
-  "emoji": "<one representative emoji>",
-  "startsOn": "<YYYY-MM-DD to switch the theme ON, a few days before the day>",
-  "endsOn": "<YYYY-MM-DD to switch it OFF, usually the festival day or a day after>",
-  "greeting": "<short warm greeting for the hero, Hinglish welcome, may end with 1 emoji>",
+  "name": "the festival's name",
+  "emoji": "one emoji that represents it",
+  "startsOn": "YYYY-MM-DD - switch the theme ON a few days before",
+  "endsOn": "YYYY-MM-DD - switch it OFF on or just after the day",
+  "greeting": "short warm greeting for the poster; Hinglish welcome; up to one emoji",
   "banner": {
-    "kicker": "<2-3 word tag, e.g. Happy Diwali>",
-    "title": "<one punchy festive line, tie the festival to fresh groceries>",
-    "subtitle": "<one supporting line; friendly, local, no prices, no fake discounts>"
+    "kicker": "2-3 word tag, e.g. Happy Diwali",
+    "title": "one punchy festive line tying the festival to fresh groceries",
+    "subtitle": "one warm supporting line; local; no prices; no fake discounts"
   },
-  "decoration": "<garland style: 'tricolor' for flag days (Independence / Republic Day) renders flag bunting; 'marigold' for every other festival renders a marigold flower garland.>",
-  "motif": "<ornamental backdrop behind the greeting poster — 'mandala' (a rangoli ring, good for most festivals), 'rays' (a sunburst, good for national / celebration days), or 'arch' (a temple archway, good for regal / religious festivals). Pick the one that best fits the festival's spirit.>",
-  "pattern": "<the festival's OWN motif scattered faintly across the whole app background — 'splash' (Holi colour splashes), 'flags' (flag-day tricolour flags), 'diyas' (Diwali/Dussehra lamps), 'coins' (Dhanteras), 'petals' (flower festivals) or 'sparkles' (generic). Choose what truly represents THIS festival.>",
+  "decoration": "garland style - 'tricolor' (flag bunting) for flag days ONLY (Independence / Republic Day); 'marigold' (flower garland) for every other festival",
+  "motif": "poster backdrop - 'mandala' (rangoli ring), 'rays' (sunburst) or 'arch' (temple archway); pick what fits the festival",
+  "pattern": "faint background motif shown app-wide - 'splash' (Holi), 'flags' (flag days), 'diyas' (Diwali / Dussehra), 'coins' (Dhanteras), 'petals' (flower festivals) or 'sparkles'",
   "colors": {
-    "primary":     "<deep, saturated brand colour; WHITE text must be clearly legible on it>",
-    "primaryDark": "<a darker shade of primary, for gradients/pressed states>",
-    "accent":      "<a bright highlight colour, a DIFFERENT palette member than primary>",
-    "accentDeep":  "<a deeper shade of accent>",
-    "tint":        "<very light wash of the theme, for soft chip/section backgrounds>",
-    "bg":          "<near-white page background with a faint warm festival hint>",
-    "headerFrom":  "<hero gradient start, usually = primary>",
-    "headerTo":    "<hero gradient end, usually = primaryDark or a warm second colour>",
-    "palette":     ["<3 to 5 authentic signature colours of THIS festival, in order>"]
+    "primary":     "#RRGGBB - deep and saturated; WHITE text must be clearly legible on it",
+    "primaryDark": "#RRGGBB - a darker shade of primary, for gradients / pressed states",
+    "accent":      "#RRGGBB - a bright festive highlight; a DIFFERENT colour from primary",
+    "accentDeep":  "#RRGGBB - a deeper shade of accent",
+    "tint":        "#RRGGBB - a very light wash for soft chip / section backgrounds",
+    "bg":          "#RRGGBB - a near-white page canvas with a faint festival hint",
+    "headerFrom":  "#RRGGBB - masthead gradient start, usually = primary",
+    "headerTo":    "#RRGGBB - masthead gradient end, = primaryDark or a warm second colour",
+    "palette":     ["#RRGGBB", "... 3 to 5 authentic signature colours of THIS festival, in order"]
   }
 }
 
-DESIGN RULES
-- Every colour is #RRGGBB hex. Colours must be HARMONIOUS together (one deep anchor + warm/festive companions), tasteful and premium — avoid neon, avoid muddy greys.
-- CONTRAST: white text must be clearly readable on "primary", "primaryDark", "headerFrom" and "headerTo" — so none of those may be pale (no near-white, no pastel).
-- "palette" is REQUIRED, 3-5 colours, ordered light-to-rich or by importance; it carries the festival's identity, so choose the colours people actually associate with it.
-- "bg" and "tint" are the only pale colours; everything else is confident.
-- Keep copy classy and specific to the festival + fresh groceries; never invent prices or discounts.
+THE COLOURS ARE YOUR CALL
+- I am giving you NO colours. You choose every hex yourself, authentically from the festival - its flowers, flags, sweets, lamps, fabrics, deities and mood. Two festivals must never come out looking the same; do not default to red/gold unless the festival genuinely is red/gold.
+- Harmonious set: one deep anchor plus festive companions - tasteful and premium; no neon, no muddy greys.
+- Contrast: white text must read clearly on "primary", "primaryDark", "headerFrom" and "headerTo" - so none of those may be pale or pastel.
+- Only "bg" and "tint" are pale; every other colour is confident. "palette" is required and carries the festival's identity.
 
-DATES
-- Today is ${TODAY_ISO}. Schedule the NEXT upcoming occurrence relative to today.
-- Fixed every year: Independence Day 15 Aug, Republic Day 26 Jan, Gandhi Jayanti 2 Oct, New Year 1 Jan.
-- Lunar/variable (Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan, Navratri, Eid, Janmashtami…): use the correct real date for the upcoming year; if unsure, give your best estimate (the shopkeeper can fine-tune the dates in the app).
+COPY
+Warm, classy and specific to the festival + fresh groceries. Hinglish welcome. Never invent prices or discounts.
 
-YOU CHOOSE THE COLOURS (this is the whole point)
-- I am NOT giving you any colours. YOU decide every hex value yourself, authentically, from the festival itself — the colours people truly associate with it: its traditional flowers, flags, sweets, lights, fabrics, deities and overall mood. Two different festivals must never come out looking the same.
-- Just obey the DESIGN RULES above for harmony, contrast and roles — the exact colours are entirely your call. Do not default to a generic red/gold unless that festival genuinely is red/gold.
+DATES (today is ${TODAY_ISO})
+Schedule the NEXT upcoming occurrence. Fixed each year: Independence Day 15 Aug, Republic Day 26 Jan, Gandhi Jayanti 2 Oct, New Year 1 Jan. Variable (Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan, Navratri, Eid, Janmashtami...): use the correct date for the upcoming year; give your best estimate if unsure (the shopkeeper can fine-tune it in the app).
 
-FORMAT (shape only — the #... are placeholders; fill in YOUR colours, copy, emoji and dates for the actual festival):
-{ "name": "...", "emoji": "...", "startsOn": "YYYY-MM-DD", "endsOn": "YYYY-MM-DD", "greeting": "...", "banner": { "kicker": "...", "title": "...", "subtitle": "..." }, "decoration": "marigold", "motif": "mandala", "pattern": "diyas", "colors": { "primary": "#...", "primaryDark": "#...", "accent": "#...", "accentDeep": "#...", "tint": "#...", "bg": "#...", "headerFrom": "#...", "headerTo": "#...", "palette": ["#...", "#...", "#..."] } }
-
-Now design the complete theme — choosing all colours yourself — for this festival or occasion:
+Design the complete theme now, choosing all colours yourself, for this festival or occasion:
 `;
 
 const DECOR_LABEL = {
