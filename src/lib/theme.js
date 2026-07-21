@@ -19,7 +19,22 @@ const VAR_MAP = {
   tint:        ["--green-tint", "--gold-tint"],
   bg:          ["--bg-soft"],
 };
-const FEST_VARS = ["--fest-header-from", "--fest-header-to", "--fest-accent", "--fest-stripe", "--fest-ribbon"];
+const FEST_VARS = ["--fest-header-from", "--fest-header-to", "--fest-accent", "--fest-stripe", "--fest-stripe-v", "--fest-ribbon", "--fest-pattern"];
+
+// A faint, tasteful festival texture (a 4-point sparkle + dot grid) tinted with
+// the theme's accent. Applied app-wide as a background watermark so every page
+// and drawer shares one festive canvas — subtle enough that text stays clean.
+function festPattern(color) {
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='46' height='46' viewBox='0 0 46 46'>` +
+    `<g fill='${color}' opacity='0.06'>` +
+    `<path d='M23 8 L26 20 L23 32 L20 20 Z'/>` +
+    `<path d='M8 23 L20 20 L38 23 L20 26 Z'/>` +
+    `<circle cx='23' cy='1.5' r='1.3'/><circle cx='1.5' cy='23' r='1.3'/>` +
+    `<circle cx='44.5' cy='23' r='1.3'/><circle cx='23' cy='44.5' r='1.3'/>` +
+    `</g></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
 
 // A hard-stop gradient from a list of colours → a crisp banded strip (flag,
 // festive bunting, rangoli edge…). Used for the thin band under the header.
@@ -77,12 +92,17 @@ export function applyTheme(t) {
   // primary→accent blend so even a minimal theme still looks multi-colour.
   const palette = themePalette(c);
   if (palette.length >= 2) {
-    el.style.setProperty("--fest-stripe", stripeGradient(palette));  // crisp band
-    el.style.setProperty("--fest-ribbon", blendGradient(palette));   // ribbon blend
+    el.style.setProperty("--fest-stripe", stripeGradient(palette));        // horizontal band
+    el.style.setProperty("--fest-stripe-v", stripeGradient(palette, "180deg")); // vertical (section bars)
+    el.style.setProperty("--fest-ribbon", blendGradient(palette));         // ribbon blend
   } else {
     const grad = via ? `linear-gradient(100deg, ${from}, ${via}, ${to})` : `linear-gradient(100deg, ${from}, ${to})`;
     if (from) el.style.setProperty("--fest-ribbon", grad);
   }
+
+  // App-wide festive texture, tinted with the accent (or a palette colour).
+  const patColor = c.accent || palette[1] || c.primary || "";
+  if (patColor) el.style.setProperty("--fest-pattern", festPattern(patColor));
 
   el.setAttribute("data-festival", t.decoration || "on");
 }

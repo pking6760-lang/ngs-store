@@ -4695,3 +4695,38 @@ body {
   background: var(--fest-stripe, var(--fest-accent, var(--yellow, #f6c445)));
   pointer-events: none;
 }
+
+/* ════════════════════════════════════════════════════════════
+   Festival design system — applied through SHARED classes so every
+   page, drawer and section inherits the festival from one place
+   (no per-page decoration copy-pasted around). Colours come from the
+   --fest-* tokens set by lib/theme.js.
+   ════════════════════════════════════════════════════════════ */
+
+/* 1 · A faint festival texture woven behind ALL content — every main page and
+      every drawer share one canvas. Subtle enough that cards/text stay clean. */
+:root[data-festival] body,
+:root[data-festival] .cart-drawer,
+:root[data-festival] .account-drawer {
+  background-image: var(--fest-pattern);
+  background-size: 46px 46px;
+}
+
+/* 2 · Every page/drawer header (Subscriptions, Inbox, Account, Cart, Wallet…)
+      picks up the same treatment as the home header: a soft warm tint and the
+      slim palette hairline. One rule → every header. */
+:root[data-festival] .drawer-head {
+  background: linear-gradient(180deg, var(--green-tint), #fff 85%);
+}
+:root[data-festival] .drawer-head::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+  background: var(--fest-stripe, var(--fest-accent, var(--yellow, #f6c445)));
+  pointer-events: none;
+}
+
+/* 3 · Section title accent bar carries the festival palette (vertical band),
+      so every section header on home & category pages reads as themed. */
+:root[data-festival] .section-title::before {
+  background: var(--fest-stripe-v, linear-gradient(var(--green), var(--green-dark)));
+  width: 6px;
+}
