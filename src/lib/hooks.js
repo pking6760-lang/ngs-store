@@ -177,6 +177,19 @@ export function useSettings() {
   return settings;
 }
 
+// Festival theme the customer app should paint right now (null = default look).
+// Cached so a repeat open paints the festive skin instantly, revalidated live.
+export function useActiveTheme() {
+  if (BACKEND) return useBackend(api.fetchActiveTheme, ["customer_themes"], null, 60000, "ngs_cache_theme");
+  return null;
+}
+
+// Admin-side list of all saved themes.
+export function useThemes() {
+  if (BACKEND) return useBackend(api.fetchThemes, ["customer_themes"], []);
+  return [];
+}
+
 export function useCoupons() {
   if (BACKEND) return useBackend(api.fetchCoupons, ["coupons"], []);
   const [coupons, setCoupons] = useState(getCoupons);

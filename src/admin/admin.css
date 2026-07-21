@@ -3167,3 +3167,29 @@ body {
 .ah-val { margin-left:auto; flex:0 0 auto; font-weight:800; font-size:14px; color:#12B886; white-space:nowrap; }
 .ah-val.ah-warn { color:#F59F00; }
 .ah-val.ah-fail { color:#FA5252; }
+
+/* ── Festival themes admin ─────────────────────────────────────────── */
+.theme-card { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e6e9ef; border-radius: 14px; background: #fff; margin-bottom: 10px; }
+.theme-card.off { opacity: .62; }
+.theme-swatch { width: 46px; height: 46px; border-radius: 11px; flex: none; position: relative; border: 1px solid #e6e9ef; display: flex; align-items: center; justify-content: center; }
+.theme-swatch-badge { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.theme-dot { position: absolute; right: -4px; bottom: -4px; width: 15px; height: 15px; border-radius: 50%; border: 2px solid #fff; }
+.theme-main { flex: 1; min-width: 0; }
+.theme-name { font-weight: 800; font-size: 15px; color: #1b2430; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.theme-live { font-size: 10px; font-weight: 800; color: #0a9155; letter-spacing: .5px; background: #e7f6ee; padding: 2px 7px; border-radius: 999px; }
+.theme-scheduled { font-size: 10px; font-weight: 700; color: #7a848f; background: #f0f2f5; padding: 2px 7px; border-radius: 999px; }
+.theme-decor { font-size: 12.5px; color: #6b7482; margin-top: 2px; }
+.theme-when { display: flex; align-items: center; gap: 10px; margin-top: 7px; flex-wrap: wrap; }
+.theme-when label { font-size: 11px; color: #6b7482; display: flex; align-items: center; gap: 5px; }
+.theme-when input { font-size: 12px; padding: 3px 6px; border: 1px solid #dce0e7; border-radius: 7px; }
+.theme-hint { font-size: 11px; color: #9aa2ad; }
+.theme-controls { display: flex; align-items: center; gap: 8px; flex: none; }
+
+.theme-prev { border: 1px solid #e6e9ef; border-radius: 14px; overflow: hidden; margin: 10px 0; }
+.theme-prev-note { font-size: 11.5px; color: #6b7482; padding: 8px 12px 4px; }
+.theme-prev-header { color: #fff; padding: 12px 14px; font-weight: 800; font-size: 14px; text-align: center; }
+.theme-prev-body { padding: 14px; position: relative; }
+.theme-prev-title { font-weight: 800; font-size: 15px; color: #1b2430; }
+.theme-prev-sub { font-size: 12.5px; color: #6b7482; margin-top: 2px; }
+.theme-prev-btn { margin-top: 12px; color: #fff; border: none; border-radius: 10px; padding: 9px 16px; font-weight: 800; font-size: 13px; }
+.theme-prev-chip { position: absolute; right: 14px; bottom: 14px; padding: 5px 11px; border-radius: 999px; font-weight: 800; font-size: 12px; }

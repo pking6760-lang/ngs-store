@@ -1415,6 +1415,55 @@ export async function sendBucketNow(bucket) {
   pingLocal("notifications");
   return { ok: true, count: data ?? 0 };
 }
+
+/* ─── Festival themes (customer app skin) ───────────────────────────────────
+   Admin pastes a theme JSON (Copy-AI-prompt flow); the customer app fetches the
+   currently-active one and repaints itself. */
+function mapTheme(t) {
+  const th = t.theme || {};
+  return {
+    id: t.id, name: t.name, emoji: t.emoji || "",
+    startsOn: t.starts_on || null, endsOn: t.ends_on || null,
+    active: t.active, theme: th,
+  };
+}
+export async function fetchThemes() {
+  const { data, error } = await must().from("customer_themes")
+    .select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapTheme);
+}
+export async function importThemes(items) {
+  const { data, error } = await must().rpc("import_customer_themes", { p_items: items });
+  if (error) throw new Error(error.message || "Import failed.");
+  pingLocal("customer_themes");
+  return { ok: true, count: data ?? 0 };
+}
+export async function setThemeActive(id, active) {
+  const { error } = await must().from("customer_themes").update({ active }).eq("id", id);
+  if (error) throw error;
+  pingLocal("customer_themes");
+  return { ok: true };
+}
+export async function updateThemeSchedule(id, { startsOn, endsOn }) {
+  const { error } = await must().from("customer_themes")
+    .update({ starts_on: startsOn || null, ends_on: endsOn || null }).eq("id", id);
+  if (error) throw error;
+  pingLocal("customer_themes");
+  return { ok: true };
+}
+export async function deleteTheme(id) {
+  const { error } = await must().from("customer_themes").delete().eq("id", id);
+  if (error) throw error;
+  pingLocal("customer_themes");
+  return { ok: true };
+}
+// The one theme the customer app should paint right now (or null for default).
+export async function fetchActiveTheme() {
+  const { data, error } = await must().rpc("get_active_theme");
+  if (error) throw error;
+  return data || null;
+}
 export async function fetchNotifCampaigns() {
   const { data, error } = await must().from("notification_campaigns")
     .select("*").order("on_date", { nullsFirst: true }).order("hour_ist");

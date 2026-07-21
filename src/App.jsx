@@ -7,7 +7,7 @@ import AccountDrawer from "./components/AccountDrawer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
-import { useProducts, useSettings, useCategories, useMyOrders } from "./lib/hooks.js";
+import { useProducts, useSettings, useCategories, useMyOrders, useActiveTheme } from "./lib/hooks.js";
 import { tierUnitPrice } from "./lib/bulk.js";
 import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
@@ -20,6 +20,8 @@ import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
 import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
 import PromoCarousel from "./components/PromoCarousel.jsx";
+import FestiveDecor, { FestiveRibbon } from "./components/FestiveDecor.jsx";
+import { applyTheme } from "./lib/theme.js";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -140,6 +142,12 @@ export default function App() {
   const settings = useSettings();
   const categories = useCategories();
 
+  // Festival theme (Independence Day, Diwali, Dhanteras…). Repaints the whole
+  // app via CSS variables and adds a greeting + falling decorations. Managed
+  // from Admin → Themes (Copy-AI-prompt → paste JSON), scheduled by date.
+  const activeTheme = useActiveTheme();
+  useEffect(() => { applyTheme(activeTheme); }, [activeTheme]);
+
   // Prune phantom cart entries: an id left in the cart whose product is no longer
   // in the catalog (deleted / deactivated / out of stock) would otherwise show as
   // "1 item · ₹0" in the bar — a ghost that can never be checked out. Once the
@@ -244,6 +252,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <FestiveDecor theme={activeTheme} />
       <CallAlertsPrompt show={isLoggedIn} />
       <PullToRefresh
         onRefresh={handleRefresh}
@@ -317,6 +326,7 @@ export default function App() {
             buyAgainIds={buyAgainIds}
             onCategoryClick={setActiveCategory}
             onPromo={handlePromo}
+            theme={activeTheme}
           />
         )}
       </main>
@@ -421,7 +431,7 @@ function HomeSkeleton() {
   );
 }
 
-function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo }) {
+function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo, theme }) {
   if (products.length === 0) return <HomeSkeleton />;
   const byCategory = (id) => products.filter((p) => p.category === id);
   // Resolve the buy-again ids against the live catalog (fresh price/stock), keep
@@ -444,6 +454,8 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
     .slice(0, 12);
   return (
     <>
+      <FestiveRibbon theme={theme} />
+
       {offer && offer.trim() && (
         <div className="offer-strip">{offer}</div>
       )}

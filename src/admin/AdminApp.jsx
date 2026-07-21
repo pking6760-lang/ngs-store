@@ -9,6 +9,7 @@ import CouponsAdmin from "./CouponsAdmin.jsx";
 import CustomersAdmin from "./CustomersAdmin.jsx";
 import NotifyAdmin from "./NotifyAdmin.jsx";
 import AutoNotify from "./AutoNotify.jsx";
+import ThemesAdmin from "./ThemesAdmin.jsx";
 import AppHealth from "./AppHealth.jsx";
 import FeedbackAdmin from "./FeedbackAdmin.jsx";
 import DeliveryAdmin from "./DeliveryAdmin.jsx";
@@ -47,6 +48,7 @@ const TILES = [
   { id: "offers", label: "Offers", icon: "offers", tint: "#E64980" },
   { id: "notify", label: "Notify", icon: "notify", tint: "#F76707" },
   { id: "auto", label: "Auto notify", icon: "broadcast", tint: "#B197FC" },
+  { id: "themes", label: "Festival themes", icon: "offers", tint: "#E8590C" },
   { id: "health", label: "App health", icon: "dashboard", tint: "#0CA678" },
   { id: "settings", label: "Settings", icon: "settings", tint: "#5C6570" },
 ];
@@ -206,6 +208,7 @@ function AdminSection({ view, navArg, onOpen }) {
             {view === "offers" && <CouponsAdmin />}
             {view === "notify" && <NotifyAdmin />}
             {view === "auto" && <AutoNotify />}
+            {view === "themes" && <ThemesAdmin />}
             {view === "health" && <AppHealth />}
             {view === "settings" && <OpsSettings />}
           </div>
