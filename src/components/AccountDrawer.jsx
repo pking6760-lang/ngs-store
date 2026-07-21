@@ -203,11 +203,11 @@ function SkipSheet({ sub, onClose, onDone }) {
   const [busy, setBusy] = useState(false);
   const custom = mode === "custom";
   const pickPreset = (d) => { setMode("preset"); setDays(d); };
-  const onCustom = (raw) => {
+  // Fine-tune with a stepper (no OS keyboard, so the date preview below stays
+  // visible while you dial the number). Range 1–14.
+  const stepCustom = (delta) => {
     setMode("custom");
-    const v = String(raw).replace(/\D/g, "").slice(0, 2);
-    if (v === "") { setDays(0); return; }                 // empty while typing
-    setDays(Math.max(1, Math.min(14, Number(v))));
+    setDays((d) => Math.max(1, Math.min(14, d + delta)));
   };
   const dates = upcomingDeliveries(sub, days);
   const n = dates.length;
@@ -240,18 +240,16 @@ function SkipSheet({ sub, onClose, onDone }) {
                 {d} {d === 1 ? "day" : "days"}
               </button>
             ))}
-            <label className={`sub-freq-btn sub-days-custom ${custom ? "on" : ""}`}>
-              <input type="number" inputMode="numeric" min="1" max="14" placeholder="Custom"
-                value={custom && days > 0 ? days : ""}
-                onFocus={() => setMode("custom")}
-                onChange={(e) => onCustom(e.target.value)} />
-              <span>days</span>
-            </label>
+            <div className={`sub-freq-btn sub-days-stepper ${custom ? "on" : ""}`}>
+              <button type="button" className="step-btn" aria-label="Fewer days"
+                onClick={() => stepCustom(-1)} disabled={days <= 1}>−</button>
+              <span className="step-val"><strong>{days}</strong> days</span>
+              <button type="button" className="step-btn" aria-label="More days"
+                onClick={() => stepCustom(1)} disabled={days >= 14}>+</button>
+            </div>
           </div>
 
-          {days < 1 ? (
-            <p className="skip-resume">Enter how many days you'll be away (up to 14).</p>
-          ) : n > 0 ? (
+          {n > 0 ? (
             <div className="skip-preview">
               <div className="sub-field-lbl">Skipping {n} {n === 1 ? "delivery" : "deliveries"}</div>
               <div className="skip-dates">

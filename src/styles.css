@@ -3577,13 +3577,18 @@ input:focus-visible {
 .sub-pay-btn.low, .sub-pay-btn:disabled { opacity: .5; }
 .sub-pay-hint { font-size: 12px; color: #c0700c; margin: 8px 2px 0; line-height: 1.4; }
 .sub-note { font-size: 12px; color: #7a8a7f; line-height: 1.5; margin: 12px 0 4px; }
-.sub-days-custom { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px; }
-.sub-days-custom input {
-  width: 42px; border: none; background: transparent; text-align: center;
-  font-size: 14px; font-weight: 800; color: inherit; -moz-appearance: textfield;
+.sub-days-stepper { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 8px; }
+.sub-days-stepper .step-btn {
+  width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%;
+  border: 1px solid #cfe0d4; background: #fff; color: #2f7d4f;
+  font-size: 20px; font-weight: 700; line-height: 1; display: flex;
+  align-items: center; justify-content: center; cursor: pointer; padding: 0;
 }
-.sub-days-custom input::-webkit-outer-spin-button,
-.sub-days-custom input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.sub-days-stepper.on .step-btn { border-color: #bfe0c9; }
+.sub-days-stepper .step-btn:disabled { opacity: .35; cursor: default; }
+.sub-days-stepper .step-btn:active:not(:disabled) { transform: scale(.9); }
+.sub-days-stepper .step-val { font-size: 13px; font-weight: 600; color: inherit; white-space: nowrap; }
+.sub-days-stepper .step-val strong { font-size: 15px; font-weight: 800; }
 .sub-total { margin-top: 16px; background: #f5faf6; border: 1px solid #dcecdf; border-radius: 12px; padding: 12px 14px; }
 .sub-total-line { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: #6b7b70; margin-bottom: 4px; }
 .sub-total-row { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 700; color: #234; border-top: 1px solid #dcecdf; padding-top: 6px; margin-top: 4px; }
