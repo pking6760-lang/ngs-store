@@ -199,7 +199,16 @@ const SKIP_PRESETS = [1, 2, 3, 5, 7];
 // the plan (customer keeps every day they paid for). Backend: skip_deliveries.
 function SkipSheet({ sub, onClose, onDone }) {
   const [days, setDays] = useState(1);
+  const [mode, setMode] = useState("preset");   // "preset" | "custom"
   const [busy, setBusy] = useState(false);
+  const custom = mode === "custom";
+  const pickPreset = (d) => { setMode("preset"); setDays(d); };
+  const onCustom = (raw) => {
+    setMode("custom");
+    const v = String(raw).replace(/\D/g, "").slice(0, 2);
+    if (v === "") { setDays(0); return; }                 // empty while typing
+    setDays(Math.max(1, Math.min(14, Number(v))));
+  };
   const dates = upcomingDeliveries(sub, days);
   const n = dates.length;
   const after = upcomingDeliveries(sub, days + 1);
@@ -227,19 +236,22 @@ function SkipSheet({ sub, onClose, onDone }) {
           <div className="sub-field-lbl">How many days away?</div>
           <div className="sub-freq">
             {SKIP_PRESETS.map((d) => (
-              <button key={d} className={`sub-freq-btn ${days === d ? "on" : ""}`} onClick={() => setDays(d)}>
+              <button key={d} className={`sub-freq-btn ${!custom && days === d ? "on" : ""}`} onClick={() => pickPreset(d)}>
                 {d} {d === 1 ? "day" : "days"}
               </button>
             ))}
-            <label className={`sub-freq-btn sub-days-custom ${!SKIP_PRESETS.includes(days) ? "on" : ""}`}>
-              <input type="number" min="1" max="14" placeholder="Custom"
-                value={SKIP_PRESETS.includes(days) ? "" : days}
-                onChange={(e) => setDays(Math.max(1, Math.min(14, Number(e.target.value) || 1)))} />
+            <label className={`sub-freq-btn sub-days-custom ${custom ? "on" : ""}`}>
+              <input type="number" inputMode="numeric" min="1" max="14" placeholder="Custom"
+                value={custom && days > 0 ? days : ""}
+                onFocus={() => setMode("custom")}
+                onChange={(e) => onCustom(e.target.value)} />
               <span>days</span>
             </label>
           </div>
 
-          {n > 0 ? (
+          {days < 1 ? (
+            <p className="skip-resume">Enter how many days you'll be away (up to 14).</p>
+          ) : n > 0 ? (
             <div className="skip-preview">
               <div className="sub-field-lbl">Skipping {n} {n === 1 ? "delivery" : "deliveries"}</div>
               <div className="skip-dates">
@@ -257,7 +269,7 @@ function SkipSheet({ sub, onClose, onDone }) {
         </div>
         <div className="sub-foot">
           <button className="sub-start" disabled={busy || n === 0} onClick={confirm}>
-            {busy ? "Skipping…" : `Skip ${n} ${n === 1 ? "delivery" : "deliveries"}`}
+            {busy ? "Skipping…" : n > 0 ? `Skip ${n} ${n === 1 ? "delivery" : "deliveries"}` : "Skip deliveries"}
           </button>
           <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>Keep my deliveries</button>
         </div>
