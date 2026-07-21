@@ -4639,13 +4639,28 @@ body {
    banner + a slim palette band under the header on every screen. No emoji
    confetti — a real, tasteful campaign look.
    ════════════════════════════════════════════════════════════ */
+/* Decorative garland (toran / bunting) hung across the top, full-bleed. */
+.fest-toran {
+  height: 52px; margin: -6px -20px 6px; pointer-events: none;
+  background-repeat: repeat-x; background-position: center top; background-size: auto 52px;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,.16));
+}
 .fest-hero {
   position: relative; isolation: isolate; overflow: hidden;
-  margin: 12px 0 6px; padding: 24px 18px 20px; border-radius: 20px;
+  margin: 4px 0 6px; padding: 24px 18px 20px; border-radius: 20px;
   background: var(--fest-ribbon, linear-gradient(125deg, var(--green), var(--green-dark)));
   color: #fff; box-shadow: 0 14px 34px rgba(0,0,0,.20), inset 0 0 0 1px rgba(255,255,255,.08);
   text-align: center;
 }
+/* Ornamental sunburst flourishes in the hero's top corners. */
+.fest-hero-corner {
+  position: absolute; z-index: 0; width: 92px; height: 92px; top: -30px; opacity: .16; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, #fff 0 3.6deg, transparent 3.6deg 15deg);
+  -webkit-mask: radial-gradient(circle, #000 0 30%, transparent 58%);
+          mask: radial-gradient(circle, #000 0 30%, transparent 58%);
+}
+.fest-hero-corner.tl { left: -28px; }
+.fest-hero-corner.tr { right: -28px; }
 /* Contrast scrim so the greeting reads on any palette (bright, pale or dark). */
 .fest-hero::before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,.42)); }
 /* Subtle dotted motif for texture (premium, not noisy). */
