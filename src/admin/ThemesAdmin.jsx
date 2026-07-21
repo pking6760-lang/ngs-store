@@ -25,11 +25,11 @@ RETURN ONLY THIS JSON OBJECT (no markdown, no code fence, no commentary):
   "emoji": "one emoji that represents it",
   "startsOn": "YYYY-MM-DD - switch the theme ON a few days before",
   "endsOn": "YYYY-MM-DD - switch it OFF on or just after the day",
-  "greeting": "the big warm line on the poster — how Nisha would actually greet a regular this festival (Hinglish welcome); up to one emoji",
+  "greeting": "the BIG wish on the poster — a warm, sincere festival wish or blessing to the customer, in polished English; up to one emoji at the end",
   "banner": {
-    "kicker": "a real greeting people say, e.g. Shubh Deepavali / Jai Hind / Rang Barse — never 'Festival Special'",
-    "title": "one human line connecting THIS festival to stocking up, with a little personality — specific to the festival, not reusable",
-    "subtitle": "one sincere, local supporting line; no prices, no discounts"
+    "kicker": "the festival's authentic greeting, kept as-is, e.g. Shubh Deepavali / Eid Mubarak / Jai Hind / Ganpati Bappa Morya / Merry Christmas",
+    "title": "a short sign-off line, e.g. '<Festival> wishes from the NGS family' or '<Festival> greetings from NGS' (vary the wording)",
+    "subtitle": "one graceful closing line of goodwill for this festival; no groceries, no prices"
   },
   "decoration": "garland style - 'tricolor' (flag bunting) for flag days ONLY (Independence / Republic Day); 'marigold' (flower garland) for every other festival",
   "motif": "poster backdrop - 'mandala' (rangoli ring), 'rays' (sunburst) or 'arch' (temple archway); pick what fits the festival",
@@ -53,17 +53,19 @@ THE COLOURS ARE YOUR CALL
 - Contrast: white text must read clearly on "primary", "primaryDark", "headerFrom" and "headerTo" - so none of those may be pale or pastel.
 - Only "bg" and "tint" are pale; every other colour is confident. "palette" is REQUIRED and must be EXACTLY 3 main colours — no more (e.g. Independence Day = saffron, white, green only; do not add a 4th like blue).
 
-COPY — this is what stops it feeling AI-generated, so take it seriously
-Write in the voice of Nisha, who runs a warm neighbourhood kirana in Sultanpur — like she is greeting a regular customer face to face, not a corporate app. Natural Hinglish is perfect; keep it simple and human.
-- Make it SPECIFIC to THIS festival. Name its real moments — its food, rituals and feelings — so the line could not be pasted onto any other festival. Hooks to draw from: Diwali (diye, mithai, safai, ghar ki raunak), Dhanteras (sona-chandi, nayi shuruaat, bartan), Holi (gujiya, rang, thandai), Raksha Bandhan (bhai-behen, rakhi, mooh meetha), Navratri (vrat ka saamaan, garba), Eid (sewaiyan, dawat), Independence / Republic Day (tiranga, desh, azaadi), New Year (nayi shuruaat).
-- Every festival's copy MUST be different from every other. If a line would fit any festival, rewrite it.
-- BAN these AI clichés and anything that smells like them: "Celebrate the spirit of…", "Experience the joy of…", "delivered in minutes", "Elevate your…", "your one-stop…", "make this <festival> special", "spread the joy/cheer", "Tis the season", "essentials, delivered". No stacked exclamation marks (one at most). No prices or discounts.
-- Warm, real, a little personality — not stiff, not salesy, not generic.
+COPY — the poster is a GREETING CARD to the customer, not an ad
+This poster WISHES the customer on the festival (like a warm greeting card), signed off from the NGS family. It does NOT sell or mention groceries, delivery, ordering or prices. Tone: professional, elegant, warm — English-led (a stray Hindi word is fine only if it belongs, e.g. "Har Ghar Tiranga"). Premium brand voice, never corporate-stiff, never salesy.
+- greeting: the main wish/blessing in clean English, specific to THIS festival's meaning (light & prosperity for Diwali; wealth & fortune for Dhanteras; good over evil for Dussehra; the sibling bond for Rakhi; freedom & pride for Independence Day; peace & blessings for Eid…). One sentence.
+- kicker: keep the festival's real greeting exactly (Shubh Deepavali, Eid Mubarak, Jai Hind, Ganpati Bappa Morya, Merry Christmas…).
+- title: a short sign-off, e.g. "Warm Diwali wishes from the NGS family" (vary "warm / heartfelt / season's" and "wishes / greetings").
+- subtitle: a graceful closing line of goodwill for this festival.
+- Every festival's wording MUST differ from every other; if a line could fit any festival, rewrite it. At most one exclamation mark.
+- BAN: anything salesy or grocery-related in the poster, and AI clichés like "Celebrate the spirit of…", "Experience the joy of…", "spread the joy/cheer", "Tis the season", "make this <festival> special".
 
-VOICE — how different two festivals should feel (do NOT copy these; write fresh for the festival you are given):
-- Diwali → kicker "Shubh Deepavali", title "Ghar chamka lo, baaki hum le aate hain", subtitle "Diye, mithai aur roz ka saamaan — sab ek hi jagah."
-- Raksha Bandhan → kicker "Happy Rakhi", title "Bhai ka favourite mithai, ghar tak", subtitle "Rakhi ki thali ka kuch chhoot gaya? Abhi mangwa lo."
-- Independence Day → kicker "Jai Hind", title "Har ghar tiranga, har ghar taazgi", subtitle "Desh ki shaan ke saath, roz ka saamaan."
+EXAMPLES OF THE TARGET VOICE (do NOT copy — write fresh for the festival you are given):
+- Diwali → kicker "Shubh Deepavali", greeting "May your home shine with light, love and prosperity 🪔", title "Warm Diwali wishes from the NGS family", subtitle "Here's to a bright and joyful festival of lights."
+- Eid → kicker "Eid Mubarak", greeting "May this Eid bring peace, joy and blessings 🌙", title "Eid Mubarak from the NGS family", subtitle "Warmth and happiness with your loved ones."
+- Independence Day → kicker "Jai Hind", greeting "Wishing you a proud and happy Independence Day 🇮🇳", title "Independence Day greetings from the NGS family", subtitle "Har Ghar Tiranga — freedom in every heart."
 
 DATES (today is ${TODAY_ISO})
 Schedule the NEXT upcoming occurrence. Fixed each year: Independence Day 15 Aug, Republic Day 26 Jan, Gandhi Jayanti 2 Oct, New Year 1 Jan. Variable (Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan, Navratri, Eid, Janmashtami...): use the correct date for the upcoming year; give your best estimate if unsure (the shopkeeper can fine-tune it in the app).
