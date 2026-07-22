@@ -13,9 +13,10 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET") ?? "";
 const sb = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" };
 
-// WMO codes that mean real rain (moderate+). Light drizzle (51/53/56) is a
-// trace that shouldn't trigger a delivery surge, so it's deliberately excluded.
-const RAIN_CODES = new Set([55, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99]);
+// WMO codes that mean precipitation — drizzle counts too, because to the shop a
+// drizzle is still "raining" and should surge. Flapping is handled by the
+// debounce (weather_debounce), not by ignoring light rain.
+const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99]);
 
 async function rpc(fn: string, body: unknown) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
@@ -34,9 +35,8 @@ async function isRaining(lat: number, lng: number): Promise<boolean> {
     const cur = data?.current ?? {};
     const precip = Number(cur.precipitation ?? 0);
     const code = Number(cur.weather_code ?? 0);
-    // Firmer threshold so a trace of drizzle doesn't trigger surge. Real rain is
-    // ≥ 0.4mm in the slot OR a definite precipitation weather-code.
-    return precip >= 0.4 || RAIN_CODES.has(code);
+    // Any real precipitation counts (a light drizzle reads ~0.1mm / code 51).
+    return precip >= 0.1 || RAIN_CODES.has(code);
   } catch {
     return false;   // never surge on a failed weather call
   }
