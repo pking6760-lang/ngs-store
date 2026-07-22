@@ -565,8 +565,10 @@ export async function fetchMyOrders() {
   const { data, error } = await must()
     .from("orders")
     .select("*, order_items(*)")
-    // Hide online orders whose payment never completed.
+    // Hide online orders whose payment never completed (still awaiting, or the
+    // customer abandoned the pay screen → 'Payment failed'). Never a real order.
     .neq("status", "Awaiting payment")
+    .neq("status", "Payment failed")
     // Return pickups are internal logistics rows — the customer sees the parent
     // order flip to "Returned", not the pickup task itself.
     .eq("is_return", false)
@@ -1286,8 +1288,10 @@ export async function updateSettings(patch) {
 export async function fetchAllOrders() {
   const { data, error } = await must()
     .from("orders").select("*, order_items(*)")
-    // Never surface an online order to the shop until its payment is confirmed.
+    // Never surface an online order to the shop until its payment is confirmed,
+    // and never show abandoned attempts ('Payment failed').
     .neq("status", "Awaiting payment")
+    .neq("status", "Payment failed")
     // Membership purchases and wallet top-ups aren't fulfillment orders — keep
     // them out of the ops list (they're payments, not deliveries).
     .eq("is_membership", false)
