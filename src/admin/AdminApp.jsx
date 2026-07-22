@@ -122,9 +122,13 @@ function AdminHome({ name, onOpen, onLogout }) {
   // subscription order isn't actionable until its delivery day, and the prepaid
   // plan "master" isn't a fulfilment order at all — exclude both (kept in sync
   // with the Overview dashboard so the two screens never disagree).
+  // 'Awaiting payment'/'Payment failed' are online orders the customer never
+  // paid for (they bounced off the UPI screen) — not real work, so they must
+  // never inflate the pending badge.
   const activeOrders = orders.filter(
     (o) => o.status !== "Delivered" && o.status !== "Cancelled" && o.status !== "Returned"
-      && o.status !== "Scheduled" && !o.isSubscription
+      && o.status !== "Scheduled" && o.status !== "Awaiting payment"
+      && o.status !== "Payment failed" && !o.isSubscription
   ).length;
   const pendingPartners = partners.filter((p) => p.status === "pending").length;
   const badge = { orders: activeOrders, partners: pendingPartners };
@@ -138,7 +142,9 @@ function AdminHome({ name, onOpen, onLogout }) {
     return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
   };
   const isSubDaily = (o) => o.subscriptionId && !o.isSubscription;
-  const todays = orders.filter((o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn && !isSubDaily(o));
+  const todays = orders.filter((o) => isToday(o.createdAt) && o.status !== "Cancelled"
+    && o.status !== "Awaiting payment" && o.status !== "Payment failed"
+    && !o.isReturn && !isSubDaily(o));
   const todaysRevenue = todays.reduce((s, o) => s + (o.total || 0), 0);
 
   return (

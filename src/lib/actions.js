@@ -23,6 +23,9 @@ function productToDb(p) {
     barcode: p.barcode ? String(p.barcode).replace(/\D/g, "") || null : null,
     image_url: p.image || null, category: p.category,
     stock: p.stock === "" || p.stock == null ? null : Number(p.stock),
+    // Manual availability toggle. Only false means "hidden from sale"; anything
+    // else (true/undefined on older forms) keeps the product buyable.
+    in_stock: p.inStock !== false,
     free_delivery_exempt: p.freeDeliveryExempt === true,
     no_rewards: p.noRewards === true,
     manual_price: manual,

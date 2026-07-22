@@ -40,7 +40,8 @@ export default function Dashboard({ onNavigate }) {
     // "Today's" figures — computed from each order's date, so they reset to
     // zero automatically at the start of a new day.
     const todaysAll = orders.filter(
-      (o) => isToday(o.createdAt) && o.status !== "Cancelled" && !o.isReturn
+      (o) => isToday(o.createdAt) && o.status !== "Cancelled"
+        && o.status !== "Awaiting payment" && o.status !== "Payment failed" && !o.isReturn
     );
     // A daily plan order (subscription_id set, not the master) is just fulfilment
     // of money already collected up-front — never counts as new revenue.
@@ -99,7 +100,8 @@ export default function Dashboard({ onNavigate }) {
     // Pending = anything not yet delivered (still needs action), any day.
     const pending = orders.filter(
       (o) => o.status !== "Delivered" && o.status !== "Cancelled" && o.status !== "Returned"
-        && o.status !== "Scheduled" && !o.isSubscription
+        && o.status !== "Scheduled" && o.status !== "Awaiting payment"
+        && o.status !== "Payment failed" && !o.isSubscription
     ).length;
     return {
       orders: revenueOrders.length,
