@@ -4447,7 +4447,9 @@ body {
    buttons line up — without stretching a void into short cards. */
 .product-footer { margin-top: 8px; padding-top: 0; flex-direction: column; align-items: stretch; gap: 6px; }
 .product-meta { min-height: 20px; display: flex; align-items: center; }
-.product-meta:empty { min-height: 20px; }
+/* No deal to show → collapse the slot entirely so a plain product reads as a
+   tight, dense tile instead of a hollow card with an empty band. */
+.product-meta:empty { display: none; }
 .foot-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
 .foot-main > .product-price { flex: 1 1 auto; min-width: 0; }
 .foot-main > .add-btn,
@@ -4463,10 +4465,18 @@ body {
 .product-card { gap: 8px; }
 /* Clean image tile — hairline only, no heavy frame */
 .product-card .product-image { border: 1px solid #eef1ed; }
-/* The one accent: gold Prime block (full-width). Reserved height so plain
-   cards keep the same height without showing an empty box. */
+/* The one accent: gold Prime block (full-width). Filled cards reserve a line
+   for the deal; plain cards collapse it (see .product-meta:empty above) so they
+   read as tight tiles rather than hollow boxes. */
 .product-meta { min-height: 22px; }
-.product-meta:empty { min-height: 22px; }
+.product-meta:empty { display: none; min-height: 0; }
+/* Pack the price+ADD row directly under the name (never float it to the card
+   bottom). Combined with the collapsing deal slot and align-items:start on the
+   grid, a plain product becomes a tight, dense tile with no hollow band — while
+   cards that DO have a deal simply grow one line taller. High specificity so it
+   beats the base `.product-footer { margin-top: auto }`. */
+.product-grid > .product-card > .product-footer,
+.product-row > .product-card > .product-footer { margin-top: 8px; }
 .product-meta .prime-hint {
   width: 100%;
   align-self: stretch;
