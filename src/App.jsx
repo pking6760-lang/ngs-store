@@ -25,6 +25,7 @@ import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
 import PromoCarousel from "./components/PromoCarousel.jsx";
 import { FestiveMasthead } from "./components/FestiveDecor.jsx";
 import { applyTheme } from "./lib/theme.js";
+import { loadStockAlerts, clearStockAlertsLocal } from "./lib/stockAlerts.js";
 import { shop } from "./data/shop.js";
 
 const svgProps = {
@@ -116,8 +117,17 @@ export default function App() {
   // Register this device for push once the customer is signed in (native app
   // only; no-op on the web build).
   useEffect(() => {
-    if (isLoggedIn) { initCustomerPush(); initWebPush(); }
+    if (isLoggedIn) { initCustomerPush(); initWebPush(); loadStockAlerts(); }
+    else clearStockAlertsLocal();
   }, [isLoggedIn]);
+
+  // Product cards (deep in the tree, no auth handler) ask to open login via a
+  // window event — e.g. a guest tapping "Notify me" on a sold-out item.
+  useEffect(() => {
+    const open = () => setAuthOpen(true);
+    window.addEventListener("ngs:require-login", open);
+    return () => window.removeEventListener("ngs:require-login", open);
+  }, []);
 
   // Warm the code-split overlays once the browser is idle after first paint, so
   // the first tap on cart / account / login opens with no fetch delay.

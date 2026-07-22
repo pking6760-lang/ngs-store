@@ -2509,6 +2509,18 @@ button {
   background: var(--bg-soft);
   color: var(--muted);
 }
+/* Back-in-stock "Notify me" — an inviting outline on a sold-out card. */
+.add-btn.notify {
+  border-color: var(--green);
+  color: var(--green);
+  background: #fff;
+  font-weight: 800;
+}
+.add-btn.notify.on {
+  background: var(--green-tint);
+  color: var(--green-dark);
+  border-color: var(--green-tint);
+}
 
 /* ─── Coupon box (cart) ──────────────────────────────────── */
 .coupon-box {

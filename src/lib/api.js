@@ -545,6 +545,23 @@ export async function fetchOrderState(dbId) {
 // Customer abandoned an online payment (left the QR screen without paying).
 // Cancel their still-unpaid order so any redeemed points / wallet money are
 // returned to them immediately, instead of waiting for the cleanup cron.
+// ── Back-in-stock alerts ────────────────────────────────────────────────────
+export async function setStockAlert(productId) {
+  const { error } = await must().rpc("set_stock_alert", { p_product_id: productId });
+  if (error) throw error;
+  return { ok: true };
+}
+export async function clearStockAlert(productId) {
+  const { error } = await must().rpc("clear_stock_alert", { p_product_id: productId });
+  if (error) throw error;
+  return { ok: true };
+}
+export async function fetchMyStockAlerts() {
+  const { data, error } = await must().rpc("my_stock_alerts");
+  if (error) throw error;
+  return (data || []).map((r) => (typeof r === "string" ? r : r?.my_stock_alerts ?? r));
+}
+
 export async function cancelPendingOrder(dbId) {
   if (!dbId) return;
   const { error } = await must().rpc("cancel_my_unpaid_order", { p_order_id: dbId });

@@ -5,6 +5,7 @@ import { useSettings } from "../lib/hooks.js";
 import ProductThumb from "./ProductThumb.jsx";
 import { firstBulkTier, tierUnitPrice } from "../lib/bulk.js";
 import BulkPackSheet from "./BulkPackSheet.jsx";
+import { useStockAlerts } from "../lib/stockAlerts.js";
 
 // Show scarcity urgency when stock is running low.
 const LOW_STOCK = 5;
@@ -13,6 +14,8 @@ export default function ProductCard({ product, badge }) {
   const { items, add, remove } = useCart();
   const { user } = useAuth();
   const settings = useSettings();
+  const alerts = useStockAlerts();
+  const alerted = alerts.has(product.id);
   const qty = items[product.id] || 0;
   // The price this shopper actually pays (their member tier's price).
   const price = tierUnitPrice(product, 1, user, settings.rewards);
@@ -108,8 +111,14 @@ export default function ProductCard({ product, badge }) {
             </div>
           </div>
           {outOfStock ? (
-            <button className="add-btn out" disabled>
-              Sold out
+            <button
+              className={`add-btn notify ${alerted ? "on" : ""}`}
+              onClick={() => {
+                if (!user) { window.dispatchEvent(new Event("ngs:require-login")); return; }
+                alerts.toggle(product.id);
+              }}
+            >
+              {alerted ? "We'll tell you ✓" : "Notify me"}
             </button>
           ) : qty === 0 && bulkTier && bulkHelps ? (
             <button className="add-btn has-packs" onClick={() => setShowPacks(true)}>
