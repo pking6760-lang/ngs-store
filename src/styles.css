@@ -2521,6 +2521,19 @@ button {
   color: var(--green-dark);
   border-color: var(--green-tint);
 }
+/* Sold-out footer: price on its own line, a full-width "Notify me" CTA under
+   it. The long "We'll tell you ✓" label then never collides with the price. */
+.foot-oos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.foot-oos .product-price { min-width: 0; }
+.add-btn.notify.full {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+}
 
 /* ─── Coupon box (cart) ──────────────────────────────────── */
 .coupon-box {

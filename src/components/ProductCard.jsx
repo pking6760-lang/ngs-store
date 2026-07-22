@@ -101,6 +101,30 @@ export default function ProductCard({ product, badge }) {
             <span className="save-pill">Save ₹{savings}</span>
           ) : null}
         </div>
+        {/* Out of stock: price stays fully visible on its own line and the
+            "Notify me" CTA spans the full card width below it, so the long
+            "We'll tell you ✓" label can never crush the price. */}
+        {outOfStock ? (
+          <div className="foot-oos">
+            <div className="product-price">
+              <div className="price-line">
+                <span className="price-now">₹{price}</span>
+                {product.mrp > price && (
+                  <span className="price-mrp">₹{product.mrp}</span>
+                )}
+              </div>
+            </div>
+            <button
+              className={`add-btn notify full ${alerted ? "on" : ""}`}
+              onClick={() => {
+                if (!user) { window.dispatchEvent(new Event("ngs:require-login")); return; }
+                alerts.toggle(product.id);
+              }}
+            >
+              {alerted ? "We'll tell you ✓" : "Notify me"}
+            </button>
+          </div>
+        ) : (
         <div className="foot-main">
           <div className="product-price">
             <div className="price-line">
@@ -110,17 +134,7 @@ export default function ProductCard({ product, badge }) {
               )}
             </div>
           </div>
-          {outOfStock ? (
-            <button
-              className={`add-btn notify ${alerted ? "on" : ""}`}
-              onClick={() => {
-                if (!user) { window.dispatchEvent(new Event("ngs:require-login")); return; }
-                alerts.toggle(product.id);
-              }}
-            >
-              {alerted ? "We'll tell you ✓" : "Notify me"}
-            </button>
-          ) : qty === 0 && bulkTier && bulkHelps ? (
+          {qty === 0 && bulkTier && bulkHelps ? (
             <button className="add-btn has-packs" onClick={() => setShowPacks(true)}>
               ADD
               <span className="add-packs-tag">packs ›</span>
@@ -145,6 +159,7 @@ export default function ProductCard({ product, badge }) {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
