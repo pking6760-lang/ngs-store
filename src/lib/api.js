@@ -141,6 +141,8 @@ function mapOrder(r) {
     // milk orders it spawns (subscriptionId set, deliverOn/deliverHour = the drop).
     isSubscription: !!r.is_subscription, subscriptionId: r.subscription_id,
     deliverOn: r.deliver_on, deliverHour: r.deliver_hour,
+    // Customer-chosen delivery window (null = express "Now").
+    deliverySlot: r.delivery_slot || null,
     count: (r.order_items || []).reduce((s, i) => s + i.qty, 0) };
 }
 function mapProfile(r) {
@@ -408,7 +410,7 @@ export async function fetchSettings() {
 // Place an order. The phone sends only product ids + quantities (+ optional
 // coupon and location); the SERVER computes prices, discount, delivery, total
 // and points. Returns the created order row.
-export async function placeOrder({ items, coupon, location, payment, address, wallet, redeemPoints, membership }) {
+export async function placeOrder({ items, coupon, location, payment, address, wallet, redeemPoints, membership, deliverySlot }) {
   const p_items = items.map((i) => ({ id: i.id, qty: i.qty }));
   const { data, error } = await must().rpc("place_order", {
     p_items,
@@ -419,6 +421,7 @@ export async function placeOrder({ items, coupon, location, payment, address, wa
     p_wallet: Math.max(0, Number(wallet) || 0),
     p_redeem_points: Math.max(0, Math.floor(Number(redeemPoints) || 0)),
     p_membership: !!membership,
+    p_deliver_slot: deliverySlot || null,
   });
   if (error) throw error;
   pingLocal("orders");

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActionOverlay } from "./Motion.jsx";
 import { withMinTime } from "../lib/ux.js";
 import { useCart } from "../context/CartContext.jsx";
@@ -24,6 +24,36 @@ function deliveryDayLabel(dateStr) {
   if (diff <= 0) return "today";
   if (diff === 1) return "tomorrow";
   return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
+
+// "14" → "2 PM". Used to label delivery windows.
+function fmtHour(h) {
+  const ampm = h >= 12 ? "PM" : "AM";
+  let hr = h % 12; if (hr === 0) hr = 12;
+  return `${hr} ${ampm}`;
+}
+// Build the delivery-time options: express "Now" first, then a few upcoming
+// 2-hour windows within store hours. If today is nearly over, fills with
+// tomorrow-morning windows so there's always a real choice. The picked window's
+// `full` label (e.g. "Today 6 PM–8 PM") is what rides along on the order; "Now"
+// stores nothing (express).
+function buildDeliverySlots(now) {
+  const OPEN = 7, CLOSE = 22, LEAD = 2, WIN = 2; // hours
+  const slots = [{ key: "now", label: "Now", sub: "Express · ~12 min" }];
+  let start = Math.max(OPEN, now.getHours() + LEAD);
+  if (start % 2 !== 0) start += 1; // align to an even hour
+  for (let s = start; s + WIN <= CLOSE && slots.length < 5; s += WIN) {
+    slots.push({ key: `t${s}`, label: `${fmtHour(s)}–${fmtHour(s + WIN)}`,
+      sub: "Today", full: `Today ${fmtHour(s)}–${fmtHour(s + WIN)}` });
+  }
+  if (slots.length < 4) {
+    let s = OPEN + 1; if (s % 2 !== 0) s += 1;
+    for (; s + WIN <= CLOSE && slots.length < 5; s += WIN) {
+      slots.push({ key: `m${s}`, label: `${fmtHour(s)}–${fmtHour(s + WIN)}`,
+        sub: "Tomorrow", full: `Tomorrow ${fmtHour(s)}–${fmtHour(s + WIN)}` });
+    }
+  }
+  return slots;
 }
 import gpayLogo from "../assets/upi/gpay.png";
 import phonepeLogo from "../assets/upi/phonepe.png";
@@ -126,6 +156,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // Optional delivery instructions the customer taps — passed to the rider on
   // the order (appended to the address the partner sees).
   const [deliveryNotes, setDeliveryNotes] = useState([]);
+  // Delivery-time window. "now" = express (default, zero friction); other keys
+  // are scheduled 2-hour windows. Regenerated each time the cart opens so the
+  // options stay in the future.
+  const [slotKey, setSlotKey] = useState("now");
+  const deliverySlots = useMemo(() => buildDeliverySlots(new Date()), [open]);
+  const selectedSlot = deliverySlots.find((s) => s.key === slotKey) || deliverySlots[0];
+  const slotLabel = selectedSlot?.full || null; // null for express "Now"
   // "Leave at the door" and "Hand it to me" are opposites — picking one clears
   // the other. The rest can be combined freely.
   const toggleNote = (n) =>
@@ -508,6 +545,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         wallet: walletApplied,
         redeemPoints: pointsUsed,
         membership: memberFee > 0,
+        deliverySlot: slotLabel,
       });
       // Verified native UPI QR shown ON our page (scan with any app → pays
       // directly → auto-confirms via webhook). No redirect to any gateway page.
@@ -588,6 +626,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         wallet: walletApplied,
         redeemPoints: pointsUsed,
         membership: memberFee > 0,
+        deliverySlot: slotLabel,
       }), 900, 1800);
       setPlaced({
         // place_order returns only the order row (no joined items), so count
@@ -1012,6 +1051,24 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="area-ok">We deliver to your area</div>
               )}
               {locError && <div className="auth-error">{locError}</div>}
+            </div>
+
+            <div className="checkout-section slot-sec">
+              <h4>Delivery time</h4>
+              <div className="slot-row">
+                {deliverySlots.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    className={`slot-chip ${slotKey === s.key ? "on" : ""} ${s.key === "now" ? "now" : ""}`}
+                    onClick={() => setSlotKey(s.key)}
+                    aria-pressed={slotKey === s.key}
+                  >
+                    <b>{s.key === "now" ? "⚡ Now" : s.label}</b>
+                    <small>{s.sub}</small>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="checkout-section pay-sec">

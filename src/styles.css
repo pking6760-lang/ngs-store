@@ -4895,3 +4895,17 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
   background:#f3fdf7; border-radius:11px; padding:9px; font-weight:800; text-align:center; font-size:12.5px; cursor:pointer; }
 .pcard-notify.on{ background:var(--green-tint); border-color:var(--green-tint); color:var(--green-dark); }
 .pcard-notify:active{ transform:scale(.97); }
+
+/* ── Delivery-time slot picker (checkout) ─────────────────────────────────── */
+.slot-sec .slot-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.slot-sec .slot-row::-webkit-scrollbar{ display:none; }
+.slot-chip{ flex:0 0 auto; min-width:94px; display:flex; flex-direction:column; align-items:flex-start;
+  gap:2px; padding:9px 13px; border:1.5px solid var(--line); border-radius:12px; background:#fff;
+  cursor:pointer; text-align:left; transition:border-color .12s, background .12s; }
+.slot-chip b{ font-size:12.5px; font-weight:800; color:#16231b; white-space:nowrap; }
+.slot-chip small{ font-size:10px; color:var(--muted); font-weight:600; white-space:nowrap; }
+.slot-chip.on{ border-color:var(--green); background:var(--green-tint); }
+.slot-chip.on b, .slot-chip.on small{ color:var(--green-dark); }
+.slot-chip:active{ transform:scale(.97); }
+.order-detail-slot{ margin-top:2px; font-size:12.5px; font-weight:700; color:var(--green-dark); }

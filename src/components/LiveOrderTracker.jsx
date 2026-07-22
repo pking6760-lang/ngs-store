@@ -311,8 +311,20 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
         <div className={`lt-hero ${delivered ? "done" : ""}`}>
           <div className="lt-hero-ico"><Svg d={delivered ? Icon.check : Icon.scooter} size={22} /></div>
           <div className="lt-hero-txt">
-            <div className="lt-hero-eta">{delivered ? "Delivered" : `${eta} min`}</div>
-            <div className="lt-hero-sub">{delivered ? "Order delivered — enjoy!" : text}</div>
+            <div className="lt-hero-eta">
+              {delivered
+                ? "Delivered"
+                : order.deliverySlot
+                ? order.deliverySlot.replace(/^(Today|Tomorrow)\s+/, "")
+                : `${eta} min`}
+            </div>
+            <div className="lt-hero-sub">
+              {delivered
+                ? "Order delivered — enjoy!"
+                : order.deliverySlot
+                ? `Scheduled · arriving ${order.deliverySlot}`
+                : text}
+            </div>
           </div>
         </div>
 

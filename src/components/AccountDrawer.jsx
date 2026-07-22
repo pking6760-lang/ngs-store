@@ -518,6 +518,9 @@ function OrderDetail({ order, onClose, onReorder }) {
 
         <div className="order-detail-body">
           <div className="order-detail-time">{formatTime(order.createdAt)}</div>
+          {order.deliverySlot && !cancelled && (
+            <div className="order-detail-slot">🕑 Delivery: {order.deliverySlot}</div>
+          )}
 
           {cancelled ? (
             <div className="order-note cancelled">

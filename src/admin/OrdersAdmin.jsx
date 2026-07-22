@@ -226,6 +226,9 @@ export default function OrdersAdmin({ onOpen }) {
                     {o.deliverHour != null ? ` · around ${hourLabel(o.deliverHour)}` : ""}
                   </div>
                 )}
+                {o.deliverySlot && o.status !== "Scheduled" && (
+                  <div className="order-row-deliver">🕑 Slot · {o.deliverySlot}</div>
+                )}
                 {o.isSubscription && (
                   <div className="order-row-deliver">🔁 Prepaid plan · {o.count} item{o.count === 1 ? "" : "s"} a day</div>
                 )}
@@ -363,6 +366,11 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
             <div className="od-deliver-banner">
               🗓 <strong>Delivery {deliverDateLabel(o.deliverOn)}</strong>
               {o.deliverHour != null ? ` · around ${hourLabel(o.deliverHour)}` : ""}
+            </div>
+          )}
+          {o.deliverySlot && o.status !== "Scheduled" && (
+            <div className="od-deliver-banner">
+              🕑 <strong>Delivery window · {o.deliverySlot}</strong>
             </div>
           )}
           {o.isSubscription && (
