@@ -4813,3 +4813,85 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 .drawer-body, .account-drawer, .cart-drawer, .sub-sheet, main.main {
   overscroll-behavior-y: contain;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDESIGNED PRODUCT CARD (.pcard)
+   Premium pedestal image + floating ADD + green deal flag. One shared anatomy
+   so every tile in a row is the same height; the action floats on the image so
+   the price row underneath is always clean. Fresh class names (pcard-*) — none
+   of the older .product-card cascade applies here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pcard{
+  background:#fffefb; border:1px solid #eceee9; border-radius:20px;
+  padding:9px; display:flex; flex-direction:column; position:relative;
+  box-shadow:0 8px 22px rgba(24,40,28,.07);
+}
+.pcard-media{
+  position:relative; aspect-ratio:1/.96; border-radius:15px;
+  background:radial-gradient(circle at 50% 42%, #ffffff, #eef2ea 82%);
+  display:flex; align-items:center; justify-content:center;
+}
+.pcard-media .thumb-img,.pcard-media .thumb-ph{ width:100%; height:100%; border-radius:15px; }
+.pcard-media.grey .thumb-img,.pcard-media.grey .thumb-ph{ filter:grayscale(.85) opacity(.7); }
+
+/* Top-left deal flag (folded corner) */
+.pcard-flag{
+  position:absolute; top:0; left:0; z-index:2;
+  background:linear-gradient(135deg,#0aa259,#0a7a43); color:#fff;
+  font-weight:800; font-size:10.5px; padding:4px 10px 5px;
+  border-radius:15px 0 13px 0; box-shadow:0 4px 10px rgba(10,138,76,.30);
+}
+.pcard-flag.alt{ background:linear-gradient(135deg,#c98a12,#a9760a); box-shadow:0 4px 10px rgba(169,118,10,.3); }
+.pcard-star{ position:absolute; top:8px; right:9px; z-index:2; color:#c8920f; font-size:15px;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.18)); }
+.pcard-unit{
+  position:absolute; left:8px; bottom:8px; z-index:2;
+  background:rgba(255,255,255,.93); color:#3c473f; font-weight:700; font-size:10px;
+  padding:2px 8px; border-radius:20px; box-shadow:0 1px 3px rgba(0,0,0,.08);
+}
+.pcard-low{
+  position:absolute; left:8px; bottom:8px; z-index:2;
+  background:#fff2ea; color:#c2410c; font-weight:800; font-size:9.5px;
+  padding:2px 8px; border-radius:20px;
+}
+.pcard-oos{ position:absolute; inset:0; border-radius:15px; z-index:3;
+  background:rgba(245,247,244,.5); display:flex; align-items:center; justify-content:center; }
+.pcard-oos b{ background:#242b26; color:#fff; font-size:11.5px; font-weight:800; padding:6px 12px; border-radius:20px; }
+
+/* Floating action — hovers over the image's bottom-right corner */
+.pcard-act{
+  position:absolute; right:7px; bottom:-16px; z-index:4;
+  background:#fff; border:1.6px solid var(--green); color:var(--green);
+  font-weight:800; font-size:12.5px; letter-spacing:.5px; padding:9px 19px;
+  border-radius:12px; box-shadow:0 6px 15px rgba(10,138,76,.22); line-height:1;
+  display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer;
+}
+.pcard-act i{ font-style:normal; font-size:8px; font-weight:800; letter-spacing:.2px; opacity:.75; }
+.pcard-act:active{ transform:scale(.94); }
+.pcard-step{
+  position:absolute; right:7px; bottom:-16px; z-index:4;
+  display:flex; align-items:center; background:var(--green); border-radius:12px;
+  box-shadow:0 6px 15px rgba(10,138,76,.32); overflow:hidden;
+}
+.pcard-step button{ background:transparent; color:#fff; border:0; width:30px; height:37px; font-size:18px; font-weight:700; cursor:pointer; }
+.pcard-step button:disabled{ opacity:.4; }
+.pcard-step span{ color:#fff; font-weight:800; min-width:22px; text-align:center; font-size:13.5px; }
+
+/* Body: name → optional Prime chip → price (grouped near the top; extra height
+   from equal-height rows falls as breathing room at the bottom, never a hole) */
+.pcard-body{ padding:22px 4px 2px; display:flex; flex-direction:column; flex:1; }
+.pcard-name{ font-size:12.5px; font-weight:600; line-height:1.3; color:#16231b;
+  min-height:2.6em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.pcard-prime{ align-self:flex-start; margin-top:6px; display:inline-flex; gap:4px; align-items:center;
+  background:linear-gradient(90deg,#fff8e6,#fdefcf); border:1px solid #efd9a1; color:#a9760a;
+  font-size:9.5px; font-weight:800; padding:2px 8px; border-radius:20px; }
+.pcard-pricewrap{ margin-top:8px; }
+.pcard-price{ display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+.pcard-now{ font-size:18px; font-weight:800; letter-spacing:-.3px; color:#16231b; }
+.pcard-was{ font-size:11.5px; color:#95a39b; text-decoration:line-through; }
+.pcard-save{ margin-top:4px; display:inline-block; font-size:9.5px; font-weight:800;
+  color:#075f30; background:#e6f6ec; padding:2px 7px; border-radius:6px; }
+.pcard-notify{ margin-top:8px; width:100%; border:1.6px solid var(--green); color:#075f30;
+  background:#f3fdf7; border-radius:11px; padding:9px; font-weight:800; text-align:center; font-size:12.5px; cursor:pointer; }
+.pcard-notify.on{ background:var(--green-tint); border-color:var(--green-tint); color:var(--green-dark); }
+.pcard-notify:active{ transform:scale(.97); }

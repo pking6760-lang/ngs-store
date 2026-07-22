@@ -10,6 +10,13 @@ import { useStockAlerts } from "../lib/stockAlerts.js";
 // Show scarcity urgency when stock is running low.
 const LOW_STOCK = 5;
 
+// ─── Product card ──────────────────────────────────────────────────────────
+// One shared anatomy so every tile is the same height in a row:
+//   [ image + overlaid badges + floating ADD ]  →  [ name ]  →  [ price ]
+// The action (ADD / qty stepper) floats on the image's bottom-right, so the
+// price row underneath is always clean and the buttons line up across the rail.
+// Discounts live as a flag on the image and savings fold into the price — there
+// is no separate "deal line", which is what used to leave plain cards hollow.
 export default function ProductCard({ product, badge }) {
   const { items, add, remove } = useCart();
   const { user } = useAuth();
@@ -41,113 +48,51 @@ export default function ProductCard({ product, badge }) {
     (t) => tierUnitPrice(product, Number(t.q), user, settings.rewards) < price
   );
   const [showPacks, setShowPacks] = useState(false);
+  const opensPacks = qty === 0 && bulkTier && bulkHelps;
 
   return (
-    <div className={`product-card ${outOfStock ? "sold-out" : ""}`}>
-      {/* Folded corner ribbon — a card-level element (not clipped by the image)
-          that hugs the left edge and tucks behind the card via the ::after
-          fold, so it reads as wrapping from behind rather than sitting on top
-          of the product. */}
-      {discount > 0 && !outOfStock && (
-        <span className="product-ribbon">
-          <b>{discount}%</b> OFF
-        </span>
-      )}
-      <div className="product-image">
+    <div className={`pcard ${outOfStock ? "is-oos" : ""}`}>
+      <div className={`pcard-media ${outOfStock ? "grey" : ""}`}>
+        {/* Top-left flag: the discount %, or a custom badge (e.g. "Best price"). */}
+        {discount > 0 && !outOfStock ? (
+          <span className="pcard-flag">{discount}% OFF</span>
+        ) : badge && !outOfStock && !product.hot ? (
+          <span className="pcard-flag alt">{badge}</span>
+        ) : null}
+        {product.hot && !outOfStock && (
+          <span className="pcard-star" title="Bestseller" aria-label="Bestseller">★</span>
+        )}
         <ProductThumb
           image={product.image}
           name={product.name}
           category={product.category}
           fill
-          radius={14}
+          radius={16}
         />
-        {/* Show the "Best price" tag only when there's no discount ribbon, so the
-            two never collide in the same corner on a narrow card. */}
-        {/* Bestseller lives on the image (top-right) so it never adds a
-            variable row that would unbalance card heights. */}
-        {product.hot && !lowStock && !outOfStock && (
-          <span className="product-best-tag">★ Bestseller</span>
-        )}
-        {badge && !outOfStock && discount === 0 && !product.hot && (
-          <span className="product-best">{badge}</span>
-        )}
-        {product.unit && !lowStock && !outOfStock && (
-          <span className="product-weight">{product.unit}</span>
-        )}
-        {lowStock && !outOfStock && (
-          <span className="product-lowstock">
+        {/* Bottom-left chip: low-stock urgency, else the pack size. */}
+        {lowStock && !outOfStock ? (
+          <span className="pcard-low">
             {product.hot ? "Selling fast · " : ""}Only {product.stock} left
           </span>
+        ) : product.unit ? (
+          <span className="pcard-unit">{product.unit}</span>
+        ) : null}
+        {outOfStock && (
+          <div className="pcard-oos"><b>Out of stock</b></div>
         )}
-        {outOfStock && <span className="sold-out-tag">Out of stock</span>}
-      </div>
-      <div className="product-name">{product.name}</div>
-      {showPacks && (
-        <BulkPackSheet product={product} onClose={() => setShowPacks(false)} />
-      )}
-      <div className="product-footer">
-        {/* One reserved deal line (Prime price / savings) — always present so
-            every card has the same anatomy: image → name → deal → price/ADD.
-            Cards pack their content top-down with no dead white gap. */}
-        <div className="product-meta">
-          {showPrimeHint && !outOfStock ? (
-            <span className="prime-hint">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
-              </svg>
-              ₹{primePrice} with Prime
-            </span>
-          ) : savings > 0 && !outOfStock ? (
-            <span className="save-pill">Save ₹{savings}</span>
-          ) : null}
-        </div>
-        {/* Out of stock: price stays fully visible on its own line and the
-            "Notify me" CTA spans the full card width below it, so the long
-            "We'll tell you ✓" label can never crush the price. */}
-        {outOfStock ? (
-          <div className="foot-oos">
-            <div className="product-price">
-              <div className="price-line">
-                <span className="price-now">₹{price}</span>
-                {product.mrp > price && (
-                  <span className="price-mrp">₹{product.mrp}</span>
-                )}
-              </div>
-            </div>
+        {/* Floating action (in-stock only): ADD → qty stepper, hovering over the
+            image's bottom-right corner. */}
+        {!outOfStock && (
+          qty === 0 ? (
             <button
-              className={`add-btn notify full ${alerted ? "on" : ""}`}
-              onClick={() => {
-                if (!user) { window.dispatchEvent(new Event("ngs:require-login")); return; }
-                alerts.toggle(product.id);
-              }}
+              className={`pcard-act ${opensPacks ? "has-packs" : ""}`}
+              onClick={() => (opensPacks ? setShowPacks(true) : add(product.id, product.stock))}
             >
-              {alerted ? "We'll tell you ✓" : "Notify me"}
-            </button>
-          </div>
-        ) : (
-        <div className="foot-main">
-          <div className="product-price">
-            <div className="price-line">
-              <span className="price-now">₹{price}</span>
-              {product.mrp > price && (
-                <span className="price-mrp">₹{product.mrp}</span>
-              )}
-            </div>
-          </div>
-          {qty === 0 && bulkTier && bulkHelps ? (
-            <button className="add-btn has-packs" onClick={() => setShowPacks(true)}>
-              ADD
-              <span className="add-packs-tag">packs ›</span>
-            </button>
-          ) : qty === 0 ? (
-            <button className="add-btn" onClick={() => add(product.id, product.stock)}>
-              ADD
+              ADD{opensPacks && <i>packs ›</i>}
             </button>
           ) : (
-            <div className="qty-stepper">
-              <button onClick={() => remove(product.id)} aria-label="Remove one">
-                −
-              </button>
+            <div className="pcard-step">
+              <button onClick={() => remove(product.id)} aria-label="Remove one">−</button>
               <span>{qty}</span>
               <button
                 onClick={() => add(product.id, product.stock)}
@@ -157,10 +102,45 @@ export default function ProductCard({ product, badge }) {
                 +
               </button>
             </div>
-          )}
-        </div>
+          )
         )}
       </div>
+
+      <div className="pcard-body">
+        <div className="pcard-name">{product.name}</div>
+        {showPrimeHint && !outOfStock && (
+          <span className="pcard-prime">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
+            </svg>
+            ₹{primePrice} with Prime
+          </span>
+        )}
+        <div className="pcard-pricewrap">
+          <div className="pcard-price">
+            <span className="pcard-now">₹{price}</span>
+            {product.mrp > price && <span className="pcard-was">₹{product.mrp}</span>}
+          </div>
+          {savings > 0 && !outOfStock && (
+            <span className="pcard-save">SAVE ₹{savings}</span>
+          )}
+          {outOfStock && (
+            <button
+              className={`pcard-notify ${alerted ? "on" : ""}`}
+              onClick={() => {
+                if (!user) { window.dispatchEvent(new Event("ngs:require-login")); return; }
+                alerts.toggle(product.id);
+              }}
+            >
+              {alerted ? "We'll tell you ✓" : "Notify me"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showPacks && (
+        <BulkPackSheet product={product} onClose={() => setShowPacks(false)} />
+      )}
     </div>
   );
 }
