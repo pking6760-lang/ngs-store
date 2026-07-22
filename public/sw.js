@@ -2,7 +2,7 @@
 // ("Add to Home Screen") and to fall back to the cached app shell when a
 // navigation happens offline. Hashed assets go straight to the network, so
 // updates are never served stale.
-const CACHE = "ngs-shell-v1";
+const CACHE = "ngs-shell-v2";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.add("/index.html")).then(() => self.skipWaiting()));
