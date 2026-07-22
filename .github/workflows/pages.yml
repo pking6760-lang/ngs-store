@@ -1,0 +1,38 @@
+# Auto-deploys the customer web app to GitHub Pages on every push.
+# Unlike the Firebase workflow this needs NO service-account secret — it uses
+# the built-in GITHUB_TOKEN, so it works out of the box. The site is served
+# from the gh-pages branch at https://pking6760-lang.github.io/ngs-store/
+name: Deploy customer web to GitHub Pages
+
+on:
+  push:
+    branches: [main, claude/new-repo-j1xy3h]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+# Never let two Pages deploys race; the newest push wins.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      # Project pages live under /ngs-store/, so assets need that base path.
+      - run: npx vite build --base=/ngs-store/
+      # SPA deep-link fallback: Pages serves 404.html for unknown paths, and
+      # .nojekyll stops Jekyll from hiding the hashed asset folders.
+      - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
