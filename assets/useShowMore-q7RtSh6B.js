@@ -1,0 +1,1 @@
+import{o as h}from"./styles-AhBX7ubC.js";function g(o,s=8){const[t,l]=h.useState(!1),e=Array.isArray(o)?o:[],n=t?e:e.slice(0,s),r=e.length-n.length;return{shown:n,expanded:t,total:e.length,hidden:r,more:e.length>s,label:t?"Show less":`Show all ${e.length}`,toggle:()=>l(a=>!a)}}export{g as u};
