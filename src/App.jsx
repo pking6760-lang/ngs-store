@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useBackGuard } from "./lib/useBackGuard.js";
 import Header from "./components/Header.jsx";
 import ProductCard from "./components/ProductCard.jsx";
-import CartDrawer from "./components/CartDrawer.jsx";
-import AccountDrawer from "./components/AccountDrawer.jsx";
-import AuthModal from "./components/AuthModal.jsx";
+// Heavy overlays that aren't needed for the first home paint are code-split, so
+// the initial bundle is smaller and startup is faster. They're prefetched on
+// idle (below) so the first tap still opens instantly.
+const CartDrawer = lazy(() => import("./components/CartDrawer.jsx"));
+const AccountDrawer = lazy(() => import("./components/AccountDrawer.jsx"));
+const AuthModal = lazy(() => import("./components/AuthModal.jsx"));
+const AddressSheet = lazy(() => import("./components/AddressSheet.jsx"));
 import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useMyOrders, useActiveTheme } from "./lib/hooks.js";
@@ -12,7 +16,6 @@ import { tierUnitPrice } from "./lib/bulk.js";
 import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import CategoryIcon from "./components/CategoryIcon.jsx";
-import AddressSheet from "./components/AddressSheet.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
 import { fetchBuyAgain, saveCart } from "./lib/api.js";
@@ -115,6 +118,21 @@ export default function App() {
   useEffect(() => {
     if (isLoggedIn) { initCustomerPush(); initWebPush(); }
   }, [isLoggedIn]);
+
+  // Warm the code-split overlays once the browser is idle after first paint, so
+  // the first tap on cart / account / login opens with no fetch delay.
+  useEffect(() => {
+    const warm = () => {
+      import("./components/CartDrawer.jsx");
+      import("./components/AuthModal.jsx");
+      import("./components/AccountDrawer.jsx");
+      import("./components/AddressSheet.jsx");
+    };
+    const ric = window.requestIdleCallback || ((fn) => setTimeout(fn, 1800));
+    const cic = window.cancelIdleCallback || clearTimeout;
+    const id = ric(warm);
+    return () => cic(id);
+  }, []);
 
   // "Buy again": ids of what this customer has bought before. We keep just the
   // ordered ids and resolve them against the live catalog so prices/stock in the
@@ -362,29 +380,31 @@ export default function App() {
         onRefresh={reloadOrders}
       />
 
-      <CartDrawer
-        open={cartOpen}
-        onClose={() => setCartOpen(false)}
-        onRequireLogin={() => setAuthOpen(true)}
-      />
+      <Suspense fallback={null}>
+        <CartDrawer
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          onRequireLogin={() => setAuthOpen(true)}
+        />
 
-      <AccountDrawer
-        open={accountOpen}
-        initialTab={accountTab}
-        onClose={() => setAccountOpen(false)}
-        onOpenCart={() => setCartOpen(true)}
-      />
+        <AccountDrawer
+          open={accountOpen}
+          initialTab={accountTab}
+          onClose={() => setAccountOpen(false)}
+          onOpenCart={() => setCartOpen(true)}
+        />
 
-      <AddressSheet open={addressOpen} onClose={() => setAddressOpen(false)} />
+        <AddressSheet open={addressOpen} onClose={() => setAddressOpen(false)} />
 
-      <AuthModal
-        open={authOpen}
-        onClose={() => setAuthOpen(false)}
-        onSuccess={() => setAuthOpen(false)}
-        reason={
-          cartOpen ? "Log in to place your order and track it." : undefined
-        }
-      />
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          onSuccess={() => setAuthOpen(false)}
+          reason={
+            cartOpen ? "Log in to place your order and track it." : undefined
+          }
+        />
+      </Suspense>
 
       <footer className="footer">
         <p className="footer-name">{shop.name}</p>

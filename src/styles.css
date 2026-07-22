@@ -4740,3 +4740,47 @@ body {
   background: var(--fest-stripe-v, linear-gradient(var(--green), var(--green-dark)));
   width: 6px;
 }
+
+/* ════════════════════════════════════════════════════════════
+   Smoothness layer — cheaper scrolling + snappy tap feedback.
+   ════════════════════════════════════════════════════════════ */
+
+/* Skip rendering off-screen product cards until they scroll into view — long
+   category & search lists stay buttery. The intrinsic size reserves space so
+   the scrollbar doesn't jump. */
+.product-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+
+/* Remove the ~300ms tap delay on interactive elements (older WebViews). */
+button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
+.chip, .seg, .sub-freq-btn, .checkout-btn, .cart-bar {
+  touch-action: manipulation;
+}
+
+/* A subtle, consistent press feedback so every tap feels responsive. */
+.add-btn, .qty-btn, .cat-tile, .promo-slide, .product-card,
+.checkout-btn, .sub-start, .primary-btn, .cart-bar, .see-all {
+  transition: transform .09s ease, filter .09s ease, box-shadow .12s ease;
+}
+.add-btn:active, .qty-btn:active, .checkout-btn:active, .sub-start:active,
+.primary-btn:active, .see-all:active { transform: scale(.95); }
+.cat-tile:active, .product-card:active, .cart-bar:active { transform: scale(.985); }
+@media (prefers-reduced-motion: reduce) {
+  .add-btn, .qty-btn, .cat-tile, .promo-slide, .product-card,
+  .checkout-btn, .sub-start, .primary-btn, .cart-bar, .see-all { transition: none; }
+  .add-btn:active, .qty-btn:active, .checkout-btn:active, .sub-start:active,
+  .primary-btn:active, .see-all:active, .cat-tile:active, .product-card:active,
+  .cart-bar:active { transform: none; }
+}
+
+/* Momentum scrolling + isolate scroll containers so a swipe in a row doesn't
+   drag the whole page (smoother, no scroll-chaining jank). */
+.product-row, .cat-row, .skip-dates, .sub-freq {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.drawer-body, .account-drawer, .cart-drawer, .sub-sheet, main.main {
+  overscroll-behavior-y: contain;
+}

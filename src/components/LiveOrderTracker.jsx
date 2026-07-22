@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+// Leaflet (~40KB gz) is loaded ONLY when the tracking map actually builds, so it
+// never weighs down the home screen. isLiveOrder / LiveOrderPill are map-free.
+let _L = null, _Lpromise = null;
+function loadLeaflet() {
+  if (_L) return Promise.resolve(_L);
+  if (!_Lpromise) {
+    _Lpromise = Promise.all([import("leaflet"), import("leaflet/dist/leaflet.css")])
+      .then(([m]) => { _L = m.default || m; return _L; });
+  }
+  return _Lpromise;
+}
 import { ORDER_STATUSES } from "../lib/store.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { getCurrentLocation } from "../lib/location.js";
@@ -189,10 +198,12 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
 
   const currentStep = order ? ORDER_STATUSES.indexOf(order.status) : -1;
 
-  // Build the map once when the sheet opens.
+  // Build the map once when the sheet opens (leaflet is fetched on demand here).
   useEffect(() => {
     if (!open || !canMap || !mapEl.current) return;
-    let map;
+    let map, cancelled = false;
+    loadLeaflet().then((L) => {
+    if (cancelled || !mapEl.current) return;
     try {
       map = L.map(mapEl.current, { zoomControl: false, attributionControl: false, dragging: true });
       // Carto's free basemap — app-friendly (unlike OSM's public server which
@@ -224,8 +235,9 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
       const fix = () => { try { map.invalidateSize(); } catch { /* ignore */ } };
       [120, 400, 900].forEach((ms) => setTimeout(fix, ms));
     } catch { /* leaflet failed — the sheet still shows everything else */ }
+    }).catch(() => { /* leaflet chunk failed to load — sheet still works */ });
 
-    return () => { cancelAnimationFrame(rafRef.current); try { map && map.remove(); } catch { /* ignore */ } mapRef.current = null; bikeRef.current = null; };
+    return () => { cancelled = true; cancelAnimationFrame(rafRef.current); try { map && map.remove(); } catch { /* ignore */ } mapRef.current = null; bikeRef.current = null; };
   }, [open, canMap, hasRoute]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Real GPS wins: if the rider is streaming a fresh position, pin the bike
@@ -241,8 +253,8 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     if (riderFresh) {
       bike.setLatLng([rider.lat, rider.lng]);
       const map = mapRef.current;
-      if (map && home) {
-        map.fitBounds(L.latLngBounds([[rider.lat, rider.lng], [home.lat, home.lng]]).pad(0.4), { animate: true, maxZoom: 16 });
+      if (map && _L && home) {
+        map.fitBounds(_L.latLngBounds([[rider.lat, rider.lng], [home.lat, home.lng]]).pad(0.4), { animate: true, maxZoom: 16 });
       }
       return; // real GPS — no fake animation
     }
