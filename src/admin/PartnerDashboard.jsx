@@ -173,7 +173,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
         ))}
       </nav>
       {runActive && (
-        <RunScreen task={task} busy={taskBusy} onAction={taskAction}
+        <RunScreen task={task} cfg={cfg} busy={taskBusy} onAction={taskAction}
           autoFailed={autoFailed} onAccept={manualAccept} />
       )}
     </div>
@@ -289,7 +289,7 @@ function IncomingOrder({ task, busy, onAction }) {
 }
 
 /* ── Full-screen run page (takes over from Accept → delivery/pick) ──────── */
-function RunScreen({ task, busy, onAction, autoFailed, onAccept }) {
+function RunScreen({ task, cfg, busy, onAction, autoFailed, onAccept }) {
   const isReturn = !!task.isReturn;
   const isDelivery = task.role === "delivery";
   const assigned = task.state === "assigned";
@@ -311,7 +311,7 @@ function RunScreen({ task, busy, onAction, autoFailed, onAccept }) {
       <div className="pd-runscreen-body">
         {assigned ? <AcceptingBody task={task} busy={busy} autoFailed={autoFailed} onAccept={onAccept} />
           : isReturn ? <ReturnBody task={task} busy={busy} onAction={onAction} />
-            : isDelivery ? <DeliveryBody task={task} busy={busy} onAction={onAction} />
+            : isDelivery ? <DeliveryBody task={task} cfg={cfg} busy={busy} onAction={onAction} />
               : <PickBody task={task} busy={busy} onAction={onAction} />}
       </div>
     </div>
@@ -358,8 +358,9 @@ function AcceptingBody({ task, busy, autoFailed, onAccept }) {
 }
 
 /* Delivery body — two swipe steps: Out for delivery → Delivered (no accept). */
-function DeliveryBody({ task, busy, onAction }) {
+function DeliveryBody({ task, cfg, busy, onAction }) {
   const { callParty } = useCall();
+  const storePhone = cfg?.storePhone || "";
   const out = task.state === "out_for_delivery";
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
 
@@ -380,7 +381,10 @@ function DeliveryBody({ task, busy, onAction }) {
         <div className="lo-row" style={{ borderTop: "none" }}>
           <span className="lo-lbl">Deliver to</span>
           <span className="lo-actions">
-            <button className="lo-nav call" onClick={() => callParty(task.orderId)}><Ic name="phone" size={14} /> Call</button>
+            <button className="lo-nav call" onClick={() => callParty(task.orderId)}><Ic name="phone" size={14} /> Customer</button>
+            {storePhone && (
+              <a className="lo-nav call" href={`tel:+91${storePhone}`}><Ic name="phone" size={14} /> Store</a>
+            )}
             {task.location
               ? <a className="lo-nav" href={googleMapsLink(task.location)} target="_blank" rel="noopener noreferrer"><Ic name="pin" size={14} /> Navigate</a>
               : <span className="lo-muted">Location shared at pickup</span>}
@@ -547,8 +551,9 @@ function PickBody({ task, busy, onAction }) {
 // The subscription "milk round": every stop for today assigned to this driver,
 // shown as one list. Prepaid, so no cash — each stop just slides to Delivered
 // and pays 70% of its handling. Self-fetches so it stays live on the Home tab.
-function MilkRound({ isDelivery }) {
+function MilkRound({ isDelivery, cfg }) {
   const { callParty } = useCall();
+  const storePhone = cfg?.storePhone || "";
   const [stops, setStops] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const load = useCallback(() => api.getMyRound().then(setStops).catch(() => setStops([])), []);
@@ -574,7 +579,12 @@ function MilkRound({ isDelivery }) {
     <div className="milk-round">
       <div className="pd-sec">
         <span><Ic name="scooter" size={13} /> Milk round · {stops.length} stop{stops.length === 1 ? "" : "s"}</span>
-        <span className="hint">earn {money(total)}</span>
+        <span className="milk-sec-right">
+          <span className="hint">earn {money(total)}</span>
+          {storePhone && (
+            <a className="milk-store-call" href={`tel:+91${storePhone}`}><Ic name="phone" size={12} /> Store</a>
+          )}
+        </span>
       </div>
       <div className="milk-list">
         {stops.map((s, i) => (
@@ -605,7 +615,7 @@ function MilkRound({ isDelivery }) {
   );
 }
 
-function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, taskBusy, taskAction }) {
+function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, taskBusy, taskAction, cfg }) {
   const [busy, setBusy] = useState(false);
   const today = istDateISO();
   const earnings = wallet.ledger.filter((l) => l.kind === "earning");
@@ -657,7 +667,7 @@ function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, ta
         </div>
       </div>
 
-      <MilkRound isDelivery={isDelivery} />
+      <MilkRound isDelivery={isDelivery} cfg={cfg} />
 
       {task ? (
         // Any active order is handled by the full-screen run page rendered above

@@ -473,3 +473,7 @@
   padding: 18px 16px; font-size: 15px; font-weight: 800; color: var(--p-sec); }
 .l-amt.amt-muted { color: var(--p-sec); }
 .pd-wbreak { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--p-sec); }
+
+/* Milk-round header: earnings + a quick "Call store" for the rider. */
+.milk-sec-right { display: inline-flex; align-items: center; gap: 12px; }
+.milk-store-call { display: inline-flex; align-items: center; gap: 4px; color: var(--p-mint); font-weight: 700; font-size: 12px; text-decoration: none; }
