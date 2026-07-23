@@ -209,7 +209,8 @@ const HI = {
 
   // ── Login ─────────────────────────────────────────────────────────────────
   "Log in or sign up": "लॉग इन या साइन अप",
-  "We'll email you an 8-digit code — no password needed.": "हम आपको 8 अंकों का कोड ईमेल करेंगे — कोई पासवर्ड नहीं चाहिए।",
+  "We'll email you a 6-digit code — no password needed.": "हम आपको 6 अंकों का कोड ईमेल करेंगे — कोई पासवर्ड नहीं चाहिए।",
+  "A 6-digit code arrives in your inbox — no password needed.": "6 अंकों का कोड आपके इनबॉक्स में आएगा — कोई पासवर्ड नहीं चाहिए।",
   "Email address": "ईमेल पता",
   "Phone number": "फ़ोन नंबर",
   "Enter the code": "कोड डालें",

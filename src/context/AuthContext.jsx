@@ -140,7 +140,7 @@ function BackendAuth({ children }) {
     pendingContact: pendingEmail,
     awaitingOtp: !!pendingEmail,
 
-    // Step 1 — email the customer an 8-digit code.
+    // Step 1 — email the customer a 6-digit code.
     async requestOtp(email, name) {
       const clean = (email || "").trim();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean))

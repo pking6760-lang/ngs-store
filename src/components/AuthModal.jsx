@@ -29,7 +29,7 @@ function IndiaFlag() {
   );
 }
 
-// Passwordless login. With a real backend it's email → 8-digit code. In the
+// Passwordless login. With a real backend it's email → 6-digit code. In the
 // demo it's phone → 4-digit code shown on screen. `reason` optionally explains
 // why we're asking.
 export default function AuthModal({ open, onClose, onSuccess, reason }) {
@@ -119,7 +119,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
             <p className="auth-reason">
               {reason ||
                 (email
-                  ? tr("We'll email you an 8-digit code — no password needed.")
+                  ? tr("We'll email you a 6-digit code — no password needed.")
                   : "We'll send a one-time code to your WhatsApp.")}
             </p>
             <form className="auth-form" onSubmit={sendCode}>
@@ -167,7 +167,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
               <span className="auth-trust-ic"><AI d={email ? AIcon.mail : AIcon.chat} size={15} /></span>
               <span>
                 {email
-                  ? "An 8-digit code arrives in your inbox — no password needed."
+                  ? tr("A 6-digit code arrives in your inbox — no password needed.")
                   : "The code arrives on WhatsApp — no password needed."}
               </span>
             </div>
