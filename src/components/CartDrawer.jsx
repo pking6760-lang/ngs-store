@@ -506,11 +506,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     // before `placing` is set, so we never create two orders / double-debit.
     if (submitLock.current || placing) return;
     if (!address.trim()) {
-      setLocError("Please enter a delivery address.");
+      setLocError(tr("Please enter a delivery address."));
       return;
     }
     if (cleanPhone.length !== 10) {
-      setLocError("Please enter a valid 10-digit phone number so we can call about your delivery.");
+      setLocError(tr("Please enter a valid 10-digit phone number so we can call about your delivery."));
       return;
     }
     // Location is optional — a customer who can't/won't share it can still
@@ -585,7 +585,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       });
       setStep("payqr");
     } catch (e) {
-      setPlaceError(e.message || "Couldn't start the payment. Please try again.");
+      setPlaceError(e.message || tr("Couldn't start the payment. Please try again."));
     } finally {
       setPlacing(false);
     }
@@ -626,10 +626,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         },
       });
       rzp.on("payment.failed", (r) =>
-        setPlaceError(r?.error?.description || "Payment failed. Please try again."));
+        setPlaceError(r?.error?.description || tr("Payment failed. Please try again.")));
       rzp.open();
     } catch (e) {
-      setPlaceError(e.message || "Couldn't open payment. Please try again.");
+      setPlaceError(e.message || tr("Couldn't open payment. Please try again."));
     }
   }
 
@@ -672,7 +672,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       setAppliedCode(null);
       setStep("done");
     } catch (e) {
-      setPlaceError(e.message || "Couldn't place the order. Please try again.");
+      setPlaceError(e.message || tr("Couldn't place the order. Please try again."));
       setStep("checkout");
     } finally {
       setPlacing(false);

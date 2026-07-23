@@ -239,14 +239,14 @@ function SkipSheet({ sub, onClose, onDone }) {
   async function confirm() {
     setBusy(true);
     try { const done = await api.skipDeliveries(sub.id, days); onDone(done); }
-    catch (e) { toast(e.message || "Couldn't skip those days."); setBusy(false); }
+    catch (e) { toast(e.message || tr("Couldn't skip those days.")); setBusy(false); }
   }
 
   return (
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sub-head">
-          <h3>Going away? Pause deliveries</h3>
+          <h3>{tr("Going away? Pause deliveries")}</h3>
           <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <div className="sub-body">
@@ -255,7 +255,7 @@ function SkipSheet({ sub, onClose, onDone }) {
             skipped day moves to the end, so you still get all {sub.daysTotal} deliveries you paid for.
           </p>
 
-          <div className="sub-field-lbl">How many days away?</div>
+          <div className="sub-field-lbl">{tr("How many days away?")}</div>
           <div className="sub-freq">
             {SKIP_PRESETS.map((d) => (
               <button key={d} className={`sub-freq-btn ${!custom && days === d ? "on" : ""}`} onClick={() => pickPreset(d)}>
@@ -283,7 +283,7 @@ function SkipSheet({ sub, onClose, onDone }) {
               </div>
               <p className="skip-resume">
                 {resume
-                  ? <>Deliveries resume <strong>{skipDateText(resume)}</strong>. Your plan now ends {n} day{n === 1 ? "" : "s"} later.</>
+                  ? <>{tr("Deliveries resume")} <strong>{skipDateText(resume)}</strong>. Your plan now ends {n} day{n === 1 ? "" : "s"} later.</>
                   : <>These are your last {n} day{n === 1 ? "" : "s"} — the plan finishes after them.</>}
               </p>
             </div>
@@ -295,7 +295,7 @@ function SkipSheet({ sub, onClose, onDone }) {
           <button className="sub-start" disabled={busy || n === 0} onClick={confirm}>
             {busy ? "Skipping…" : n > 0 ? `Skip ${n} ${n === 1 ? "delivery" : "deliveries"}` : "Skip deliveries"}
           </button>
-          <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>Keep my deliveries</button>
+          <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>{tr("Keep my deliveries")}</button>
         </div>
       </div>
     </div>
@@ -311,21 +311,21 @@ function CancelSheet({ sub, onClose, onDone }) {
   async function confirm() {
     setBusy(true);
     try { await api.cancelSubscription(sub.id); onDone(); }
-    catch (e) { toast(e.message || "Couldn't cancel."); setBusy(false); }
+    catch (e) { toast(e.message || tr("Couldn't cancel.")); setBusy(false); }
   }
 
   return (
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sub-head">
-          <h3>Cancel this plan?</h3>
+          <h3>{tr("Cancel this plan?")}</h3>
           <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <div className="sub-body">
           <p className="skip-lead">We'll stop future deliveries right away. Deliveries already made aren't affected.</p>
           <div className="sub-total">
-            <div className="sub-total-line"><span>Unused days</span><span>{left} day{left === 1 ? "" : "s"}</span></div>
-            <div className="sub-total-row"><span>Refund to your wallet</span><strong>₹{refund}</strong></div>
+            <div className="sub-total-line"><span>{tr("Unused days")}</span><span>{left} day{left === 1 ? "" : "s"}</span></div>
+            <div className="sub-total-row"><span>{tr("Refund to your wallet")}</span><strong>₹{refund}</strong></div>
             <div className="sub-total-note">Refunded instantly to your NGS Wallet — use it on any order.</div>
           </div>
         </div>
@@ -346,7 +346,7 @@ function Subscriptions({ onShop }) {
   const [subs, setSubs] = useState(null);
   const [skipFor, setSkipFor] = useState(null);
   const [cancelFor, setCancelFor] = useState(null);
-  const nameOf = (id) => products.find((p) => p.id === id)?.name || "Item";
+  const nameOf = (id) => products.find((p) => p.id === id)?.name || tr("Item");
 
   async function load() {
     // Hide never-paid "pending" plans — only real (paid) plans belong here.
@@ -385,7 +385,7 @@ function Subscriptions({ onShop }) {
           <div className={`sub-card ${s.status === "active" ? "" : "paused"}`} key={s.id}>
             <div className="sub-card-top">
               <span className="sub-card-sched">{s.daysTotal}-day plan · ₹{Math.round(s.amount)}</span>
-              <span className={`sub-status ${st.cls}`}>{st.label}</span>
+              <span className={`sub-status ${st.cls}`}>{tr(st.label)}</span>
             </div>
             <div className="sub-items">
               {s.items.map((it, i) => (
@@ -400,7 +400,7 @@ function Subscriptions({ onShop }) {
             {(s.status === "active" || s.status === "pending") && (
               <div className="sub-card-actions">
                 {s.status === "active" && (
-                  <button onClick={() => setSkipFor(s)}>Going away? Pause</button>
+                  <button onClick={() => setSkipFor(s)}>{tr("Going away? Pause")}</button>
                 )}
                 <button className="danger" onClick={() => setCancelFor(s)}>{tr("Cancel plan")}</button>
               </div>
@@ -526,7 +526,7 @@ function OrderDetail({ order, onClose, onReorder }) {
           {cancelled ? (
             <div className="order-note cancelled">
               <span className="order-note-ic"><MIcon d={PIC.xc} size={18} /></span>
-              <span>This order was cancelled.</span>
+              <span>{tr("This order was cancelled.")}</span>
             </div>
           ) : returned ? (
             <div className="order-note returned">
@@ -620,7 +620,7 @@ function RatingBox({ order }) {
       else setOrderRating(order.id, stars, feedback);
       setDone(true);
     } catch (e) {
-      setError(e?.message || "Couldn't save your rating. Please try again.");
+      setError(e?.message || tr("Couldn't save your rating. Please try again."));
     } finally {
       setBusy(false);
     }
@@ -863,7 +863,7 @@ function TopupPay({ amount, onPaid, onBack }) {
           } catch { /* the polling effect / webhook still confirms it */ }
         },
       });
-      rzp.on("payment.failed", (r) => { setPaying(false); setErr(r?.error?.description || "Payment failed. Please try again."); });
+      rzp.on("payment.failed", (r) => { setPaying(false); setErr(r?.error?.description || tr("Payment failed. Please try again.")); });
       rzp.open();
     } catch (e) {
       setErr(e.message || "Couldn't open the payment. Please try again.");
@@ -891,7 +891,7 @@ function TopupPay({ amount, onPaid, onBack }) {
 
 function walletLabel(e) {
   if (e.note) return e.note;
-  return { refund: "Refund", topup: "Money added", spent: "Used on order", adjust: "Adjustment" }[e.kind] || e.kind;
+  return { refund: tr("Refund"), topup: tr("Money added"), spent: tr("Used on order"), adjust: tr("Adjustment") }[e.kind] || e.kind;
 }
 function fmtWalletDate(iso) {
   try {
@@ -967,14 +967,14 @@ function Rewards({ user }) {
       </div>
 
       <div className="rewards-how">
-        <h4>How it works</h4>
+        <h4>{tr("How it works")}</h4>
         <ul>
           <li>Earn reward points on eligible items in every order you place.</li>
           <li>
             <strong>{redeemPer} points = ₹1</strong> off — redeem at checkout.
           </li>
           <li>Pay up to <strong>{maxRedeemPct}%</strong> of an order with points.</li>
-          <li>Points are added once your order is confirmed.</li>
+          <li>{tr("Points are added once your order is confirmed.")}</li>
         </ul>
       </div>
     </div>
@@ -1061,7 +1061,7 @@ function Referral({ user }) {
               {busy ? "…" : "Apply"}
             </button>
           </div>
-          <small className="refer-fine">Only before your first order.</small>
+          <small className="refer-fine">{tr("Only before your first order.")}</small>
           {msg && (
             <div className={msg.ok ? "refer-ok" : "refer-err"}>
               <MIcon d={msg.ok ? PIC.check : PIC.alert} size={14} /> {msg.text}
@@ -1158,7 +1158,7 @@ function Membership() {
 
       <div className="prime-offer">
         <div className="prime-offer-l">
-          <div className="prime-offer-lbl">Limited-time price</div>
+          <div className="prime-offer-lbl">{tr("Limited-time price")}</div>
           <div className="prime-price">
             <s>₹{mrp}</s>
             <span className="pp-amt">₹{price}</span>
@@ -1206,10 +1206,10 @@ function PrimeCard({ name, until, active }) {
       <div className="pc-row pc-foot">
         <div className="pc-holder">
           <span className="pc-lbl">{tr("Member")}</span>
-          <span className="pc-name">{(name || "Your Name").toUpperCase()}</span>
+          <span className="pc-name">{(name || tr("Your Name")).toUpperCase()}</span>
         </div>
         <div className="pc-thru">
-          <span className="pc-lbl">Valid thru</span>
+          <span className="pc-lbl">{tr("Valid thru")}</span>
           <span className="pc-val">{cardThru(until)}</span>
         </div>
       </div>
@@ -1331,7 +1331,7 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
           } catch { /* the polling effect / webhook still confirms it */ }
         },
       });
-      rzp.on("payment.failed", (r) => { setPaying(false); setErr(r?.error?.description || "Payment failed. Please try again."); });
+      rzp.on("payment.failed", (r) => { setPaying(false); setErr(r?.error?.description || tr("Payment failed. Please try again.")); });
       rzp.open();
     } catch (e) {
       setErr(e.message || "Couldn't open the payment. Please try again.");
@@ -1380,10 +1380,10 @@ function Profile() {
     try {
       // Only show "Saved" once the server actually confirms.
       const res = await updateProfile(form);
-      if (res && res.ok === false) setError(res.error || "Couldn't save. Please try again.");
+      if (res && res.ok === false) setError(res.error || tr("Couldn't save. Please try again."));
       else setSaved(true);
     } catch (err) {
-      setError(err?.message || "Couldn't save. Please try again.");
+      setError(err?.message || tr("Couldn't save. Please try again."));
     } finally {
       setBusy(false);
     }

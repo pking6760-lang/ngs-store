@@ -28,6 +28,7 @@ import { FestiveMasthead } from "./components/FestiveDecor.jsx";
 import { applyTheme } from "./lib/theme.js";
 import { loadStockAlerts, clearStockAlertsLocal } from "./lib/stockAlerts.js";
 import { shop } from "./data/shop.js";
+import { tr } from "./lib/i18n.jsx";
 
 const svgProps = {
   width: 66, height: 66, viewBox: "0 0 24 24", fill: "none",
@@ -313,7 +314,7 @@ export default function App() {
           <span className="gpb-text">
             You're seeing regular prices. <b>Log in &amp; get Prime</b> to save up to 15% on every item.
           </span>
-          <span className="gpb-cta">Log in</span>
+          <span className="gpb-cta">{tr("Log in")}</span>
         </button>
       )}
 
@@ -495,7 +496,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
 
       {buyAgain.length > 0 && (
         <section className="section">
-          <h2 className="section-title">Buy again</h2>
+          <h2 className="section-title">{tr("Buy again")}</h2>
           <div className="product-row">
             {buyAgain.map((p) => (
               <ProductCard key={p.id} product={p} />

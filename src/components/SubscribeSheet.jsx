@@ -6,6 +6,7 @@ import {
 import { loadRazorpay, RAZORPAY_ENABLED, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import UpiPayScreen from "./UpiPayScreen.jsx";
 import { toast } from "../lib/toast.js";
+import { tr } from "../lib/i18n.jsx";
 
 // Prepaid subscription sheet: choose days, pay upfront (Wallet = instant, Online
 // = our own branded UPI QR page, same as checkout — NOT Razorpay's hosted page).
@@ -37,7 +38,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
 
   const summary = useMemo(() => {
     const byId = Object.fromEntries((summaryProducts || []).map((p) => [p.id, p]));
-    return (items || []).map((it) => ({ name: byId[it.id]?.name || "Item", qty: it.qty }));
+    return (items || []).map((it) => ({ name: byId[it.id]?.name || tr("Item"), qty: it.qty }));
   }, [items, summaryProducts]);
 
   // Load wallet balance on open; reset everything when closed.
@@ -97,8 +98,8 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
 
   async function start() {
     if (busy) return;
-    if (!items || items.length === 0) { toast("Your cart is empty."); return; }
-    if (days < 1) { toast("Choose how many days."); return; }
+    if (!items || items.length === 0) { toast(tr("Your cart is empty.")); return; }
+    if (days < 1) { toast(tr("Choose how many days.")); return; }
     setBusy(true);
     try {
       const o = await createSubscriptionOrder({ items, days, hour, address, location, pay });
@@ -111,7 +112,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
         setMode("pay");     // show OUR branded QR page, not Razorpay's
       }
     } catch (e) {
-      toast(e.message || "Couldn't start the plan.");
+      toast(e.message || tr("Couldn't start the plan."));
     } finally {
       setBusy(false);
     }
@@ -176,7 +177,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
               error={qr === "error" ? payErr : payErr}
               note="Your plan starts the moment payment confirms — first delivery tomorrow."
             />
-            <button className="ghost-btn full" onClick={handleClose} style={{ marginTop: 10 }}>Cancel</button>
+            <button className="ghost-btn full" onClick={handleClose} style={{ marginTop: 10 }}>{tr("Cancel")}</button>
           </div>
         ) : (
           <>
@@ -202,12 +203,12 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                 </label>
               </div>
 
-              <div className="sub-field-lbl">Deliver around</div>
+              <div className="sub-field-lbl">{tr("Deliver around")}</div>
               <select className="sub-select" value={hour} onChange={(e) => setHour(Number(e.target.value))}>
                 {HOURS.map((h) => <option key={h} value={h}>{hourText(h)}</option>)}
               </select>
 
-              <div className="sub-field-lbl">Pay in advance by</div>
+              <div className="sub-field-lbl">{tr("Pay in advance by")}</div>
               <div className="sub-pay">
                 <button
                   className={`sub-pay-btn ${pay === "wallet" ? "on" : ""} ${walletKnown && !walletEnough ? "low" : ""}`}
@@ -217,7 +218,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                   NGS Wallet{walletKnown ? ` · ₹${Math.round(walletBal)}` : ""}
                 </button>
                 {RAZORPAY_ENABLED && (
-                  <button className={`sub-pay-btn ${pay === "razorpay" ? "on" : ""}`} onClick={() => setPay("razorpay")}>Pay online</button>
+                  <button className={`sub-pay-btn ${pay === "razorpay" ? "on" : ""}`} onClick={() => setPay("razorpay")}>{tr("Pay online")}</button>
                 )}
               </div>
               {walletKnown && !walletEnough && (
@@ -229,7 +230,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
 
               <div className="sub-total">
                 <div className="sub-total-line"><span>Items</span><span>₹{perItems}/day</span></div>
-                <div className="sub-total-line"><span>Convenience fee</span><span>₹{fee}/day</span></div>
+                <div className="sub-total-line"><span>{tr("Convenience fee")}</span><span>₹{fee}/day</span></div>
                 <div className="sub-total-row"><span>₹{perDay}/day × {days} days</span><strong>₹{total}</strong></div>
                 <div className="sub-total-note">First delivery tomorrow. Add items to any day's delivery from the cart.</div>
               </div>

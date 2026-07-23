@@ -6,6 +6,7 @@ import {
 import { loadRazorpay, RAZORPAY_ENABLED, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import UpiPayScreen from "./UpiPayScreen.jsx";
 import { toast } from "../lib/toast.js";
+import { tr } from "../lib/i18n.jsx";
 
 // Add the current cart to the customer's next subscription delivery. Prepaid by
 // Wallet (instant) or Online (our own branded UPI QR — same as checkout). Delivery
@@ -27,7 +28,7 @@ export default function AddToDeliverySheet({
 
   const summary = useMemo(() => {
     const byId = Object.fromEntries((summaryProducts || []).map((p) => [p.id, p]));
-    return (items || []).map((it) => ({ name: byId[it.id]?.name || "Item", qty: it.qty }));
+    return (items || []).map((it) => ({ name: byId[it.id]?.name || tr("Item"), qty: it.qty }));
   }, [items, summaryProducts]);
 
   const itemsR = Math.round(itemsTotal || 0);
@@ -90,7 +91,7 @@ export default function AddToDeliverySheet({
 
   async function confirm() {
     if (busy) return;
-    if (!items || items.length === 0) { toast("Your cart is empty."); return; }
+    if (!items || items.length === 0) { toast(tr("Your cart is empty.")); return; }
     setBusy(true);
     try {
       const o = await addToDelivery(items, pay);
@@ -102,7 +103,7 @@ export default function AddToDeliverySheet({
         setMode("pay");
       }
     } catch (e) {
-      toast(e.message || "Couldn't add to your delivery.");
+      toast(e.message || tr("Couldn't add to your delivery."));
     } finally {
       setBusy(false);
     }
@@ -157,7 +158,7 @@ export default function AddToDeliverySheet({
               error={qr === "error" ? payErr : payErr}
               note={`Once paid, these items ride along with your ${dayLabel} delivery.`}
             />
-            <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>Cancel</button>
+            <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>{tr("Cancel")}</button>
           </div>
         ) : (
           <>
@@ -180,7 +181,7 @@ export default function AddToDeliverySheet({
                   NGS Wallet{walletKnown ? ` · ₹${Math.round(walletBal)}` : ""}
                 </button>
                 {RAZORPAY_ENABLED && (
-                  <button className={`sub-pay-btn ${pay === "razorpay" ? "on" : ""}`} onClick={() => setPay("razorpay")}>Pay online</button>
+                  <button className={`sub-pay-btn ${pay === "razorpay" ? "on" : ""}`} onClick={() => setPay("razorpay")}>{tr("Pay online")}</button>
                 )}
               </div>
               {walletKnown && !walletEnough && (
@@ -193,8 +194,8 @@ export default function AddToDeliverySheet({
               <div className="sub-total">
                 <div className="sub-total-line"><span>Items</span><span>₹{itemsR}</span></div>
                 <div className="sub-total-line"><span>Delivery</span><span>{delR === 0 ? "FREE" : `₹${delR}`}</span></div>
-                <div className="sub-total-line"><span>Handling</span><span>₹0 · covered</span></div>
-                <div className="sub-total-row"><span>To pay</span><strong>₹{totalR}</strong></div>
+                <div className="sub-total-line"><span>{tr("Handling")}</span><span>₹0 · covered</span></div>
+                <div className="sub-total-row"><span>{tr("To pay")}</span><strong>₹{totalR}</strong></div>
                 {shortForFree > 0 && (
                   <div className="sub-total-note">Add ₹{shortForFree} more of regular items to get free delivery.</div>
                 )}
