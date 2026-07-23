@@ -37,20 +37,29 @@ function fmtHour(h) {
 // tomorrow-morning windows so there's always a real choice. The picked window's
 // `full` label (e.g. "Today 6 PM–8 PM") is what rides along on the order; "Now"
 // stores nothing (express).
+function isoDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 function buildDeliverySlots(now) {
   const OPEN = 7, CLOSE = 22, LEAD = 2, WIN = 2; // hours
+  const today = isoDate(now);
+  const tmr = new Date(now); tmr.setDate(tmr.getDate() + 1);
+  const tmrISO = isoDate(tmr);
+  // `on`/`hour` mark a scheduled window (the order is held until its day); the
+  // express "Now" option has neither.
   const slots = [{ key: "now", label: "Now", sub: "Express · ~12 min" }];
   let start = Math.max(OPEN, now.getHours() + LEAD);
   if (start % 2 !== 0) start += 1; // align to an even hour
   for (let s = start; s + WIN <= CLOSE && slots.length < 5; s += WIN) {
     slots.push({ key: `t${s}`, label: `${fmtHour(s)}–${fmtHour(s + WIN)}`,
-      sub: "Today", full: `Today ${fmtHour(s)}–${fmtHour(s + WIN)}` });
+      sub: "Today", full: `Today ${fmtHour(s)}–${fmtHour(s + WIN)}`, on: today, hour: s });
   }
   if (slots.length < 4) {
     let s = OPEN + 1; if (s % 2 !== 0) s += 1;
     for (; s + WIN <= CLOSE && slots.length < 5; s += WIN) {
       slots.push({ key: `m${s}`, label: `${fmtHour(s)}–${fmtHour(s + WIN)}`,
-        sub: "Tomorrow", full: `Tomorrow ${fmtHour(s)}–${fmtHour(s + WIN)}` });
+        sub: "Tomorrow", full: `Tomorrow ${fmtHour(s)}–${fmtHour(s + WIN)}`, on: tmrISO, hour: s });
     }
   }
   return slots;
@@ -163,6 +172,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const deliverySlots = useMemo(() => buildDeliverySlots(new Date()), [open]);
   const selectedSlot = deliverySlots.find((s) => s.key === slotKey) || deliverySlots[0];
   const slotLabel = selectedSlot?.full || null; // null for express "Now"
+  const slotOn = selectedSlot?.on || null;      // date → order is held/scheduled
+  const slotHour = selectedSlot?.hour ?? null;
+  const isScheduled = !!slotOn;
   // "Leave at the door" and "Hand it to me" are opposites — picking one clears
   // the other. The rest can be combined freely.
   const toggleNote = (n) =>
@@ -508,6 +520,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       setLocError(`Cash on delivery isn't available above ₹${COD_LIMIT}. Please pay online.`);
       return;
     }
+    // Scheduled orders are Pay-on-Delivery — above the COD cap they can't be
+    // placed as scheduled, so point the customer to express (online) instead.
+    if (isScheduled && payable > 0 && codBlocked) {
+      setLocError(`Scheduled orders are pay-on-delivery. For an order over ₹${COD_LIMIT}, choose "⚡ Now" to pay online.`);
+      return;
+    }
     setLocError("");
     submitLock.current = true;
     try {
@@ -517,7 +535,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         await updateProfile({ address: address.trim(), phone: cleanPhone });
       }
       // Wallet covers the whole order → nothing to pay online, place it directly.
+      // Scheduled orders always go through the direct (pay-on-delivery) path.
       if (payable === 0) await placeOrder();
+      else if (isScheduled) await placeOrder();
       else if (payment === "razorpay") await startRazorpay();
       else if (payment === "upi") setStep("pay");
       else await placeOrder();
@@ -546,6 +566,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         redeemPoints: pointsUsed,
         membership: memberFee > 0,
         deliverySlot: slotLabel,
+        deliverOn: slotOn,
+        deliverHour: slotHour,
       });
       // Verified native UPI QR shown ON our page (scan with any app → pays
       // directly → auto-confirms via webhook). No redirect to any gateway page.
@@ -614,8 +636,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   async function placeOrderBackend() {
     setPlacing(true);
     setPlaceError("");
-    // If the wallet covers everything, there's nothing to pay online.
-    const pay = payable === 0 ? "wallet" : payment;
+    // If the wallet covers everything, there's nothing to pay online. Scheduled
+    // orders are Pay-on-Delivery, so any remaining amount is COD (never online).
+    const pay = payable === 0 ? "wallet" : isScheduled ? "cod" : payment;
     try {
       const order = await withMinTime(() => api.placeOrder({
         items: lines.map(({ product, qty }) => ({ id: product.id, qty })),
@@ -627,6 +650,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         redeemPoints: pointsUsed,
         membership: memberFee > 0,
         deliverySlot: slotLabel,
+        deliverOn: slotOn,
+        deliverHour: slotHour,
       }), 900, 1800);
       setPlaced({
         // place_order returns only the order row (no joined items), so count
@@ -636,6 +661,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         eta: 12, payment: pay,
         pointsEarned: order.pointsEarned, code: order.id,
         memberSavings: order.memberSavings || 0,
+        slot: isScheduled ? slotLabel : null,
       });
       clear();
       setUsePoints(false);
@@ -692,7 +718,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     decrementStock(order.items); // keep inventory / low-stock alerts in sync
     // Update the customer's points: earn on what they paid, spend what they used.
     applyRewards({ earned: pointsEarned, used: pointsUsed });
-    setPlaced({ total: grandTotal, count, eta: 12, payment, pointsEarned });
+    setPlaced({ total: grandTotal, count, eta: 12, payment, pointsEarned, slot: isScheduled ? slotLabel : null });
     clear();
     setUsePoints(false);
     setAppliedCode(null);
@@ -792,7 +818,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </p>
             )}
             <p className="success-eta">
-              Arriving in <strong>{placed.eta} minutes</strong>
+              {placed.slot
+                ? <>Scheduled · arriving <strong>{placed.slot}</strong></>
+                : <>Arriving in <strong>{placed.eta} minutes</strong></>}
             </p>
             <button className="checkout-btn" onClick={handleClose}>
               Continue shopping
@@ -1069,6 +1097,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   </button>
                 ))}
               </div>
+              {isScheduled && (
+                <small className="slot-note">Scheduled orders are Pay on Delivery — we'll bring it in your chosen window.</small>
+              )}
             </div>
 
             <div className="checkout-section pay-sec">

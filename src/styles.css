@@ -4909,3 +4909,4 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 .slot-chip.on b, .slot-chip.on small{ color:var(--green-dark); }
 .slot-chip:active{ transform:scale(.97); }
 .order-detail-slot{ margin-top:2px; font-size:12.5px; font-weight:700; color:var(--green-dark); }
+.slot-note{ display:block; margin-top:8px; font-size:11px; font-weight:600; color:var(--green-dark); line-height:1.4; }
