@@ -329,10 +329,19 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                 : text}
             </div>
           </div>
-          {storePhone && !delivered && (
-            <a className="lt-hero-call" href={`tel:+91${storePhone}`} aria-label="Call the store">
-              <Svg d={Icon.phone} size={16} sw={2.2} /> Call store
-            </a>
+          {!delivered && (rider?.phone || storePhone) && (
+            <div className="lt-hero-actions">
+              {rider?.phone && (
+                <a className="lt-hero-call" href={`tel:+91${rider.phone}`} aria-label="Call the delivery partner">
+                  <Svg d={Icon.phone} size={14} sw={2.2} /> Delivery
+                </a>
+              )}
+              {storePhone && (
+                <a className="lt-hero-call" href={`tel:+91${storePhone}`} aria-label="Call the store">
+                  <Svg d={Icon.phone} size={14} sw={2.2} /> Store
+                </a>
+              )}
+            </div>
           )}
         </div>
 

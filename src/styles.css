@@ -4911,13 +4911,17 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 .order-detail-slot{ margin-top:2px; font-size:12.5px; font-weight:700; color:var(--green-dark); }
 .slot-note{ display:block; margin-top:8px; font-size:11px; font-weight:600; color:var(--green-dark); line-height:1.4; }
 
-/* "Call store" pill on the live-tracker hero — reach the shop about an order. */
+/* Call pills on the live-tracker hero — reach the delivery partner and/or the
+   shop about an order. Stacked top-right so they never crowd the ETA. */
 .lt-hero{ position: relative; }
+.lt-hero-actions{
+  position:absolute; top:10px; right:10px;
+  display:flex; flex-direction:column; gap:6px; align-items:flex-end;
+}
 .lt-hero-call{
-  position:absolute; top:12px; right:12px;
   display:inline-flex; align-items:center; gap:5px;
-  background:rgba(255,255,255,.18); color:#fff; font-weight:800; font-size:12px;
-  padding:6px 11px; border-radius:20px; text-decoration:none;
-  border:1px solid rgba(255,255,255,.4);
+  background:rgba(255,255,255,.18); color:#fff; font-weight:800; font-size:11.5px;
+  padding:5px 10px; border-radius:20px; text-decoration:none;
+  border:1px solid rgba(255,255,255,.4); white-space:nowrap;
 }
 .lt-hero-call:active{ background:rgba(255,255,255,.32); }
