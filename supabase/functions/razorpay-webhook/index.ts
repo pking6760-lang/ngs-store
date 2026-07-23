@@ -105,8 +105,13 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ p_order: order.id, p_payment_id: paymentId }),
     });
 
-    // Only a real delivery order alerts the shop — never a membership / top-up / return.
-    if (!wasPaid && !order.is_membership && !order.is_topup && !order.is_return) {
+    // Alert the shop ONLY for a genuinely NEW order — i.e. an online order that
+    // was "Awaiting payment" and has now been paid, so it enters the queue.
+    // A doorstep COD payment (order already Placed/Packed/Out for delivery, the
+    // rider just collected via the UPI QR) is NOT a new order, so it must not
+    // fire the "new order" alarm on the admin phone.
+    const isNewOnlineOrder = order.status === "Awaiting payment";
+    if (!wasPaid && isNewOnlineOrder && !order.is_membership && !order.is_topup && !order.is_return) {
       await notifyAdmin({ ...order, status: "Placed", payment_status: "paid" });
     }
 
