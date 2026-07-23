@@ -57,3 +57,6 @@ android-customer/.gradle/
 
 # Release signing (kept out of git — delivered separately)
 signing/
+
+# The customer APK we host for download on the website
+!public/ngs.apk

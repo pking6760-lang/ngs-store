@@ -43,7 +43,10 @@ export default function InstallPrompt() {
   const [deferred, setDeferred] = useState(null);
 
   useEffect(() => {
+    // Android gets the native-APK download prompt instead (ApkPrompt), so the
+    // PWA "add to home screen" banner only runs on iOS / desktop.
     if (isNativeApp() || isStandalone() || snoozed()) return;
+    if (/android/i.test(navigator.userAgent || "")) return;
 
     // Android/Chrome: capture the install event so we can trigger it on tap.
     const onBIP = (e) => {

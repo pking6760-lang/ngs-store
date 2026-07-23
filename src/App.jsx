@@ -19,6 +19,7 @@ import CategoryIcon from "./components/CategoryIcon.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
 import OfflineBanner from "./components/OfflineBanner.jsx";
+import ApkPrompt from "./components/ApkPrompt.jsx";
 import { fetchBuyAgain, saveCart, applyReferral } from "./lib/api.js";
 import { toast } from "./lib/toast.js";
 import { initCustomerPush } from "./lib/customerPush.js";
@@ -312,6 +313,7 @@ export default function App() {
   return (
     <div className="app">
       <OfflineBanner />
+      <ApkPrompt />
       <CallAlertsPrompt show={isLoggedIn} />
       <PullToRefresh
         onRefresh={handleRefresh}

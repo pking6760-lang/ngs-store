@@ -353,6 +353,11 @@ const HI = {
   "It's free to cancel right now. Anything you've paid is refunded to your NGS Wallet.":
     "अभी रद्द करना मुफ़्त है। आपने जो भुगतान किया है वह आपके NGS वॉलेट में वापस आ जाएगा।",
   "fee": "शुल्क",
+
+  // ── Android app download prompt ────────────────────────────────────────────
+  "Get the NGS app": "NGS ऐप पाएं",
+  "Faster, with order alerts & calls": "तेज़, ऑर्डर अलर्ट और कॉल के साथ",
+  "Install": "इंस्टॉल करें",
 };
 
 const DICT = { en: {}, hi: HI };
