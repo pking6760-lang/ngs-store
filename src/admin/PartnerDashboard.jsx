@@ -779,45 +779,95 @@ function mondayISO(iso) {
   d.setUTCDate(d.getUTCDate() - wd);
   return d.toISOString().slice(0, 10);
 }
+function tripTime(iso) {
+  try { return new Intl.DateTimeFormat("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso)); }
+  catch { return ""; }
+}
+function dayHeading(iso) {
+  const today = istDateISO();
+  const y = new Date(today + "T12:00:00Z"); y.setUTCDate(y.getUTCDate() - 1);
+  if (iso === today) return "Today";
+  if (iso === y.toISOString().slice(0, 10)) return "Yesterday";
+  const { wd, dm } = dayLabel(iso);
+  return `${wd}, ${dm}`;
+}
+
 function Earnings({ wallet }) {
   const earnings = wallet.ledger.filter((l) => l.kind === "earning");
   const payouts = wallet.ledger.filter((l) => l.kind === "payout");
-  const monthKey = istDateISO().slice(0, 7);
-  const monthTotal = earnings.filter((l) => istParts(l.at).monthKey === monthKey).reduce((s, l) => s + l.amount, 0);
+  const penalties = wallet.ledger.filter((l) => l.kind === "penalty");
+  const today = istDateISO();
+  const thisWeek = mondayISO(today);
 
-  const byWeek = {};
-  earnings.forEach((l) => {
-    const wk = mondayISO(istParts(l.at).dateISO);
-    byWeek[wk] = (byWeek[wk] || 0) + l.amount;
+  const todays = earnings.filter((l) => istParts(l.at).dateISO === today);
+  const todayTotal = todays.reduce((s, l) => s + l.amount, 0);
+  const avgTrip = todays.length ? todayTotal / todays.length : 0;
+
+  const weekEarn = earnings.filter((l) => mondayISO(istParts(l.at).dateISO) === thisWeek).reduce((s, l) => s + l.amount, 0);
+  const weekEarnCount = earnings.filter((l) => mondayISO(istParts(l.at).dateISO) === thisWeek).length;
+  const weekPenalty = penalties.filter((l) => mondayISO(istParts(l.at).dateISO) === thisWeek).reduce((s, l) => s + Math.abs(l.amount), 0);
+  const pending = Math.max(0, weekEarn - weekPenalty);
+  const lastPayout = payouts.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0];
+
+  // Per-trip list, grouped by day (most recent first, last ~30 trips).
+  const byDay = {};
+  earnings.slice().sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 40).forEach((l) => {
+    const d = istParts(l.at).dateISO;
+    (byDay[d] || (byDay[d] = [])).push(l);
   });
-  const weeks = Object.keys(byWeek).sort().reverse().slice(0, 8);
-  const thisWeek = mondayISO(istDateISO());
+  const days = Object.keys(byDay).sort().reverse();
 
   return (
     <>
-      <div className="pd-wcard">
-        <div className="lbl">This month</div>
-        <div className="big">{money(monthTotal)}</div>
-        <div className="note">{new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: IST }).format(new Date())}</div>
+      <div className="pd-earn-cards">
+        <div className="pd-ecard">
+          <div className="e-lbl">Today</div>
+          <div className="e-amt">{money(todayTotal)}</div>
+          <div className="e-sub">{todays.length} {todays.length === 1 ? "trip" : "trips"}{todays.length ? ` · ${money(avgTrip)}/trip` : ""}</div>
+        </div>
+        <div className="pd-ecard alt">
+          <div className="e-lbl">This week</div>
+          <div className="e-amt">{money(weekEarn)}</div>
+          <div className="e-sub">{weekEarnCount} {weekEarnCount === 1 ? "trip" : "trips"}</div>
+        </div>
       </div>
-      <div className="pd-sec"><span>Week by week</span></div>
-      <div className="pd-list">
-        {weeks.length === 0 ? <div className="pd-empty"><span className="emo"><Ic name="trending" size={26} /></span>No earnings yet.</div>
-        : weeks.map((wk) => {
-          const end = new Date(wk + "T12:00:00Z"); end.setUTCDate(end.getUTCDate() + 6);
-          const endISO = end.toISOString().slice(0, 10);
-          const paid = payouts.some((p) => istParts(p.at).dateISO > endISO);
-          const status = wk === thisWeek ? "Current" : paid ? "Paid" : "Pending";
-          const a = dayLabel(wk), b = dayLabel(endISO);
-          return (
-            <div className="pd-row" key={wk}>
-              <div><div className="r-main">{a.dm} – {b.dm}</div>
-                <div className="r-sub">{status === "Current" ? "Current week" : status === "Paid" ? "✓ Paid" : "Pending payout"}</div></div>
-              <div className="r-amt amt-pos">{money(byWeek[wk])}</div>
-            </div>
-          );
-        })}
+
+      <div className="pd-payout">
+        <div className="po-top">
+          <span className="po-lbl"><Ic name="wallet" size={15} /> Pending payout</span>
+          <strong className="po-amt">{money(pending)}</strong>
+        </div>
+        <div className="po-note">
+          Paid every Monday{weekPenalty > 0 ? ` · after ${money(weekPenalty)} penalty` : ""}.
+          {lastPayout ? ` Last payout ${money(lastPayout.amount)} on ${dayLabel(istParts(lastPayout.at).dateISO).dm}.` : ""}
+        </div>
       </div>
+
+      <div className="pd-sec"><span>Recent trips</span></div>
+      {days.length === 0 ? (
+        <div className="pd-empty"><span className="emo"><Ic name="trending" size={26} /></span>No earnings yet.</div>
+      ) : (
+        <div className="pd-trips">
+          {days.map((d) => {
+            const dayTotal = byDay[d].reduce((s, l) => s + l.amount, 0);
+            return (
+              <div className="pd-tripday" key={d}>
+                <div className="pd-dayhead"><span>{dayHeading(d)}</span><span className="pd-dayamt">{money(dayTotal)}</span></div>
+                {byDay[d].map((t) => (
+                  <div className="pd-triprow" key={t.id}>
+                    <span className="tr-ico"><Ic name={/milk/i.test(t.note || "") ? "scooter" : /pack/i.test(t.note || "") ? "basket" : "scooter"} size={15} /></span>
+                    <span className="tr-main">
+                      <span className="tr-title">{t.code ? `#${t.code}` : (t.note || "Trip")}</span>
+                      <span className="tr-sub">{t.note || "Delivery"} · {tripTime(t.at)}</span>
+                    </span>
+                    <span className="tr-amt">+{money(t.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

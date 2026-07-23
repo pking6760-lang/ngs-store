@@ -477,3 +477,37 @@
 /* Milk-round header: earnings + a quick "Call store" for the rider. */
 .milk-sec-right { display: inline-flex; align-items: center; gap: 12px; }
 .milk-store-call { display: inline-flex; align-items: center; gap: 4px; color: var(--p-mint); font-weight: 700; font-size: 12px; text-decoration: none; }
+
+/* ── Earnings tab: today/week cards, payout summary, per-trip list ────────── */
+.pd-earn-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pd-ecard { border-radius: 18px; padding: 16px;
+  background: linear-gradient(135deg, var(--p-red) 0%, var(--p-red-deep) 60%, #360610 100%); }
+.pd-ecard.alt { background: var(--p-card); border: 1px solid var(--p-line); }
+.pd-ecard .e-lbl { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+  color: rgba(255,255,255,0.82); }
+.pd-ecard.alt .e-lbl { color: var(--p-sec); }
+.pd-ecard .e-amt { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 2px;
+  font-variant-numeric: tabular-nums; color: #fff; }
+.pd-ecard .e-sub { font-size: 12px; color: rgba(255,255,255,0.85); }
+.pd-ecard.alt .e-sub { color: var(--p-muted); }
+
+.pd-payout { margin-top: 12px; background: var(--p-card); border: 1px solid var(--p-line);
+  border-radius: 16px; padding: 14px 16px; }
+.pd-payout .po-top { display: flex; align-items: center; justify-content: space-between; }
+.pd-payout .po-lbl { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--p-text); }
+.pd-payout .po-amt { font-size: 20px; font-weight: 800; color: var(--p-mint); font-variant-numeric: tabular-nums; }
+.pd-payout .po-note { font-size: 12px; color: var(--p-muted); margin-top: 6px; line-height: 1.45; }
+
+.pd-trips { display: flex; flex-direction: column; gap: 14px; }
+.pd-tripday { display: flex; flex-direction: column; }
+.pd-dayhead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.pd-dayhead span:first-child { font-size: 13px; font-weight: 800; color: var(--p-text); }
+.pd-dayamt { font-size: 12px; font-weight: 700; color: var(--p-mint); font-variant-numeric: tabular-nums; }
+.pd-triprow { display: flex; align-items: center; gap: 11px; padding: 11px 12px;
+  background: var(--p-card); border: 1px solid var(--p-line); border-radius: 14px; margin-bottom: 8px; }
+.pd-triprow .tr-ico { width: 30px; height: 30px; flex: none; border-radius: 9px; display: flex; align-items: center;
+  justify-content: center; background: var(--p-card2); color: var(--p-red-bright); }
+.pd-triprow .tr-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.pd-triprow .tr-title { font-size: 14px; font-weight: 700; color: var(--p-text); }
+.pd-triprow .tr-sub { font-size: 11.5px; color: var(--p-muted); margin-top: 1px; }
+.pd-triprow .tr-amt { font-size: 15px; font-weight: 800; color: var(--p-mint); font-variant-numeric: tabular-nums; white-space: nowrap; }
