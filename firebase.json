@@ -1,8 +1,11 @@
 {
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "dist/admin.html", "dist/partner.html"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "dist/admin.html"],
+    "rewrites": [
+      { "source": "/partner", "destination": "/partner.html" },
+      { "source": "**", "destination": "/index.html" }
+    ],
     "headers": [
       {
         "source": "**",
