@@ -31,10 +31,25 @@ messaging.onBackgroundMessage((payload) => {
     });
     return;
   }
+  // Partner assigned an order (data-only, high priority). Show it loud and keep
+  // it on screen until tapped so a rider on the web app never misses it.
+  if (d.type === "new_task") {
+    self.registration.showNotification(d.title || "🛵 New order!", {
+      body: d.body || "Tap to accept",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: "ngs-new-task",
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [500, 200, 500, 200, 500],
+      data: { url: "https://ngsstore.in/partner" },
+    });
+    return;
+  }
   const n = payload.notification || {};
-  const link = (payload.fcmOptions && payload.fcmOptions.link) || "https://ngsstore.in/";
-  self.registration.showNotification(n.title || "NGS Store", {
-    body: n.body || "",
+  const link = (payload.fcmOptions && payload.fcmOptions.link) || d.url || "https://ngsstore.in/";
+  self.registration.showNotification(n.title || d.title || "NGS Store", {
+    body: n.body || d.body || "",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     data: { url: link },

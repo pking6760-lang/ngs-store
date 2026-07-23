@@ -511,3 +511,22 @@
 .pd-triprow .tr-title { font-size: 14px; font-weight: 700; color: var(--p-text); }
 .pd-triprow .tr-sub { font-size: 11.5px; color: var(--p-muted); margin-top: 1px; }
 .pd-triprow .tr-amt { font-size: 15px; font-weight: 800; color: var(--p-mint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── Web order-alert opt-in banner (iPhone / desktop partner web) ───────── */
+.pd-notify {
+  display: flex; align-items: center; gap: 11px;
+  margin: 10px 12px 0; padding: 11px 13px;
+  background: linear-gradient(180deg, rgba(229,18,46,.16), rgba(229,18,46,.08));
+  border: 1px solid rgba(229,18,46,.38); border-radius: 14px;
+}
+.pd-notify-ic { font-size: 20px; line-height: 1; }
+.pd-notify-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.pd-notify-txt b { font-size: 13.5px; font-weight: 800; color: var(--p-text); }
+.pd-notify-txt small { font-size: 11.5px; color: var(--p-muted); margin-top: 2px; line-height: 1.35; }
+.pd-notify-btn {
+  flex-shrink: 0; padding: 9px 16px; border: none; border-radius: 999px;
+  background: var(--p-red-bright, #E5122E); color: #fff;
+  font-size: 13px; font-weight: 800; cursor: pointer;
+}
+.pd-notify-btn:disabled { opacity: .6; }
+.pd-notify-hint { background: var(--p-card2, #17171b); border-color: rgba(255,255,255,.1); }

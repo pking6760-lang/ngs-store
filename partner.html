@@ -9,6 +9,16 @@
     <link rel="icon" type="image/svg+xml" href="/logo-partner.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-partner-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-partner.png" />
+
+    <!-- Installable PWA. iOS only allows Web Push when the app is added to the
+         Home Screen AND launches in standalone mode — which needs these tags +
+         the manifest below. Without them "Add to Home Screen" opens a plain
+         Safari bookmark and push stays blocked. -->
+    <link rel="manifest" href="/manifest-partner.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="NGS Partner" />
   </head>
   <body>
     <div id="root"></div>

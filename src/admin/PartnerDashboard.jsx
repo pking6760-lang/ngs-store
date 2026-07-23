@@ -3,6 +3,7 @@ import { useBackGuard } from "../lib/useBackGuard.js";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { initPartnerPush } from "../lib/partnerPush.js";
+import { initPartnerWebPush, enablePartnerAlerts, canReceivePartnerWebPush, partnerNeedsHomeScreen, partnerWebPushPermission } from "../lib/partnerWebPush.js";
 import { unlockAudio, stopAlarm, errorBeep, okBeep } from "../lib/sound.js";
 import { scanBarcode } from "../lib/scanner.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
@@ -65,7 +66,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
 
   // Live everywhere: reload the instant any of the partner's own data changes,
   // plus a light safety poll and refetch on refocus.
-  useEffect(() => { initPartnerPush(); }, []);
+  useEffect(() => { initPartnerPush(); initPartnerWebPush(); }, []);
   useEffect(() => {
     reload();
     const unsubs = ["wallet_ledger", "partner_slots", "partner_presence", "partner_strikes"]
@@ -182,6 +183,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
 
   return (
     <div className="pd">
+      <NotifyBanner />
       <PullRefresh className="pd-scroll" onRefresh={refreshPartner} tint="#E5122E" disabled={runActive}>
         {switching ? (
           <PageLoad variant="partner" text={tab} />
@@ -206,6 +208,65 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
         <RunScreen task={task} cfg={cfg} busy={taskBusy} onAction={taskAction}
           autoFailed={autoFailed} onAccept={manualAccept} />
       )}
+    </div>
+  );
+}
+
+/* Order-alert opt-in for the WEB partner app (iPhone / desktop). Native app
+   handles its own push, so this shows only on the web. iOS needs the app added
+   to the Home Screen first, then a real tap to grant permission. */
+function NotifyBanner() {
+  const [perm, setPerm] = useState(() => partnerWebPushPermission());
+  const [needsHome, setNeedsHome] = useState(() => partnerNeedsHomeScreen());
+  const [canPush, setCanPush] = useState(() => canReceivePartnerWebPush());
+  const [busy, setBusy] = useState(false);
+
+  // Re-check on focus (e.g. after they add to Home Screen and relaunch).
+  useEffect(() => {
+    const recheck = () => { setPerm(partnerWebPushPermission()); setNeedsHome(partnerNeedsHomeScreen()); setCanPush(canReceivePartnerWebPush()); };
+    recheck();
+    document.addEventListener("visibilitychange", recheck);
+    return () => document.removeEventListener("visibilitychange", recheck);
+  }, []);
+
+  // Native app, unsupported browser, or already on → nothing to show.
+  if (typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.()) return null;
+  if (perm === "granted") return null;
+  if (!needsHome && !canPush) return null; // browser can't do web push at all
+
+  if (needsHome) {
+    return (
+      <div className="pd-notify pd-notify-hint">
+        <span className="pd-notify-ic">🔔</span>
+        <span className="pd-notify-txt">
+          <b>Turn on order alerts</b>
+          <small>Tap <b>Share</b> → <b>Add to Home Screen</b>, then open NGS Partner from that icon.</small>
+        </span>
+      </div>
+    );
+  }
+
+  const enable = async () => {
+    setBusy(true);
+    try {
+      const ok = await enablePartnerAlerts();
+      setPerm(partnerWebPushPermission());
+      if (!ok && Notification.permission === "denied") {
+        alert("Notifications are blocked. Enable them for ngsstore.in in your browser/site settings, then reopen the app.");
+      }
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="pd-notify">
+      <span className="pd-notify-ic">🔔</span>
+      <span className="pd-notify-txt">
+        <b>Turn on order alerts</b>
+        <small>Get notified the moment an order is assigned to you.</small>
+      </span>
+      <button className="pd-notify-btn" onClick={enable} disabled={busy}>
+        {busy ? "…" : "Turn on"}
+      </button>
     </div>
   );
 }
