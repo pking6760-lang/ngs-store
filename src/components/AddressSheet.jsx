@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { tr } from "../lib/i18n.jsx";
 import { useSettings } from "../lib/hooks.js";
 import { getShopLocations } from "../lib/store.js";
 import { searchAddress, getCurrentLocation, reverseGeocode } from "../lib/location.js";
@@ -51,12 +52,12 @@ export default function AddressSheet({ open, onClose }) {
 
   async function select(a) {
     try { await api.setDefaultAddress(a.id); await applyRewards?.(); onClose(); }
-    catch (e) { alert(e.message || "Couldn't set the address."); }
+    catch (e) { alert(e.message || tr("Couldn't set the address.")); }
   }
   async function remove(a) {
     if (!window.confirm("Delete this address?")) return;
     try { await api.deleteAddress(a.id); await applyRewards?.(); load(); }
-    catch (e) { alert(e.message || "Couldn't delete."); }
+    catch (e) { alert(e.message || tr("Couldn't delete.")); }
   }
 
   if (!open) return null;
@@ -82,10 +83,10 @@ export default function AddressSheet({ open, onClose }) {
             {loading && list.length === 0 ? (
               <p className="addr-empty">Loading…</p>
             ) : list.length === 0 ? (
-              <p className="addr-empty">No saved addresses yet. Add one to get started.</p>
+              <p className="addr-empty">{tr("No saved addresses yet. Add one to get started.")}</p>
             ) : (
               <div className="addr-list">
-                <div className="addr-list-lbl">Saved addresses</div>
+                <div className="addr-list-lbl">{tr("Saved addresses")}</div>
                 {list.map((a) => {
                   const L = labelOf(a.label);
                   return (
@@ -93,7 +94,7 @@ export default function AddressSheet({ open, onClose }) {
                       <button className="addr-card-main" onClick={() => select(a)}>
                         <span className="addr-card-ic"><Ic d={L.d} size={19} /></span>
                         <span className="addr-card-txt">
-                          <span className="addr-card-name">{L.name}{a.isDefault && <span className="addr-badge">Current</span>}</span>
+                          <span className="addr-card-name">{L.name}{a.isDefault && <span className="addr-badge">{tr("Current")}</span>}</span>
                           <span className="addr-card-line">{a.address}</span>
                         </span>
                         {a.isDefault && <span className="addr-card-check"><Ic d={I.check} size={16} sw={2.4} /></span>}
@@ -145,7 +146,7 @@ function AddressForm({ editing, onDone }) {
       } catch { /* keep coords even if the label lookup fails */ }
       setSuggestions([]);
     } catch (e) {
-      setErr(e.message || "Couldn't get your location.");
+      setErr(e.message || tr("Couldn't get your location."));
     } finally { setLocating(false); }
   }
 
@@ -186,13 +187,13 @@ function AddressForm({ editing, onDone }) {
       else await api.addAddress({ label, address: address.trim(), location, makeDefault: true });
       onDone();
     } catch (e) {
-      setErr(e.message || "Couldn't save. Please try again."); setBusy(false);
+      setErr(e.message || tr("Couldn't save. Please try again.")); setBusy(false);
     }
   }
 
   return (
     <div className="addr-body">
-      <div className="addr-form-lbl">Save as</div>
+      <div className="addr-form-lbl">{tr("Save as")}</div>
       <div className="addr-chips">
         {LABELS.map((l) => (
           <button
@@ -219,7 +220,7 @@ function AddressForm({ editing, onDone }) {
       <div className="loc-or"><span>or type it below</span></div>
 
       <label className="addr-field">
-        <span>Full address</span>
+        <span>{tr("Full address")}</span>
         <div className="address-autocomplete">
           <textarea
             rows={3}
@@ -250,8 +251,8 @@ function AddressForm({ editing, onDone }) {
       <button type="button" className="addr-pin" onClick={() => setMap(true)}>
         <span className="addr-pin-ic"><Ic d={I.pin} size={17} /></span>
         <span>
-          <strong>Or pin your exact location on the map</strong>
-          <small>Helps the delivery partner reach you faster</small>
+          <strong>{tr("Or pin your exact location on the map")}</strong>
+          <small>{tr("Helps the delivery partner reach you faster")}</small>
         </span>
       </button>
 

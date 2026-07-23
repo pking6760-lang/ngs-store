@@ -282,6 +282,51 @@ const HI = {
   "Couldn't save. Please try again.": "सहेजा नहीं जा सका। कृपया फिर से कोशिश करें।",
   "Couldn't save your rating. Please try again.": "आपकी रेटिंग सहेजी नहीं जा सकी। कृपया फिर से कोशिश करें।",
   "Thanks for your feedback!": "आपके फ़ीडबैक के लिए धन्यवाद!",
+
+  // ── Rewards ────────────────────────────────────────────────────────────────
+  "reward points": "इनाम पॉइंट्स",
+  "Earn reward points on eligible items in every order you place.": "हर ऑर्डर में योग्य वस्तुओं पर इनाम पॉइंट्स कमाएं।",
+  "Redeem at checkout.": "चेकआउट पर भुनाएं।",
+
+  // ── Refer & earn ───────────────────────────────────────────────────────────
+  "Your code": "आपका कोड",
+  "Share code": "कोड साझा करें",
+  "Copied": "कॉपी हुआ",
+  "friends joined": "दोस्त जुड़े",
+  "earned so far": "अब तक कमाया",
+  "Have a friend's code?": "दोस्त का कोड है?",
+  "Only before your first order.": "सिर्फ़ आपके पहले ऑर्डर से पहले।",
+
+  // ── Membership (NGS Prime) ─────────────────────────────────────────────────
+  "Member": "सदस्य",
+  "Get NGS Prime": "NGS Prime लें",
+  "Pay from Wallet": "वॉलेट से भुगतान करें",
+  "not enough": "पर्याप्त नहीं",
+  "Joining…": "जुड़ रहे हैं…",
+  "Renew here anytime — your benefits never pause.": "यहाँ कभी भी नवीनीकरण करें — आपके लाभ कभी नहीं रुकते।",
+  "Pay by any UPI app or your NGS Wallet · activates instantly.": "किसी भी UPI ऐप या अपने NGS वॉलेट से भुगतान करें · तुरंत सक्रिय।",
+  "Offers and updates from the store will appear here.": "दुकान के ऑफ़र और अपडेट यहाँ दिखेंगे।",
+
+  // ── Address ────────────────────────────────────────────────────────────────
+  "Add address": "पता जोड़ें",
+  "Edit address": "पता संपादित करें",
+  "Save address": "पता सहेजें",
+  "Save as": "इस रूप में सहेजें",
+  "Saved addresses": "सहेजे गए पते",
+  "No saved addresses yet. Add one to get started.": "अभी कोई सहेजा पता नहीं। शुरू करने के लिए एक जोड़ें।",
+  "Or pin your exact location on the map": "या नक्शे पर अपना सटीक स्थान पिन करें",
+  "Full address": "पूरा पता",
+  "Helps the delivery partner reach you faster": "डिलीवरी पार्टनर को आप तक तेज़ी से पहुँचने में मदद करता है",
+  "Current": "वर्तमान",
+  "Other": "अन्य",
+  "Home": "घर",
+  "Work": "काम",
+  "Delete": "हटाएं",
+  "Delete this address?": "यह पता हटाएं?",
+  "Please enter your address.": "कृपया अपना पता डालें।",
+  "Couldn't get your location.": "आपका स्थान नहीं लिया जा सका।",
+  "Couldn't set the address.": "पता सेट नहीं हो सका।",
+  "Couldn't delete.": "हटाया नहीं जा सका।",
 };
 
 const DICT = { en: {}, hi: HI };

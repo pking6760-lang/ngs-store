@@ -924,7 +924,7 @@ function Inbox({ notes, userId, error, onRetry }) {
       <div className="account-empty">
         <div className="empty-ic"><MIcon d={PIC.bell} size={30} /></div>
         <p>{tr("No messages yet")}</p>
-        <span>Offers and updates from the store will appear here.</span>
+        <span>{tr("Offers and updates from the store will appear here.")}</span>
       </div>
     );
   }
@@ -962,14 +962,14 @@ function Rewards({ user }) {
       <div className="rewards-hero">
         <div className="rewards-hero-ic"><MIcon d={PIC.star} size={20} /></div>
         <div className="rewards-hero-val">{points}</div>
-        <div className="rewards-hero-lbl">reward points</div>
+        <div className="rewards-hero-lbl">{tr("reward points")}</div>
         <div className="rewards-hero-worth">worth ₹{worth} off your next order</div>
       </div>
 
       <div className="rewards-how">
         <h4>{tr("How it works")}</h4>
         <ul>
-          <li>Earn reward points on eligible items in every order you place.</li>
+          <li>{tr("Earn reward points on eligible items in every order you place.")}</li>
           <li>
             <strong>{redeemPer} points = ₹1</strong> off — redeem at checkout.
           </li>
@@ -1037,13 +1037,13 @@ function Referral({ user }) {
         <span className="refer-code-label">{tr("Your code")}</span>
         <button className="refer-code" onClick={copyCode}>{stats?.code || "…"}</button>
         <button className="primary-btn refer-share" onClick={share}>{tr("Share code")}</button>
-        {copied && <span className="refer-copied"><MIcon d={PIC.check} size={13} /> Copied</span>}
+        {copied && <span className="refer-copied"><MIcon d={PIC.check} size={13} /> {tr("Copied")}</span>}
       </div>
 
       {stats && (
         <div className="refer-stats">
-          <div><strong>{stats.joined}</strong><span>friends joined</span></div>
-          <div><strong>₹{Math.round(stats.earned || 0)}</strong><span>earned so far</span></div>
+          <div><strong>{stats.joined}</strong><span>{tr("friends joined")}</span></div>
+          <div><strong>₹{Math.round(stats.earned || 0)}</strong><span>{tr("earned so far")}</span></div>
         </div>
       )}
 
@@ -1173,14 +1173,14 @@ function Membership() {
       {err && <div className="auth-error">{err}</div>}
 
       <button className="prime-cta" onClick={() => setPayQr(true)} disabled={busy}>
-        <MIcon d={PIC.bolt} size={17} /> Get NGS Prime · ₹{price}
+        <MIcon d={PIC.bolt} size={17} /> {tr("Get NGS Prime")} · ₹{price}
       </button>
       <button
         className="prime-cta ghost"
         onClick={enoughWallet ? joinWithWallet : undefined}
         disabled={busy || !enoughWallet}
       >
-        {busy ? "Joining…" : enoughWallet ? `Pay from Wallet · ₹${price}` : `Wallet ₹${balance || 0} — not enough`}
+        {busy ? tr("Joining…") : enoughWallet ? `${tr("Pay from Wallet")} · ₹${price}` : `${tr("Wallet")} ₹${balance || 0} — ${tr("not enough")}`}
       </button>
       <p className="prime-fine">Pay by any UPI app or your NGS Wallet · activates instantly.</p>
     </div>
