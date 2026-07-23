@@ -64,7 +64,10 @@ export default function FeedbackAdmin() {
                 ) : (
                   <p className="fb-text muted">No comment left.</p>
                 )}
-                <div className="fb-cust">{o.customer || "Customer"}{o.userPhone ? ` · ${o.userPhone}` : ""}</div>
+                <div className="fb-cust">
+                  {o.customer || "Customer"}{o.userPhone ? ` · ${o.userPhone}` : ""}
+                  {o.customerCode && <span className="fb-cust-id">#{o.customerCode}</span>}
+                </div>
               </div>
             ))}
             {list.more && (

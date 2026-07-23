@@ -3015,6 +3015,8 @@ body {
 .fb-text { margin: 7px 0 4px; font-size: 14px; color: #16202c; line-height: 1.45; }
 .fb-text.muted { color: #9aa4b2; font-style: italic; }
 .fb-cust { font-size: 12.5px; color: #6b7885; font-weight: 600; }
+.fb-cust-id { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+  background: #eef2f9; color: #2b5bd7; font-size: 11.5px; font-weight: 800; letter-spacing: .3px; }
 
 /* ─── Order refund (to NGS wallet) ───────────────────────── */
 .od-refund { border-top: 1px solid var(--line); padding-top: 14px; }

@@ -116,6 +116,8 @@ function settingsToDb(p) {
 function mapOrder(r) {
   return { id: r.human_code || r.id, dbId: r.id, createdAt: r.created_at,
     customer: r.customer_name, userId: r.user_id, userPhone: r.user_phone,
+    // Customer's searchable code (present when the query embeds profiles).
+    customerCode: r.profiles?.customer_code || r.customer_code || null,
     accepted: r.accepted, member: r.member, status: r.status,
     items: (r.order_items || []).map((i) => ({ id: i.product_id, name: i.name,
       icon: i.icon, qty: i.qty, price: num(i.price) })),
@@ -1315,7 +1317,9 @@ export async function updateSettings(patch) {
 
 export async function fetchAllOrders() {
   const { data, error } = await must()
-    .from("orders").select("*, order_items(*)")
+    // Pull the customer's searchable code (customer_code) alongside the order so
+    // the admin can look them up from feedback / order lists.
+    .from("orders").select("*, order_items(*), profiles!orders_user_id_fkey(customer_code)")
     // Never surface an online order to the shop until its payment is confirmed,
     // and never show abandoned attempts ('Payment failed').
     .neq("status", "Awaiting payment")
