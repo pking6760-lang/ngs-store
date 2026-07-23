@@ -534,12 +534,10 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
   const { callParty } = useCall();
   const storePhone = cfg?.storePhone || "";
   const out = task.state === "out_for_delivery";
-  const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
   const due = Math.round(Number(task.codAmount) || 0);
-  const [given, setGiven] = useState("");        // cash the customer handed over
-  const givenN = Number(given) || 0;
-  const change = givenN > due ? givenN - due : 0; // credited to customer wallet
-  const tendered = change > 0 ? givenN : null;    // only pass when no change given
+  const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
+  const [cashOpen, setCashOpen] = useState(false);
+  const codOpen = !task.paid && task.isCod;
 
   async function showQr() {
     if (qr && qr !== "error") { setQr(null); return; }
@@ -574,42 +572,25 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
               : <span className="lo-paid">✓ Prepaid</span>}
         </div>
 
-        {!task.paid && task.isCod && (
+        {codOpen && (
           <>
             <button className="lo-qr-btn" onClick={showQr}>
               <QrGlyph />
               <span>{qr && qr !== "error" ? "Hide UPI QR" : "Show UPI QR — customer pays now"}</span>
             </button>
             {qr === "loading" && <div className="lo-qr-wrap"><div className="qr-spin"><span>Making secure QR…</span></div></div>}
-            {qr === "error" && <div className="lo-muted" style={{ textAlign: "center" }}>Couldn't create QR. Collect cash instead.</div>}
+            {qr === "error" && <div className="lo-muted" style={{ textAlign: "center" }}>Couldn't create QR. Take cash instead.</div>}
             {qr && qr.url && (
               <div className="lo-qr-wrap">
                 <div className="lo-qr"><img src={qr.url} alt="UPI QR" /></div>
                 <p className="lo-qr-note">Scan with <strong>any UPI app</strong> to pay <strong>{money(task.codAmount)}</strong><br /><span>Confirms automatically</span></p>
               </div>
             )}
-
-            {/* Cash with no change: keep the full note, credit the rest to the
-                customer's wallet — no physical change needed. Leave blank for
-                exact cash. */}
-            <div className="lo-change">
-              <span className="lo-change-lbl"><Ic name="cash" size={13} /> No change? Enter cash the customer gave</span>
-              <div className="lo-change-row">
-                <span className="lo-change-cur">₹</span>
-                <input className="lo-change-in" inputMode="numeric" pattern="[0-9]*"
-                  value={given} onChange={(e) => setGiven(e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder={String(due)} />
-                {[100, 200, 500].filter((v) => v > due).map((v) => (
-                  <button type="button" key={v} className="lo-change-q" onClick={() => setGiven(String(v))}>₹{v}</button>
-                ))}
-              </div>
-              {change > 0 && (
-                <p className="lo-change-note">₹{change} change → added to customer's wallet · you keep ₹{givenN}</p>
-              )}
-              {givenN > 0 && givenN < due && (
-                <p className="lo-change-warn">That's less than ₹{due} due.</p>
-              )}
-            </div>
+            {/* Take cash → enter what the customer gives; overpayment (no change)
+                is credited to their wallet. */}
+            <button className="lo-cash-btn" onClick={() => setCashOpen(true)}>
+              <Ic name="cash" size={16} /> Take cash
+            </button>
           </>
         )}
       </div>
@@ -622,14 +603,84 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
         {!out ? (
           <SlideAction label="Slide to go — Out for delivery" busy={busy} tone="blue"
             onConfirm={() => onAction(() => api.partnerMarkOutForDelivery(task.orderId))} />
+        ) : codOpen ? (
+          <p className="pd-collect-hint">Collect payment above — QR or <b>Take cash</b> — to finish this delivery.</p>
         ) : (
-          <SlideAction
-            label={change > 0 ? `Slide — Delivered (₹${change} to wallet)` : "Slide when handed over — Delivered"}
-            busy={busy} tone="green"
-            onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId, tendered))} />
+          <SlideAction label="Slide when handed over — Delivered" busy={busy} tone="green"
+            onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId))} />
         )}
       </div>
+
+      {cashOpen && (
+        <CashModal due={due} busy={busy} onClose={() => setCashOpen(false)}
+          onConfirm={(tendered) => onAction(() => api.partnerMarkDelivered(task.orderId, tendered))} />
+      )}
     </>
+  );
+}
+
+/* Take-cash flow: enter the note the customer hands over → a confirm step that
+   spells out the bill, what to deposit to the shop, and the change that goes to
+   the customer's wallet → marks the delivery done. */
+function CashModal({ due, busy, onClose, onConfirm }) {
+  const [amt, setAmt] = useState(String(due || ""));
+  const [step, setStep] = useState("enter"); // "enter" | "confirm"
+  const n = Number(amt) || 0;
+  const change = n > due ? n - due : 0;
+  const short = n > 0 && n < due;
+  const quick = [due, 100, 200, 500, 2000].filter((v, i, a) => v >= due && a.indexOf(v) === i).slice(0, 4);
+
+  return (
+    <div className="pd-cash-ov" onClick={busy ? undefined : onClose}>
+      <div className="pd-cash-sheet" onClick={(e) => e.stopPropagation()}>
+        {step === "enter" ? (
+          <>
+            <h3 className="pd-cash-h">Take cash</h3>
+            <p className="pd-cash-bill">Bill amount <b>₹{due}</b></p>
+            <label className="pd-cash-lbl">How much cash is the customer giving?</label>
+            <div className="pd-cash-inrow">
+              <span className="pd-cash-cur">₹</span>
+              <input className="pd-cash-in" inputMode="numeric" pattern="[0-9]*" autoFocus value={amt}
+                onChange={(e) => setAmt(e.target.value.replace(/[^0-9]/g, ""))} placeholder={String(due)} />
+            </div>
+            <div className="pd-cash-quick">
+              {quick.map((v) => (
+                <button type="button" key={v} className={n === v ? "sel" : ""} onClick={() => setAmt(String(v))}>₹{v}</button>
+              ))}
+            </div>
+            {change > 0 && <p className="pd-cash-hint">₹{change} change → customer's wallet</p>}
+            {short && <p className="pd-cash-warn">That's less than the ₹{due} bill.</p>}
+            <div className="pd-cash-actions">
+              <button className="pd-cash-cancel" onClick={onClose}>Cancel</button>
+              <button className="pd-cash-proceed" disabled={n < due} onClick={() => setStep("confirm")}>Proceed</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="pd-cash-h">Confirm cash</h3>
+            <div className="pd-cash-sum">
+              <div><span>Bill</span><b>₹{due}</b></div>
+              <div><span>Cash you're taking</span><b>₹{n}</b></div>
+              {change > 0 && <div className="cr"><span>Change → customer wallet</span><b>₹{change}</b></div>}
+            </div>
+            {change > 0 ? (
+              <p className="pd-cash-warnbox">
+                ⚠️ You're taking <b>₹{n}</b> but the bill is only <b>₹{due}</b>. <b>₹{change}</b> will be added to the
+                customer's wallet — and you must deposit the full <b>₹{n}</b> to the shop.
+              </p>
+            ) : (
+              <p className="pd-cash-warnbox">Collect <b>₹{due}</b>, hand over the order, and deposit it to the shop.</p>
+            )}
+            <div className="pd-cash-actions">
+              <button className="pd-cash-cancel" disabled={busy} onClick={() => setStep("enter")}>Back</button>
+              <button className="pd-cash-proceed" disabled={busy} onClick={() => onConfirm(change > 0 ? n : null)}>
+                {busy ? <span className="ngs-spin" /> : "Confirm & deliver"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
