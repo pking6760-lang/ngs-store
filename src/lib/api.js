@@ -1225,8 +1225,13 @@ export async function partnerMarkOutForDelivery(orderId) {
   const { error } = await must().rpc("partner_mark_out_for_delivery", { p_order: orderId });
   if (error) throw new Error(error.message || "Couldn't start delivery."); return { ok: true };
 }
-export async function partnerMarkDelivered(orderId) {
-  const { error } = await must().rpc("partner_mark_delivered", { p_order: orderId });
+// tendered = cash the customer handed over. Pass it ONLY when it's more than the
+// bill and the rider couldn't give change — the difference is credited to the
+// customer's wallet. Omit for exact cash / prepaid / QR-paid deliveries.
+export async function partnerMarkDelivered(orderId, tendered = null) {
+  const params = { p_order: orderId };
+  if (tendered != null && Number(tendered) > 0) params.p_tendered = Number(tendered);
+  const { error } = await must().rpc("partner_mark_delivered", params);
   if (error) throw new Error(error.message || "Couldn't mark delivered."); return { ok: true };
 }
 export async function partnerMarkReturned(orderId) {

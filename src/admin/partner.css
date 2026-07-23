@@ -556,3 +556,22 @@
   font-size: 15px; font-weight: 800; cursor: pointer;
 }
 .pd-pass:disabled { opacity: .5; }
+
+/* ── Cash with no change → credit customer wallet ────────────────────────── */
+.lo-change { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,.1); }
+.lo-change-lbl { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--p-muted, #9aa); }
+.lo-change-row { display: flex; align-items: center; gap: 7px; margin-top: 8px; }
+.lo-change-cur { font-size: 16px; font-weight: 800; color: var(--p-text, #fff); }
+.lo-change-in {
+  flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; font-weight: 800;
+  color: var(--p-text, #fff); background: var(--p-card2, #17171b);
+  border: 1.5px solid rgba(255,255,255,.14); border-radius: 12px; outline: none;
+}
+.lo-change-in:focus { border-color: var(--p-red-bright, #E5122E); }
+.lo-change-q {
+  flex: 0 0 auto; padding: 10px 12px; font-size: 13px; font-weight: 800;
+  color: var(--p-text, #fff); background: var(--p-card2, #17171b);
+  border: 1.5px solid rgba(255,255,255,.14); border-radius: 12px; cursor: pointer;
+}
+.lo-change-note { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: #34d399; line-height: 1.4; }
+.lo-change-warn { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #f59e0b; }

@@ -535,6 +535,11 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
   const storePhone = cfg?.storePhone || "";
   const out = task.state === "out_for_delivery";
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
+  const due = Math.round(Number(task.codAmount) || 0);
+  const [given, setGiven] = useState("");        // cash the customer handed over
+  const givenN = Number(given) || 0;
+  const change = givenN > due ? givenN - due : 0; // credited to customer wallet
+  const tendered = change > 0 ? givenN : null;    // only pass when no change given
 
   async function showQr() {
     if (qr && qr !== "error") { setQr(null); return; }
@@ -583,6 +588,28 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
                 <p className="lo-qr-note">Scan with <strong>any UPI app</strong> to pay <strong>{money(task.codAmount)}</strong><br /><span>Confirms automatically</span></p>
               </div>
             )}
+
+            {/* Cash with no change: keep the full note, credit the rest to the
+                customer's wallet — no physical change needed. Leave blank for
+                exact cash. */}
+            <div className="lo-change">
+              <span className="lo-change-lbl"><Ic name="cash" size={13} /> No change? Enter cash the customer gave</span>
+              <div className="lo-change-row">
+                <span className="lo-change-cur">₹</span>
+                <input className="lo-change-in" inputMode="numeric" pattern="[0-9]*"
+                  value={given} onChange={(e) => setGiven(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder={String(due)} />
+                {[100, 200, 500].filter((v) => v > due).map((v) => (
+                  <button type="button" key={v} className="lo-change-q" onClick={() => setGiven(String(v))}>₹{v}</button>
+                ))}
+              </div>
+              {change > 0 && (
+                <p className="lo-change-note">₹{change} change → added to customer's wallet · you keep ₹{givenN}</p>
+              )}
+              {givenN > 0 && givenN < due && (
+                <p className="lo-change-warn">That's less than ₹{due} due.</p>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -596,8 +623,10 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
           <SlideAction label="Slide to go — Out for delivery" busy={busy} tone="blue"
             onConfirm={() => onAction(() => api.partnerMarkOutForDelivery(task.orderId))} />
         ) : (
-          <SlideAction label="Slide when handed over — Delivered" busy={busy} tone="green"
-            onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId))} />
+          <SlideAction
+            label={change > 0 ? `Slide — Delivered (₹${change} to wallet)` : "Slide when handed over — Delivered"}
+            busy={busy} tone="green"
+            onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId, tendered))} />
         )}
       </div>
     </>
