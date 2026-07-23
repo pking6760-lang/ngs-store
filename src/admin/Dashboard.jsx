@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useProducts, useAdminProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
-import { getOpsConfigRaw } from "../lib/api.js";
+import { getOpsConfigRaw, fetchPartnerWallets, subscribeTable } from "../lib/api.js";
 import { Ic } from "./AdminIcons.jsx";
 import CategoryIcon from "../components/CategoryIcon.jsx";
 
@@ -16,6 +16,23 @@ export default function Dashboard({ onNavigate }) {
   // Ops rates + who covers picking/delivery — to net staff payouts out of profit.
   const [ops, setOps] = useState(null);
   useEffect(() => { getOpsConfigRaw().then(setOps).catch(() => {}); }, []);
+
+  // Cash the shop still needs to collect from partners (their cash-in-hand on
+  // COD orders). Kept live so the moment you confirm a deposit it updates.
+  const [wallets, setWallets] = useState({});
+  useEffect(() => {
+    const load = () => fetchPartnerWallets().then(setWallets).catch(() => {});
+    load();
+    const unsubs = ["wallet_ledger", "partner_strikes"].map((t) => subscribeTable(t, load));
+    return () => unsubs.forEach((u) => u && u());
+  }, []);
+  const cashToCollect = useMemo(() => {
+    const vals = Object.values(wallets);
+    return {
+      total: Math.round(vals.reduce((s, w) => s + (w.cashInHand || 0), 0)),
+      holders: vals.filter((w) => (w.cashInHand || 0) > 0).length,
+    };
+  }, [wallets]);
 
   // Buying cost per product, for the profit figure.
   const costMap = useMemo(() => {
@@ -183,6 +200,20 @@ export default function Dashboard({ onNavigate }) {
         />
         <StatCard label="Pending orders" value={stats.pending} icon="pending" tone="pink" />
       </div>
+
+      {cashToCollect.total > 0 && (
+        <button className="cash-collect" onClick={() => onNavigate("partners")}>
+          <span className="cash-collect-ic"><Ic name="wallet" size={20} /></span>
+          <span className="cash-collect-txt">
+            <span className="cash-collect-lbl">Cash to collect from partners</span>
+            <span className="cash-collect-sub">
+              held by {cashToCollect.holders} partner{cashToCollect.holders === 1 ? "" : "s"} · tap to view
+            </span>
+          </span>
+          <strong className="cash-collect-amt">₹{cashToCollect.total.toLocaleString("en-IN")}</strong>
+          <span className="cash-collect-arrow">›</span>
+        </button>
+      )}
 
       {(stats.givenBack > 0 || stats.walletUsed > 0 || stats.staffPay > 0 || stats.feesCollected > 0) && (
         <section className="panel dash-giveback">
