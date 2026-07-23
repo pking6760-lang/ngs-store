@@ -1191,6 +1191,12 @@ export async function partnerAccept(orderId) {
   const { error } = await must().rpc("partner_accept", { p_order: orderId });
   if (error) throw new Error(error.message || "Couldn't accept."); return { ok: true };
 }
+// Explicitly decline a just-assigned order — instantly rolls it to the next
+// nearest free partner (or the owner if none). No penalty.
+export async function partnerPass(orderId) {
+  const { error } = await must().rpc("partner_pass", { p_order: orderId });
+  if (error) throw new Error(error.message || "Couldn't pass this order."); return { ok: true };
+}
 export async function partnerMarkPacked(orderId) {
   const { error } = await must().rpc("partner_mark_packed", { p_order: orderId });
   if (error) throw new Error(error.message || "Couldn't mark packed."); return { ok: true };

@@ -530,3 +530,29 @@
 }
 .pd-notify-btn:disabled { opacity: .6; }
 .pd-notify-hint { background: var(--p-card2, #17171b); border-color: rgba(255,255,255,.1); }
+
+/* ── Accept offer (web): countdown ring + Accept / Pass ─────────────────── */
+.pd-offer-timer { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0 4px; }
+.pd-offer-ring {
+  --pct: 1;
+  width: 108px; height: 108px; border-radius: 50%;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(closest-side, var(--p-card, #17171b) 71%, transparent 72% 100%),
+    conic-gradient(var(--p-red-bright, #E5122E) calc(var(--pct) * 360deg), rgba(255,255,255,.12) 0);
+  transition: background .95s linear;
+}
+.pd-offer-ring span { font-size: 34px; font-weight: 800; color: var(--p-text, #fff); font-variant-numeric: tabular-nums; }
+.pd-offer-timer.urgent .pd-offer-ring { animation: pd-pulse 1s ease-in-out infinite; }
+.pd-offer-timer.urgent .pd-offer-ring span { color: var(--p-red-bright, #E5122E); }
+@keyframes pd-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.pd-offer-hint { font-size: 12px; color: var(--p-muted, #9aa); text-align: center; max-width: 240px; line-height: 1.4; margin: 0; }
+.pd-offer-actions { display: flex; gap: 10px; }
+.pd-offer-actions .lo-accept { flex: 1; }
+.pd-pass {
+  flex-shrink: 0; padding: 0 22px; min-height: 52px;
+  background: transparent; color: var(--p-muted, #9aa);
+  border: 1.5px solid rgba(255,255,255,.18); border-radius: 14px;
+  font-size: 15px; font-weight: 800; cursor: pointer;
+}
+.pd-pass:disabled { opacity: .5; }

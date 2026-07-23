@@ -132,14 +132,16 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
     return () => { alive = false; clearInterval(iv); };
   }, [presence.isOnline]);
 
-  // There is no reject — an assigned order is already the partner's. So the
-  // instant one appears (i.e. right after they tap Accept on the lock-screen
-  // alarm), accept it automatically and drop straight onto the delivery / pick
-  // page. No second Accept tap. If the accept call fails, we fall back to a
-  // manual Accept button so they're never stuck.
+  // Native app: the loud lock-screen alarm IS the accept prompt, so opening the
+  // app means "I'm taking it" — auto-accept and drop straight onto the run page.
+  // WEB has no lock-screen action, so it instead shows an explicit Accept screen
+  // with a countdown (see AcceptOffer); the rider chooses, and if they don't
+  // accept in time it rolls to the next rider (dispatch_tick / partner_pass).
+  const isNativeApp = typeof window !== "undefined" && !!window.Capacitor?.isNativePlatform?.();
   const autoTried = useRef(new Set());
   const [autoFailed, setAutoFailed] = useState(false);
   useEffect(() => {
+    if (!isNativeApp) return; // web accepts explicitly
     if (!task || task.state !== "assigned") { setAutoFailed(false); return; }
     if (taskBusy || autoTried.current.has(task.orderId)) return;
     autoTried.current.add(task.orderId);
@@ -152,13 +154,18 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
       } catch { setAutoFailed(true); }
       finally { setTaskBusy(false); }
     })();
-  }, [task, taskBusy]);
+  }, [task, taskBusy, isNativeApp]);
 
   function manualAccept() {
     if (!task) return;
     setAutoFailed(false);
     autoTried.current.add(task.orderId);
     taskAction(() => api.partnerAccept(task.orderId));
+  }
+  // Decline a just-assigned order (web) — rolls it to the next rider instantly.
+  function passTask() {
+    if (!task) return;
+    taskAction(() => api.partnerPass(task.orderId));
   }
 
   // Pull-to-refresh: refetch the partner's own data (wallet/slots/config/
@@ -206,7 +213,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
       </nav>
       {runActive && (
         <RunScreen task={task} cfg={cfg} busy={taskBusy} onAction={taskAction}
-          autoFailed={autoFailed} onAccept={manualAccept} />
+          autoFailed={autoFailed} onAccept={manualAccept} onPass={passTask} isNative={isNativeApp} />
       )}
     </div>
   );
@@ -380,14 +387,17 @@ function IncomingOrder({ task, busy, onAction }) {
 }
 
 /* ── Full-screen run page (takes over from Accept → delivery/pick) ──────── */
-function RunScreen({ task, cfg, busy, onAction, autoFailed, onAccept }) {
+function RunScreen({ task, cfg, busy, onAction, autoFailed, onAccept, onPass, isNative }) {
   const isReturn = !!task.isReturn;
   const isDelivery = task.role === "delivery";
   const assigned = task.state === "assigned";
   const out = task.state === "out_for_delivery";
   const code = task.code || (task.orderId || "").slice(0, 4).toUpperCase();
+  // On web the rider chooses to accept; on native it auto-accepts.
+  const offering = assigned && !isNative;
   const heading = assigned ? "New order" : isReturn ? "Return pickup" : isDelivery ? "Delivery" : "Packing";
-  const status = assigned ? (autoFailed ? "Tap to accept" : "Accepting…")
+  const status = assigned
+    ? (offering ? "Accept or pass" : autoFailed ? "Tap to accept" : "Accepting…")
     : isReturn ? "Collect the items"
       : isDelivery ? (out ? "On the way" : "Ready to go") : "Scan every item";
   return (
@@ -400,12 +410,83 @@ function RunScreen({ task, cfg, busy, onAction, autoFailed, onAccept }) {
         <span className="pd-rs-code">#{code}</span>
       </div>
       <div className="pd-runscreen-body">
-        {assigned ? <AcceptingBody task={task} busy={busy} autoFailed={autoFailed} onAccept={onAccept} />
+        {assigned
+          ? (offering
+              ? <AcceptOffer task={task} cfg={cfg} busy={busy} onAccept={onAccept} onPass={onPass} />
+              : <AcceptingBody task={task} busy={busy} autoFailed={autoFailed} onAccept={onAccept} />)
           : isReturn ? <ReturnBody task={task} busy={busy} onAction={onAction} />
             : isDelivery ? <DeliveryBody task={task} cfg={cfg} busy={busy} onAction={onAction} />
               : <PickBody task={task} busy={busy} onAction={onAction} />}
       </div>
     </div>
+  );
+}
+
+/* Accept offer (WEB) — order summary + a live countdown ring; the rider taps
+   Accept to take it or Pass to send it on. If the countdown runs out it auto-
+   passes, so an ignored order rolls to the next rider within the window. */
+function AcceptOffer({ task, cfg, busy, onAccept, onPass }) {
+  const isReturn = !!task.isReturn;
+  const isDelivery = task.role === "delivery";
+  const total = Math.max(5, Number(cfg?.assignment_timeout_seconds) || 30);
+  const [left, setLeft] = useState(total);
+  const passed = useRef(false);
+
+  // Fresh countdown per order.
+  useEffect(() => { passed.current = false; setLeft(total); }, [task.orderId, total]);
+
+  useEffect(() => {
+    if (busy) return;                       // paused while an action is in flight
+    if (left <= 0) {
+      if (!passed.current) { passed.current = true; onPass(); }  // ignored → roll on
+      return;
+    }
+    const id = setTimeout(() => setLeft((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [left, busy]);
+
+  const pct = Math.max(0, Math.min(1, left / total));
+  const urgent = left <= 10;
+
+  return (
+    <>
+      {task.earning > 0 && <EarnBanner amount={task.earning} />}
+      {isDelivery && !isReturn ? (
+        <div className="pd-run-card">
+          <div className="lo-row" style={{ borderTop: "none" }}>
+            <span className="lo-lbl">Payment</span>
+            {task.paid ? <span className="lo-paid">✓ Prepaid</span>
+              : task.isCod ? <span className="lo-cod"><Ic name="cash" size={14} /> Collect {money(task.codAmount)}</span>
+                : <span className="lo-paid">✓ Prepaid</span>}
+          </div>
+        </div>
+      ) : (
+        <div className="pd-run-card">
+          <div className="lo-items">
+            <span className="lo-lbl">{isReturn ? "Collect these items back" : "Pack these"}</span>
+            {(task.items || []).map((it, i) => (
+              <div className="lo-item" key={i}><span>{it.name}</span><span>× {it.qty}</span></div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className={`pd-offer-timer ${urgent ? "urgent" : ""}`}>
+        <div className="pd-offer-ring" style={{ "--pct": pct }}>
+          <span>{busy ? "…" : left}</span>
+        </div>
+        <p className="pd-offer-hint">{busy ? "Working…" : "Accept before the timer ends, or it goes to another rider."}</p>
+      </div>
+
+      <div className="pd-run-foot">
+        <div className="pd-offer-actions">
+          <button className="pd-btn pd-pass" disabled={busy} onClick={onPass}>Pass</button>
+          <button className="pd-btn lo-accept" disabled={busy} onClick={onAccept}>
+            {busy ? <span className="ngs-spin" /> : <><Ic name="check" size={16} /> Accept {isReturn ? "return" : "order"}</>}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
