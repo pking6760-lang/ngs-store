@@ -4,6 +4,7 @@ import PartnerApp from "./PartnerApp.jsx";
 import AppSplash from "../components/AppSplash.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import { CallProvider } from "../components/CallProvider.jsx";
+import UpdateGate from "../components/UpdateGate.jsx";
 import "../styles.css";
 import "./admin.css";
 import "./partner.css";
@@ -12,9 +13,11 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
       <AppSplash variant="partner" tagline="partner" />
-      <CallProvider>
-        <PartnerApp />
-      </CallProvider>
+      <UpdateGate app="partner">
+        <CallProvider>
+          <PartnerApp />
+        </CallProvider>
+      </UpdateGate>
     </ErrorBoundary>
   </StrictMode>
 );

@@ -14,6 +14,7 @@ import AppHealth from "./AppHealth.jsx";
 import FeedbackAdmin from "./FeedbackAdmin.jsx";
 import DeliveryAdmin from "./DeliveryAdmin.jsx";
 import PartnersAdmin from "./PartnersAdmin.jsx";
+import AppUpdatesAdmin from "./AppUpdatesAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
 import { AdminMark } from "./BrandMark.jsx";
 import { Ic } from "./AdminIcons.jsx";
@@ -58,6 +59,7 @@ const TILES = [
   { id: "auto", label: "Auto notify", icon: "broadcast", tint: "#B197FC" },
   { id: "themes", label: "Festival themes", icon: "offers", tint: "#E8590C" },
   { id: "health", label: "App health", icon: "dashboard", tint: "#0CA678" },
+  { id: "updates", label: "App updates", icon: "broadcast", tint: "#4263EB" },
   { id: "settings", label: "Settings", icon: "settings", tint: "#5C6570" },
 ];
 
@@ -224,6 +226,7 @@ function AdminSection({ view, navArg, onOpen }) {
             {view === "auto" && <AutoNotify />}
             {view === "themes" && <ThemesAdmin />}
             {view === "health" && <AppHealth />}
+            {view === "updates" && <AppUpdatesAdmin />}
             {view === "settings" && <OpsSettings />}
           </div>
         )}

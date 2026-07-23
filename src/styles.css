@@ -5013,3 +5013,35 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 .apk-x { position: absolute; top: -9px; right: -9px; width: 26px; height: 26px; border-radius: 50%;
   border: none; background: #16202c; color: #fff; font-size: 13px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+
+/* ── Forced in-app update wall (native only) ─────────────────────────────── */
+.upd-gate {
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(8, 10, 14, 0.94);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.upd-card {
+  width: 100%; max-width: 380px; background: #ffffff; border-radius: 22px;
+  padding: 30px 24px 24px; text-align: center;
+  box-shadow: 0 30px 80px -20px rgba(0,0,0,0.6);
+}
+.upd-ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; border-radius: 50%; margin-bottom: 16px;
+  background: #eaf7f0; color: #0a9155;
+}
+.upd-title { margin: 0 0 8px; font-size: 21px; font-weight: 800; color: #14171f; }
+.upd-msg { margin: 0 0 16px; font-size: 14.5px; line-height: 1.55; color: #555c6b; }
+.upd-notes {
+  text-align: left; font-size: 13px; line-height: 1.5; color: #3a4150;
+  background: #f4f6f9; border: 1px solid #e6e9ef; border-radius: 12px;
+  padding: 12px 14px; margin: 0 0 18px; white-space: pre-wrap;
+  max-height: 40vh; overflow-y: auto;
+}
+.upd-btn {
+  width: 100%; padding: 15px; border: none; border-radius: 14px;
+  background: #0a9155; color: #fff; font-size: 16px; font-weight: 800; cursor: pointer;
+}
+.upd-btn:active { transform: scale(0.99); }
+.upd-hint { margin: 12px 0 0; font-size: 12.5px; color: #8a92a1; }

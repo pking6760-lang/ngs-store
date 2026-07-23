@@ -991,6 +991,43 @@ export async function fetchStaffPresence() {
   return out;
 }
 
+/* ─── In-app updates (forced) ───────────────────────────────────────────── */
+
+// Latest published version for an app ('customer' | 'partner' | 'admin').
+export async function getAppVersion(app) {
+  const { data, error } = await must().rpc("get_app_version", { p_app: app });
+  if (error) return null;
+  const r = Array.isArray(data) ? data[0] : data;
+  if (!r) return null;
+  return { app: r.app, versionName: r.version_name, versionCode: Number(r.version_code), apkUrl: r.apk_url, releaseNotes: r.release_notes };
+}
+export async function fetchAllAppVersions() {
+  const { data, error } = await must().from("app_versions").select("*").order("app");
+  if (error) return [];
+  return (data || []).map((r) => ({
+    app: r.app, versionName: r.version_name, versionCode: Number(r.version_code),
+    apkUrl: r.apk_url, releaseNotes: r.release_notes, updatedAt: r.updated_at,
+  }));
+}
+// Admin: upload a new APK to the public app-releases bucket; returns its URL.
+export async function adminUploadAppApk(file, app, versionCode) {
+  const path = `${app}-v${versionCode}.apk`;
+  const { error } = await must().storage.from("app-releases")
+    .upload(path, file, { contentType: "application/vnd.android.package-archive", upsert: true });
+  if (error) throw new Error(error.message || "Upload failed.");
+  const { data } = must().storage.from("app-releases").getPublicUrl(path);
+  return `${data.publicUrl}?t=${Date.now()}`; // cache-bust so the new build downloads
+}
+// Admin: publish a version — every installed app below it is forced to update.
+export async function adminPublishAppVersion({ app, versionName, versionCode, apkUrl, notes }) {
+  const { error } = await must().rpc("admin_publish_app_version", {
+    p_app: app, p_version_name: versionName, p_version_code: Number(versionCode),
+    p_apk_url: apkUrl || null, p_notes: notes || null,
+  });
+  if (error) throw new Error(error.message || "Couldn't publish the update.");
+  return { ok: true };
+}
+
 // Slot bookings (mine) + live availability counts for the grid.
 export async function getMySlots() {
   const { data, error } = await must().from("partner_slots")
