@@ -296,6 +296,10 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   if (!open || !order) return null;
   const eta = etaMinutes(order);
   const delivered = order.status === "Delivered";
+  // A delivery partner only exists once the order is actually on its way — the
+  // picker packs first, then a driver (or the owner) takes it out. Until then
+  // there's no one to call, so the call buttons stay hidden.
+  const outForDelivery = order.status === "Out for delivery";
   const { text } = statusLine(order);
   const firstName = rider?.name ? rider.name.split(" ")[0] : "";
   const itemCount = (order.items || []).reduce((s, it) => s + it.qty, 0);
@@ -331,7 +335,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                 : text}
             </div>
           </div>
-          {!delivered && (
+          {outForDelivery && (
             <div className="lt-hero-actions">
               <button className="lt-hero-call" onClick={callDelivery} aria-label="Call the delivery partner">
                 <Svg d={Icon.phone} size={14} sw={2.2} /> Call
@@ -372,7 +376,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
         )}
 
         {/* Driver card */}
-        {rider && !delivered && (
+        {rider && outForDelivery && (
           <div className="lt-driver">
             <div className="lt-driver-av">
               <span>{(rider.name || "?").trim().charAt(0).toUpperCase() || "R"}</span>
@@ -409,15 +413,24 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           </ol>
         </div>
 
-        {/* Contact — always in the scroll flow (the hero pill scrolls away).
-            In-app, masked call; the server rings the rider or the owner. */}
-        {!delivered && (
+        {/* Contact — the masked in-app call reaches the delivery partner, so it
+            only makes sense once someone is actually out delivering. While the
+            order is still being packed we show a calm "being prepared" note. */}
+        {outForDelivery ? (
           <div className="lt-card lt-contact">
             <div className="lt-card-title">Need help with this order?</div>
             <div className="lt-contact-btns">
               <button className="lt-contact-btn" onClick={callDelivery}>
                 <Svg d={Icon.phone} size={16} sw={2.2} /> Call delivery partner
               </button>
+            </div>
+          </div>
+        ) : !delivered && (
+          <div className="lt-card lt-contact">
+            <div className="lt-card-title">Need help with this order?</div>
+            <div className="lt-contact-note">
+              <Svg d={Icon.box} size={16} sw={2.1} />
+              <span>Your order is being prepared. You'll be able to call your delivery partner once it's on the way.</span>
             </div>
           </div>
         )}
