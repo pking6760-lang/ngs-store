@@ -532,6 +532,12 @@ export async function partnerUpdateLocation(orderId, lat, lng) {
   if (error) throw error;
 }
 
+// Report where the partner is while ONLINE (even when idle), so new orders go
+// to the nearest free rider. Best-effort — failures are ignored.
+export async function partnerPingLocation(lat, lng) {
+  try { await must().rpc("partner_ping_location", { p_lat: lat, p_lng: lng }); } catch { /* ignore */ }
+}
+
 // Customer attaches their exact location to an order placed without one, so
 // live tracking + the map light up. Only works while the order is in flight.
 export async function setOrderLocation(orderId, location) {

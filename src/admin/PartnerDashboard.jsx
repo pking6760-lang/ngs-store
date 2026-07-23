@@ -114,6 +114,23 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
     return () => { alive = false; if (stop) stop(); };
   }, [streamOrderId]);
 
+  // While ONLINE (even idle), report position every ~45s so new orders route to
+  // the nearest free rider. Best-effort; a denied/failed fix is simply skipped.
+  useEffect(() => {
+    if (!presence.isOnline) return;
+    let alive = true;
+    const ping = async () => {
+      try {
+        const { getCurrentLocation } = await import("../lib/location.js");
+        const loc = await getCurrentLocation();
+        if (alive && loc) api.partnerPingLocation(loc.lat, loc.lng);
+      } catch { /* ignore */ }
+    };
+    ping();
+    const iv = setInterval(ping, 45000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [presence.isOnline]);
+
   // There is no reject — an assigned order is already the partner's. So the
   // instant one appears (i.e. right after they tap Accept on the lock-screen
   // alarm), accept it automatically and drop straight onto the delivery / pick
