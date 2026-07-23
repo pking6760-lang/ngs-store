@@ -54,3 +54,6 @@ scratchpad/
 android-customer/build/
 android-customer/app/build/
 android-customer/.gradle/
+
+# Release signing (kept out of git — delivered separately)
+signing/

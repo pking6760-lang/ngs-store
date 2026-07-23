@@ -1,0 +1,67 @@
+# Builds SIGNED release APKs for all three apps (customer / admin / partner).
+# The release keystore is NEVER in git — it comes from repo secrets:
+#   NGS_KEYSTORE_BASE64  – base64 of signing/ngs-release.jks
+#   NGS_KEYSTORE_PASSWORD – store password
+#   NGS_KEY_ALIAS         – "ngs"
+#   NGS_KEY_PASSWORD      – key password (same as store password)
+# Run it from the Actions tab (workflow_dispatch); the signed APKs come out as
+# downloadable build artifacts.
+name: Build signed release APKs
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app:
+          - { dir: android-customer, name: ngs-customer }
+          - { dir: android,          name: ngs-admin }
+          - { dir: android-partner,  name: ngs-partner }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+
+      - name: Build web bundles
+        run: |
+          npm ci
+          npm run build:customer
+          npx vite build --config vite.config.mobile.js && node scripts/prepare-www.mjs
+          npx vite build --config vite.config.partner.js
+          cp www-partner/partner.html www-partner/index.html
+
+      - name: Sync web into the Android app
+        run: |
+          d="${{ matrix.app.dir }}"
+          case "$d" in
+            android-customer) src=www-customer ;;
+            android)          src=www ;;
+            android-partner)  src=www-partner ;;
+          esac
+          rm -rf "$d/app/src/main/assets/public"/*
+          cp -r "$src"/. "$d/app/src/main/assets/public"/
+
+      - name: Restore the release keystore + properties from secrets
+        run: |
+          mkdir -p signing
+          echo "${{ secrets.NGS_KEYSTORE_BASE64 }}" | base64 -d > signing/ngs-release.jks
+          cat > signing/keystore.properties <<EOF
+          storeFile=../../signing/ngs-release.jks
+          storePassword=${{ secrets.NGS_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.NGS_KEY_ALIAS }}
+          keyPassword=${{ secrets.NGS_KEY_PASSWORD }}
+          EOF
+
+      - name: Assemble signed release
+        run: cd "${{ matrix.app.dir }}" && ./gradlew assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app.name }}-release-apk
+          path: ${{ matrix.app.dir }}/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

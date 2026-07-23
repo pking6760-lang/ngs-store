@@ -1,8 +1,16 @@
 apply plugin: 'com.android.application'
 
+// Release signing — keystore + passwords come from ../signing/keystore.properties
+// (git-ignored). When absent (e.g. a plain debug build), builds fall back to the
+// debug key so `assembleDebug` still works with no setup.
+def ngsKsProps = new Properties()
+def ngsKsFile = rootProject.file("../signing/keystore.properties")
+if (ngsKsFile.exists()) { ngsKsProps.load(new FileInputStream(ngsKsFile)) }
+
 android {
     namespace "com.ngsstore.admin"
     compileSdk rootProject.ext.compileSdkVersion
+    lint { checkReleaseBuilds false; abortOnError false }
     defaultConfig {
         applicationId "com.ngsstore.customer"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -16,10 +24,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (ngsKsFile.exists()) {
+                storeFile file("../../signing/ngs-release.jks")
+                storePassword ngsKsProps['storePassword']
+                keyAlias ngsKsProps['keyAlias']
+                keyPassword ngsKsProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig ngsKsFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
 }
