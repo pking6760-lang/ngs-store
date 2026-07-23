@@ -971,6 +971,26 @@ export async function setOnline(on) {
   return { ok: true };
 }
 
+// Admin: live presence for every partner (who's online right now). RLS lets an
+// admin read all partner_presence rows. Returns a map keyed by user_id.
+export async function fetchStaffPresence() {
+  const { data, error } = await must()
+    .from("partner_presence")
+    .select("user_id, is_online, active_order_id, went_online_at, updated_at, loc_at");
+  if (error) return {};
+  const out = {};
+  (data || []).forEach((r) => {
+    out[r.user_id] = {
+      isOnline: !!r.is_online,
+      activeOrderId: r.active_order_id || null,
+      wentOnlineAt: r.went_online_at || null,
+      updatedAt: r.updated_at || null,
+      locAt: r.loc_at || null,
+    };
+  });
+  return out;
+}
+
 // Slot bookings (mine) + live availability counts for the grid.
 export async function getMySlots() {
   const { data, error } = await must().from("partner_slots")

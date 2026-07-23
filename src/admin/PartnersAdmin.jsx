@@ -15,6 +15,54 @@ function fmtDate(iso) {
   } catch { return iso; }
 }
 
+// online = on shift & free · busy = on shift & handling an order · offline = off.
+function staffStatus(pr) {
+  if (!pr || !pr.isOnline) return "offline";
+  return pr.activeOrderId ? "busy" : "online";
+}
+function sinceLabel(iso) {
+  if (!iso) return "";
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return `${h}h${m ? ` ${m}m` : ""}`;
+}
+
+// Live roster of everyone currently on shift, shown at the top of the team view.
+function OnShiftPanel({ team, presence }) {
+  const rows = team
+    .map((p) => ({ p, st: staffStatus(presence[p.userId]), pr: presence[p.userId] }))
+    .filter((r) => r.st !== "offline")
+    // free riders first, then the ones mid-order.
+    .sort((a, b) => (a.st === "busy" ? 1 : 0) - (b.st === "busy" ? 1 : 0));
+  return (
+    <section className="onshift">
+      <div className="onshift-head">
+        <span className="onshift-title"><span className="os-dot online" /> On shift now</span>
+        <span className="onshift-count">{rows.length} online</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="onshift-empty">No staff online right now.</p>
+      ) : (
+        <div className="onshift-list">
+          {rows.map(({ p, st, pr }) => (
+            <div className="onshift-row" key={p.userId}>
+              <span className={`os-dot ${st}`} />
+              <span className="os-name">
+                {p.fullName}
+                <small>{p.role === "picker" ? "Picker" : "Delivery"}</small>
+              </span>
+              <span className={`os-badge ${st}`}>{st === "busy" ? "On a run" : "Online"}</span>
+              {pr?.wentOnlineAt && <span className="os-since">{sinceLabel(pr.wentOnlineAt)}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // One document photo. Loads a preview; tapping opens it full-screen INSIDE the
 // app (never navigates away, so the backend address is never shown).
 function DocView({ path, label, onOpen }) {
@@ -319,6 +367,16 @@ export default function PartnersAdmin() {
     return () => unsubs.forEach((u) => u && u());
   }, [partners.length]);
 
+  // Live "who's online" — presence updates in real time as staff go on/off shift.
+  const [presence, setPresence] = useState({});
+  const loadPresence = () => api.fetchStaffPresence().then(setPresence).catch(() => {});
+  useEffect(() => {
+    loadPresence();
+    const unsub = api.subscribeTable("partner_presence", loadPresence);
+    const poll = setInterval(loadPresence, 20000); // refresh "since" times + safety net
+    return () => { if (unsub) unsub(); clearInterval(poll); };
+  }, []);
+
   const byName = (a, b) => a.fullName.localeCompare(b.fullName);
   // Home shows your team (approved). Pending (awaiting your decision) is the
   // "Requests" list; rejected are already decided, so they get their own list.
@@ -342,6 +400,7 @@ export default function PartnersAdmin() {
     <>
       {view === "team" ? (
         <>
+          <OnShiftPanel team={team} presence={presence} />
           {pending.length > 0 && (
             <button className="pending-banner" onClick={() => setView("requests")}>
               {pending.length} partner{pending.length === 1 ? "" : "s"} waiting for your approval — review →
@@ -384,10 +443,19 @@ export default function PartnersAdmin() {
             return (
               <div className="order-card" key={p.id}>
                 <button className="partner-head" onClick={() => setOpenId(open ? null : p.id)}>
-                  <span className="partner-role"><Ic name={p.role === "picker" ? "products" : "delivery"} size={18} /></span>
+                  <span className={`partner-role ${staffStatus(presence[p.userId])}`}>
+                    <Ic name={p.role === "picker" ? "products" : "delivery"} size={18} />
+                  </span>
                   <span className="partner-main">
                     <strong>{p.fullName}{p.empCode && <span className="emp-badge">{p.empCode}</span>}</strong>
-                    <small>{p.role === "picker" ? "Picker" : "Delivery"} · {p.phone || "—"}</small>
+                    <small>
+                      {p.role === "picker" ? "Picker" : "Delivery"} · {p.phone || "—"}
+                      {staffStatus(presence[p.userId]) !== "offline" && (
+                        <span className={`pstatus ${staffStatus(presence[p.userId])}`}>
+                          {staffStatus(presence[p.userId]) === "busy" ? "On a run" : "Online"}
+                        </span>
+                      )}
+                    </small>
                     {cash > 0 && (
                       <span className="partner-cash">Cash in hand · ₹{cash.toLocaleString("en-IN")}</span>
                     )}
