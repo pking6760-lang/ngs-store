@@ -14,6 +14,7 @@ import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
 import ScratchCard from "./ScratchCard.jsx";
 import ProductThumb from "./ProductThumb.jsx";
+import { tr } from "../lib/i18n.jsx";
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
@@ -64,7 +65,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
               ←
             </button>
           ) : null}
-          <h2>{active ? active.label : "My Account"}</h2>
+          <h2>{active ? tr(active.label) : tr("My Account")}</h2>
           <button className="drawer-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
@@ -101,7 +102,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
                   className="account-menu-row"
                   onClick={() => setTab(t.id)}
                 >
-                  <span className="account-menu-label">{t.label}</span>
+                  <span className="account-menu-label">{tr(t.label)}</span>
                   {t.id === "inbox" && unread > 0 && (
                     <span className="account-menu-badge">{unread}</span>
                   )}
@@ -134,15 +135,15 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
 
         <div className="account-foot">
           <nav className="legal-links">
-            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
-            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
-            <a href="/refunds.html" target="_blank" rel="noopener noreferrer">Refunds</a>
-            <a href="/shipping.html" target="_blank" rel="noopener noreferrer">Shipping</a>
-            <a href="/contact.html" target="_blank" rel="noopener noreferrer">Contact</a>
+            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">{tr("Privacy")}</a>
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer">{tr("Terms")}</a>
+            <a href="/refunds.html" target="_blank" rel="noopener noreferrer">{tr("Refunds")}</a>
+            <a href="/shipping.html" target="_blank" rel="noopener noreferrer">{tr("Shipping")}</a>
+            <a href="/contact.html" target="_blank" rel="noopener noreferrer">{tr("Contact")}</a>
           </nav>
           {isLoggedIn && (
             <button className="logout-btn" onClick={handleLogout}>
-              Log out
+              {tr("Log out")}
             </button>
           )}
         </div>
@@ -332,7 +333,7 @@ function CancelSheet({ sub, onClose, onDone }) {
           <button className="sub-start danger" disabled={busy} onClick={confirm}>
             {busy ? "Cancelling…" : refund > 0 ? `Cancel & refund ₹${refund}` : "Cancel plan"}
           </button>
-          <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>Keep my plan</button>
+          <button className="ghost-btn full" onClick={onClose} style={{ marginTop: 10 }}>{tr("Keep my plan")}</button>
         </div>
       </div>
     </div>
@@ -369,9 +370,9 @@ function Subscriptions({ onShop }) {
   if (subs.length === 0) {
     return (
       <div className="account-empty">
-        <p>No subscriptions yet</p>
+        <p>{tr("No subscriptions yet")}</p>
         <span>Add items to your cart and tap “Subscribe &amp; prepay” at checkout to get daily deliveries.</span>
-        <button className="checkout-btn" onClick={onShop}>Browse products</button>
+        <button className="checkout-btn" onClick={onShop}>{tr("Browse products")}</button>
       </div>
     );
   }
@@ -401,7 +402,7 @@ function Subscriptions({ onShop }) {
                 {s.status === "active" && (
                   <button onClick={() => setSkipFor(s)}>Going away? Pause</button>
                 )}
-                <button className="danger" onClick={() => setCancelFor(s)}>Cancel plan</button>
+                <button className="danger" onClick={() => setCancelFor(s)}>{tr("Cancel plan")}</button>
               </div>
             )}
           </div>
@@ -660,7 +661,7 @@ function RatingBox({ order }) {
         </>
       )}
       {done && order.feedback && <p className="rating-fb">“{order.feedback}”</p>}
-      {done && <p className="rating-thanks">Thanks for your feedback!</p>}
+      {done && <p className="rating-thanks">{tr("Thanks for your feedback!")}</p>}
     </div>
   );
 }
@@ -671,7 +672,7 @@ function RetryState({ error, onRetry, label }) {
       <div className="load-retry-ic"><MIcon d={PIC.alert} size={22} /></div>
       <p>{error || `Couldn't load ${label || "this"}.`}</p>
       <button className="load-retry-btn" onClick={onRetry}>
-        <MIcon d={PIC.reorder} size={15} /> Retry
+        <MIcon d={PIC.reorder} size={15} /> {tr("Retry")}
       </button>
     </div>
   );
@@ -685,7 +686,7 @@ function WalletTab({ userId }) {
   return (
     <div className="wallet-tab">
       <div className="wallet-card">
-        <div className="wallet-card-lbl">NGS Wallet balance</div>
+        <div className="wallet-card-lbl">{tr("NGS Wallet balance")}</div>
         <div className="wallet-card-bal">₹{balance.toFixed(2)}</div>
         <div className="wallet-card-note">Refunds land here and apply on your next order.</div>
         <button className="wallet-add-btn" onClick={() => setAddOpen(true)}>
@@ -700,11 +701,11 @@ function WalletTab({ userId }) {
         />
       )}
 
-      <h4 className="wallet-h">History</h4>
+      <h4 className="wallet-h">{tr("History")}</h4>
       {loading && ledger.length === 0 ? (
         <p className="account-empty">Loading…</p>
       ) : ledger.length === 0 ? (
-        <p className="account-empty">No wallet activity yet.</p>
+        <p className="account-empty">{tr("No wallet activity yet.")}</p>
       ) : (
         <div className="wallet-list">
           {list.shown.map((e) => (
@@ -749,7 +750,7 @@ function WalletTopup({ onClose, onDone }) {
 
         {step === "amount" ? (
           <>
-            <div className="wtop-title">Add money</div>
+            <div className="wtop-title">{tr("Add money")}</div>
             <div className="wtop-sub">Top up your NGS Wallet and use it on any order.</div>
             <div className="wtop-chips">
               {QUICK.map((q) => (
@@ -922,7 +923,7 @@ function Inbox({ notes, userId, error, onRetry }) {
     return (
       <div className="account-empty">
         <div className="empty-ic"><MIcon d={PIC.bell} size={30} /></div>
-        <p>No messages yet</p>
+        <p>{tr("No messages yet")}</p>
         <span>Offers and updates from the store will appear here.</span>
       </div>
     );
@@ -1033,9 +1034,9 @@ function Referral({ user }) {
       </div>
 
       <div className="refer-code-box">
-        <span className="refer-code-label">Your code</span>
+        <span className="refer-code-label">{tr("Your code")}</span>
         <button className="refer-code" onClick={copyCode}>{stats?.code || "…"}</button>
-        <button className="primary-btn refer-share" onClick={share}>Share code</button>
+        <button className="primary-btn refer-share" onClick={share}>{tr("Share code")}</button>
         {copied && <span className="refer-copied"><MIcon d={PIC.check} size={13} /> Copied</span>}
       </div>
 
@@ -1048,7 +1049,7 @@ function Referral({ user }) {
 
       {isNew && (
         <form className="refer-enter" onSubmit={submitCode}>
-          <span className="refer-enter-label">Have a friend's code?</span>
+          <span className="refer-enter-label">{tr("Have a friend's code?")}</span>
           <div className="refer-enter-row">
             <input
               value={code}
@@ -1204,7 +1205,7 @@ function PrimeCard({ name, until, active }) {
       <div className="pc-chip"><i /><i /><i /></div>
       <div className="pc-row pc-foot">
         <div className="pc-holder">
-          <span className="pc-lbl">Member</span>
+          <span className="pc-lbl">{tr("Member")}</span>
           <span className="pc-name">{(name || "Your Name").toUpperCase()}</span>
         </div>
         <div className="pc-thru">
@@ -1349,7 +1350,7 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
         error={qr === "error" ? err : ""}
         note="Your NGS Prime membership activates automatically the moment you pay."
       />
-      <button className="ghost-btn full" onClick={onCancel}>Cancel</button>
+      <button className="ghost-btn full" onClick={onCancel}>{tr("Cancel")}</button>
     </div>
   );
 }
@@ -1391,7 +1392,7 @@ function Profile() {
   return (
     <form className="profile-form" onSubmit={save}>
       <label className="field">
-        <span>Full name</span>
+        <span>{tr("Full name")}</span>
         <input
           type="text"
           value={form.name}
@@ -1400,12 +1401,12 @@ function Profile() {
       </label>
 
       <label className="field">
-        <span>Phone number</span>
+        <span>{tr("Phone number")}</span>
         <input type="tel" value={user?.phone || ""} disabled />
       </label>
 
       <label className="field">
-        <span>Email</span>
+        <span>{tr("Email")}</span>
         <input
           type="email"
           value={form.email}
@@ -1415,7 +1416,7 @@ function Profile() {
       </label>
 
       <label className="field">
-        <span>Delivery address</span>
+        <span>{tr("Delivery address")}</span>
         <textarea
           rows={3}
           value={form.address}
@@ -1428,7 +1429,7 @@ function Profile() {
         {busy ? "Saving…" : "Save changes"}
       </button>
       {error && <div className="auth-error">{error}</div>}
-      {saved && <div className="profile-saved"><MIcon d={PIC.check} size={15} /> Saved</div>}
+      {saved && <div className="profile-saved"><MIcon d={PIC.check} size={15} /> {tr("Saved")}</div>}
     </form>
   );
 }

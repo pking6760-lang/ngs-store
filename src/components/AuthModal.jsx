@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { shop } from "../data/shop.js";
+import { tr } from "../lib/i18n.jsx";
 
 // Small line icons (no emoji) for the login screen.
 const AIcon = {
@@ -114,18 +115,18 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
 
         {stage === "contact" ? (
           <>
-            <h2 className="auth-title">Log in or sign up</h2>
+            <h2 className="auth-title">{tr("Log in or sign up")}</h2>
             <p className="auth-reason">
               {reason ||
                 (email
-                  ? "We'll email you an 8-digit code — no password needed."
+                  ? tr("We'll email you an 8-digit code — no password needed.")
                   : "We'll send a one-time code to your WhatsApp.")}
             </p>
             <form className="auth-form" onSubmit={sendCode}>
               {email ? (
                 <>
                   <label className="field">
-                    <span>Email address</span>
+                    <span>{tr("Email address")}</span>
                     <input
                       type="email" value={contact}
                       onChange={(e) => { setContact(e.target.value); setError(""); }}
@@ -133,7 +134,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
                     />
                   </label>
                   <label className="field">
-                    <span>Your name <em>(new customers)</em></span>
+                    <span>{tr("Your name")} <em>(new customers)</em></span>
                     <input
                       type="text" value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -143,7 +144,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
                 </>
               ) : (
                 <label className="field">
-                  <span>Phone number</span>
+                  <span>{tr("Phone number")}</span>
                   <div className="phone-input">
                     <span className="phone-cc"><IndiaFlag /> +91</span>
                     <input
@@ -159,7 +160,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
               )}
               {error && <div className="auth-error">{error}</div>}
               <button className="checkout-btn" type="submit" disabled={busy}>
-                {busy ? "Sending…" : email ? "Email me a code" : "Send code on WhatsApp"}
+                {busy ? tr("Sending…") : email ? tr("Email me a code") : tr("Send code on WhatsApp")}
               </button>
             </form>
             <div className="auth-trust">
@@ -176,13 +177,13 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
           </>
         ) : (
           <>
-            <h2 className="auth-title">Enter the code</h2>
+            <h2 className="auth-title">{tr("Enter the code")}</h2>
             <p className="auth-reason">
               Sent to {email ? contact : `+91 ${contact}`}.{" "}
               <button
                 className="link-btn"
                 onClick={() => { setStage("contact"); setCode(""); cancelOtp(); }}
-              >Change</button>
+              >{tr("Change")}</button>
             </p>
 
             {demoCode && (
@@ -194,7 +195,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
             <form className="auth-form" onSubmit={verify}>
               {!email && isNew && (
                 <label className="field">
-                  <span>Your name</span>
+                  <span>{tr("Your name")}</span>
                   <input
                     type="text" value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -203,7 +204,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
                 </label>
               )}
               <label className="field">
-                <span>One-time code</span>
+                <span>{tr("One-time code")}</span>
                 <input
                   className="otp-input" type="tel" inputMode="numeric" value={code}
                   onChange={(e) => {
@@ -215,7 +216,7 @@ export default function AuthModal({ open, onClose, onSuccess, reason }) {
               </label>
               {error && <div className="auth-error">{error}</div>}
               <button className="checkout-btn" type="submit" disabled={busy}>
-                {busy ? "Verifying…" : "Verify & continue"}
+                {busy ? tr("Verifying…") : tr("Verify & continue")}
               </button>
             </form>
           </>

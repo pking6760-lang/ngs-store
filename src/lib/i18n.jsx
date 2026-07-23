@@ -91,17 +91,156 @@ const HI = {
   "You're offline": "आप ऑफ़लाइन हैं",
   "Check your connection — we'll reconnect automatically.": "अपना कनेक्शन जांचें — हम अपने आप फिर से जुड़ जाएंगे।",
   "Back online": "फिर से ऑनलाइन",
+
+  // ── Checkout ──────────────────────────────────────────────────────────────
+  "Checkout": "चेकआउट",
+  "Back": "वापस",
+  "Close": "बंद करें",
+  "Bill details": "बिल विवरण",
+  "Payment method": "भुगतान का तरीका",
+  "Delivery instructions": "डिलीवरी निर्देश",
+  "Delivery instructions (optional)": "डिलीवरी निर्देश (वैकल्पिक)",
+  "Leave at the door": "दरवाज़े पर छोड़ दें",
+  "Hand it to me": "मुझे हाथ में दें",
+  "Don't ring the bell": "घंटी न बजाएं",
+  "Avoid calling": "कॉल न करें",
+  "Use my current location": "मेरा वर्तमान स्थान उपयोग करें",
+  "Getting your location…": "आपका स्थान लिया जा रहा है…",
+  "Searching the map…": "नक्शे में खोज रहे हैं…",
+  "Coupon code": "कूपन कोड",
+  "Apply": "लगाएं",
+  "View available coupons": "उपलब्ध कूपन देखें",
+  "Hide coupons": "कूपन छिपाएं",
+  "Points discount": "पॉइंट्स छूट",
+  "Extra discount": "अतिरिक्त छूट",
+  "Surge charge": "सर्ज शुल्क",
+  "To pay": "देय राशि",
+  "Pay now": "अभी भुगतान करें",
+  "Pay online": "ऑनलाइन भुगतान",
+  "Pay on delivery": "डिलीवरी पर भुगतान",
+  "Pay by UPI app": "UPI ऐप से भुगतान",
+  "Pay with UPI": "UPI से भुगतान",
+  "Pay on this phone": "इसी फ़ोन पर भुगतान करें",
+  "Or pay to UPI ID": "या UPI ID पर भुगतान करें",
+  "Pay when your order arrives": "ऑर्डर आने पर भुगतान करें",
+  "Phone number (for delivery calls)": "फ़ोन नंबर (डिलीवरी कॉल के लिए)",
+  "Please enter a delivery address.": "कृपया डिलीवरी पता डालें।",
+  "Order placed": "ऑर्डर हो गया",
+  "Order confirmed!": "ऑर्डर पक्का हो गया!",
+  "Placing your order…": "आपका ऑर्डर हो रहा है…",
+  "Placing…": "हो रहा है…",
+  "Store closed": "दुकान बंद है",
+  "Outside delivery area": "डिलीवरी क्षेत्र के बाहर",
+  "We deliver to your area": "हम आपके क्षेत्र में डिलीवरी करते हैं",
+  "Your order": "आपका ऑर्डर",
+  "You might also want": "आपको यह भी चाहिए हो सकता है",
+  "Today": "आज",
+  "Tomorrow": "कल",
+  "Express · ~12 min": "एक्सप्रेस · ~12 मिनट",
+  "Get this delivered daily": "इसे रोज़ मंगवाएं",
+  "Cards": "कार्ड",
+  "Netbanking": "नेटबैंकिंग",
+  "Wallets": "वॉलेट",
+
+  // ── Account ───────────────────────────────────────────────────────────────
+  "My Account": "मेरा खाता",
+  "My Orders": "मेरे ऑर्डर",
+  "Profile": "प्रोफ़ाइल",
+  "Wallet": "वॉलेट",
+  "Inbox": "इनबॉक्स",
+  "Subscriptions": "सदस्यताएँ",
+  "Membership": "सदस्यता",
+  "Rewards": "इनाम",
+  "Refunds": "रिफंड",
+  "History": "इतिहास",
+  "No orders yet": "अभी कोई ऑर्डर नहीं",
+  "No messages yet": "अभी कोई संदेश नहीं",
+  "No subscriptions yet": "अभी कोई सदस्यता नहीं",
+  "No wallet activity yet.": "अभी कोई वॉलेट गतिविधि नहीं।",
+  "Loading your orders…": "आपके ऑर्डर लोड हो रहे हैं…",
+  "Loading…": "लोड हो रहा है…",
+  "Save changes": "बदलाव सहेजें",
+  "Saving…": "सहेजा जा रहा है…",
+  "Saved": "सहेजा गया",
+  "Full name": "पूरा नाम",
+  "Your Name": "आपका नाम",
+  "Phone number": "फ़ोन नंबर",
+  "Email": "ईमेल",
+  "Add money": "पैसे जोड़ें",
+  "Money added": "पैसे जोड़ दिए गए",
+  "Enter an amount": "राशि डालें",
+  "Change amount": "राशि बदलें",
+  "NGS Wallet balance": "NGS वॉलेट बैलेंस",
+  "Refer & earn": "रेफ़र करें और कमाएं",
+  "Share code": "कोड साझा करें",
+  "Your code": "आपका कोड",
+  "Have a friend's code?": "दोस्त का कोड है?",
+  "Rate this order": "इस ऑर्डर को रेट करें",
+  "Your rating": "आपकी रेटिंग",
+  "Submit rating": "रेटिंग भेजें",
+  "Tell us how it went (optional)": "बताएं कैसा रहा (वैकल्पिक)",
+  "Browse products": "उत्पाद देखें",
+  "Contact": "संपर्क",
+  "Terms": "नियम",
+  "Privacy": "गोपनीयता",
+  "Shipping": "शिपिंग",
+  "Skip deliveries": "डिलीवरी छोड़ें",
+  "Cancel plan": "प्लान रद्द करें",
+  "Keep my plan": "मेरा प्लान रखें",
+  "Delivery address": "डिलीवरी पता",
+  "Member": "सदस्य",
+  "Awaiting payment": "भुगतान बाकी",
+  "Payment failed": "भुगतान विफल",
+  "Return requested": "वापसी का अनुरोध",
+  "Returned": "वापस किया गया",
+  "Cancelled": "रद्द",
+  "Completed": "पूरा हुआ",
+  "Active": "सक्रिय",
+  "Prepaid": "प्रीपेड",
+  "Paid online": "ऑनलाइन भुगतान किया",
+  "Paid via UPI": "UPI से भुगतान किया",
+  "Paid with NGS Wallet": "NGS वॉलेट से भुगतान किया",
+  "Refund": "रिफंड",
+  "Refunded to wallet": "वॉलेट में रिफंड",
+  "Handling": "हैंडलिंग",
+  "Surge": "सर्ज",
+  "Item": "वस्तु",
+  "Delivery time": "डिलीवरी समय",
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  "Log in or sign up": "लॉग इन या साइन अप",
+  "We'll email you an 8-digit code — no password needed.": "हम आपको 8 अंकों का कोड ईमेल करेंगे — कोई पासवर्ड नहीं चाहिए।",
+  "Email address": "ईमेल पता",
+  "Phone number": "फ़ोन नंबर",
+  "Enter the code": "कोड डालें",
+  "One-time code": "एक-बार कोड",
+  "Change": "बदलें",
+  "Email me a code": "मुझे कोड ईमेल करें",
+  "Send code on WhatsApp": "WhatsApp पर कोड भेजें",
+  "Sending…": "भेजा जा रहा है…",
+  "Verifying…": "जाँचा जा रहा है…",
+  "Verify & continue": "जाँचें और आगे बढ़ें",
+  "Your name": "आपका नाम",
 };
 
 const DICT = { en: {}, hi: HI };
+
+// Module-level current language + a plain translate function. LangProvider keeps
+// `currentLang` in sync and re-renders the whole app on change, so components
+// deep in the tree can call `tr("...")` directly (no hook to thread through).
+let currentLang = (() => { try { return localStorage.getItem("ngs_lang") || "en"; } catch { return "en"; } })();
+export function tr(s) {
+  const d = DICT[currentLang];
+  return (d && d[s]) || s;
+}
+
 const LangCtx = createContext({ lang: "en", t: (s) => s, setLang: () => {} });
 export const useT = () => useContext(LangCtx);
 
 export function LangProvider({ children }) {
-  const [lang, setLangState] = useState(() => {
-    try { return localStorage.getItem("ngs_lang") || "en"; } catch { return "en"; }
-  });
+  const [lang, setLangState] = useState(currentLang);
   const setLang = useCallback((l) => {
+    currentLang = l;                 // update synchronously so tr() is fresh on the re-render
     setLangState(l);
     try { localStorage.setItem("ngs_lang", l); } catch { /* ignore */ }
   }, []);

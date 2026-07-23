@@ -10,7 +10,7 @@ import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchA
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import { tierUnitPrice, bulkUnitPrice } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
-import { useT } from "../lib/i18n.jsx";
+import { useT, tr } from "../lib/i18n.jsx";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import SubscribeSheet from "./SubscribeSheet.jsx";
@@ -776,14 +776,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
           )}
           <h2>
             {step === "done"
-              ? "Order placed"
+              ? tr("Order placed")
               : step === "pay"
-              ? "Pay with UPI"
+              ? tr("Pay with UPI")
               : step === "payqr"
-              ? "Pay online"
+              ? tr("Pay online")
               : step === "checkout"
-              ? "Checkout"
-              : "My Cart"}
+              ? tr("Checkout")
+              : tr("My Cart")}
           </h2>
           <button className="drawer-close" onClick={handleClose} aria-label="Close">
             ✕
@@ -796,18 +796,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               <circle cx="36" cy="36" r="27" />
               <path d="M23 37 l9 9 l17 -19" />
             </svg>
-            <h3>Order confirmed!</h3>
+            <h3>{tr("Order confirmed!")}</h3>
             <p>
               {placed.count} item{placed.count > 1 ? "s" : ""} • ₹{placed.total}
             </p>
             <p className="success-pay">
               {placed.payment === "razorpay"
-                ? "Paid online"
+                ? tr("Paid online")
                 : placed.payment === "upi"
-                ? "Paid via UPI"
+                ? tr("Paid via UPI")
                 : placed.payment === "wallet"
-                ? "Paid with NGS Wallet"
-                : "Cash on delivery"}
+                ? tr("Paid with NGS Wallet")
+                : tr("Cash on delivery")}
             </p>
             {placed.memberSavings > 0 && (
               <p className="success-savings">
@@ -863,7 +863,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 for cards / any other method, or if an app isn't installed. */}
             {payLink.upiIntent ? (
               <>
-                <div className="upi-apps-label">Pay by UPI app</div>
+                <div className="upi-apps-label">{tr("Pay by UPI app")}</div>
                 <div className="upi-apps">
                   {UPI_APPS.map((app) => (
                     <a className="upi-app" key={app.id} href={upiAppHref(payLink.upiIntent, app)}>
@@ -913,7 +913,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </div>
 
             <div className="upi-id-row">
-              <span>Or pay to UPI ID</span>
+              <span>{tr("Or pay to UPI ID")}</span>
               <code>{SHOP_UPI_ID}</code>
             </div>
             {placeError && <div className="auth-error">{placeError}</div>}
@@ -942,7 +942,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </div>
 
             <div className="checkout-section co-items-sec">
-              <h4>Your order</h4>
+              <h4>{tr("Your order")}</h4>
               {lines.map(({ product, qty, unit }) => (
                 <div className="co-item" key={product.id}>
                   <ProductThumb image={product.image} name={product.name} category={product.category} size={42} radius={9} />
@@ -975,7 +975,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   </svg>
                 </span>
                 <span className="sub-promo-text">
-                  <strong>Get this delivered daily</strong>
+                  <strong>{tr("Get this delivered daily")}</strong>
                   <span>Subscribe &amp; prepay — milk at your door every morning</span>
                 </span>
                 <span className="sub-promo-arrow">→</span>
@@ -983,7 +983,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             )}
 
             <div className="checkout-section">
-              <h4>Delivery address</h4>
+              <h4>{tr("Delivery address")}</h4>
 
               {/* Hero action: one tap captures the customer's exact GPS spot —
                   the fastest and most accurate way for a home delivery. */}
@@ -1030,7 +1030,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 Pin exact spot on map
               </button>
               <p className="address-hint">
-                Tip: tap <strong>Use my current location</strong> if you're at
+                Tip: tap <strong>{tr("Use my current location")}</strong> if you're at
                 home — it's the most reliable. Then add your house / flat number.
               </p>
               <div className="checkout-phone">
@@ -1078,13 +1078,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </div>
               )}
               {dist != null && !outOfArea && (
-                <div className="area-ok">We deliver to your area</div>
+                <div className="area-ok">{tr("We deliver to your area")}</div>
               )}
               {locError && <div className="auth-error">{locError}</div>}
             </div>
 
             <div className="checkout-section slot-sec">
-              <h4>Delivery time</h4>
+              <h4>{tr("Delivery time")}</h4>
               <div className="slot-row">
                 {deliverySlots.map((s) => (
                   <button
@@ -1105,7 +1105,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </div>
 
             <div className="checkout-section pay-sec">
-              <h4>Payment method</h4>
+              <h4>{tr("Payment method")}</h4>
 
               <div className="pay-group-label">Recommended</div>
               {RAZORPAY_ENABLED ? (
@@ -1115,9 +1115,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>
                   </span>
                   <span className="pay-row-txt">
-                    <strong>Pay online</strong>
+                    <strong>{tr("Pay online")}</strong>
                     <small>Secure &amp; instant — via Razorpay</small>
-                    <span className="pay-chips"><span>UPI</span><span>Cards</span><span>Wallets</span><span>Netbanking</span></span>
+                    <span className="pay-chips"><span>UPI</span><span>{tr("Cards")}</span><span>{tr("Wallets")}</span><span>{tr("Netbanking")}</span></span>
                   </span>
                   <span className="pay-radio" aria-hidden="true" />
                 </label>
@@ -1137,7 +1137,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
               {walletBal > 0 && (
                 <>
-                  <div className="pay-group-label">Wallet</div>
+                  <div className="pay-group-label">{tr("Wallet")}</div>
                   <label className={`pay-row ${useWalletCredit ? "sel" : ""}`}>
                     <input type="checkbox" checked={useWalletCredit} onChange={(e) => setUseWalletCredit(e.target.checked)} />
                     <span className="pay-row-ic wallet">
@@ -1152,7 +1152,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </>
               )}
 
-              <div className="pay-group-label">Pay on delivery</div>
+              <div className="pay-group-label">{tr("Pay on delivery")}</div>
               <label className={`pay-row ${payment === "cod" ? "sel" : ""} ${codBlocked ? "disabled" : ""}`}>
                 <input
                   type="radio"
@@ -1165,7 +1165,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/></svg>
                 </span>
                 <span className="pay-row-txt">
-                  <strong>Cash on delivery</strong>
+                  <strong>{tr("Cash on delivery")}</strong>
                   <small>
                     {memberFee > 0
                       ? "Not available with NGS Prime — please pay online"
@@ -1184,7 +1184,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             )}
 
             <div className="checkout-section">
-              <h4>Delivery instructions <span className="co-optional">optional</span></h4>
+              <h4>{tr("Delivery instructions")} <span className="co-optional">optional</span></h4>
               <div className="co-notes">
                 {DELIVERY_NOTES.map((n) => (
                   <button
@@ -1207,7 +1207,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             <div className="bill compact">
               {discount > 0 && (
                 <div className="bill-row">
-                  <span>Points discount</span>
+                  <span>{tr("Points discount")}</span>
                   <span className="free">−₹{discount}</span>
                 </div>
               )}
@@ -1230,7 +1230,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </div>
               )}
               <div className="bill-row total">
-                <span>To pay</span>
+                <span>{tr("To pay")}</span>
                 <span>₹{payable.toFixed(2)}</span>
               </div>
             </div>
@@ -1276,7 +1276,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             <p>{t("Your cart is empty")}</p>
             <span>{t("Add items to get started")}</span>
             <button className="checkout-btn" onClick={handleClose}>
-              Browse products
+              {tr("Browse products")}
             </button>
           </div>
         ) : (
@@ -1409,7 +1409,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       className="coupon-apply"
                       onClick={() => applyCouponCode()}
                     >
-                      Apply
+                      {tr("Apply")}
                     </button>
                   </div>
                   {(couponError || couponInvalid) && (
@@ -1479,14 +1479,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             )}
 
             <div className="bill">
-              <h4>Bill details</h4>
+              <h4>{tr("Bill details")}</h4>
               <div className="bill-row">
-                <span>Item total</span>
+                <span>{tr("Item total")}</span>
                 <span>₹{itemTotal}</span>
               </div>
               {discount > 0 && (
                 <div className="bill-row">
-                  <span>Points discount</span>
+                  <span>{tr("Points discount")}</span>
                   <span className="free">−₹{discount}</span>
                 </div>
               )}
@@ -1497,7 +1497,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </div>
               )}
               <div className="bill-row">
-                <span>Delivery fee</span>
+                <span>{tr("Delivery fee")}</span>
                 <span>
                   {deliveryFee === 0 ? (
                     <span className="free">
@@ -1509,7 +1509,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </span>
               </div>
               <div className="bill-row">
-                <span>Handling charge</span>
+                <span>{tr("Handling charge")}</span>
                 <span>{handling === 0 && freePerk ? <span className="free">FREE · Prime</span> : `₹${handling}`}</span>
               </div>
               {isMember && !freePerk && hasThin && (
@@ -1519,7 +1519,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {surgeFee > 0 && (
                 <div className="bill-row">
-                  <span>Surge charge <small>(bad weather / peak)</small></span>
+                  <span>{tr("Surge charge")} <small>(bad weather / peak)</small></span>
                   <span>₹{surgeFee}</span>
                 </div>
               )}
@@ -1530,7 +1530,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </div>
               )}
               <div className="bill-row total">
-                <span>To pay</span>
+                <span>{tr("To pay")}</span>
                 <span>₹{grandTotal}</span>
               </div>
               {savings > 0 && (
@@ -1641,7 +1641,7 @@ function AddonSuggestions({ lines, onAdd, user, rewardsCfg }) {
   if (!items.length) return null;
   return (
     <div className="addons">
-      <div className="addons-head">You might also want</div>
+      <div className="addons-head">{tr("You might also want")}</div>
       <div className="addons-row">
         {items.map((p) => {
           const price = tierUnitPrice(p, 1, user, rewardsCfg); // this shopper's price
@@ -1650,7 +1650,7 @@ function AddonSuggestions({ lines, onAdd, user, rewardsCfg }) {
               <ProductThumb image={p.image} name={p.name} category={p.category} size={56} radius={10} />
               <div className="addon-name">{p.name}</div>
               <div className="addon-price">₹{price}{p.mrp > price ? <s>₹{p.mrp}</s> : null}</div>
-              <button className="addon-add" onClick={() => onAdd(p.id)}>ADD</button>
+              <button className="addon-add" onClick={() => onAdd(p.id)}>{tr("ADD")}</button>
             </div>
           );
         })}
