@@ -13,6 +13,7 @@ function isNative() {
 
 export default function UpdateGate({ app, children }) {
   const [block, setBlock] = useState(null); // null | { versionName, apkUrl, notes }
+  const [dl, setDl] = useState(null);       // null | number(0-100) | 'opening' | 'error'
 
   useEffect(() => {
     if (!isNative()) return;
@@ -46,11 +47,54 @@ export default function UpdateGate({ app, children }) {
     return () => { alive = false; if (removeResume) removeResume(); };
   }, [app]);
 
-  const install = () => {
-    if (!block?.apkUrl) return;
+  const openInBrowser = () => {
     try { window.open(block.apkUrl, "_system"); }
     catch { try { window.location.href = block.apkUrl; } catch { /* ignore */ } }
   };
+
+  const install = async () => {
+    if (!block?.apkUrl) return;
+    if (dl !== null && dl !== "error") return; // already working
+    // Native: download the APK inside the app, then hand it straight to
+    // Android's package installer — no browser tab.
+    if (isNative()) {
+      let sub = null;
+      try {
+        setDl(0);
+        const { Filesystem, Directory } = await import("@capacitor/filesystem");
+        const { FileOpener } = await import("@capacitor-community/file-opener");
+        try {
+          sub = await Filesystem.addListener("progress", (p) => {
+            const total = Number(p?.contentLength) || 0;
+            if (total > 0) setDl(Math.min(99, Math.round((Number(p.bytes) / total) * 100)));
+          });
+        } catch { /* progress is best-effort */ }
+        const res = await Filesystem.downloadFile({
+          url: block.apkUrl,
+          path: `ngs-update-${Date.now()}.apk`,
+          directory: Directory.Cache,
+          progress: true,
+        });
+        if (sub) { try { await sub.remove(); } catch { /* ignore */ } sub = null; }
+        setDl("opening");
+        await FileOpener.open({ filePath: res.uri || res.path, contentType: "application/vnd.android.package-archive" });
+        setDl(null); // installer is up; when they return, resume-check re-runs
+        return;
+      } catch {
+        if (sub) { try { await sub.remove(); } catch { /* ignore */ } }
+        setDl("error"); // fall back to the browser download below
+        openInBrowser();
+        return;
+      }
+    }
+    openInBrowser();
+  };
+
+  const btnLabel =
+    dl === "opening" ? "Opening installer…"
+      : typeof dl === "number" ? `Downloading… ${dl}%`
+        : dl === "error" ? "Retry download"
+          : "Download & install update";
 
   return (
     <>
@@ -70,8 +114,18 @@ export default function UpdateGate({ app, children }) {
               Please update to keep using the app.
             </p>
             {block.notes && <div className="upd-notes">{block.notes}</div>}
-            <button className="upd-btn" onClick={install}>Download &amp; install update</button>
-            <p className="upd-hint">After it installs, reopen the app.</p>
+            {typeof dl === "number" && (
+              <div className="upd-bar"><span style={{ width: `${dl}%` }} /></div>
+            )}
+            <button className="upd-btn" onClick={install}
+              disabled={typeof dl === "number" || dl === "opening"}>
+              {btnLabel}
+            </button>
+            <p className="upd-hint">
+              {dl === "opening" ? "Tap Install when Android asks."
+                : typeof dl === "number" ? "Downloading the update…"
+                  : "Tap to download and install the latest version."}
+            </p>
           </div>
         </div>
       )}

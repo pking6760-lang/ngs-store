@@ -5045,3 +5045,5 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 }
 .upd-btn:active { transform: scale(0.99); }
 .upd-hint { margin: 12px 0 0; font-size: 12.5px; color: #8a92a1; }
+.upd-bar { width: 100%; height: 8px; border-radius: 999px; background: #e6e9ef; overflow: hidden; margin: 0 0 14px; }
+.upd-bar span { display: block; height: 100%; background: #0a9155; transition: width .25s ease; }
