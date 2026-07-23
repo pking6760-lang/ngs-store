@@ -51,9 +51,14 @@ export function CallProvider({ children }) {
   // phase: idle | outgoing | incoming | connecting | connected | ended
   const [phase, setPhase] = useState("idle");
   const [peerName, setPeerName] = useState("");
+  const [peerRole, setPeerRole] = useState(""); // customer | partner | owner
+  const [peerRef, setPeerRef] = useState("");   // customer_code / emp_code
+  const [peerPhone, setPeerPhone] = useState("");
   const [muted, setMuted] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [note, setNote] = useState("");
+  const [minimized, setMinimized] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const engine = useRef(null);
   const callRow = useRef(null);
@@ -78,11 +83,15 @@ export function CallProvider({ children }) {
     if (audioRef.current) audioRef.current.srcObject = null;
   }, []);
 
-  const finish = useCallback((label) => {
+  const finish = useCallback((label, ms) => {
     cleanup();
     setNote(label || "");
     setPhase("ended");
-    setTimeout(() => { setPhase("idle"); setPeerName(""); setSeconds(0); setMuted(false); setNote(""); }, 1400);
+    setMinimized(false);
+    setTimeout(() => {
+      setPhase("idle"); setPeerName(""); setPeerRole(""); setPeerRef(""); setPeerPhone("");
+      setSeconds(0); setMuted(false); setNote(""); setCopied(false);
+    }, ms || 1400);
   }, [cleanup]);
 
   // Watch the call row so we react when the OTHER side declines / hangs up.
@@ -126,7 +135,12 @@ export function CallProvider({ children }) {
       ringer.current.start();
       await engine.current.start();
     } catch (e) {
-      finish(e.message || "Call failed");
+      const busy = /NGS_BUSY/.test(e?.message || "");
+      if (busy) {
+        finish("They're on another call. Please wait a moment and try again.", 3200);
+      } else {
+        finish(e.message || "Call failed");
+      }
     }
   }, [phase, supported, watchRow, finish]);
 
@@ -136,6 +150,9 @@ export function CallProvider({ children }) {
     if (row.caller_id === uid) return;
     callRow.current = row;
     setPeerName(row.caller_name || "Incoming call");
+    setPeerRole(row.caller_role || "");
+    setPeerRef(row.caller_ref || "");
+    setPeerPhone(row.caller_phone || "");
     setPhase("incoming");
     watchRow(row.id);
     ringer.current.start();
@@ -221,46 +238,91 @@ export function CallProvider({ children }) {
 
   const active = phase !== "idle";
   const mmss = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  const initial = (peerName || "?").trim().charAt(0).toUpperCase() || "?";
+  const ROLE_LABEL = { customer: "Customer", partner: "Employee", owner: "Store" };
+  const roleLabel = ROLE_LABEL[peerRole] || "";
+  // Minimizing is offered once a call is going (not while it's still ringing to
+  // be answered), so you can look up the caller's ID without dropping the call.
+  const canMinimize = phase === "outgoing" || phase === "connecting" || phase === "connected";
+  const statusText =
+    phase === "outgoing" ? "Calling…"
+    : phase === "incoming" ? "Incoming call"
+    : phase === "connecting" ? "Connecting…"
+    : phase === "connected" ? mmss
+    : (note || "Call ended");
+
+  const copyRef = () => {
+    if (!peerRef) return;
+    try { navigator.clipboard?.writeText(peerRef); } catch { /* ignore */ }
+    setCopied(true); setTimeout(() => setCopied(false), 1400);
+  };
 
   return (
     <CallCtx.Provider value={{ callParty, supported }}>
       {children}
       {active && createPortal(
-        <div className="callov">
-          <div className="callov-card">
-            <div className="callov-avatar">{(peerName || "?").trim().charAt(0).toUpperCase()}</div>
-            <div className="callov-name">{peerName}</div>
-            <div className="callov-status">
-              {phase === "outgoing" && "Calling…"}
-              {phase === "incoming" && "Incoming call"}
-              {phase === "connecting" && "Connecting…"}
-              {phase === "connected" && mmss}
-              {phase === "ended" && (note || "Call ended")}
+        <>
+          {minimized ? (
+            /* ── Minimized: a floating bar; the app stays fully usable ─────── */
+            <div className="callmini" onClick={() => setMinimized(false)} role="button" aria-label="Return to call">
+              <span className="callmini-av">{initial}</span>
+              <span className="callmini-txt">
+                <div className="callmini-name">{peerName}</div>
+                <div className="callmini-sub">{statusText} · tap to open</div>
+              </span>
+              <button className="callmini-end" onClick={(e) => { e.stopPropagation(); endCall(); }} aria-label="End call">✕</button>
             </div>
+          ) : (
+            /* ── Full call screen ──────────────────────────────────────────── */
+            <div className="callov">
+              <div className="callov-bar">
+                {canMinimize && (
+                  <button className="callov-min" onClick={() => setMinimized(true)} aria-label="Minimize call">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                )}
+                <span className="callov-secure">🔒 Private · numbers hidden</span>
+              </div>
 
-            {phase === "incoming" ? (
-              <div className="callov-actions">
-                <button className="callov-btn decline" onClick={declineIncoming} aria-label="Decline">✕</button>
-                <button className="callov-btn accept" onClick={acceptIncoming} aria-label="Answer">📞</button>
+              <div className="callov-card">
+                <div className={`callov-avatar ${phase === "connected" ? "live" : ""}`}>{initial}</div>
+                <div className="callov-name">{peerName}</div>
+
+                {(roleLabel || peerRef) && (
+                  <button className="callov-idchip" onClick={copyRef} title="Tap to copy the ID">
+                    {roleLabel && <span className="callov-idrole">{roleLabel}</span>}
+                    {peerRef && <span className="callov-idcode">#{peerRef}</span>}
+                    {peerRef && <span className="callov-idcopy">{copied ? "copied ✓" : "copy"}</span>}
+                  </button>
+                )}
+                {peerPhone && <div className="callov-idphone">{peerPhone}</div>}
+
+                <div className="callov-status">{statusText}</div>
+
+                {phase === "incoming" ? (
+                  <div className="callov-actions">
+                    <button className="callov-btn decline" onClick={declineIncoming} aria-label="Decline">✕</button>
+                    <button className="callov-btn accept" onClick={acceptIncoming} aria-label="Answer">📞</button>
+                  </div>
+                ) : phase === "connected" ? (
+                  <div className="callov-actions">
+                    <button className={`callov-btn util ${muted ? "on" : ""}`} onClick={toggleMute} aria-label="Mute">
+                      {muted ? "🔇" : "🎙"}
+                    </button>
+                    <button className="callov-btn end" onClick={endCall} aria-label="End call">✕</button>
+                  </div>
+                ) : phase === "ended" ? (
+                  <div className="callov-actions"><div className="callov-ended-dot">✓</div></div>
+                ) : (
+                  <div className="callov-actions">
+                    <button className="callov-btn end" onClick={endCall} aria-label="Cancel">✕</button>
+                  </div>
+                )}
               </div>
-            ) : phase === "connected" ? (
-              <div className="callov-actions">
-                <button className={`callov-btn util ${muted ? "on" : ""}`} onClick={toggleMute} aria-label="Mute">
-                  {muted ? "🔇" : "🎙"}
-                </button>
-                <button className="callov-btn end" onClick={endCall} aria-label="End call">✕</button>
-              </div>
-            ) : phase === "ended" ? (
-              <div className="callov-actions"><div className="callov-ended-dot">✓</div></div>
-            ) : (
-              <div className="callov-actions">
-                <button className="callov-btn end" onClick={endCall} aria-label="Cancel">✕</button>
-              </div>
-            )}
-            <div className="callov-tag">🔒 Private call · numbers stay hidden</div>
-          </div>
+            </div>
+          )}
           <audio ref={audioRef} autoPlay playsInline />
-        </div>,
+        </>,
         document.body)}
     </CallCtx.Provider>
   );

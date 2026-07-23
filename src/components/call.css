@@ -1,18 +1,43 @@
-/* Full-screen call overlay — theme-neutral (works over the light customer app
-   and the dark partner app). Portaled to <body>, above everything. */
+/* ════════════════════════════════════════════════════════════════════════
+   In-app call UI — theme-neutral (works over the light customer app and the
+   dark partner/admin app). Portaled to <body>, above everything.
+   Two states:
+     .callov   — full-screen call screen (incoming / outgoing / connected)
+     .callmini — floating minimized bar so you can multitask during a call
+   ════════════════════════════════════════════════════════════════════════ */
+
 .callov {
   position: fixed; inset: 0; z-index: 100000;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column;
   background: radial-gradient(120% 90% at 50% 0%, #16305a 0%, #0a1526 55%, #060b16 100%);
   color: #fff;
   animation: callov-in .22s ease;
-  padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+  padding: calc(env(safe-area-inset-top) + 6px) 20px calc(env(safe-area-inset-bottom) + 22px);
 }
 @keyframes callov-in { from { opacity: 0; } to { opacity: 1; } }
 
+/* Top bar: minimize (left) + secure badge (right) */
+.callov-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; min-height: 40px;
+}
+.callov-min {
+  width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.10); color: #fff; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s ease, transform .12s ease;
+}
+.callov-min:active { transform: scale(.9); background: rgba(255,255,255,0.18); }
+.callov-secure {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: #8fa2c4;
+  background: rgba(255,255,255,0.06); padding: 6px 11px; border-radius: 999px;
+}
+
+/* Centered card with the person + status + actions */
 .callov-card {
-  width: 100%; max-width: 360px;
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  flex: 1; width: 100%; max-width: 360px; margin: 0 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
   text-align: center;
 }
 .callov-avatar {
@@ -21,16 +46,41 @@
   font-size: 44px; font-weight: 800; color: #fff;
   background: linear-gradient(140deg, #3b82f6, #2b5bd7);
   box-shadow: 0 0 0 8px rgba(255,255,255,0.06), 0 20px 50px -20px rgba(0,0,0,.7);
-  margin-top: 8px; animation: callov-pulse 2s ease-in-out infinite;
+  animation: callov-pulse 2s ease-in-out infinite;
 }
+.callov-avatar.live { animation: none; }
 @keyframes callov-pulse {
   0%,100% { box-shadow: 0 0 0 8px rgba(255,255,255,0.06), 0 20px 50px -20px rgba(0,0,0,.7); }
   50%     { box-shadow: 0 0 0 16px rgba(255,255,255,0.02), 0 20px 50px -20px rgba(0,0,0,.7); }
 }
 .callov-name { font-size: 24px; font-weight: 800; letter-spacing: .2px; }
-.callov-status { font-size: 15px; color: #b8c6e0; font-variant-numeric: tabular-nums; min-height: 20px; }
 
-.callov-actions { display: flex; gap: 28px; align-items: center; justify-content: center; margin-top: 26px; }
+/* Caller ID chip — role + searchable code, with copy button */
+.callov-idchip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  padding: 7px 8px 7px 13px; border-radius: 999px; max-width: 100%;
+}
+.callov-idrole {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px;
+  color: #0a1526; background: #cfe0ff; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.callov-idcode {
+  font-size: 15px; font-weight: 700; color: #eaf1ff; letter-spacing: .4px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.callov-idcopy {
+  height: 26px; padding: 0 12px; border-radius: 999px; border: none; cursor: pointer; flex: none;
+  background: rgba(255,255,255,0.14); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; transition: background .12s ease;
+}
+.callov-idcopy:active { background: rgba(255,255,255,0.28); }
+.callov-idphone { font-size: 13px; color: #8fa2c4; letter-spacing: .3px; }
+
+.callov-status { font-size: 15px; color: #b8c6e0; font-variant-numeric: tabular-nums; min-height: 20px; margin-top: 2px; }
+
+.callov-actions { display: flex; gap: 28px; align-items: center; justify-content: center; margin-top: 30px; }
 .callov-btn {
   width: 68px; height: 68px; border-radius: 50%; border: none; cursor: pointer;
   font-size: 26px; color: #fff; display: flex; align-items: center; justify-content: center;
@@ -43,8 +93,37 @@
 @keyframes callov-ring { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
 .callov-btn.util { background: rgba(255,255,255,0.14); font-size: 24px; }
 .callov-btn.util.on { background: #f59e0b; }
+.callov-btnlabel { font-size: 12px; color: #8fa2c4; margin-top: 8px; }
 .callov-ended-dot {
   width: 60px; height: 60px; border-radius: 50%; background: rgba(34,197,94,.2); color: #22c55e;
   display: flex; align-items: center; justify-content: center; font-size: 30px;
 }
-.callov-tag { margin-top: 30px; font-size: 12px; color: #7c8aa8; }
+
+/* ── Minimized floating bar — call keeps running, user can use the app ── */
+.callmini {
+  position: fixed; left: 12px; right: 12px;
+  top: calc(env(safe-area-inset-top) + 8px);
+  z-index: 100000;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 16px;
+  background: #0f1c33; color: #fff;
+  box-shadow: 0 16px 40px -14px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,0.06);
+  animation: callmini-in .2s ease;
+  cursor: pointer;
+}
+@keyframes callmini-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+.callmini-av {
+  width: 40px; height: 40px; border-radius: 50%; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800; color: #fff;
+  background: linear-gradient(140deg, #3b82f6, #2b5bd7);
+}
+.callmini-txt { flex: 1; min-width: 0; text-align: left; }
+.callmini-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.callmini-sub { font-size: 12px; color: #22c55e; font-variant-numeric: tabular-nums; }
+.callmini-end {
+  width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; flex: none;
+  background: #ef4444; color: #fff; font-size: 17px;
+  display: flex; align-items: center; justify-content: center; transition: transform .12s ease;
+}
+.callmini-end:active { transform: scale(.9); }
