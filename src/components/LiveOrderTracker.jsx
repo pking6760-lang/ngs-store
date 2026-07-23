@@ -11,6 +11,7 @@ function loadLeaflet() {
   return _Lpromise;
 }
 import { ORDER_STATUSES } from "../lib/store.js";
+import { useSettings } from "../lib/hooks.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { getCurrentLocation } from "../lib/location.js";
 import * as api from "../lib/api.js";
@@ -142,6 +143,8 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   const [refreshing, setRefreshing] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareErr, setShareErr] = useState("");
+  const settings = useSettings();
+  const storePhone = settings?.supportPhone || "";
 
   useBackGuard(open, onClose);
 
@@ -326,6 +329,11 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                 : text}
             </div>
           </div>
+          {storePhone && !delivered && (
+            <a className="lt-hero-call" href={`tel:+91${storePhone}`} aria-label="Call the store">
+              <Svg d={Icon.phone} size={16} sw={2.2} /> Call store
+            </a>
+          )}
         </div>
 
         {/* Segmented progress */}

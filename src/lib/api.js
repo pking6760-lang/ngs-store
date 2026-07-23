@@ -98,6 +98,8 @@ function mapSettings(r) {
     codCustomerLimit: num(r.cod_customer_limit),
     shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold,
     automation: r.automation || null,
+    // Store contact number the customer can call about an order (live tracker).
+    supportPhone: (r.support_phone || "").replace(/\D/g, ""),
     subDeliveryFee: r.sub_delivery_fee != null ? num(r.sub_delivery_fee) : 10 };
 }
 function settingsToDb(p) {
@@ -106,7 +108,7 @@ function settingsToDb(p) {
     freeDeliveryAbove: "free_delivery_above", handlingFee: "handling_fee",
     surgeFee: "surge_fee", maxDistanceKm: "max_distance_km",
     shopLocations: "shop_locations", lowStockThreshold: "low_stock_threshold",
-    automation: "automation" };
+    automation: "automation", supportPhone: "support_phone" };
   const out = {};
   for (const k in p) if (map[k]) out[map[k]] = p[k];
   return out;
