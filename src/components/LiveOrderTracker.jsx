@@ -13,6 +13,7 @@ function loadLeaflet() {
 import { ORDER_STATUSES } from "../lib/store.js";
 import { useCall } from "./CallProvider.jsx";
 import { useT } from "../lib/i18n.jsx";
+import { useSettings } from "../lib/hooks.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { getCurrentLocation } from "../lib/location.js";
 import * as api from "../lib/api.js";
@@ -146,9 +147,38 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   const [shareErr, setShareErr] = useState("");
   const { callParty } = useCall();
   const { t } = useT();
+  const settings = useSettings();
   // One in-app call button: the server rings the assigned rider, or the shop
   // owner if none — either way the customer just sees "Delivery partner".
   const callDelivery = () => callParty(order?.dbId, "Delivery partner");
+
+  // Cancellation. Allowed only while the order hasn't left for delivery. Free
+  // within a short grace window right after placing; a fee applies after that
+  // (the server is the source of truth — this just previews it).
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelErr, setCancelErr] = useState("");
+  const GRACE_MS = 90 * 1000;
+  const canCancel = order && ["Placed", "Packed", "Scheduled"].includes(order.status)
+    && !order.isSubscription && !order.subscriptionId;
+  const inGrace = order && order.status === "Placed"
+    && Date.now() - new Date(order.createdAt).getTime() < GRACE_MS;
+  const cancelFeeAmt = inGrace ? 0 : Math.round(settings.cancelFee ?? 20);
+  useBackGuard(showCancel, () => setShowCancel(false));
+
+  async function confirmCancel() {
+    if (cancelBusy) return;
+    setCancelBusy(true); setCancelErr("");
+    try {
+      await api.cancelMyOrder(order.dbId, cancelReason.trim() || null);
+      setShowCancel(false);
+      if (onRefresh) await onRefresh();
+      onClose();
+    } catch (e) {
+      setCancelErr(e.message || "Couldn't cancel the order.");
+    } finally { setCancelBusy(false); }
+  }
 
   useBackGuard(open, onClose);
 
@@ -437,6 +467,14 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           </div>
         )}
 
+        {/* Cancel order — allowed until it's out for delivery. Free within the
+            grace window, otherwise a fee applies (server is the source of truth). */}
+        {canCancel && (
+          <button className="lt-cancel-link" onClick={() => { setCancelReason(""); setCancelErr(""); setShowCancel(true); }}>
+            {t("Cancel order")}
+          </button>
+        )}
+
         {/* Order summary + full bill */}
         <div className="lt-card">
           <div className="lt-card-title">
@@ -472,6 +510,35 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           </div>
         </div>
       </div>
+
+      {showCancel && (
+        <div className="lt-cancel-ov" onClick={() => !cancelBusy && setShowCancel(false)}>
+          <div className="lt-cancel-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="lt-cancel-h">{t("Cancel this order?")}</div>
+            <p className="lt-cancel-sub">
+              {cancelFeeAmt > 0
+                ? `${t("A cancellation fee of")} ₹${cancelFeeAmt} ${t("applies. Anything you've paid is refunded to your NGS Wallet, minus the fee.")}`
+                : t("It's free to cancel right now. Anything you've paid is refunded to your NGS Wallet.")}
+            </p>
+            <input
+              className="lt-cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder={t("Reason (optional)")}
+              maxLength={120}
+            />
+            {cancelErr && <div className="lt-cancel-err">{cancelErr}</div>}
+            <div className="lt-cancel-actions">
+              <button className="lt-cancel-keep" disabled={cancelBusy} onClick={() => setShowCancel(false)}>
+                {t("Keep order")}
+              </button>
+              <button className="lt-cancel-go" disabled={cancelBusy} onClick={confirmCancel}>
+                {cancelBusy ? "…" : cancelFeeAmt > 0 ? `${t("Cancel")} · ₹${cancelFeeAmt} ${t("fee")}` : t("Cancel order")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

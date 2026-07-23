@@ -341,6 +341,18 @@ const HI = {
   "Couldn't get your location.": "आपका स्थान नहीं लिया जा सका।",
   "Couldn't set the address.": "पता सेट नहीं हो सका।",
   "Couldn't delete.": "हटाया नहीं जा सका।",
+
+  // ── Cancel order ───────────────────────────────────────────────────────────
+  "Cancel order": "ऑर्डर रद्द करें",
+  "Cancel this order?": "यह ऑर्डर रद्द करें?",
+  "Keep order": "ऑर्डर रखें",
+  "Reason (optional)": "कारण (वैकल्पिक)",
+  "A cancellation fee of": "रद्दीकरण शुल्क",
+  "applies. Anything you've paid is refunded to your NGS Wallet, minus the fee.":
+    "लगेगा। आपने जो भुगतान किया है वह शुल्क घटाकर आपके NGS वॉलेट में वापस आ जाएगा।",
+  "It's free to cancel right now. Anything you've paid is refunded to your NGS Wallet.":
+    "अभी रद्द करना मुफ़्त है। आपने जो भुगतान किया है वह आपके NGS वॉलेट में वापस आ जाएगा।",
+  "fee": "शुल्क",
 };
 
 const DICT = { en: {}, hi: HI };

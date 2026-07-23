@@ -100,6 +100,7 @@ function mapSettings(r) {
     automation: r.automation || null,
     // Store contact number the customer can call about an order (live tracker).
     supportPhone: (r.support_phone || "").replace(/\D/g, ""),
+    cancelFee: r.cancel_fee != null ? num(r.cancel_fee) : 20,
     subDeliveryFee: r.sub_delivery_fee != null ? num(r.sub_delivery_fee) : 10 };
 }
 function settingsToDb(p) {
@@ -108,7 +109,7 @@ function settingsToDb(p) {
     freeDeliveryAbove: "free_delivery_above", handlingFee: "handling_fee",
     surgeFee: "surge_fee", maxDistanceKm: "max_distance_km",
     shopLocations: "shop_locations", lowStockThreshold: "low_stock_threshold",
-    automation: "automation", supportPhone: "support_phone" };
+    automation: "automation", supportPhone: "support_phone", cancelFee: "cancel_fee" };
   const out = {};
   for (const k in p) if (map[k]) out[map[k]] = p[k];
   return out;
@@ -579,6 +580,16 @@ export async function fetchMyStockAlerts() {
   const { data, error } = await must().rpc("my_stock_alerts");
   if (error) throw error;
   return (data || []).map((r) => (typeof r === "string" ? r : r?.my_stock_alerts ?? r));
+}
+
+// Customer cancels an active order (Placed/Packed). The server decides the fee
+// (free within the grace window) and handles the refund. Returns { fee, refunded }.
+export async function cancelMyOrder(dbId, reason) {
+  const { data, error } = await must().rpc("cancel_my_order", { p_order: dbId, p_reason: reason || null });
+  if (error) throw new Error(error.message || "Couldn't cancel the order.");
+  pingLocal("orders");
+  pingLocal("customer_wallet");
+  return data || { ok: true };
 }
 
 export async function cancelPendingOrder(dbId) {

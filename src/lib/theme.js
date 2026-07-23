@@ -139,6 +139,22 @@ export function themePalette(c = {}) {
 
 let applied = []; // brand vars we overrode, so we can revert cleanly
 
+// Defense-in-depth: only recognizable CSS colours pass through, so a malformed
+// or hostile theme value can never reach a style property or an SVG `fill`.
+// (Themes are admin-authored, but this JSON can come from a paste-the-AI-output
+// flow, so it's validated anyway.)
+const COLOR_RE = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$|^(?:rgb|rgba|hsl|hsla)\([0-9.,%\s/]+\)$|^[a-zA-Z]{3,20}$/;
+function safeColor(v) { return (typeof v === "string" && COLOR_RE.test(v.trim())) ? v.trim() : ""; }
+function sanitizeColors(obj) {
+  const out = {};
+  for (const k in obj) {
+    const v = obj[k];
+    if (Array.isArray(v)) out[k] = v.map(safeColor).filter(Boolean);
+    else { const s = safeColor(v); if (s) out[k] = s; }
+  }
+  return out;
+}
+
 export function applyTheme(t) {
   const el = root();
   if (!el) return;
@@ -151,7 +167,7 @@ export function applyTheme(t) {
 
   if (!t || !t.id) return; // no active theme → back to the default green look
 
-  const c = t.colors || {};
+  const c = sanitizeColors(t.colors || {});
   Object.entries(VAR_MAP).forEach(([key, vars]) => {
     const val = c[key];
     if (val) vars.forEach((v) => { el.style.setProperty(v, val); applied.push(v); });

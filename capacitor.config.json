@@ -3,6 +3,6 @@
   "appName": "NGS Store Admin",
   "webDir": "www",
   "android": {
-    "allowMixedContent": true
+    "allowMixedContent": false
   }
 }

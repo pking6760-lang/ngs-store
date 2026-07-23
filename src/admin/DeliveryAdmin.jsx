@@ -16,6 +16,7 @@ export default function DeliveryAdmin() {
     maxDistanceKm: settings.maxDistanceKm ?? 5,
     minOrderValue: settings.rewards?.minOrderValue ?? 0,
     supportPhone: settings.supportPhone ?? "",
+    cancelFee: settings.cancelFee ?? 20,
   });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +40,7 @@ export default function DeliveryAdmin() {
       });
       await updateSettings({
         maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
+        cancelFee: Math.max(0, Number(form.cancelFee) || 0),
         supportPhone: (form.supportPhone || "").replace(/\D/g, "").slice(0, 10) || null,
         rewards: {
           ...(settings.rewards || {}),
@@ -88,6 +90,11 @@ export default function DeliveryAdmin() {
               onChange={(e) => set("maxDistanceKm", e.target.value)} />
           </label>
           <label className="dfield">
+            <span>Cancellation fee (₹)</span>
+            <input type="number" min="0" value={form.cancelFee}
+              onChange={(e) => set("cancelFee", e.target.value)} />
+          </label>
+          <label className="dfield">
             <span>Store contact number</span>
             <input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
               value={form.supportPhone}
@@ -97,6 +104,12 @@ export default function DeliveryAdmin() {
         <p className="delivery-hint">
           The <strong>store contact number</strong> shows as a "Call store" button
           on the customer's live order screen, so they can reach you about an order.
+        </p>
+        <p className="delivery-hint">
+          The <strong>cancellation fee</strong> is charged when a customer cancels
+          after a short free window (≈90s) or once you've started packing. What
+          they paid is refunded to their wallet minus this fee. Set to 0 to allow
+          free cancellation.
         </p>
         <p className="delivery-hint">
           The <strong>surge charge</strong> is added to every order only while
