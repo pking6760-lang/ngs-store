@@ -12,6 +12,7 @@ function loadLeaflet() {
 }
 import { ORDER_STATUSES } from "../lib/store.js";
 import { useCall } from "./CallProvider.jsx";
+import { useT } from "../lib/i18n.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { getCurrentLocation } from "../lib/location.js";
 import * as api from "../lib/api.js";
@@ -144,6 +145,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   const [sharing, setSharing] = useState(false);
   const [shareErr, setShareErr] = useState("");
   const { callParty } = useCall();
+  const { t } = useT();
   // One in-app call button: the server rings the assigned rider, or the shop
   // owner if none — either way the customer just sees "Delivery partner".
   const callDelivery = () => callParty(order?.dbId, "Delivery partner");
@@ -311,7 +313,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     <div className="lt-sheet">
       <div className="lt-head">
         <button className="back-btn small" onClick={onClose} aria-label="Back">←</button>
-        <h2>Track order</h2>
+        <h2>{t("Track order")}</h2>
         <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
       </div>
 
@@ -338,7 +340,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           {outForDelivery && (
             <div className="lt-hero-actions">
               <button className="lt-hero-call" onClick={callDelivery} aria-label="Call the delivery partner">
-                <Svg d={Icon.phone} size={14} sw={2.2} /> Call
+                <Svg d={Icon.phone} size={14} sw={2.2} /> {t("Call")}
               </button>
             </div>
           )}
@@ -387,7 +389,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                 {rider.name}
                 <span className="lt-driver-verified"><Svg d={Icon.shield} size={13} sw={2.2} /></span>
               </div>
-              <div className="lt-driver-role">Your delivery partner</div>
+              <div className="lt-driver-role">{t("Your delivery partner")}</div>
               <div className="lt-driver-msg">
                 {order.status === "Out for delivery"
                   ? `"Hi, I'm ${firstName}. I've picked up your order and I'm on my way!"`
@@ -402,12 +404,12 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
 
         {/* Timeline */}
         <div className="lt-card">
-          <div className="lt-card-title">Order status</div>
+          <div className="lt-card-title">{t("Order status")}</div>
           <ol className="lt-timeline">
             {ORDER_STATUSES.map((s, i) => (
               <li key={s} className={`lt-tl ${i < currentStep ? "done" : ""} ${i === currentStep ? "current" : ""}`}>
                 <span className="lt-tl-mark">{i < currentStep || (delivered && i === currentStep) ? <Svg d={Icon.check} size={13} sw={2.6} /> : <span className="lt-tl-dot" />}</span>
-                <span className="lt-tl-label">{s}</span>
+                <span className="lt-tl-label">{t(s)}</span>
               </li>
             ))}
           </ol>
@@ -418,19 +420,19 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
             order is still being packed we show a calm "being prepared" note. */}
         {outForDelivery ? (
           <div className="lt-card lt-contact">
-            <div className="lt-card-title">Need help with this order?</div>
+            <div className="lt-card-title">{t("Need help with this order?")}</div>
             <div className="lt-contact-btns">
               <button className="lt-contact-btn" onClick={callDelivery}>
-                <Svg d={Icon.phone} size={16} sw={2.2} /> Call delivery partner
+                <Svg d={Icon.phone} size={16} sw={2.2} /> {t("Call delivery partner")}
               </button>
             </div>
           </div>
         ) : !delivered && (
           <div className="lt-card lt-contact">
-            <div className="lt-card-title">Need help with this order?</div>
+            <div className="lt-card-title">{t("Need help with this order?")}</div>
             <div className="lt-contact-note">
               <Svg d={Icon.box} size={16} sw={2.1} />
-              <span>Your order is being prepared. You'll be able to call your delivery partner once it's on the way.</span>
+              <span>{t("Your order is being prepared. You'll be able to call your delivery partner once it's on the way.")}</span>
             </div>
           </div>
         )}
@@ -438,8 +440,8 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
         {/* Order summary + full bill */}
         <div className="lt-card">
           <div className="lt-card-title">
-            Order summary
-            <span className="lt-card-sub">#{order.id} · {itemCount} item{itemCount > 1 ? "s" : ""}</span>
+            {t("Order summary")}
+            <span className="lt-card-sub">#{order.id} · {itemCount} {t(itemCount > 1 ? "items" : "item")}</span>
           </div>
           <div className="lt-items">
             {(order.items || []).map((it) => (
@@ -455,15 +457,15 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           </div>
 
           <div className="lt-bill">
-            <BillRow k="Item total" v={`₹${order.itemTotal}`} />
+            <BillRow k={t("Item total")} v={`₹${order.itemTotal}`} />
             {order.couponDiscount > 0 && <BillRow k={`Coupon ${order.couponCode || ""}`.trim()} v={`− ₹${order.couponDiscount}`} good />}
             {order.pointsDiscount > 0 && <BillRow k={`Points used${order.pointsRedeemed ? ` (${order.pointsRedeemed} pts)` : ""}`} v={`− ₹${order.pointsDiscount}`} good />}
-            <BillRow k="Delivery fee" v={order.deliveryFee ? `₹${order.deliveryFee}` : "FREE"} free={!order.deliveryFee} />
+            <BillRow k={t("Delivery fee")} v={order.deliveryFee ? `₹${order.deliveryFee}` : t("FREE")} free={!order.deliveryFee} />
             {order.handling > 0 && <BillRow k="Handling charge" v={`₹${order.handling}`} />}
             {order.surgeFee > 0 && <BillRow k="Surge fee" v={`₹${order.surgeFee}`} />}
             {order.walletUsed > 0 && <BillRow k="NGS Wallet" v={`− ₹${order.walletUsed}`} good />}
             <div className="lt-bill-total">
-              <span>Total paid</span>
+              <span>{t("Total paid")}</span>
               <span>₹{order.total}</span>
             </div>
             <div className="lt-pay"><Svg d={Icon.shield} size={13} /> {payLabel}</div>

@@ -1,8 +1,21 @@
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useUserNotifications, useWallet } from "../lib/hooks.js";
+import { useT } from "../lib/i18n.jsx";
 import { shop } from "../data/shop.js";
 import Logo from "./Logo.jsx";
+
+// EN ⇄ हिंदी switch. One tap flips the whole app's language (persisted).
+function LangToggle() {
+  const { lang, setLang } = useT();
+  return (
+    <button className="lang-toggle" onClick={() => setLang(lang === "hi" ? "en" : "hi")}
+      aria-label="Change language">
+      <span className={lang === "en" ? "on" : ""}>EN</span>
+      <span className={lang === "hi" ? "on" : ""}>हिं</span>
+    </button>
+  );
+}
 
 // Compact wallet balance chip — sits in the location row (native chrome).
 function WalletChip({ balance, onClick, className }) {
@@ -30,6 +43,7 @@ export default function Header({
   const { user, isLoggedIn } = useAuth();
   const { notes } = useUserNotifications(user?.id);
   const { balance } = useWallet(user?.id);
+  const { t } = useT();
   const unread = notes.filter((n) => !n.read).length;
 
   const firstName = isLoggedIn ? user.name.split(" ")[0] : null;
@@ -57,14 +71,14 @@ export default function Header({
             <span className="account-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
             </span>
-            <span className="account-label">{isLoggedIn ? firstName : "Login"}</span>
+            <span className="account-label">{isLoggedIn ? firstName : t("Login")}</span>
           </button>
           <button className="cart-button" onClick={onCartClick}>
             <span className="cart-icon">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.5 3h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6" /></svg>
             </span>
             <span className="cart-label">
-              {totalCount > 0 ? `${totalCount} item${totalCount > 1 ? "s" : ""}` : "My Cart"}
+              {totalCount > 0 ? `${totalCount} ${t(totalCount > 1 ? "items" : "item")}` : t("My Cart")}
             </span>
           </button>
         </div>
@@ -77,13 +91,14 @@ export default function Header({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
           </span>
           <span className="hl-text">
-            <span className="hl-eta">Delivery in 12 min</span>
+            <span className="hl-eta">{t("Delivery in")} 12 {t("min")}</span>
             <span className="hl-addr">
               <span className="hl-addr-txt">{deliverTo}</span>
               <span className="hl-caret" aria-hidden="true">▾</span>
             </span>
           </span>
         </button>
+        <LangToggle />
         {isLoggedIn && (
           <WalletChip balance={balance} onClick={onWalletClick} className="hl-wallet" />
         )}
@@ -102,7 +117,7 @@ export default function Header({
               type="text"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder='Search "milk", "bread", "atta"...'
+              placeholder={t('Search "milk", "bread", "atta"...')}
             />
           </div>
         </div>

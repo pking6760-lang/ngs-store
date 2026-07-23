@@ -10,6 +10,7 @@ import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchA
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import { tierUnitPrice, bulkUnitPrice } from "../lib/bulk.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
+import { useT } from "../lib/i18n.jsx";
 import ProductThumb from "./ProductThumb.jsx";
 import MapPicker from "./MapPicker.jsx";
 import SubscribeSheet from "./SubscribeSheet.jsx";
@@ -150,6 +151,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const allCoupons = useCoupons();
 
   const BACKEND = api.isBackendConfigured;
+  const { t } = useT();
   const [step, setStep] = useState("cart"); // cart | checkout | pay | done
   const [placed, setPlaced] = useState(null);
   const [placing, setPlacing] = useState(false);
@@ -1271,8 +1273,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <path d="M2.5 3h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6" />
               </svg>
             </div>
-            <p>Your cart is empty</p>
-            <span>Add items to get started</span>
+            <p>{t("Your cart is empty")}</p>
+            <span>{t("Add items to get started")}</span>
             <button className="checkout-btn" onClick={handleClose}>
               Browse products
             </button>
@@ -1575,10 +1577,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               disabled={storeClosed || belowMin}
             >
               {storeClosed
-                ? "Store closed"
+                ? t("Store closed")
                 : belowMin
-                ? `Add ₹${minShortfall} more`
-                : `Proceed to checkout • ₹${grandTotal}`}
+                ? `${t("Add more items")} · ₹${minShortfall}`
+                : `${t("Proceed to checkout")} • ₹${grandTotal}`}
             </button>
           </>
         )}

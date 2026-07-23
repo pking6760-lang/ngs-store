@@ -6,19 +6,22 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { CallProvider } from "./components/CallProvider.jsx";
+import { LangProvider } from "./lib/i18n.jsx";
 import "./styles.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
-      <AppSplash variant="customer" tagline="Nisha General Store" />
-      <AuthProvider>
-        <CartProvider>
-          <CallProvider>
-            <App />
-          </CallProvider>
-        </CartProvider>
-      </AuthProvider>
+      <LangProvider>
+        <AppSplash variant="customer" tagline="Nisha General Store" />
+        <AuthProvider>
+          <CartProvider>
+            <CallProvider>
+              <App />
+            </CallProvider>
+          </CartProvider>
+        </AuthProvider>
+      </LangProvider>
     </ErrorBoundary>
   </StrictMode>
 );

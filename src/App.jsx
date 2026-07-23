@@ -18,6 +18,7 @@ import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/Live
 import CategoryIcon from "./components/CategoryIcon.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
+import OfflineBanner from "./components/OfflineBanner.jsx";
 import { fetchBuyAgain, saveCart } from "./lib/api.js";
 import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
@@ -280,6 +281,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <OfflineBanner />
       <CallAlertsPrompt show={isLoggedIn} />
       <PullToRefresh
         onRefresh={handleRefresh}

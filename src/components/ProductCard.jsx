@@ -6,6 +6,7 @@ import ProductThumb from "./ProductThumb.jsx";
 import { firstBulkTier, tierUnitPrice } from "../lib/bulk.js";
 import BulkPackSheet from "./BulkPackSheet.jsx";
 import { useStockAlerts } from "../lib/stockAlerts.js";
+import { useT } from "../lib/i18n.jsx";
 
 // Show scarcity urgency when stock is running low.
 const LOW_STOCK = 5;
@@ -23,6 +24,7 @@ export default function ProductCard({ product, badge }) {
   const settings = useSettings();
   const alerts = useStockAlerts();
   const alerted = alerts.has(product.id);
+  const { t } = useT();
   const qty = items[product.id] || 0;
   // The price this shopper actually pays (their member tier's price).
   const price = tierUnitPrice(product, 1, user, settings.rewards);
@@ -78,7 +80,7 @@ export default function ProductCard({ product, badge }) {
           <span className="pcard-unit">{product.unit}</span>
         ) : null}
         {outOfStock && (
-          <div className="pcard-oos"><b>Out of stock</b></div>
+          <div className="pcard-oos"><b>{t("Out of stock")}</b></div>
         )}
         {/* Floating action (in-stock only): ADD → qty stepper, hovering over the
             image's bottom-right corner. */}
@@ -88,7 +90,7 @@ export default function ProductCard({ product, badge }) {
               className={`pcard-act ${opensPacks ? "has-packs" : ""}`}
               onClick={() => (opensPacks ? setShowPacks(true) : add(product.id, product.stock))}
             >
-              ADD{opensPacks && <i>packs ›</i>}
+              {t("ADD")}{opensPacks && <i>packs ›</i>}
             </button>
           ) : (
             <div className="pcard-step">
@@ -132,7 +134,7 @@ export default function ProductCard({ product, badge }) {
                 alerts.toggle(product.id);
               }}
             >
-              {alerted ? "We'll tell you ✓" : "Notify me"}
+              {alerted ? t("We'll tell you ✓") : t("Notify me")}
             </button>
           )}
         </div>
