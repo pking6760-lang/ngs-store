@@ -326,8 +326,6 @@ export default function PartnersAdmin() {
   const pending = partners.filter((p) => p.status === "pending").sort(byName);
   const rejected = partners.filter((p) => p.status === "rejected").sort(byName);
   const shown = view === "requests" ? pending : view === "rejected" ? rejected : team;
-  const cashOnRoad = Object.values(wallets).reduce((s, w) => s + (w.cashInHand || 0), 0);
-  const holders = Object.values(wallets).filter((w) => (w.cashInHand || 0) > 0).length;
 
   async function decide(p, status) {
     setErr("");
@@ -342,13 +340,6 @@ export default function PartnersAdmin() {
 
   return (
     <>
-      {cashOnRoad > 0 && (
-        <div className="cash-road">
-          <span>Cash on the road</span>
-          <strong>₹{Math.round(cashOnRoad).toLocaleString("en-IN")}</strong>
-          <small>held by {holders} partner{holders === 1 ? "" : "s"}</small>
-        </div>
-      )}
       {view === "team" ? (
         <>
           {pending.length > 0 && (
@@ -389,6 +380,7 @@ export default function PartnersAdmin() {
         <div className="orders-list">
           {shown.map((p) => {
             const open = openId === p.id;
+            const cash = Math.round(wallets[p.userId]?.cashInHand || 0);
             return (
               <div className="order-card" key={p.id}>
                 <button className="partner-head" onClick={() => setOpenId(open ? null : p.id)}>
@@ -396,6 +388,9 @@ export default function PartnersAdmin() {
                   <span className="partner-main">
                     <strong>{p.fullName}{p.empCode && <span className="emp-badge">{p.empCode}</span>}</strong>
                     <small>{p.role === "picker" ? "Picker" : "Delivery"} · {p.phone || "—"}</small>
+                    {cash > 0 && (
+                      <span className="partner-cash">Cash in hand · ₹{cash.toLocaleString("en-IN")}</span>
+                    )}
                   </span>
                   <span className={`partner-status ${p.status}`}>{p.status}</span>
                 </button>
