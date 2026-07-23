@@ -7,6 +7,7 @@ import { unlockAudio, stopAlarm, errorBeep, okBeep } from "../lib/sound.js";
 import { scanBarcode } from "../lib/scanner.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
+import PullRefresh from "../components/PullRefresh.jsx";
 import { withMinTime } from "../lib/ux.js";
 import { Ic } from "./AdminIcons.jsx";
 import { useCall } from "../components/CallProvider.jsx";
@@ -142,6 +143,18 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
     taskAction(() => api.partnerAccept(task.orderId));
   }
 
+  // Pull-to-refresh: refetch the partner's own data (wallet/slots/config/
+  // presence) + current task, and nudge any focus-driven hooks used inside the
+  // tabs (e.g. Earnings' order list).
+  const refreshPartner = useCallback(async () => {
+    try { window.dispatchEvent(new Event("focus")); } catch { /* ignore */ }
+    await Promise.all([
+      reload(),
+      api.getMyTask().then(setTask).catch(() => {}),
+    ]);
+    await new Promise((r) => setTimeout(r, 300));
+  }, [reload]);
+
   const isDelivery = role === "delivery";
   const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload, task, taskBusy, taskAction };
   const switching = useReveal(tab, 300, 650);
@@ -152,7 +165,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
 
   return (
     <div className="pd">
-      <div className="pd-scroll">
+      <PullRefresh className="pd-scroll" onRefresh={refreshPartner} tint="#E5122E" disabled={runActive}>
         {switching ? (
           <PageLoad variant="partner" text={tab} />
         ) : (
@@ -164,7 +177,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
             {tab === "profile" && <Profile {...shared} onLogout={onLogout} />}
           </div>
         )}
-      </div>
+      </PullRefresh>
       <nav className="pd-nav">
         {[["home", "Home"], ["slots", "Slots"], ["earnings", "Earnings"], ["wallet", "Wallet"], ["profile", "Profile"]].map(([k, lbl]) => (
           <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>

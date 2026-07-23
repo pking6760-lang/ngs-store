@@ -4260,20 +4260,22 @@ body {
   top: calc(env(safe-area-inset-top, 0px) + 8px);
   left: 50%;
   z-index: 60;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 4px 16px rgba(16, 32, 24, 0.18);
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  color: var(--green, var(--green));
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px 0 11px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 8px 22px -8px rgba(16, 32, 24, 0.34), 0 0 0 1px rgba(16, 32, 24, 0.05);
+  color: var(--green);
   pointer-events: none;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 .ptr-ring { display: flex; transition: transform 0.08s linear; }
+.ptr-lbl { font-size: 12.5px; font-weight: 800; letter-spacing: 0.01em; white-space: nowrap; }
 .ptr--busy .ptr-ring { animation: ptr-spin 0.7s linear infinite; }
+.ptr--done { color: #12a150; }
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
 
 /* ── Prime price hint (shown to guests / non-Prime on each card) ──────────── */

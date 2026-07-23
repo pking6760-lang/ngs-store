@@ -18,6 +18,7 @@ import OpsSettings from "./OpsSettings.jsx";
 import { AdminMark } from "./BrandMark.jsx";
 import { Ic } from "./AdminIcons.jsx";
 import IncomingOrder from "./IncomingOrder.jsx";
+import PullRefresh from "../components/PullRefresh.jsx";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { useSettings, useOrders, usePartners } from "../lib/hooks.js";
 import { updateSettings } from "../lib/actions.js";
@@ -30,6 +31,13 @@ import {
 } from "../lib/biometric.js";
 
 const BACKEND = api.isBackendConfigured;
+// Pull-to-refresh: every live hook (orders, partners, products, settings…)
+// reloads on window "focus", so one dispatched focus event re-fetches the whole
+// screen. The short settle keeps the spinner honest on a fast connection.
+async function refreshAdmin() {
+  try { window.dispatchEvent(new Event("focus")); } catch { /* ignore */ }
+  await new Promise((r) => setTimeout(r, 500));
+}
 // Demo-only logins (used when no backend is configured). With a backend, the
 // admin signs in with the real email + password of their admin account.
 const ADMIN_PASSWORD = "admin123";
@@ -148,7 +156,7 @@ function AdminHome({ name, onOpen, onLogout }) {
   const todaysRevenue = todays.reduce((s, o) => s + (o.total || 0), 0);
 
   return (
-    <div className="adm-home">
+    <PullRefresh className="adm-home" onRefresh={refreshAdmin}>
       <header className="adm-hero">
         <div className="adm-hero-top">
           <div className="adm-brand">
@@ -185,7 +193,7 @@ function AdminHome({ name, onOpen, onLogout }) {
           </button>
         ))}
       </div>
-    </div>
+    </PullRefresh>
   );
 }
 
@@ -198,7 +206,7 @@ function AdminSection({ view, navArg, onOpen }) {
         <button className="adm-back" onClick={() => onOpen("menu")} aria-label="Back">←</button>
         <h1>{label}</h1>
       </header>
-      <div className="adm-sec-body">
+      <PullRefresh className="adm-sec-body" onRefresh={refreshAdmin}>
         {loading ? (
           <PageLoad variant="admin" text={label} />
         ) : (
@@ -219,7 +227,7 @@ function AdminSection({ view, navArg, onOpen }) {
             {view === "settings" && <OpsSettings />}
           </div>
         )}
-      </div>
+      </PullRefresh>
     </div>
   );
 }

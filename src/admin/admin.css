@@ -2880,6 +2880,19 @@ body {
 .adm-secbar h1 { font-size: 18px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
 .adm-sec-body { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 14px 16px 34px; }
 
+/* ── Pull-to-refresh (container-based; admin & partner inner scrollers) ────── */
+.pr { position: relative; overscroll-behavior-y: contain; }
+.pr-cap { position: absolute; top: 0; left: 50%; z-index: 40; pointer-events: none;
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 11px;
+  border-radius: 999px; background: #fff; color: var(--pr-tint, #3B5BDB);
+  box-shadow: 0 8px 22px -8px rgba(16,32,64,.35), 0 0 0 1px rgba(16,32,64,.05);
+  will-change: transform, opacity; }
+.pr-spin { display: flex; transition: transform .08s linear; }
+.pr-cap.busy .pr-spin { animation: pr-spin .7s linear infinite; }
+.pr-cap.done { color: #12a150; }
+.pr-lbl { font-size: 12.5px; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
+@keyframes pr-spin { to { transform: rotate(360deg); } }
+
 /* Retheme the admin login + store controls to the new indigo */
 .login-screen .admin-logo { color: var(--a-primary) !important; }
 .login-screen .admin-logo-sub { color: var(--a-sub); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; font-size: 11px; }
