@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect } from "react";
 import { useProducts, useAdminProducts, useOrders, useCategories, useSettings } from "../lib/hooks.js";
-import { updateSettings } from "../lib/actions.js";
 import { getOpsConfigRaw, fetchPartnerWallets, subscribeTable } from "../lib/api.js";
 import { Ic } from "./AdminIcons.jsx";
 import CategoryIcon from "../components/CategoryIcon.jsx";
+import Autopilot from "./Autopilot.jsx";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
@@ -11,7 +11,6 @@ export default function Dashboard({ onNavigate }) {
   const orders = useOrders();
   const categories = useCategories();
   const settings = useSettings();
-  const threshold = settings.lowStockThreshold ?? 5;
 
   // Ops rates + who covers picking/delivery — to net staff payouts out of profit.
   const [ops, setOps] = useState(null);
@@ -40,18 +39,6 @@ export default function Dashboard({ onNavigate }) {
     adminProducts.forEach((p) => { if (p.cost != null) m[p.id] = p.cost; });
     return m;
   }, [adminProducts]);
-
-  // Items that need restocking: marked out of stock, or a stock count at/below
-  // the alert threshold.
-  const lowStock = useMemo(() => {
-    return products
-      .filter(
-        (p) =>
-          p.inStock === false ||
-          (typeof p.stock === "number" && p.stock <= threshold)
-      )
-      .sort((a, b) => (a.stock ?? -1) - (b.stock ?? -1));
-  }, [products, threshold]);
 
   const stats = useMemo(() => {
     // "Today's" figures — computed from each order's date, so they reset to
@@ -201,6 +188,8 @@ export default function Dashboard({ onNavigate }) {
         <StatCard label="Pending orders" value={stats.pending} icon="pending" tone="pink" />
       </div>
 
+      <Autopilot adminProducts={adminProducts} orders={orders} settings={settings} onNavigate={onNavigate} />
+
       {cashToCollect.total > 0 && (
         <button className="cash-collect" onClick={() => onNavigate("partners")}>
           <span className="cash-collect-ic"><Ic name="wallet" size={20} /></span>
@@ -258,43 +247,6 @@ export default function Dashboard({ onNavigate }) {
             </div>
           ))}
         </div>
-      </section>
-
-      <section className="panel lowstock-panel">
-        <div className="panel-head">
-          <h3><Ic name="alert" size={17} /> Low stock {lowStock.length > 0 && <span className="lowstock-count">{lowStock.length}</span>}</h3>
-          <label className="lowstock-thresh">
-            Alert at ≤
-            <input
-              type="number"
-              min="0"
-              value={threshold}
-              onChange={(e) =>
-                updateSettings({ lowStockThreshold: Math.max(0, Number(e.target.value) || 0) })
-              }
-            />
-          </label>
-        </div>
-        {lowStock.length === 0 ? (
-          <p className="panel-empty">Everything's well stocked.</p>
-        ) : (
-          <div className="lowstock-list">
-            {lowStock.map((p) => (
-              <button
-                key={p.id}
-                className="lowstock-item"
-                onClick={() => onNavigate("products")}
-              >
-                <span className="lowstock-name">{p.name}</span>
-                {p.inStock === false ? (
-                  <span className="lowstock-tag out">Out of stock</span>
-                ) : (
-                  <span className="lowstock-tag low">{p.stock} left</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
       </section>
 
       <section className="panel">
