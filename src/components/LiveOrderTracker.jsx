@@ -416,6 +416,25 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           </ol>
         </div>
 
+        {/* Contact — always in the scroll flow (the hero pills scroll away). */}
+        {!delivered && (rider?.phone || storePhone) && (
+          <div className="lt-card lt-contact">
+            <div className="lt-card-title">Need help with this order?</div>
+            <div className="lt-contact-btns">
+              {rider?.phone && (
+                <a className="lt-contact-btn" href={`tel:+91${rider.phone}`}>
+                  <Svg d={Icon.phone} size={16} sw={2.2} /> Call delivery partner
+                </a>
+              )}
+              {storePhone && (
+                <a className="lt-contact-btn" href={`tel:+91${storePhone}`}>
+                  <Svg d={Icon.phone} size={16} sw={2.2} /> Call store
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Order summary + full bill */}
         <div className="lt-card">
           <div className="lt-card-title">

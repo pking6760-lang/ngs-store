@@ -4925,3 +4925,9 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
   border:1px solid rgba(255,255,255,.4); white-space:nowrap;
 }
 .lt-hero-call:active{ background:rgba(255,255,255,.32); }
+/* Contact card in the live tracker (main scroll flow, not just the hero). */
+.lt-contact-btns{ display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+.lt-contact-btn{ display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px; border-radius:12px; border:1.5px solid var(--green); color:var(--green-dark);
+  background:#f3fdf7; font-weight:800; font-size:14px; text-decoration:none; }
+.lt-contact-btn:active{ background:var(--green-tint); }
