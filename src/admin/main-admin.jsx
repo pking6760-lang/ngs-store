@@ -11,7 +11,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
       <AppSplash variant="admin" tagline="admin" />
-      <CallProvider>
+      <CallProvider app="admin">
         <AdminApp />
       </CallProvider>
     </ErrorBoundary>

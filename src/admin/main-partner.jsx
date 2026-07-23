@@ -14,7 +14,7 @@ createRoot(document.getElementById("root")).render(
     <ErrorBoundary>
       <AppSplash variant="partner" tagline="partner" />
       <UpdateGate app="partner">
-        <CallProvider>
+        <CallProvider app="partner">
           <PartnerApp />
         </CallProvider>
       </UpdateGate>

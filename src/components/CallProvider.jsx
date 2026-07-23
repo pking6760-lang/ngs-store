@@ -45,7 +45,7 @@ function makeRinger() {
   };
 }
 
-export function CallProvider({ children }) {
+export function CallProvider({ app, children }) {
   const supported = isCallSupported();
   const [uid, setUid] = useState(null);
   // phase: idle | outgoing | incoming | connecting | connected | ended
@@ -238,9 +238,15 @@ export function CallProvider({ children }) {
 
   const active = phase !== "idle";
   const mmss = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  const initial = (peerName || "?").trim().charAt(0).toUpperCase() || "?";
   const ROLE_LABEL = { customer: "Customer", partner: "Employee", owner: "Store" };
   const roleLabel = ROLE_LABEL[peerRole] || "";
+  // Masked calling: the customer and partner apps don't reveal the other party's
+  // name, ID or number — just a generic role title. Only the admin app, which
+  // needs to know exactly who's on the line, shows the full identity.
+  const hideIdentity = app === "customer" || app === "partner";
+  const TITLE_HIDDEN = { customer: "Customer", partner: "Delivery partner", owner: "NGS Store" };
+  const displayName = hideIdentity ? (TITLE_HIDDEN[peerRole] || "NGS Store") : peerName;
+  const initial = (displayName || "?").trim().charAt(0).toUpperCase() || "?";
   // Minimizing is offered once a call is going (not while it's still ringing to
   // be answered), so you can look up the caller's ID without dropping the call.
   const canMinimize = phase === "outgoing" || phase === "connecting" || phase === "connected";
@@ -267,7 +273,7 @@ export function CallProvider({ children }) {
             <div className="callmini" onClick={() => setMinimized(false)} role="button" aria-label="Return to call">
               <span className="callmini-av">{initial}</span>
               <span className="callmini-txt">
-                <div className="callmini-name">{peerName}</div>
+                <div className="callmini-name">{displayName}</div>
                 <div className="callmini-sub">{statusText} · tap to open</div>
               </span>
               <button className="callmini-end" onClick={(e) => { e.stopPropagation(); endCall(); }} aria-label="End call">✕</button>
@@ -286,16 +292,16 @@ export function CallProvider({ children }) {
 
               <div className="callov-card">
                 <div className={`callov-avatar ${phase === "connected" ? "live" : ""}`}>{initial}</div>
-                <div className="callov-name">{peerName}</div>
+                <div className="callov-name">{displayName}</div>
 
-                {(roleLabel || peerRef) && (
+                {!hideIdentity && (roleLabel || peerRef) && (
                   <button className="callov-idchip" onClick={copyRef} title="Tap to copy the ID">
                     {roleLabel && <span className="callov-idrole">{roleLabel}</span>}
                     {peerRef && <span className="callov-idcode">#{peerRef}</span>}
                     {peerRef && <span className="callov-idcopy">{copied ? "copied ✓" : "copy"}</span>}
                   </button>
                 )}
-                {peerPhone && <div className="callov-idphone">{peerPhone}</div>}
+                {!hideIdentity && peerPhone && <div className="callov-idphone">{peerPhone}</div>}
 
                 <div className="callov-status">{statusText}</div>
 

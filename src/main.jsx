@@ -18,7 +18,7 @@ createRoot(document.getElementById("root")).render(
         <UpdateGate app="customer">
           <AuthProvider>
             <CartProvider>
-              <CallProvider>
+              <CallProvider app="customer">
                 <App />
               </CallProvider>
             </CartProvider>
