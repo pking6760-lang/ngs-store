@@ -19,7 +19,8 @@ import CategoryIcon from "./components/CategoryIcon.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
 import OfflineBanner from "./components/OfflineBanner.jsx";
-import { fetchBuyAgain, saveCart } from "./lib/api.js";
+import { fetchBuyAgain, saveCart, applyReferral } from "./lib/api.js";
+import { toast } from "./lib/toast.js";
 import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
 import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
@@ -130,6 +131,34 @@ export default function App() {
     window.addEventListener("ngs:require-login", open);
     return () => window.removeEventListener("ngs:require-login", open);
   }, []);
+
+  // Referral link: someone arriving via …/?ref=CODE. Remember the code and
+  // clean it off the URL, so it survives until they sign up.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = (params.get("ref") || "").trim().toUpperCase();
+      if (!ref) return;
+      localStorage.setItem("ngs_ref", ref);
+      params.delete("ref");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : "") + window.location.hash);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Once a referred visitor signs in, auto-apply the referral (no code to type).
+  // The server only accepts it for a brand-new account, so this is safe to fire
+  // for anyone — a non-new user is simply rejected and the pending ref cleared.
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let ref = null;
+    try { ref = localStorage.getItem("ngs_ref"); } catch { /* ignore */ }
+    if (!ref) return;
+    applyReferral(ref)
+      .then((r) => toast(`🎉 ₹${r?.reward || 30} added to your wallet! Use it on your first order.`))
+      .catch(() => { /* already ordered / already referred — ignore */ })
+      .finally(() => { try { localStorage.removeItem("ngs_ref"); } catch { /* ignore */ } });
+  }, [isLoggedIn, user?.id]);
 
   // Warm the code-split overlays once the browser is idle after first paint, so
   // the first tap on cart / account / login opens with no fetch delay.

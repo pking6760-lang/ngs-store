@@ -981,11 +981,16 @@ function Rewards({ user }) {
   );
 }
 
+const REFER_BASE = "https://ngsstore.in";
+const ShareGlyph = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+    <path d="M8.6 13.5 15.4 17.5M15.4 6.5 8.6 10.5" />
+  </svg>
+);
+
 function Referral({ user }) {
   const [stats, setStats] = useState(null);
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState(null); // { ok, text }
   const [copied, setCopied] = useState(false);
 
   async function load() {
@@ -993,51 +998,39 @@ function Referral({ user }) {
   }
   useEffect(() => { load(); }, [user?.id]);
 
-  const shareText =
-    stats?.code &&
-    `Shop daily essentials on NGS — use my code ${stats.code} and we both get ₹${stats.amount} off.`;
+  const amount = stats?.amount ?? 30;
+  const link = stats?.code ? `${REFER_BASE}/?ref=${stats.code}` : "";
+  const shareText = link &&
+    `Get groceries from Nisha General Store, delivered fast. Join with my link — we both get ₹${amount} after your first delivery: ${link}`;
 
+  const flash = () => { setCopied(true); setTimeout(() => setCopied(false), 1800); };
   async function share() {
-    if (!stats?.code) return;
+    if (!link) return;
     try {
-      if (navigator.share) await navigator.share({ text: shareText });
-      else { await navigator.clipboard.writeText(shareText); setCopied(true); setTimeout(() => setCopied(false), 1800); }
+      if (navigator.share) await navigator.share({ title: "NGS — Nisha General Store", text: shareText, url: link });
+      else { await navigator.clipboard.writeText(link); flash(); }
     } catch { /* user dismissed */ }
   }
-  async function copyCode() {
-    try { await navigator.clipboard.writeText(stats.code); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* no clipboard */ }
+  async function copyLink() {
+    if (!link) return;
+    try { await navigator.clipboard.writeText(link); flash(); } catch { /* no clipboard */ }
   }
-
-  async function submitCode(e) {
-    e.preventDefault();
-    if (!code.trim() || busy) return;
-    setBusy(true); setMsg(null);
-    try {
-      const r = await api.applyReferral(code.trim().toUpperCase());
-      setMsg({ ok: true, text: `Code applied! You'll get ₹${r.reward} after your first order.` });
-      setCode("");
-      load();
-    } catch (e2) {
-      setMsg({ ok: false, text: e2.message });
-    } finally { setBusy(false); }
-  }
-
-  const amount = stats?.amount ?? 30;
-  const isNew = !stats?.usedCode && (user?.orderCount ?? 0) === 0;
 
   return (
     <div className="refer-panel">
       <div className="refer-hero">
         <div className="refer-hero-ic"><MIcon d={PIC.gift} size={26} /></div>
-        <h3>Refer a friend, both get ₹{amount}</h3>
-        <p>Share your code. When your friend places their first order, you both get ₹{amount} in your NGS Wallet.</p>
+        <h3>{tr("Refer a friend — you both get")} ₹{amount}</h3>
+        <p>{tr("Share your invite link. Your friend gets")} ₹{amount} {tr("instantly, and you get")} ₹{amount} {tr("after their first delivery — no code needed.")}</p>
       </div>
 
-      <div className="refer-code-box">
-        <span className="refer-code-label">{tr("Your code")}</span>
-        <button className="refer-code" onClick={copyCode}>{stats?.code || "…"}</button>
-        <button className="primary-btn refer-share" onClick={share}>{tr("Share code")}</button>
-        {copied && <span className="refer-copied"><MIcon d={PIC.check} size={13} /> {tr("Copied")}</span>}
+      <div className="refer-link-box">
+        <span className="refer-code-label">{tr("Your invite link")}</span>
+        <button className="refer-link" onClick={copyLink} title={tr("Tap to copy")}>{link || "…"}</button>
+        <div className="refer-link-actions">
+          <button className="primary-btn refer-share" onClick={share}><ShareGlyph /> {tr("Share link")}</button>
+          <button className="ghost-btn refer-copy" onClick={copyLink}>{copied ? tr("Copied") : tr("Copy link")}</button>
+        </div>
       </div>
 
       {stats && (
@@ -1047,33 +1040,11 @@ function Referral({ user }) {
         </div>
       )}
 
-      {isNew && (
-        <form className="refer-enter" onSubmit={submitCode}>
-          <span className="refer-enter-label">{tr("Have a friend's code?")}</span>
-          <div className="refer-enter-row">
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="e.g. NGS1043"
-              maxLength={16}
-            />
-            <button className="primary-btn" type="submit" disabled={busy}>
-              {busy ? "…" : "Apply"}
-            </button>
-          </div>
-          <small className="refer-fine">{tr("Only before your first order.")}</small>
-          {msg && (
-            <div className={msg.ok ? "refer-ok" : "refer-err"}>
-              <MIcon d={msg.ok ? PIC.check : PIC.alert} size={14} /> {msg.text}
-            </div>
-          )}
-        </form>
-      )}
-      {stats?.usedCode && (
-        <div className="refer-used">
-          <MIcon d={PIC.check} size={15} /> You've already used a friend's code — enjoy!
-        </div>
-      )}
+      <div className="refer-steps">
+        <div className="refer-step"><span className="refer-step-n">1</span>{tr("Share your link with friends")}</div>
+        <div className="refer-step"><span className="refer-step-n">2</span>{tr("They sign up and get")} ₹{amount} {tr("instantly")}</div>
+        <div className="refer-step"><span className="refer-step-n">3</span>{tr("You get")} ₹{amount} {tr("after their first delivery")}</div>
+      </div>
     </div>
   );
 }

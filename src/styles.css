@@ -4110,6 +4110,23 @@ body {
   font-size: 13px; color: var(--green); font-weight: 700;
   background: var(--green-tint); border-radius: 10px; padding: 10px; }
 
+/* Link-based referral: the shareable invite link + share/copy actions. */
+.refer-link-box { display: flex; flex-direction: column; gap: 10px; }
+.refer-link { width: 100%; text-align: left; font-size: 13px; font-weight: 700; color: var(--green-dark, #2B44A8);
+  padding: 12px 14px; border: 2px dashed var(--green, #0a9155); border-radius: 12px; background: #f3fdf7;
+  cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.refer-link:active { background: var(--green-tint); }
+.refer-link-actions { display: flex; gap: 8px; }
+.refer-link-actions .refer-share { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.refer-link-actions .refer-copy { flex: none; padding: 12px 16px; border: 1px solid var(--line); background: #fff;
+  border-radius: 12px; font-weight: 700; color: var(--ink, #1c2430); cursor: pointer; }
+.refer-link-actions .refer-copy:active { background: #f1f4f9; }
+.refer-steps { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.refer-step { display: flex; align-items: center; gap: 11px; font-size: 13.5px; color: var(--ink, #1c2430); }
+.refer-step-n { width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--green-tint);
+  color: var(--green-dark, #178a3a); font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; }
+
 .prime-benefits {
   background: var(--card, #fff); border: 1px solid var(--line); border-radius: 16px;
   padding: 6px 16px; margin-top: 14px;
