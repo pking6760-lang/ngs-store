@@ -1,7 +1,7 @@
 {
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "dist/admin.html"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "dist/admin.html", "**/*.apk"],
     "rewrites": [
       { "source": "/partner", "destination": "/partner.html" },
       { "source": "**", "destination": "/index.html" }
@@ -21,14 +21,6 @@
       {
         "source": "assets/**",
         "headers": [{ "key": "Cache-Control", "value": "max-age=31536000, immutable" }]
-      },
-      {
-        "source": "/ngs.apk",
-        "headers": [
-          { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
-          { "key": "Content-Disposition", "value": "attachment; filename=\"NGS.apk\"" },
-          { "key": "Cache-Control", "value": "no-cache" }
-        ]
       },
       {
         "source": "/index.html",

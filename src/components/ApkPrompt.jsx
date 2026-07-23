@@ -4,7 +4,11 @@ import { useT } from "../lib/i18n.jsx";
 // A one-time "download the Android app" banner, shown ONLY to Android visitors
 // on the website — never inside the installed app (Capacitor) or the PWA, and
 // snoozed for a week after it's dismissed or the download starts.
-const APK_URL = "/ngs.apk";
+// The APK is hosted on Supabase Storage rather than Firebase Hosting: Firebase's
+// free (Spark) plan forbids serving executable files (.apk), and doing so blocks
+// the whole site deploy. Supabase serves it publicly with the right content-type.
+const APK_URL =
+  "https://wvlkhvqohkkxlatwotvy.supabase.co/storage/v1/object/public/downloads/ngs.apk";
 const SNOOZE_KEY = "ngs_apk_snooze";
 const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 

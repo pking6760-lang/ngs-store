@@ -59,4 +59,3 @@ android-customer/.gradle/
 signing/
 
 # The customer APK we host for download on the website
-!public/ngs.apk
