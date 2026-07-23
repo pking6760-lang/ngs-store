@@ -2880,17 +2880,19 @@ body {
 .adm-secbar h1 { font-size: 18px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
 .adm-sec-body { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 14px 16px 34px; }
 
-/* ── Pull-to-refresh (container-based; admin & partner inner scrollers) ────── */
+/* ── Pull-to-refresh (container-based; admin & partner inner scrollers) ─────
+   A single clean spinner that slides in at the top of the content as you pull.
+   Absolutely positioned (out of flow) so it never disturbs the scroller's own
+   layout, and no text labels. */
 .pr { position: relative; overscroll-behavior-y: contain; }
-.pr-cap { position: absolute; top: 0; left: 50%; z-index: 40; pointer-events: none;
-  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 11px;
-  border-radius: 999px; background: #fff; color: var(--pr-tint, #3B5BDB);
+.pr-spin { position: absolute; top: 6px; left: 50%; z-index: 6; pointer-events: none;
+  width: 36px; height: 36px; border-radius: 50%; background: #fff; color: var(--pr-tint, #3B5BDB);
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 8px 22px -8px rgba(16,32,64,.35), 0 0 0 1px rgba(16,32,64,.05);
   will-change: transform, opacity; }
-.pr-spin { display: flex; transition: transform .08s linear; }
-.pr-cap.busy .pr-spin { animation: pr-spin .7s linear infinite; }
-.pr-cap.done { color: #12a150; }
-.pr-lbl { font-size: 12.5px; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
+.pr-ring { display: flex; transition: transform .08s linear; }
+.pr-spin.busy .pr-ring { animation: pr-spin .7s linear infinite; }
+.pr-spin.done { color: #12a150; }
 @keyframes pr-spin { to { transform: rotate(360deg); } }
 
 /* Retheme the admin login + store controls to the new indigo */

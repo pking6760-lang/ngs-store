@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 
-// Advanced pull-to-refresh for INNER scroll containers (admin & partner shells,
-// whose content scrolls inside a fixed frame rather than the window). The
-// component *becomes* the scroller — pass the scroller's className so it keeps
-// the same flex/overflow/padding role. It shows a floating pill that reads
-// "Pull to refresh" → "Release to refresh" → "Refreshing…" → "Updated", winds
-// the arrow up as you pull, gives a haptic tick at the threshold, and holds a
-// success tick briefly so a fast refresh still registers.
+// Pull-to-refresh for INNER scroll containers (admin & partner shells, whose
+// content scrolls inside a fixed frame rather than the window). The component
+// *becomes* the scroller — pass the scroller's className so it keeps the same
+// flex/overflow/padding role. Deliberately minimal: a single clean spinner at
+// the top of the content that winds up as you pull, spins while refreshing and
+// shows a brief tick when done. No text labels. The spinner is out of flow, so
+// it never disturbs the container's own layout.
 const THRESHOLD = 72; // px pulled (after resistance) to arm a refresh
-const MAX = 104;      // clamp so it can't be dragged arbitrarily far
+const MAX = 108;      // clamp so it can't be dragged arbitrarily far
 
 const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch { /* ignore */ } };
 
@@ -33,15 +33,14 @@ export default function PullRefresh({ onRefresh, disabled, className = "", child
       if (!st.active) return;
       const dy = e.touches[0].clientY - st.y;
       const dx = e.touches[0].clientX - st.x;
-      // Left the top, pulling up, or a mostly-horizontal swipe → not a refresh.
       if (dy <= 0 || el.scrollTop > 2 || Math.abs(dx) > dy) {
         st.active = false; st.pull = 0; setPull(0); set("idle"); return;
       }
-      e.preventDefault(); // suppress native overscroll while we own the gesture
+      e.preventDefault(); // own the gesture; suppress native overscroll
       const d = Math.min(MAX, dy * 0.5); // rubber-band resistance
       st.pull = d; setPull(d);
       const ready = d >= THRESHOLD;
-      if (ready && !st.crossed) { st.crossed = true; buzz(12); }   // tick when it arms
+      if (ready && !st.crossed) { st.crossed = true; buzz(12); }
       if (!ready && st.crossed) st.crossed = false;
       set(ready ? "ready" : "pulling");
     };
@@ -51,7 +50,7 @@ export default function PullRefresh({ onRefresh, disabled, className = "", child
         st.phase = "busy"; setPhase("busy"); buzz(8);
         Promise.resolve(onRefresh?.()).finally(() => {
           st.phase = "done"; setPhase("done");
-          window.setTimeout(() => { st.phase = "idle"; setPhase("idle"); st.pull = 0; setPull(0); }, 650);
+          window.setTimeout(() => { st.phase = "idle"; setPhase("idle"); st.pull = 0; setPull(0); }, 600);
         });
       } else {
         st.pull = 0; setPull(0); set("idle");
@@ -71,29 +70,30 @@ export default function PullRefresh({ onRefresh, disabled, className = "", child
   }, [onRefresh]);
 
   const busy = phase === "busy", done = phase === "done";
-  const dist = busy || done ? THRESHOLD * 0.66 : pull;
-  const rot = Math.min(1, pull / THRESHOLD) * 280; // arrow wind-up before it spins
-  const label = done ? "Updated" : busy ? "Refreshing…" : phase === "ready" ? "Release to refresh" : "Pull to refresh";
+  const active = pull > 0 || busy || done;
+  const prog = Math.min(1, pull / THRESHOLD);
+  const rot = prog * 300;                       // arrow winds up before it spins
+  const scale = busy || done ? 1 : 0.4 + 0.6 * prog;
+  const drop = busy || done ? 40 : Math.min(48, pull * 0.7); // how far it slides in
 
   return (
     <div className={`pr ${className}`} ref={scrollRef} style={{ "--pr-tint": tint }}>
       <div
-        className={`pr-cap ${busy ? "busy" : ""} ${done ? "done" : ""}`}
+        className={`pr-spin ${busy ? "busy" : ""} ${done ? "done" : ""}`}
         style={{
-          transform: `translateX(-50%) translateY(${dist - 52}px)`,
-          opacity: dist > 4 || busy || done ? 1 : 0,
-          transition: s.current.active ? "none" : "transform .3s cubic-bezier(.16,1,.3,1), opacity .2s ease",
+          opacity: active ? 1 : 0,
+          transform: `translateX(-50%) translateY(${drop}px) scale(${scale})`,
+          transition: s.current.active ? "opacity .15s ease" : "transform .32s cubic-bezier(.16,1,.3,1), opacity .2s ease",
         }}
-        aria-hidden={dist === 0 && !busy && !done}
+        aria-hidden={!active}
       >
-        <span className="pr-spin" style={{ transform: busy ? undefined : `rotate(${rot}deg)` }}>
+        <span className="pr-ring" style={{ transform: busy ? undefined : `rotate(${rot}deg)` }}>
           {done ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
           ) : (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v5h-5" /></svg>
           )}
         </span>
-        <span className="pr-lbl">{label}</span>
       </div>
       {children}
     </div>

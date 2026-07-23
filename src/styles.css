@@ -4257,23 +4257,22 @@ body {
 /* ── Pull-to-refresh spinner ─────────────────────────────────────────────── */
 .ptr {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  top: 150px; /* overridden inline to sit just below the live header height */
   left: 50%;
-  z-index: 60;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  z-index: 35; /* below the sticky search bar (z-40) so it reads as content */
+  width: 36px;
   height: 36px;
-  padding: 0 14px 0 11px;
-  border-radius: 999px;
+  border-radius: 50%;
   background: #fff;
   box-shadow: 0 8px 22px -8px rgba(16, 32, 24, 0.34), 0 0 0 1px rgba(16, 32, 24, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--green);
   pointer-events: none;
   will-change: transform, opacity;
 }
 .ptr-ring { display: flex; transition: transform 0.08s linear; }
-.ptr-lbl { font-size: 12.5px; font-weight: 800; letter-spacing: 0.01em; white-space: nowrap; }
 .ptr--busy .ptr-ring { animation: ptr-spin 0.7s linear infinite; }
 .ptr--done { color: #12a150; }
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
