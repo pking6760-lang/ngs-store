@@ -11,7 +11,7 @@ function loadLeaflet() {
   return _Lpromise;
 }
 import { ORDER_STATUSES } from "../lib/store.js";
-import { useSettings } from "../lib/hooks.js";
+import { useCall } from "./CallProvider.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { getCurrentLocation } from "../lib/location.js";
 import * as api from "../lib/api.js";
@@ -143,8 +143,10 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   const [refreshing, setRefreshing] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareErr, setShareErr] = useState("");
-  const settings = useSettings();
-  const storePhone = settings?.supportPhone || "";
+  const { callParty } = useCall();
+  // One in-app call button: the server rings the assigned rider, or the shop
+  // owner if none — either way the customer just sees "Delivery partner".
+  const callDelivery = () => callParty(order?.dbId, "Delivery partner");
 
   useBackGuard(open, onClose);
 
@@ -329,18 +331,11 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                 : text}
             </div>
           </div>
-          {!delivered && (rider?.phone || storePhone) && (
+          {!delivered && (
             <div className="lt-hero-actions">
-              {rider?.phone && (
-                <a className="lt-hero-call" href={`tel:+91${rider.phone}`} aria-label="Call the delivery partner">
-                  <Svg d={Icon.phone} size={14} sw={2.2} /> Delivery
-                </a>
-              )}
-              {storePhone && (
-                <a className="lt-hero-call" href={`tel:+91${storePhone}`} aria-label="Call the store">
-                  <Svg d={Icon.phone} size={14} sw={2.2} /> Store
-                </a>
-              )}
+              <button className="lt-hero-call" onClick={callDelivery} aria-label="Call the delivery partner">
+                <Svg d={Icon.phone} size={14} sw={2.2} /> Call
+              </button>
             </div>
           )}
         </div>
@@ -395,11 +390,9 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                   : `${firstName} will bring your order.`}
               </div>
             </div>
-            {rider.phone && (
-              <a className="lt-driver-call" href={`tel:+91${rider.phone}`} aria-label={`Call ${rider.name}`}>
-                <Svg d={Icon.phone} size={20} />
-              </a>
-            )}
+            <button className="lt-driver-call" onClick={callDelivery} aria-label={`Call ${rider.name}`}>
+              <Svg d={Icon.phone} size={20} />
+            </button>
           </div>
         )}
 
@@ -416,21 +409,15 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           </ol>
         </div>
 
-        {/* Contact — always in the scroll flow (the hero pills scroll away). */}
-        {!delivered && (rider?.phone || storePhone) && (
+        {/* Contact — always in the scroll flow (the hero pill scrolls away).
+            In-app, masked call; the server rings the rider or the owner. */}
+        {!delivered && (
           <div className="lt-card lt-contact">
             <div className="lt-card-title">Need help with this order?</div>
             <div className="lt-contact-btns">
-              {rider?.phone && (
-                <a className="lt-contact-btn" href={`tel:+91${rider.phone}`}>
-                  <Svg d={Icon.phone} size={16} sw={2.2} /> Call delivery partner
-                </a>
-              )}
-              {storePhone && (
-                <a className="lt-contact-btn" href={`tel:+91${storePhone}`}>
-                  <Svg d={Icon.phone} size={16} sw={2.2} /> Call store
-                </a>
-              )}
+              <button className="lt-contact-btn" onClick={callDelivery}>
+                <Svg d={Icon.phone} size={16} sw={2.2} /> Call delivery partner
+              </button>
             </div>
           </div>
         )}
