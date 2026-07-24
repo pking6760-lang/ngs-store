@@ -87,6 +87,20 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
   // open and even if the device has no push token (so a picker who hasn't
   // enabled notifications still hears every new order while on the app).
   const alarmedFor = useRef(new Set());
+
+  // iPhone/Safari refuses to play ANY sound until audio is primed inside a real
+  // tap. Hook the very first touch anywhere in the app to unlock the alarm, so
+  // when a task lands later the siren actually rings (Android is unaffected).
+  useEffect(() => {
+    const unlock = () => { try { unlockAudio(); } catch { /* ignore */ } };
+    window.addEventListener("pointerdown", unlock, { once: true, capture: true });
+    window.addEventListener("touchend", unlock, { once: true, capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock, { capture: true });
+      window.removeEventListener("touchend", unlock, { capture: true });
+    };
+  }, []);
+
   useEffect(() => {
     let alive = true;
     const tick = async () => {
@@ -423,7 +437,7 @@ function RunScreen({ task, cfg, busy, onAction, autoFailed, onAccept, onPass, is
   const status = assigned
     ? (offering ? "Accept or pass" : autoFailed ? "Tap to accept" : "Accepting…")
     : isReturn ? "Collect the items"
-      : isDelivery ? (out ? "On the way" : "Ready to go") : "Scan every item";
+      : isDelivery ? (out ? "On the way" : task.packed === false ? "Waiting for packing" : "Ready to go") : "Scan every item";
   return (
     <div className="pd-runscreen">
       <div className="pd-runscreen-head">
@@ -558,10 +572,13 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
   const { callParty } = useCall();
   const storePhone = cfg?.storePhone || "";
   const out = task.state === "out_for_delivery";
+  const packed = task.packed !== false;
   const due = Math.round(Number(task.codAmount) || 0);
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
   const [cashOpen, setCashOpen] = useState(false);
-  const codOpen = !task.paid && task.isCod;
+  // Payment (QR / Take cash) belongs at the customer's door — only after the
+  // rider has gone Out for delivery. The server enforces the same order.
+  const codOpen = !task.paid && task.isCod && out;
 
   async function showQr() {
     if (qr && qr !== "error") { setQr(null); return; }
@@ -624,7 +641,10 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
           <div className={`pd-step ${out ? "done" : "on"}`}><span className="pd-step-dot" /> Out for delivery</div>
           <div className={`pd-step ${out ? "on" : ""}`}><span className="pd-step-dot" /> Delivered</div>
         </div>
-        {!out ? (
+        {!out && !packed ? (
+          <p className="pd-collect-hint"><Ic name="pending" size={14} /> Waiting for packing —
+            you can head out as soon as the order is marked <b>Packed</b>.</p>
+        ) : !out ? (
           <SlideAction label="Slide to go — Out for delivery" busy={busy} tone="blue"
             onConfirm={() => onAction(() => api.partnerMarkOutForDelivery(task.orderId))} />
         ) : codOpen ? (

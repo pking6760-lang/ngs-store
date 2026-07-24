@@ -1255,6 +1255,7 @@ export async function getMyTask() {
       name: it.name, qty: it.qty, barcode: it.barcode || "", productId: it.productId,
     })),
     isReturn: !!t.is_return, earning: Number(t.earning) || 0,
+    packed: t.packed !== false, // old payloads without the field default to true
   };
 }
 
