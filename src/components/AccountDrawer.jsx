@@ -1,3 +1,4 @@
+import ApkDownloadRow from "./ApkDownloadRow.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -141,6 +142,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
             <a href="/shipping.html" target="_blank" rel="noopener noreferrer">{tr("Shipping")}</a>
             <a href="/contact.html" target="_blank" rel="noopener noreferrer">{tr("Contact")}</a>
           </nav>
+          <ApkDownloadRow app="customer" />
           {isLoggedIn && (
             <button className="logout-btn" onClick={handleLogout}>
               {tr("Log out")}

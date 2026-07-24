@@ -9,6 +9,7 @@ import { scanBarcode } from "../lib/scanner.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import PullRefresh from "../components/PullRefresh.jsx";
+import ApkDownloadRow from "../components/ApkDownloadRow.jsx";
 import { withMinTime } from "../lib/ux.js";
 import { Ic } from "./AdminIcons.jsx";
 import { useCall } from "../components/CallProvider.jsx";
@@ -1233,6 +1234,7 @@ function Profile({ role, name, partner, onLogout }) {
         <span className="pd-support-title">Need help? Contact NGS support</span>
         <span className="pd-support-mail">ngscustomersupport@gmail.com</span>
       </a>
+      <ApkDownloadRow app="partner" className="pd-apk-row" />
       <button className="pd-logout" onClick={onLogout}>Log out</button>
     </>
   );

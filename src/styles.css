@@ -5047,3 +5047,19 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 .upd-hint { margin: 12px 0 0; font-size: 12.5px; color: #8a92a1; }
 .upd-bar { width: 100%; height: 8px; border-radius: 999px; background: #e6e9ef; overflow: hidden; margin: 0 0 14px; }
 .upd-bar span { display: block; height: 100%; background: #0a9155; transition: width .25s ease; }
+
+/* ── Persistent "Download the app" row (browser only) ────────────────────── */
+.apk-row {
+  display: flex; align-items: center; gap: 11px; text-decoration: none;
+  margin: 12px 0 4px; padding: 12px 14px; border-radius: 14px;
+  background: #eaf7f0; border: 1px solid #cdeede; color: #0a7c42;
+}
+.apk-row-ic { display: inline-flex; }
+.apk-row-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.apk-row-txt b { font-size: 14px; font-weight: 800; color: #0d6b3c; }
+.apk-row-txt small { font-size: 11.5px; color: #3a7a58; margin-top: 1px; }
+.apk-row-cta { flex-shrink: 0; font-size: 13px; font-weight: 800; background: #0a9155; color: #fff; padding: 7px 16px; border-radius: 999px; }
+/* Dark (partner) surface */
+.pd-apk-row { background: rgba(52,211,153,.1); border-color: rgba(52,211,153,.32); color: #34d399; margin: 10px 12px 4px; }
+.pd-apk-row .apk-row-txt b { color: #eafff3; }
+.pd-apk-row .apk-row-txt small { color: #8fd9b6; }

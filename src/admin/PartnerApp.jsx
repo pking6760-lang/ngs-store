@@ -4,6 +4,7 @@ import { toast } from "../lib/toast.js";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
+import ApkPrompt from "../components/ApkPrompt.jsx";
 import { PartnerMark } from "./BrandMark.jsx";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
 import LivenessCapture from "./LivenessCapture.jsx";
@@ -180,7 +181,12 @@ function PartnerInner() {
   }
 
   // Approved → their role decides the dashboard.
-  return <PartnerDashboard role={partner.role} name={partner.fullName || user?.name} partner={partner} onLogout={logout} />;
+  return (
+    <>
+      <PartnerDashboard role={partner.role} name={partner.fullName || user?.name} partner={partner} onLogout={logout} />
+      <ApkPrompt app="partner" />
+    </>
+  );
 }
 
 // Item labels shared by the partner + admin re-KYC flows.

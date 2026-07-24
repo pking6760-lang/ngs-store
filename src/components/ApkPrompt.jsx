@@ -1,39 +1,51 @@
 import { useEffect, useState } from "react";
 import { useT } from "../lib/i18n.jsx";
+import { getAppVersion } from "../lib/api.js";
 
-// A one-time "download the Android app" banner, shown ONLY to Android visitors
-// on the website — never inside the installed app (Capacitor) or the PWA, and
-// snoozed for a week after it's dismissed or the download starts.
-// The APK is hosted on Supabase Storage rather than Firebase Hosting: Firebase's
-// free (Spark) plan forbids serving executable files (.apk), and doing so blocks
-// the whole site deploy. Supabase serves it publicly with the right content-type.
-const APK_URL =
-  "https://wvlkhvqohkkxlatwotvy.supabase.co/storage/v1/object/public/downloads/ngs.apk";
-const SNOOZE_KEY = "ngs_apk_snooze";
+// "Download the Android app" banner, shown ONLY to Android visitors on the
+// website — never inside the installed app (Capacitor) or the PWA, and snoozed
+// for a week after it's dismissed or the download starts.
+//
+// The version + APK link are read LIVE from the app-versions registry (the same
+// one the admin's "App updates" screen publishes to). So the moment the owner
+// publishes a new APK, this browser download offers the latest version too — no
+// code change or redeploy needed. `app` selects which app's APK: 'customer' or
+// 'partner'.
 const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
-export default function ApkPrompt() {
+export default function ApkPrompt({ app = "customer" }) {
   const { t } = useT();
   const [show, setShow] = useState(false);
+  const [ver, setVer] = useState(null); // { versionName, apkUrl }
+  const snoozeKey = `ngs_apk_snooze_${app}`;
 
   useEffect(() => {
+    let alive = true;
     try {
       if (window.Capacitor) return;                                   // already the native app
       if (!/android/i.test(navigator.userAgent || "")) return;        // Android only
-      if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return; // installed
-      const snoozed = Number(localStorage.getItem(SNOOZE_KEY) || 0);
+      if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return; // installed PWA
+      const snoozed = Number(localStorage.getItem(snoozeKey) || 0);
       if (Date.now() - snoozed < SNOOZE_MS) return;
     } catch { return; }
-    const tmr = window.setTimeout(() => setShow(true), 1400);         // let the home settle first
-    return () => window.clearTimeout(tmr);
-  }, []);
+    // Only show once we know there's an APK published for this app.
+    getAppVersion(app).then((v) => {
+      if (!alive || !v?.apkUrl) return;
+      setVer({ versionName: v.versionName, apkUrl: v.apkUrl });
+      window.setTimeout(() => alive && setShow(true), 1400);          // let the page settle
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [app, snoozeKey]);
 
-  if (!show) return null;
+  if (!show || !ver) return null;
 
   const snooze = () => {
-    try { localStorage.setItem(SNOOZE_KEY, String(Date.now())); } catch { /* ignore */ }
+    try { localStorage.setItem(snoozeKey, String(Date.now())); } catch { /* ignore */ }
     setShow(false);
   };
+
+  const fileName = app === "partner" ? "NGS-Partner.apk" : "NGS.apk";
+  const title = app === "partner" ? t("Get the NGS Partner app") : t("Get the NGS app");
 
   return (
     <div className="apk-prompt" role="dialog" aria-label="Download the NGS app">
@@ -45,10 +57,10 @@ export default function ApkPrompt() {
         </svg>
       </span>
       <span className="apk-txt">
-        <b>{t("Get the NGS app")}</b>
+        <b>{title}{ver.versionName ? ` v${ver.versionName}` : ""}</b>
         <small>{t("Faster, with order alerts & calls")}</small>
       </span>
-      <a className="apk-dl" href={APK_URL} download="NGS.apk" onClick={snooze}>{t("Install")}</a>
+      <a className="apk-dl" href={ver.apkUrl} download={fileName} onClick={snooze}>{t("Install")}</a>
     </div>
   );
 }
