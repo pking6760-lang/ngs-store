@@ -4,7 +4,7 @@ import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
 import { initPartnerPush } from "../lib/partnerPush.js";
 import { initPartnerWebPush, enablePartnerAlerts, canReceivePartnerWebPush, partnerNeedsHomeScreen, partnerWebPushPermission } from "../lib/partnerWebPush.js";
-import { unlockAudio, stopAlarm, errorBeep, okBeep } from "../lib/sound.js";
+import { unlockAudio, startAlarm, stopAlarm, errorBeep, okBeep } from "../lib/sound.js";
 import { scanBarcode } from "../lib/scanner.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
@@ -81,9 +81,32 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
   // delivery / pick page can cover the tabs and survive tab switches.
   const [task, setTask] = useState(null);
   const [taskBusy, setTaskBusy] = useState(false);
+  // Ring the loud alarm the FIRST time a new order is assigned — for picker AND
+  // delivery, straight from the live task feed. This fires even with the app
+  // open and even if the device has no push token (so a picker who hasn't
+  // enabled notifications still hears every new order while on the app).
+  const alarmedFor = useRef(new Set());
   useEffect(() => {
     let alive = true;
-    const tick = () => api.getMyTask().then((t) => alive && setTask(t)).catch(() => {});
+    const tick = async () => {
+      try {
+        const t = await api.getMyTask();
+        if (!alive) return;
+        setTask(t);
+        if (t && t.state === "assigned" && !alarmedFor.current.has(t.orderId)) {
+          alarmedFor.current.add(t.orderId);
+          try { unlockAudio(); startAlarm(); } catch { /* ignore */ }
+          try {
+            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+              const isDel = t.role === "delivery";
+              new Notification(isDel ? "New delivery assigned" : "New order to pack", {
+                body: `#${t.code || ""} — tap to accept`, icon: "/icon-192.png", tag: "ngs-new-task", renotify: true,
+              });
+            }
+          } catch { /* ignore */ }
+        }
+      } catch { /* ignore */ }
+    };
     tick();
     const iv = setInterval(tick, 5000);
     return () => { alive = false; clearInterval(iv); };
