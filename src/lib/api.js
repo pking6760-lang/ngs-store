@@ -1190,6 +1190,37 @@ export async function adminCreditWallet(userId, amount, note) {
   return Number(data) || 0;
 }
 
+// Referral watch: every referral claim with its device/IP cluster size, so the
+// admin can spot one device/connection farming the welcome bonus.
+export async function adminReferralWatch() {
+  const { data, error } = await must().rpc("admin_referral_watch");
+  if (error) throw new Error(error.message || "Couldn't load referral activity.");
+  return (Array.isArray(data) ? data : []).map((r) => ({
+    refereeId: r.referee_id,
+    code: r.code,
+    name: r.name,
+    email: r.email,
+    deviceHash: r.device_hash,
+    ip: r.ip,
+    createdAt: r.created_at,
+    status: r.status,
+    reward: Number(r.reward_amount) || 0,
+    referrerCode: r.referrer_code,
+    referrerName: r.referrer_name,
+    deviceCount: Number(r.device_count) || 0,
+    ipCount: Number(r.ip_count) || 0,
+    walletNet: Number(r.wallet_net) || 0,
+  }));
+}
+
+// Reverse a referral bonus (debits the new customer, and the referrer too if
+// they were already paid). Idempotent server-side.
+export async function adminReferralClawback(refereeId, reason) {
+  const { data, error } = await must().rpc("admin_referral_clawback", { p_referee: refereeId, p_reason: reason || null });
+  if (error) throw new Error(error.message || "Couldn't reverse that referral.");
+  return data;
+}
+
 // The partner's current assigned task (minimal fields, privacy-scoped).
 export async function getMyTask() {
   const { data, error } = await must().rpc("get_my_task");
