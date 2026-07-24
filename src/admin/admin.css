@@ -3369,3 +3369,19 @@ body {
 }
 .refwatch-claw:disabled { opacity: .55; cursor: default; }
 .refwatch-done { font-size: 12px; font-weight: 700; color: var(--a-sub); }
+
+/* ── Coupon restrictions (one-time + exclusions) ───────────────────────── */
+.coupon-excl { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px dashed var(--a-line); border-radius: 12px; background: var(--a-tint); }
+.coupon-excl-label { font-size: 12.5px; font-weight: 700; color: var(--a-sub); line-height: 1.45; }
+.coupon-excl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.coupon-chip {
+  border: 1px solid var(--a-line); background: var(--a-surface); color: var(--a-sub);
+  font-size: 12px; font-weight: 700; border-radius: 999px; padding: 5px 11px; cursor: pointer;
+}
+.coupon-chip.on { border-color: #e8590c; background: #fff0e6; color: #d9480f; }
+.coupon-excl input { font-size: 14px; padding: 9px 11px; border: 1px solid var(--a-line); border-radius: 10px; background: var(--a-surface); outline: none; }
+.coupon-excl-hits { display: flex; flex-direction: column; gap: 4px; }
+.coupon-excl-hits button {
+  text-align: left; border: 1px solid var(--a-line); background: var(--a-surface);
+  border-radius: 9px; padding: 7px 10px; font-size: 13px; font-weight: 600; color: var(--a-ink); cursor: pointer;
+}

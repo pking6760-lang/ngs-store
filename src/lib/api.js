@@ -83,12 +83,18 @@ function mapCategory(r) {
 }
 function mapCoupon(r) {
   return { code: r.code, type: r.type, value: num(r.value),
-    minOrder: num(r.min_order), category: r.category || "", active: r.active };
+    minOrder: num(r.min_order), category: r.category || "", active: r.active,
+    singleUse: !!r.single_use,
+    excludedCategories: r.excluded_categories || [],
+    excludedProducts: r.excluded_products || [] };
 }
 function couponToDb(c) {
   return { code: (c.code || "").trim().toUpperCase(), type: c.type === "flat" ? "flat" : "percent",
     value: Number(c.value) || 0, min_order: Number(c.minOrder) || 0,
-    category: (c.category || "").trim(), active: c.active !== false };
+    category: (c.category || "").trim(), active: c.active !== false,
+    single_use: !!c.singleUse,
+    excluded_categories: c.excludedCategories || [],
+    excluded_products: c.excludedProducts || [] };
 }
 function mapSettings(r) {
   if (!r) return null;
@@ -404,6 +410,17 @@ export async function fetchCoupons() {
   return (data || []).map(mapCoupon);
 }
 
+// True when a one-time coupon was already redeemed by this account or on this
+// physical device — checked when the customer applies the code, so they find
+// out immediately instead of at checkout.
+export async function couponUsed(code) {
+  let device = null;
+  try { device = await deviceFingerprint(); } catch { /* best-effort */ }
+  const { data, error } = await must().rpc("coupon_used", { p_code: code, p_device: device });
+  if (error) return false; // fail open here — checkout enforces it authoritatively
+  return !!data;
+}
+
 export async function fetchSettings() {
   const { data, error } = await must()
     .from("settings").select("*").eq("id", 1).maybeSingle();
@@ -418,7 +435,11 @@ export async function fetchSettings() {
 // and points. Returns the created order row.
 export async function placeOrder({ items, coupon, location, payment, address, wallet, redeemPoints, membership, deliverySlot, deliverOn, deliverHour }) {
   const p_items = items.map((i) => ({ id: i.id, qty: i.qty }));
+  // Device fingerprint enforces one-time coupons per physical device.
+  let p_device = null;
+  try { p_device = await deviceFingerprint(); } catch { /* best-effort */ }
   const { data, error } = await must().rpc("place_order", {
+    p_device,
     p_items,
     p_coupon: coupon || null,
     p_location: location || null,

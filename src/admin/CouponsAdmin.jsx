@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Ic } from "./AdminIcons.jsx";
-import { useCoupons, useSettings, useCategories } from "../lib/hooks.js";
+import { useCoupons, useSettings, useCategories, useProducts } from "../lib/hooks.js";
 import { upsertCoupon, deleteCoupon, updateSettings } from "../lib/actions.js";
 import Dropdown from "./Dropdown.jsx";
 
@@ -388,20 +388,41 @@ function OfferBanner({ settings }) {
 }
 
 function CouponManager({ coupons, categories }) {
-  const [form, setForm] = useState({
+  const products = useProducts();
+  const emptyForm = {
     code: "",
     type: "percent",
     value: "",
     minOrder: "",
     category: "",
-  });
+    singleUse: false,
+    excludedCategories: [],
+    excludedProducts: [],
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [prodQuery, setProdQuery] = useState("");
   const [error, setError] = useState("");
 
   const catName = (id) => categories.find((c) => c.id === id)?.name || id;
+  const prodName = (id) => products.find((p) => p.id === id)?.name || id;
+
+  // Product search for exclusions — top matches not already excluded.
+  const prodMatches = useMemo(() => {
+    const q = prodQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return products
+      .filter((p) => p.name?.toLowerCase().includes(q) && !form.excludedProducts.includes(p.id))
+      .slice(0, 6);
+  }, [prodQuery, products, form.excludedProducts]);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
     setError("");
+  }
+  function toggleExCat(id) {
+    set("excludedCategories", form.excludedCategories.includes(id)
+      ? form.excludedCategories.filter((c) => c !== id)
+      : [...form.excludedCategories, id]);
   }
 
   async function add(e) {
@@ -411,7 +432,8 @@ function CouponManager({ coupons, categories }) {
       setError(res.error);
       return;
     }
-    setForm({ code: "", type: "percent", value: "", minOrder: "", category: "" });
+    setForm(emptyForm);
+    setProdQuery("");
   }
 
   function toggleActive(c) {
@@ -462,6 +484,53 @@ function CouponManager({ coupons, categories }) {
             ...categories.map((c) => ({ value: c.id, label: `Only ${c.name}` })),
           ]}
         />
+
+        <label className="preg-ev full" style={{ margin: "2px 0" }}>
+          <input type="checkbox" checked={form.singleUse}
+            onChange={(e) => set("singleUse", e.target.checked)} />
+          <span>One-time use — once per customer <b>and</b> once per device (a farmer
+            can't re-use it from new accounts on the same phone)</span>
+        </label>
+
+        <div className="coupon-excl full">
+          <span className="coupon-excl-label">Doesn't qualify (excluded) — these items neither
+            count toward the minimum nor get the discount:</span>
+          <div className="coupon-excl-chips">
+            {categories.map((c) => (
+              <button type="button" key={c.id}
+                className={`coupon-chip ${form.excludedCategories.includes(c.id) ? "on" : ""}`}
+                onClick={() => toggleExCat(c.id)}>
+                {c.name}
+              </button>
+            ))}
+          </div>
+          <input
+            value={prodQuery}
+            onChange={(e) => setProdQuery(e.target.value)}
+            placeholder="Exclude a single product — type to search…"
+          />
+          {prodMatches.length > 0 && (
+            <div className="coupon-excl-hits">
+              {prodMatches.map((p) => (
+                <button type="button" key={p.id} onClick={() => {
+                  set("excludedProducts", [...form.excludedProducts, p.id]);
+                  setProdQuery("");
+                }}>+ {p.name}</button>
+              ))}
+            </div>
+          )}
+          {form.excludedProducts.length > 0 && (
+            <div className="coupon-excl-chips">
+              {form.excludedProducts.map((id) => (
+                <button type="button" key={id} className="coupon-chip on"
+                  onClick={() => set("excludedProducts", form.excludedProducts.filter((x) => x !== id))}>
+                  {prodName(id)} ✕
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {error && <div className="auth-error full">{error}</div>}
         <button className="primary-btn full" type="submit">
           Add coupon
@@ -480,6 +549,13 @@ function CouponManager({ coupons, categories }) {
                   {c.type === "percent" ? `${c.value}% off` : `₹${c.value} off`}
                   {c.category ? ` · only ${catName(c.category)}` : ""}
                   {c.minOrder > 0 ? ` · min ₹${c.minOrder}` : ""}
+                  {c.singleUse ? " · one-time per customer/device" : ""}
+                  {(c.excludedCategories?.length || 0) + (c.excludedProducts?.length || 0) > 0
+                    ? ` · excludes ${[
+                        ...(c.excludedCategories || []).map(catName),
+                        ...(c.excludedProducts || []).map(prodName),
+                      ].join(", ")}`
+                    : ""}
                 </div>
               </div>
               <span className="spacer" />

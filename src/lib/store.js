@@ -201,6 +201,7 @@ export function applyCoupon(code, ctx) {
 export function applyCouponFrom(coupons, code, ctx) {
   const itemTotal = typeof ctx === "number" ? ctx : ctx?.itemTotal || 0;
   const catTotals = (typeof ctx === "object" && ctx?.catTotals) || {};
+  const lines = (typeof ctx === "object" && ctx?.lines) || []; // [{id, category, total}]
   const catName =
     (typeof ctx === "object" && ctx?.catName) || ((id) => id);
 
@@ -211,7 +212,21 @@ export function applyCouponFrom(coupons, code, ctx) {
     return { ok: false, error: "This coupon isn't valid." };
 
   const scoped = !!coupon.category;
-  const eligible = scoped ? catTotals[coupon.category] || 0 : itemTotal;
+  const base = scoped ? catTotals[coupon.category] || 0 : itemTotal;
+
+  // Items in excluded categories/products neither count toward the minimum
+  // nor earn the discount (mirrors the server exactly).
+  const exCats = coupon.excludedCategories || [];
+  const exProds = coupon.excludedProducts || [];
+  let excluded = 0;
+  if (exCats.length || exProds.length) {
+    for (const l of lines) {
+      const inBase = !scoped || l.category === coupon.category;
+      if (inBase && (exCats.includes(l.category) || exProds.includes(l.id)))
+        excluded += l.total;
+    }
+  }
+  const eligible = Math.max(base - excluded, 0);
 
   if (scoped && eligible <= 0)
     return { ok: false, error: `Add ${catName(coupon.category)} items to use ${clean}.` };
@@ -220,7 +235,7 @@ export function applyCouponFrom(coupons, code, ctx) {
       ok: false,
       error: `Add ₹${coupon.minOrder - eligible} more${
         scoped ? ` in ${catName(coupon.category)}` : ""
-      } to use ${clean}.`,
+      } to use ${clean}.${excluded > 0 ? " (Some items in your cart don't qualify for this coupon.)" : ""}`,
     };
 
   const raw =
@@ -230,7 +245,7 @@ export function applyCouponFrom(coupons, code, ctx) {
   return {
     ok: true,
     code: clean,
-    discount: Math.min(raw, itemTotal),
+    discount: Math.min(raw, eligible, itemTotal),
     category: coupon.category || null,
   };
 }

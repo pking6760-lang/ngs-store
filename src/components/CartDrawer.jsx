@@ -280,7 +280,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       (catTotals[product.category] || 0) + unit * qty;
   }
   const catName = (id) => categories.find((c) => c.id === id)?.name || id;
-  const couponCtx = { itemTotal, catTotals, catName };
+  // Per-line info so coupon exclusions (categories/products that don't qualify)
+  // can be mirrored client-side exactly like the server computes them.
+  const couponLines = lines.map(({ product, qty, unit }) => ({
+    id: product.id, category: product.category, total: unit * qty,
+  }));
+  const couponCtx = { itemTotal, catTotals, catName, lines: couponLines };
   const activeCoupons = allCoupons.filter((c) => c.active);
 
   // Coupon — re-validated against the current cart each render so it stays
@@ -488,9 +493,20 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     }
   }
 
-  function applyCouponCode(code) {
+  async function applyCouponCode(code) {
     const res = applyCouponFrom(allCoupons, code ?? couponInput, couponCtx);
     if (res.ok) {
+      // One-time coupons: tell them now if this account/device already used it,
+      // instead of failing at checkout. (Server re-checks authoritatively.)
+      const c = allCoupons.find((x) => x.code === res.code);
+      if (c?.singleUse) {
+        try {
+          if (await api.couponUsed(res.code)) {
+            setCouponError("This coupon has already been used on this account or device.");
+            return;
+          }
+        } catch { /* offline → let checkout decide */ }
+      }
       setAppliedCode(res.code);
       setCouponInput("");
       setCouponError("");
