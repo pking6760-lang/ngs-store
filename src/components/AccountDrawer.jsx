@@ -1000,7 +1000,7 @@ function Referral({ user }) {
   }
   useEffect(() => { load(); }, [user?.id]);
 
-  const amount = stats?.amount ?? 30;
+  const amount = stats?.amount ?? 10;
   const link = stats?.code ? `${REFER_BASE}/?ref=${stats.code}` : "";
   const shareText = link &&
     `Get groceries from Nisha General Store, delivered fast. Join with my link — we both get ₹${amount} after your first delivery: ${link}`;
