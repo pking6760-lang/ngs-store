@@ -1337,6 +1337,21 @@ export async function partnerMarkReturned(orderId) {
 
 /* ─── Admin: catalog ────────────────────────────────────────────────────── */
 
+// Bulk tag import: apply search tags to many products at once (admin "Bulk
+// tags" flow — paste an AI-generated list). Updates run in small batches.
+export async function bulkUpdateProductTags(rows) {
+  let done = 0;
+  for (let i = 0; i < rows.length; i += 10) {
+    const batch = rows.slice(i, i + 10);
+    const results = await Promise.all(batch.map(({ id, tags }) =>
+      must().from("products").update({ tags }).eq("id", id).then((r) => !r.error)
+    ));
+    done += results.filter(Boolean).length;
+  }
+  pingLocal("products");
+  return done;
+}
+
 export async function upsertProduct(product, cost) {
   const { error } = await must().from("products").upsert(product);
   if (error) throw error;

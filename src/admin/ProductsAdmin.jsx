@@ -12,7 +12,7 @@ import {
   updateCategory,
 } from "../lib/actions.js";
 import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory, proposeNewCategory } from "../lib/productLookup.js";
-import { smartReprice, uploadProductImage, uploadCategoryImage } from "../lib/api.js";
+import { smartReprice, uploadProductImage, uploadCategoryImage, bulkUpdateProductTags } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { Ic } from "./AdminIcons.jsx";
@@ -53,8 +53,10 @@ export default function ProductsAdmin() {
   const [catFilter, setCatFilter] = useState("all");
   const [editing, setEditing] = useState(null); // product object or null
   const [managingCats, setManagingCats] = useState(false);
+  const [bulkTags, setBulkTags] = useState(false);
   useBackGuard(!!editing, () => setEditing(null));
   useBackGuard(managingCats, () => setManagingCats(false));
+  useBackGuard(bulkTags, () => setBulkTags(false));
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -102,6 +104,9 @@ export default function ProductsAdmin() {
         />
         <button className="ghost-btn" onClick={() => setManagingCats(true)}>
           Categories
+        </button>
+        <button className="ghost-btn" onClick={() => setBulkTags(true)}>
+          Bulk tags
         </button>
         <button
           className="primary-btn"
@@ -208,6 +213,16 @@ export default function ProductsAdmin() {
               deleteProduct(id);
               setEditing(null);
             }}
+          />
+        </AdminPortal>
+      )}
+
+      {bulkTags && (
+        <AdminPortal>
+          <BulkTagsModal
+            products={products}
+            categories={categories}
+            onClose={() => setBulkTags(false)}
           />
         </AdminPortal>
       )}
@@ -853,6 +868,154 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/* Bulk tag import — 3 easy steps:
+   1. Copy the ready-made AI prompt (it includes the full product list).
+   2. Paste it into any AI (ChatGPT, Gemini…) and copy the answer.
+   3. Paste the answer here → preview → Apply. Tags merge with existing ones
+      unless "Replace" is ticked. Lines are matched by product id (exact), with
+      a name fallback for AIs that drop the ids. */
+function BulkTagsModal({ products, categories, onClose }) {
+  const [pasted, setPasted] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [replace, setReplace] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(null); // number applied
+  const catName = (id) => categories.find((c) => c.id === id)?.name || id;
+
+  const prompt = useMemo(() => {
+    const list = products
+      .map((p) => `${p.id} | ${p.name.trim()}${p.unit ? ` (${p.unit})` : ""} | ${catName(p.category)}`)
+      .join("\n");
+    return (
+`You are helping an Indian grocery store (Delhi) add SEARCH TAGS to products so customers find items in Hindi, Hinglish or English — however they type.
+
+For EVERY product below, give 4-8 short search tags:
+- Hindi/Hinglish names and common spellings (mustard oil → sarson ka tel, sarso tel, kacchi ghani; milk → doodh, dudh; biscuit → biskut)
+- What locals actually ask for (curd → dahi; buttermilk → chaas, mattha; peanuts → moongfali, sing dana; semolina → suji, rava)
+- The generic item type (ketchup → tomato sauce; bhujia → namkeen, sev)
+- Do NOT repeat the brand name or words already in the product name.
+
+STRICT OUTPUT FORMAT — one line per product, nothing else, no headings, no numbering, no extra commentary:
+<product id>: tag1, tag2, tag3, tag4
+
+Example:
+p1234 | Fortune Mustard Oil (1 L) | Oil & Ghee
+→ your output line: p1234: sarson ka tel, sarso tel, kacchi ghani, tel, cooking oil
+
+PRODUCTS:
+${list}`);
+  }, [products, categories]);
+
+  async function copyPrompt() {
+    try { await navigator.clipboard.writeText(prompt); setCopied(true); setTimeout(() => setCopied(false), 1800); }
+    catch { /* clipboard unavailable — they can select the textarea */ }
+  }
+
+  // Parse "id: tag, tag" lines (also tolerates "id | tags", "id - tags", and a
+  // product-name fallback when the AI dropped the ids).
+  const parsed = useMemo(() => {
+    const rows = [];
+    const misses = [];
+    const byId = new Map(products.map((p) => [p.id.toLowerCase(), p]));
+    for (const raw of pasted.split("\n")) {
+      const line = raw.trim().replace(/^[-*\d.)\s]+/, "");
+      if (!line) continue;
+      const m = line.match(/^(\S+?)\s*[:|\-–]\s*(.+)$/);
+      if (!m) { misses.push(line); continue; }
+      const key = m[1].trim().toLowerCase();
+      const tags = m[2].split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+      if (!tags.length) continue;
+      let targets = [];
+      if (byId.has(key)) targets = [byId.get(key)];
+      else {
+        // Name fallback: the part before the separator may be a product name.
+        const nm = m[1].trim().toLowerCase();
+        targets = products.filter((p) => p.name.trim().toLowerCase() === nm);
+      }
+      if (!targets.length) { misses.push(line); continue; }
+      for (const p of targets) rows.push({ id: p.id, name: p.name, tags });
+    }
+    return { rows, misses };
+  }, [pasted, products]);
+
+  async function apply() {
+    if (!parsed.rows.length || busy) return;
+    setBusy(true);
+    try {
+      const byId = new Map(products.map((p) => [p.id, p]));
+      const updates = parsed.rows.map(({ id, tags }) => {
+        const existing = replace ? [] : (byId.get(id)?.tags || []);
+        const merged = [...existing];
+        for (const t of tags) if (!merged.includes(t)) merged.push(t);
+        return { id, tags: merged };
+      });
+      const n = await bulkUpdateProductTags(updates);
+      setDone(n);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={busy ? undefined : onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+        <h3 style={{ marginTop: 0 }}>Bulk search tags</h3>
+
+        {done != null ? (
+          <>
+            <p className="sub">✅ Tags applied to <b>{done}</b> product{done === 1 ? "" : "s"}.
+              Customers can use them in search right away.</p>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button className="primary-btn" onClick={onClose}>Done</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="sub">
+              <b>Step 1.</b> Copy the ready-made prompt (your whole product list is inside it)
+              and paste it into any AI — ChatGPT, Gemini, anything.
+            </p>
+            <button type="button" className="primary-btn" onClick={copyPrompt} style={{ width: "100%" }}>
+              {copied ? "Copied ✓" : `Copy AI prompt (${products.length} products)`}
+            </button>
+
+            <p className="sub" style={{ marginTop: 14 }}>
+              <b>Step 2.</b> Copy the AI's answer and paste it below.
+            </p>
+            <textarea
+              rows={7}
+              value={pasted}
+              onChange={(e) => setPasted(e.target.value)}
+              placeholder={"p1234: sarson ka tel, kacchi ghani, tel\np5678: doodh, milk, dudh\n…"}
+              style={{ width: "100%", fontSize: 13, fontFamily: "monospace", padding: 10,
+                       border: "1px solid var(--a-line, #ddd)", borderRadius: 10 }}
+            />
+
+            {pasted.trim() && (
+              <p className="sub" style={{ marginTop: 8 }}>
+                Matched <b>{parsed.rows.length}</b> product{parsed.rows.length === 1 ? "" : "s"}
+                {parsed.misses.length > 0 && <> · <span style={{ color: "#b42318" }}>{parsed.misses.length} line{parsed.misses.length === 1 ? "" : "s"} not recognised</span></>}
+              </p>
+            )}
+
+            <label className="preg-ev" style={{ margin: "6px 0" }}>
+              <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} />
+              <span>Replace existing tags (otherwise new tags are added to what's already there)</span>
+            </label>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+              <button className="ghost-btn" disabled={busy} onClick={onClose}>Cancel</button>
+              <button className="primary-btn" disabled={busy || parsed.rows.length === 0} onClick={apply}>
+                {busy ? "Applying…" : `Apply to ${parsed.rows.length} products`}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
