@@ -26,6 +26,9 @@ function productToDb(p) {
     // Manual availability toggle. Only false means "hidden from sale"; anything
     // else (true/undefined on older forms) keeps the product buyable.
     in_stock: p.inStock !== false,
+    // Search tags: accepts the comma-separated admin input or an array as-is.
+    tags: (Array.isArray(p.tags) ? p.tags : String(p.tags || "").split(","))
+      .map((t) => String(t).trim().toLowerCase()).filter(Boolean),
     free_delivery_exempt: p.freeDeliveryExempt === true,
     no_rewards: p.noRewards === true,
     manual_price: manual,

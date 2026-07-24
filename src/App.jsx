@@ -292,6 +292,8 @@ export default function App() {
     const matched = products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
+        // Tags: Hindi/Hinglish/alternate names ("sarson tel", "doodh", "biskut")
+        (p.tags || []).some((t) => t.includes(q) || q.includes(t)) ||
         (cat && p.category === cat.id)
     );
     return sortProducts(matched, sort);

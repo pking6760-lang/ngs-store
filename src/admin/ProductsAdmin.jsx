@@ -43,6 +43,7 @@ const EMPTY = {
   inStock: true,
   stock: "",
   noRewards: false,
+  tags: "",
 };
 
 export default function ProductsAdmin() {
@@ -59,7 +60,8 @@ export default function ProductsAdmin() {
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
       const matchCat = catFilter === "all" || p.category === catFilter;
-      const matchText = !q || p.name.toLowerCase().includes(q) || (p.barcode || "").includes(q);
+      const matchText = !q || p.name.toLowerCase().includes(q) || (p.barcode || "").includes(q)
+        || (p.tags || []).some((t) => t.includes(q));
       return matchCat && matchText;
     });
   }, [products, search, catFilter]);
@@ -659,6 +661,15 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
               onChange={(e) => update("unit", e.target.value)}
               placeholder="e.g. 500 g"
               required
+            />
+          </label>
+
+          <label className="field">
+            <span>Search tags (comma separated)</span>
+            <input
+              value={Array.isArray(form.tags) ? form.tags.join(", ") : form.tags || ""}
+              onChange={(e) => update("tags", e.target.value)}
+              placeholder="e.g. sarson tel, kacchi ghani, oil"
             />
           </label>
 

@@ -61,6 +61,7 @@ function mapProduct(r) {
   return { id: r.id, name: r.name, unit: r.unit, price: num(r.price),
     mrp: num(r.mrp), icon: r.icon, image: r.image_url,
     category: r.category, stock: r.stock, active: r.active, barcode: r.barcode || "",
+    tags: r.tags || [],
     // Manual availability override (owner's "Out of stock" toggle). Defaults to
     // available when the column is absent/null so old rows read as in stock.
     inStock: r.in_stock == null ? true : r.in_stock,
