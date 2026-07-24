@@ -308,7 +308,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const addonDelivery = addonQualify >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_FEE;
   const addonTotal = subItemsTotal + addonDelivery;
   const SURGE_FEE = settings.surgeFee ?? 0;
-  // Prime perk (free delivery + no handling) is funded by item margin. Milk &
+  // Prime perk (free delivery) is funded by item margin. Milk &
   // dairy (freeDeliveryExempt) have almost none, so waiving both fees would put
   // the shop in loss. The perk applies only when the cart has no such items, OR
   // the qualifying (non-exempt) total already earns free delivery on its own —
@@ -324,7 +324,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   }
 
   // Handling is waived only when the Prime perk applies (so milk/dairy keeps it).
-  const handling = itemTotal === 0 || freePerk ? 0 : HANDLING_FEE;
+  // Handling is charged to everyone — Prime's perk is free delivery only.
+  const handling = itemTotal === 0 ? 0 : HANDLING_FEE;
   // Surge / bad-weather premium — applies to everyone while surge mode is on.
   const surgeFee = isSurge && itemTotal > 0 ? SURGE_FEE : 0;
 
@@ -1535,7 +1536,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               <div className="bill-row">
                 <span>{tr("Handling charge")}</span>
-                <span>{handling === 0 && freePerk ? <span className="free">FREE · Prime</span> : `₹${handling}`}</span>
+                <span>₹{handling}</span>
               </div>
               {isMember && !freePerk && hasThin && (
                 <div className="bill-note">
