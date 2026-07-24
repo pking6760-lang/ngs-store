@@ -343,8 +343,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // The customer can apply their wallet balance to this order. The server caps
   // it at the balance and the total; we mirror that here for the bill display.
   const walletBal = isLoggedIn ? Math.max(0, wallet.balance || 0) : 0;
+  // Wallet money (referral/welcome credit, change, refunds) is only redeemable on
+  // a cart of walletMinOrder+ (default ₹199) — mirrors the server gate so the
+  // customer sees the rule up front instead of hitting an error at checkout.
+  const walletMinOrder = Number(settings.rewards?.walletMinOrder) || 199;
+  const walletEligible = itemTotal >= walletMinOrder;
+  const walletShortfall = walletBal > 0 && !walletEligible ? Math.ceil(walletMinOrder - itemTotal) : 0;
   const walletCap = Math.min(walletBal, grandTotal);
-  const walletApplied = useWalletCredit ? walletCap : 0;
+  const walletApplied = useWalletCredit && walletEligible ? walletCap : 0;
   const payable = Math.max(0, grandTotal - walletApplied);
 
   // ── Cash-on-delivery cap ───────────────────────────────
@@ -1138,14 +1144,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {walletBal > 0 && (
                 <>
                   <div className="pay-group-label">{tr("Wallet")}</div>
-                  <label className={`pay-row ${useWalletCredit ? "sel" : ""}`}>
-                    <input type="checkbox" checked={useWalletCredit} onChange={(e) => setUseWalletCredit(e.target.checked)} />
+                  <label className={`pay-row ${useWalletCredit && walletEligible ? "sel" : ""} ${walletEligible ? "" : "disabled"}`}>
+                    <input type="checkbox" checked={useWalletCredit && walletEligible} disabled={!walletEligible}
+                      onChange={(e) => setUseWalletCredit(e.target.checked)} />
                     <span className="pay-row-ic wallet">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M16 12h3"/><path d="M2.5 9h14a2 2 0 0 1 2 2"/></svg>
                     </span>
                     <span className="pay-row-txt">
                       <strong>NGS Wallet</strong>
-                      <small>Balance ₹{walletBal.toFixed(2)} · use ₹{walletCap.toFixed(2)} on this order</small>
+                      {walletEligible
+                        ? <small>Balance ₹{walletBal.toFixed(2)} · use ₹{walletCap.toFixed(2)} on this order</small>
+                        : <small>Balance ₹{walletBal.toFixed(2)} · add ₹{walletShortfall} more to use it (₹{walletMinOrder}+ orders)</small>}
                     </span>
                     <span className="pay-check" aria-hidden="true" />
                   </label>

@@ -15,6 +15,7 @@ export default function DeliveryAdmin() {
     surgeFee: settings.surgeFee ?? 20,
     maxDistanceKm: settings.maxDistanceKm ?? 5,
     minOrderValue: settings.rewards?.minOrderValue ?? 0,
+    walletMinOrder: settings.rewards?.walletMinOrder ?? 199,
     supportPhone: settings.supportPhone ?? "",
     cancelFee: settings.cancelFee ?? 20,
   });
@@ -45,6 +46,7 @@ export default function DeliveryAdmin() {
         rewards: {
           ...(settings.rewards || {}),
           minOrderValue: Math.max(0, Number(form.minOrderValue) || 0),
+          walletMinOrder: Math.max(0, Number(form.walletMinOrder) || 0),
         },
       });
       setSaved(true);
@@ -73,6 +75,11 @@ export default function DeliveryAdmin() {
             <span>Minimum order value (₹)</span>
             <input type="number" min="0" value={form.minOrderValue}
               onChange={(e) => set("minOrderValue", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>Wallet usable above (₹)</span>
+            <input type="number" min="0" value={form.walletMinOrder}
+              onChange={(e) => set("walletMinOrder", e.target.value)} />
           </label>
           <label className="dfield">
             <span>Handling charge (₹)</span>
@@ -110,6 +117,13 @@ export default function DeliveryAdmin() {
           after a short free window (≈90s) or once you've started packing. What
           they paid is refunded to their wallet minus this fee. Set to 0 to allow
           free cancellation.
+        </p>
+        <p className="delivery-hint">
+          <strong>Wallet usable above</strong> is the smallest cart on which a
+          customer can spend their NGS Wallet (referral bonus, change, refunds).
+          Below it the wallet stays locked — this stops a ₹30 referral credit
+          being burned on a tiny order that doesn't cover the delivery. Set to 0
+          to allow wallet on any order.
         </p>
         <p className="delivery-hint">
           The <strong>surge charge</strong> is added to every order only while
