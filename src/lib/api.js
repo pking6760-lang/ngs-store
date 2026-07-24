@@ -8,6 +8,7 @@
 // Security, so a customer only ever sees their own orders/points/profile.
 import { supabase, isBackendConfigured } from "./supabase.js";
 import { fileToResizedBlob } from "./image.js";
+import { deviceFingerprint } from "./device.js";
 
 export { isBackendConfigured };
 
@@ -648,8 +649,12 @@ export async function rateOrderRider(orderId, rating) {
 }
 
 // Referral: a new customer applies a friend's code (before their first order).
+// We send a deterministic device fingerprint so the same physical device can't
+// farm the welcome bonus across new email accounts / incognito / a VPN.
 export async function applyReferral(code) {
-  const { data, error } = await must().rpc("apply_referral", { p_code: code });
+  let device = null;
+  try { device = await deviceFingerprint(); } catch { /* best-effort */ }
+  const { data, error } = await must().rpc("apply_referral", { p_code: code, p_device: device });
   if (error) throw new Error(error.message || "Couldn't apply that code.");
   pingLocal("profiles");
   return data;
