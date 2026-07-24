@@ -56,13 +56,21 @@ export function isLiveOrder(o) {
   return false;
 }
 
+// Does this delivered order have an unclaimed scratch reward waiting?
+function hasScratchReward(o) {
+  return !o.scratchClaimed && ((o.scratchPoints || 0) > 0 || (o.scratchWallet || 0) > 0);
+}
+
 // Friendly one-liner for the current status, with a matching line icon.
 function statusLine(order) {
   switch (order.status) {
     case "Placed": return { icon: "box", text: "Order placed — getting it ready" };
     case "Packed": return { icon: "basket", text: "Packed — waiting for a delivery partner" };
     case "Out for delivery": return { icon: "scooter", text: "On the way to you" };
-    case "Delivered": return { icon: "gift", text: "Delivered — scratch your reward!" };
+    case "Delivered":
+      return hasScratchReward(order)
+        ? { icon: "gift", text: "Delivered — scratch your reward!" }
+        : { icon: "check", text: "Delivered — enjoy!" };
     default: return { icon: "box", text: order.status };
   }
 }
@@ -78,20 +86,23 @@ function etaMinutes(order) {
 export function LiveOrderPill({ order, raised, onOpen }) {
   const { icon, text } = statusLine(order);
   const delivered = order.status === "Delivered";
+  const reward = delivered && hasScratchReward(order); // gold "REWARD" only when there's one
   const eta = etaMinutes(order);
   return (
-    <button className={`live-pill ${raised ? "raised" : ""} ${delivered ? "reward" : ""}`} onClick={onOpen}>
+    <button className={`live-pill ${raised ? "raised" : ""} ${reward ? "reward" : ""}`} onClick={onOpen}>
       <span className="live-pill-bike" aria-hidden><Svg d={Icon[icon]} size={20} /></span>
       <span className="live-pill-mid">
         <span className="live-pill-top">
           Order #{order.id}
           <span className="live-pill-dot" />
-          <span className="live-pill-live">{delivered ? "REWARD" : "LIVE"}</span>
+          <span className="live-pill-live">{reward ? "REWARD" : delivered ? "DONE" : "LIVE"}</span>
         </span>
         <span className="live-pill-sub">{text}</span>
       </span>
-      {delivered ? (
+      {reward ? (
         <span className="live-pill-gift" aria-hidden><Svg d={Icon.gift} size={22} /></span>
+      ) : delivered ? (
+        <span className="live-pill-gift" aria-hidden><Svg d={Icon.check} size={22} /></span>
       ) : (
         <span className="live-pill-eta">
           <strong>{eta}</strong>
