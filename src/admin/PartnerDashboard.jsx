@@ -656,7 +656,7 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
       </div>
 
       {cashOpen && (
-        <CashModal due={due} busy={busy} onClose={() => setCashOpen(false)}
+        <CashModal due={due} cap={Math.round(Number(cfg?.riderCashCap) || 1000)} busy={busy} onClose={() => setCashOpen(false)}
           onConfirm={(tendered) => onAction(() => api.partnerMarkDelivered(task.orderId, tendered))} />
       )}
     </>
@@ -666,13 +666,17 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
 /* Take-cash flow: enter the note the customer hands over → a confirm step that
    spells out the bill, what to deposit to the shop, and the change that goes to
    the customer's wallet → marks the delivery done. */
-function CashModal({ due, busy, onClose, onConfirm }) {
+function CashModal({ due, cap = 1000, busy, onClose, onConfirm }) {
   const [amt, setAmt] = useState(String(due || ""));
   const [step, setStep] = useState("enter"); // "enter" | "confirm"
   const n = Number(amt) || 0;
   const change = n > due ? n - due : 0;
   const short = n > 0 && n < due;
-  const quick = [due, 100, 200, 500, 2000].filter((v, i, a) => v >= due && a.indexOf(v) === i).slice(0, 4);
+  // COD stops at the cash cap (₹1000) — above that customers pay online, so a
+  // rider never handles more than the cap. The bill itself is always payable.
+  const maxCash = Math.max(due, cap);
+  const over = n > maxCash;
+  const quick = [due, 100, 200, 500, 2000].filter((v, i, a) => v >= due && v <= maxCash && a.indexOf(v) === i).slice(0, 4);
 
   return (
     <div className="pd-cash-ov" onClick={busy ? undefined : onClose}>
@@ -692,11 +696,12 @@ function CashModal({ due, busy, onClose, onConfirm }) {
                 <button type="button" key={v} className={n === v ? "sel" : ""} onClick={() => setAmt(String(v))}>₹{v}</button>
               ))}
             </div>
-            {change > 0 && <p className="pd-cash-hint">₹{change} change → customer's wallet</p>}
+            {over && <p className="pd-cash-warn">Cash above ₹{maxCash} isn't allowed — show the UPI QR for the rest instead.</p>}
+            {!over && change > 0 && <p className="pd-cash-hint">₹{change} change → customer's wallet</p>}
             {short && <p className="pd-cash-warn">That's less than the ₹{due} bill.</p>}
             <div className="pd-cash-actions">
               <button className="pd-cash-cancel" onClick={onClose}>Cancel</button>
-              <button className="pd-cash-proceed" disabled={n < due} onClick={() => setStep("confirm")}>Proceed</button>
+              <button className="pd-cash-proceed" disabled={n < due || over} onClick={() => setStep("confirm")}>Proceed</button>
             </div>
           </>
         ) : (
