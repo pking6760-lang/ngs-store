@@ -1,4 +1,5 @@
 import { StrictMode } from "react";
+import { lockZoomInStandalone } from "../lib/noZoom.js";
 import { createRoot } from "react-dom/client";
 import PartnerApp from "./PartnerApp.jsx";
 import AppSplash from "../components/AppSplash.jsx";
@@ -8,6 +9,8 @@ import UpdateGate from "../components/UpdateGate.jsx";
 import "../styles.css";
 import "./admin.css";
 import "./partner.css";
+
+lockZoomInStandalone();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

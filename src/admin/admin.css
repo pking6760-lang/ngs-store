@@ -3492,3 +3492,7 @@ body {
 .wh-in { color: #0a7c42; font-weight: 800; font-size: 13px; white-space: nowrap; }
 .wh-out { color: #b42318; font-weight: 800; font-size: 13px; white-space: nowrap; }
 .pl-note.warn { background: #fdf3d8; color: #7a5800; }
+
+/* iOS: block double-tap zoom / text inflation (see styles.css note). */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { touch-action: manipulation; }

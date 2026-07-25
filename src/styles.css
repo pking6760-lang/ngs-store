@@ -1,3 +1,9 @@
+/* iOS: no double-tap zoom, and never let Safari inflate text on rotation —
+   both leave a home-screen app stuck at the wrong scale with no way back. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { touch-action: manipulation; overscroll-behavior-y: none; }
+img { max-width: 100%; }
+
 :root {
   /* Simple, modern palette — emerald accent on cool neutrals. */
   --green: #1f7a44;
