@@ -5062,6 +5062,11 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 .apk-x { position: absolute; top: -9px; right: -9px; width: 26px; height: 26px; border-radius: 50%;
   border: none; background: #16202c; color: #fff; font-size: 13px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+/* Green is the customer brand — the partner banner wears partner red/black. */
+.apk-prompt.apk-partner { background: linear-gradient(135deg, #e5122e, #7d0a1b);
+  box-shadow: 0 14px 34px -12px rgba(120,8,22,.65); }
+.apk-prompt.apk-partner .apk-ic { background: rgba(0,0,0,.28); }
+.apk-prompt.apk-partner .apk-dl { color: #b60d24; }
 
 /* ── Forced in-app update wall (native only) ─────────────────────────────── */
 .upd-gate {
