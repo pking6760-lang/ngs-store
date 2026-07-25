@@ -3491,3 +3491,4 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wh-in { color: #0a7c42; font-weight: 800; font-size: 13px; white-space: nowrap; }
 .wh-out { color: #b42318; font-weight: 800; font-size: 13px; white-space: nowrap; }
+.pl-note.warn { background: #fdf3d8; color: #7a5800; }

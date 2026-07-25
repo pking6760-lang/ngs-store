@@ -149,6 +149,13 @@ function ProfitCard({ sum }) {
         )}
       </div>
 
+      {Number(c.lines_estimated) > 0 && (
+        <p className="pl-note warn">
+          {c.lines_estimated} of {c.lines} sold items had no buying price saved, so their cost was
+          estimated. Add cost prices in Products to make this profit figure exact.
+        </p>
+      )}
+
       {Number(e.restock) > 0 && (
         <p className="pl-note">
           {money(e.restock)} of stock purchases isn't counted as a loss above — that money became
