@@ -1212,6 +1212,71 @@ export async function adminCreditWallet(userId, amount, note) {
   return Number(data) || 0;
 }
 
+/* ─── Business finance (admin only — every RPC is is_admin() gated) ──────── */
+
+// The whole P&L + cash picture for a date window.
+export async function adminFinanceSummary(from, to) {
+  const { data, error } = await must().rpc("admin_finance_summary", { p_from: from, p_to: to });
+  if (error) throw new Error(error.message || "Couldn't load the finance summary.");
+  return data;
+}
+
+export async function adminTopProducts(from, to, limit = 10) {
+  const { data, error } = await must().rpc("admin_top_products", { p_from: from, p_to: to, p_limit: limit });
+  if (error) throw new Error(error.message || "Couldn't load product profit.");
+  return Array.isArray(data) ? data : [];
+}
+
+export async function adminListExpenses(from, to) {
+  const { data, error } = await must().rpc("admin_list_expenses", { p_from: from, p_to: to });
+  if (error) throw new Error(error.message || "Couldn't load expenses.");
+  return Array.isArray(data) ? data : [];
+}
+
+export async function adminAddExpense({ kind, amount, note, spentOn, staffId }) {
+  const { data, error } = await must().rpc("admin_add_expense", {
+    p_kind: kind, p_amount: Number(amount), p_note: note || null,
+    p_spent_on: spentOn || null, p_staff: staffId || null,
+  });
+  if (error) throw new Error(error.message || "Couldn't save that expense.");
+  return data;
+}
+
+export async function adminDeleteExpense(id) {
+  const { error } = await must().rpc("admin_delete_expense", { p_id: id });
+  if (error) throw new Error(error.message || "Couldn't delete that expense.");
+}
+
+export async function adminListStaff() {
+  const { data, error } = await must().rpc("admin_list_staff");
+  if (error) throw new Error(error.message || "Couldn't load staff.");
+  return Array.isArray(data) ? data : [];
+}
+
+export async function adminSaveStaff({ id, name, role, phone, salary, active, note }) {
+  const { data, error } = await must().rpc("admin_save_staff", {
+    p_id: id || null, p_name: name, p_role: role || "helper", p_phone: phone || null,
+    p_salary: Number(salary) || 0, p_active: active !== false, p_note: note || null,
+  });
+  if (error) throw new Error(error.message || "Couldn't save that person.");
+  return data;
+}
+
+export async function adminDeleteStaff(id) {
+  const { error } = await must().rpc("admin_delete_staff", { p_id: id });
+  if (error) throw new Error(error.message || "Couldn't remove that person.");
+}
+
+// A customer's full wallet ledger, for the admin customer profile.
+export async function adminCustomerWalletHistory(userId) {
+  const { data, error } = await must().rpc("admin_customer_wallet_history", { p_user: userId });
+  if (error) throw new Error(error.message || "Couldn't load wallet history.");
+  return (Array.isArray(data) ? data : []).map((r) => ({
+    id: r.id, amount: Number(r.amount) || 0, kind: r.kind,
+    note: r.note || "", createdAt: r.created_at, orderCode: r.order_code || null,
+  }));
+}
+
 // Referral watch: every referral claim with its device/IP cluster size, so the
 // admin can spot one device/connection farming the welcome bonus.
 export async function adminReferralWatch() {

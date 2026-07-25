@@ -3,7 +3,7 @@ import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
 import { useCustomers, useOrders, useUserNotifications, useSettings, useAdminProducts } from "../lib/hooks.js";
 import { sendNotification } from "../lib/actions.js";
-import { getOpsConfigRaw, fetchCustomerBalance, adminCreditWallet } from "../lib/api.js";
+import { getOpsConfigRaw, fetchCustomerBalance, adminCreditWallet, adminCustomerWalletHistory } from "../lib/api.js";
 import { toast } from "../lib/toast.js";
 import AdminPortal from "./AdminPortal.jsx";
 
@@ -299,6 +299,9 @@ function CustomerDetail({ customer, orders, onClose }) {
             )}
           </div>
 
+          <h4 className="customer-sec">Wallet history</h4>
+          <WalletHistory customerId={customer.id} />
+
           <h4 className="customer-sec">
             Order history
             {orders.length > 0 && <span className="sec-count">{orders.length}</span>}
@@ -401,3 +404,57 @@ function fmtDate(iso) {
     return "";
   }
 }
+
+
+/* Full wallet ledger for one customer — read through an admin-gated RPC, so a
+   customer can never pull another person's wallet history. */
+function WalletHistory({ customerId }) {
+  const [rows, setRows] = useState(null);
+  const [all, setAll] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    adminCustomerWalletHistory(customerId)
+      .then((r) => { if (alive) setRows(r); })
+      .catch(() => { if (alive) setRows([]); });
+    return () => { alive = false; };
+  }, [customerId]);
+
+  if (rows === null) return <p className="panel-empty">Loading wallet…</p>;
+  if (!rows.length) return <p className="panel-empty">No wallet activity yet.</p>;
+  const shown = all ? rows : rows.slice(0, 6);
+  const balance = rows.reduce((t, r) => t + r.amount, 0);
+
+  return (
+    <>
+      <div className="wh-balance">
+        <span>Wallet balance</span>
+        <b className={balance >= 0 ? "good" : "bad"}>₹{balance.toFixed(2)}</b>
+      </div>
+      <div className="wh-list">
+        {shown.map((r) => (
+          <div className="wh-row" key={r.id}>
+            <div className="wh-txt">
+              <b>{WALLET_KIND[r.kind] || r.kind}</b>
+              <small>
+                {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                {r.orderCode ? ` · ${r.orderCode}` : ""}{r.note ? ` · ${r.note}` : ""}
+              </small>
+            </div>
+            <b className={r.amount >= 0 ? "wh-in" : "wh-out"}>
+              {r.amount >= 0 ? "+" : "−"}₹{Math.abs(r.amount).toFixed(2)}
+            </b>
+          </div>
+        ))}
+      </div>
+      {rows.length > 6 && (
+        <button type="button" className="show-more-btn" onClick={() => setAll((v) => !v)}>
+          {all ? "Show less" : `Show all ${rows.length} entries`}
+        </button>
+      )}
+    </>
+  );
+}
+const WALLET_KIND = {
+  topup: "Wallet top-up", spent: "Spent on order", referral: "Referral bonus",
+  change: "Cash change", adjustment: "Manual adjustment", refund: "Refund",
+};
