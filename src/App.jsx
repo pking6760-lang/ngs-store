@@ -332,7 +332,7 @@ export default function App() {
         onAddressClick={openAddress}
       />
 
-      {!settings.storeOpen && (
+      {!settings.storeOpen && !settings.__stale && (
         <div className="store-closed-banner">
           <span className="status-dot closed" aria-hidden="true" />
           Store is currently closed — you can browse, but ordering is paused.

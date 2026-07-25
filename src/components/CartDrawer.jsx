@@ -780,7 +780,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   useBackGuard(open && (step === "pay" || step === "payqr"), leaveStep);
 
   const upiLink = buildUpiLink({ amount: payable, note: "NGS Store order" });
-  const storeClosed = !settings.storeOpen;
+  // Don't declare the store shut from a cached value that hasn't been confirmed
+  // yet — place_order re-checks store hours server-side regardless.
+  const storeClosed = !settings.storeOpen && !settings.__stale;
 
   return (
     <>

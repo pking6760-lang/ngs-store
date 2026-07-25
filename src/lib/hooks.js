@@ -39,8 +39,14 @@ function writeCache(key, data) {
 // Generic backend hook: fetch once, then re-fetch on any realtime change to the
 // given tables. `fetcher` returns app-shaped data; `initial` shows instantly.
 // `cacheKey` (optional) turns on the stale-while-revalidate localStorage cache.
+// Data restored from localStorage is marked __stale until the first live fetch
+// lands. Screens that would otherwise flash yesterday's state (e.g. "store
+// closed" first thing in the morning) can wait for the confirmed value.
+function markStale(v) {
+  return v && typeof v === "object" && !Array.isArray(v) ? { ...v, __stale: true } : v;
+}
 function useBackend(fetcher, tables, initial, pollMs = 30000, cacheKey = null) {
-  const [data, setData] = useState(() => readCache(cacheKey, initial));
+  const [data, setData] = useState(() => markStale(readCache(cacheKey, initial)));
   useEffect(() => {
     let alive = true;
     const load = () =>
