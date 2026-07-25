@@ -7,6 +7,8 @@
 --
 -- Charged on the ITEM TOTAL BEFORE discounts and redemptions, so a coupon
 -- cannot be used to duck under the threshold and then also skip the fee.
+-- Applies to EVERYONE including Prime members — the Prime perk is free
+-- delivery, and a tiny basket still costs the shop the same to fulfil.
 -- Computed entirely server-side in _place_order_core; the client value is
 -- display only and is never trusted.
 

@@ -331,11 +331,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   // Small cart charge. Mirrors the server (_place_order_core): measured on the
   // ITEM TOTAL before discounts, so a coupon can neither trigger it nor dodge
-  // it, and Prime members are exempt. Display only — the server recomputes it.
+  // it, and charged to everyone — Prime's perk is free delivery, and a tiny
+  // basket costs the shop the same to fulfil either way. Display only: the
+  // server recomputes it and its value is the one that counts.
   const SMALL_CART_FEE = settings.smallCartFee ?? 0;
   const SMALL_CART_ABOVE = settings.smallCartThreshold ?? 0;
   const smallCartFee =
-    itemTotal > 0 && !isMember && SMALL_CART_FEE > 0 && itemTotal < SMALL_CART_ABOVE
+    itemTotal > 0 && SMALL_CART_FEE > 0 && itemTotal < SMALL_CART_ABOVE
       ? SMALL_CART_FEE : 0;
 
   // ── NGS Prime — buy the membership along with this order ──

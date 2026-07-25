@@ -13,6 +13,8 @@ export default function DeliveryAdmin() {
     freeDeliveryAbove: settings.freeDeliveryAbove,
     handlingFee: settings.handlingFee,
     surgeFee: settings.surgeFee ?? 20,
+    smallCartFee: settings.smallCartFee ?? 0,
+    smallCartThreshold: settings.smallCartThreshold ?? 0,
     maxDistanceKm: settings.maxDistanceKm ?? 5,
     minOrderValue: settings.rewards?.minOrderValue ?? 0,
     walletMinOrder: settings.rewards?.walletMinOrder ?? 199,
@@ -38,6 +40,8 @@ export default function DeliveryAdmin() {
         free_delivery_threshold: Math.max(0, Number(form.freeDeliveryAbove) || 0),
         handling_fee: Math.max(0, Number(form.handlingFee) || 0),
         surge_fee: Math.max(0, Number(form.surgeFee) || 0),
+        small_cart_fee: Math.max(0, Number(form.smallCartFee) || 0),
+        small_cart_threshold: Math.max(0, Number(form.smallCartThreshold) || 0),
       });
       await updateSettings({
         maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
@@ -92,6 +96,16 @@ export default function DeliveryAdmin() {
               onChange={(e) => set("surgeFee", e.target.value)} />
           </label>
           <label className="dfield">
+            <span>Small cart charge (₹)</span>
+            <input type="number" min="0" value={form.smallCartFee}
+              onChange={(e) => set("smallCartFee", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>…on carts below (₹)</span>
+            <input type="number" min="0" value={form.smallCartThreshold}
+              onChange={(e) => set("smallCartThreshold", e.target.value)} />
+          </label>
+          <label className="dfield">
             <span>Delivery radius (km)</span>
             <input type="number" min="0" value={form.maxDistanceKm}
               onChange={(e) => set("maxDistanceKm", e.target.value)} />
@@ -111,6 +125,14 @@ export default function DeliveryAdmin() {
         <p className="delivery-hint">
           The <strong>store contact number</strong> shows as a "Call store" button
           on the customer's live order screen, so they can reach you about an order.
+        </p>
+        <p className="delivery-hint">
+          The <strong>small cart charge</strong> is added to every order whose
+          items come to less than the amount beside it — Prime members included.
+          A tiny basket costs the same to pick and ride out as a big one, so this
+          covers it and nudges customers to add a little more. It's worked out on
+          the item total <em>before</em> any coupon, so a discount can't be used
+          to dodge it. Set the charge to 0 to switch it off.
         </p>
         <p className="delivery-hint">
           The <strong>cancellation fee</strong> is charged when a customer cancels
