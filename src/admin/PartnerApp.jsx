@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
 import ApkPrompt from "../components/ApkPrompt.jsx";
+import ApkDownloadRow from "../components/ApkDownloadRow.jsx";
 import { PartnerMark } from "./BrandMark.jsx";
 import { useBootSplashUp } from "../lib/bootsplash.js";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
@@ -75,6 +76,7 @@ function PartnerLogin() {
           </form>
         )}
       </div>
+      <ApkDownloadRow app="partner" className="pd-apk-row" />
     </div>
   );
 }
@@ -155,6 +157,7 @@ function PartnerInner() {
         <h2>Under review</h2>
         <p>Thanks, <strong>{partner.fullName}</strong>! The store is reviewing your
           documents. You'll be able to start once you're approved.</p>
+        <ApkDownloadRow app="partner" className="pd-apk-row" />
         <button className="emp-logout" onClick={logout}>Log out</button>
       </div>
     );

@@ -248,6 +248,19 @@
 .pl-sub { color: var(--p-sec) !important; }
 .partner-splash { background: var(--p-bg) !important; }
 
+/* The APK download row also appears before login and while under review, where
+   it sits in a centred column rather than a full-width dashboard list. */
+.partner-login-bg .apk-row, .partner-notstaff .apk-row {
+  width: 100%; max-width: 380px; margin: 18px auto 0; box-sizing: border-box; }
+
+/* Green is the customer brand — in the partner app the row wears partner red. */
+.pd-apk-row {
+  background: rgba(229,18,46,.12) !important; border-color: rgba(255,71,87,.34) !important;
+  color: var(--p-red-bright, #FF4757) !important; }
+.pd-apk-row .apk-row-txt b { color: #fff !important; }
+.pd-apk-row .apk-row-txt small { color: var(--p-sec, #b9c0cc) !important; }
+.pd-apk-row .apk-row-cta { background: var(--p-red, #e5122e) !important; color: #fff !important; }
+
 /* Boot placeholder — matches the splash backdrop so the handover is seamless.
    No wordmark: the opening splash already did the branding. */
 .partner-boot { min-height: 100vh; display: flex; align-items: center; justify-content: center;

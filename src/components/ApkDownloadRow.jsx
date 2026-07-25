@@ -3,19 +3,37 @@ import { getAppVersion } from "../lib/api.js";
 
 // A persistent "Download the Android app" button that always shows the LATEST
 // published version (read live from the app-versions registry the admin updates).
-// Only rendered on Android in a browser — hidden inside the native app, on the
-// installed PWA, and on non-Android devices (there's no APK for them).
+//
+// Hidden only where the APK is genuinely no use: inside the native app itself,
+// and on iPhone/iPad. It DOES show on the home-screen web app — that's the main
+// place someone still needs the real APK, because the web app can't do the
+// full-screen order alarm or partner calls — and on desktop, so the owner can
+// grab the file to share.
+
+// The URL comes from the database. Only an admin can write it, but an href is
+// an injection surface (javascript:, data:), so it is checked before rendering.
+function safeApkUrl(u) {
+  try {
+    const url = new URL(String(u));
+    return url.protocol === "https:" ? url.href : null;
+  } catch { return null; }
+}
+
 export default function ApkDownloadRow({ app = "customer", className = "" }) {
   const [ver, setVer] = useState(null); // { versionName, apkUrl }
 
   useEffect(() => {
     let alive = true;
     try {
-      if (window.Capacitor) return;                                    // native app already
-      if (!/android/i.test(navigator.userAgent || "")) return;         // Android only
-      if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return; // installed PWA
+      // NOTE: window.Capacitor also exists on the WEBSITE (the shim is bundled),
+      // so only isNativePlatform() actually means "running inside the APK".
+      if (window.Capacitor?.isNativePlatform?.()) return;                  // native app already
+      if (/iphone|ipad|ipod/i.test(navigator.userAgent || "")) return;     // an APK can't install on iOS
     } catch { return; }
-    getAppVersion(app).then((v) => { if (alive && v?.apkUrl) setVer({ versionName: v.versionName, apkUrl: v.apkUrl }); }).catch(() => {});
+    getAppVersion(app).then((v) => {
+      const href = safeApkUrl(v?.apkUrl);
+      if (alive && href) setVer({ versionName: v.versionName, apkUrl: href });
+    }).catch(() => {});
     return () => { alive = false; };
   }, [app]);
 

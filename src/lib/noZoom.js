@@ -10,7 +10,10 @@ export function lockZoomInStandalone() {
     const standalone =
       window.navigator.standalone === true ||
       (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
-      !!window.Capacitor; // packaged APK — always app-like
+      // window.Capacitor exists on the website too (the shim is bundled), so
+      // check isNativePlatform() — otherwise this would block pinch-zoom for
+      // everyone browsing the site, which is exactly what we don't want.
+      window.Capacitor?.isNativePlatform?.() === true; // packaged APK — always app-like
     if (!standalone) return;
 
     const stop = (e) => e.preventDefault();

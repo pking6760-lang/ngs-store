@@ -22,7 +22,9 @@ export default function ApkPrompt({ app = "customer" }) {
   useEffect(() => {
     let alive = true;
     try {
-      if (window.Capacitor) return;                                   // already the native app
+      // window.Capacitor is bundled into the website too — only isNativePlatform()
+      // means we're really inside the APK.
+      if (window.Capacitor?.isNativePlatform?.()) return;             // already the native app
       if (!/android/i.test(navigator.userAgent || "")) return;        // Android only
       if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return; // installed PWA
       const snoozed = Number(localStorage.getItem(snoozeKey) || 0);
