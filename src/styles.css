@@ -3013,24 +3013,59 @@ input:focus-visible {
 
 /* Opening brand splash */
 .splash { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;
-  transition: opacity .6s ease, transform .6s ease; }
-.splash.leaving { opacity: 0; transform: scale(1.05); pointer-events: none; }
-.splash-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.splash-logo { display: flex; gap: 2px; font-weight: 900; font-size: 62px; letter-spacing: -0.02em; line-height: 1; }
-.splash-logo span { display: inline-block; opacity: 0; transform: translateY(18px) scale(.8);
-  animation: splashPop .55s cubic-bezier(.2,.8,.2,1) forwards; }
-@keyframes splashPop { to { opacity: 1; transform: none; } }
-.splash-tag { font-size: 13px; letter-spacing: .22em; text-transform: uppercase; opacity: 0;
-  animation: splashFade .6s ease .45s forwards; }
-@keyframes splashFade { to { opacity: .82; } }
-.splash-bar { width: 130px; height: 4px; border-radius: 999px; overflow: hidden; margin-top: 8px; }
-.splash-bar > span { display: block; height: 100%; width: 42%; border-radius: 999px; animation: splashBar 1.05s ease-in-out infinite; }
-@keyframes splashBar { 0% { margin-left: -45%; } 100% { margin-left: 105%; } }
-.splash-customer { background: radial-gradient(120% 90% at 50% 0%, var(--green), var(--green-dark)); color: #fff; }
-.splash-admin { background: radial-gradient(120% 90% at 50% 0%, #5877f7, #2B44A8); color: #fff; }
-.splash-partner { background: radial-gradient(120% 90% at 50% -8%, rgba(229,18,46,.4), #08080A 62%); color: #fff; }
+  overflow: hidden; transition: opacity .7s cubic-bezier(.4,0,.2,1), transform .7s cubic-bezier(.4,0,.2,1); }
+.splash.leaving { opacity: 0; transform: scale(1.08); pointer-events: none; }
+
+/* soft light source behind the mark, breathing gently */
+.splash-glow { position: absolute; width: 78vw; max-width: 460px; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 62%);
+  animation: splashBreath 3.4s ease-in-out infinite; }
+@keyframes splashBreath { 0%,100% { transform: scale(1); opacity: .85; } 50% { transform: scale(1.12); opacity: 1; } }
+
+.splash-inner { position: relative; display: flex; flex-direction: column; align-items: center; }
+
+/* brand mark — settles in with a gentle spring, leaf unfurls after */
+.splash-mark { width: 76px; height: 76px; margin-bottom: 20px;
+  opacity: 0; transform: scale(.68) translateY(10px);
+  animation: splashMark .8s cubic-bezier(.2,.9,.25,1.2) forwards;
+  filter: drop-shadow(0 10px 26px rgba(0,0,0,.28)); }
+@keyframes splashMark { to { opacity: 1; transform: none; } }
+.splash-mark .sm-n { fill: #fff; }
+.splash-mark .sm-leaf { fill: #bdf0d0; opacity: 0; transform-origin: 46px 20px;
+  animation: splashLeaf .5s cubic-bezier(.2,.9,.25,1.3) .55s forwards; }
+@keyframes splashLeaf { from { opacity: 0; transform: scale(.4) rotate(-25deg); }
+                        to   { opacity: 1; transform: none; } }
+
+/* wordmark — each letter rises out of a blur */
+.splash-logo { display: flex; gap: 1px; font-weight: 900; font-size: 58px; letter-spacing: -.035em; line-height: 1; }
+.splash-logo span { display: inline-block; opacity: 0; transform: translateY(22px);
+  filter: blur(8px); animation: splashLetter .62s cubic-bezier(.2,.75,.2,1) forwards; }
+@keyframes splashLetter { to { opacity: 1; transform: none; filter: blur(0); } }
+
+/* tagline — tracking settles as it fades in */
+.splash-tag { margin-top: 12px; font-size: 11.5px; font-weight: 600; letter-spacing: .5em; text-transform: uppercase;
+  text-indent: .5em; opacity: 0; animation: splashTag .85s cubic-bezier(.2,.75,.2,1) .62s forwards; }
+@keyframes splashTag { from { opacity: 0; letter-spacing: .78em; } to { opacity: .72; letter-spacing: .26em; } }
+
+/* hairline that draws outward from the centre */
+.splash-rule { width: 0; height: 1px; margin-top: 20px; background: currentColor; opacity: .22;
+  animation: splashRule .7s cubic-bezier(.3,.8,.3,1) .95s forwards; }
+@keyframes splashRule { to { width: 132px; } }
+
+.splash-bar { width: 132px; height: 3px; border-radius: 999px; overflow: hidden; margin-top: 16px; opacity: 0;
+  animation: splashFadeIn .4s ease 1.15s forwards; }
+@keyframes splashFadeIn { to { opacity: 1; } }
+.splash-bar > span { display: block; height: 100%; width: 38%; border-radius: 999px;
+  animation: splashBar 1.25s cubic-bezier(.55,0,.45,1) infinite; }
+@keyframes splashBar { 0% { margin-left: -42%; } 100% { margin-left: 106%; } }
+
+.splash-customer { background: radial-gradient(125% 95% at 50% -5%, #17a05c, var(--green-dark)); color: #fff; }
+.splash-admin    { background: radial-gradient(125% 95% at 50% -5%, #5877f7, #22357f); color: #fff; }
+.splash-partner  { background: radial-gradient(125% 95% at 50% -8%, rgba(229,18,46,.42), #08080A 62%); color: #fff; }
 .splash-partner .splash-logo { color: #FF4757; }
-.splash .splash-bar { background: rgba(255,255,255,.22); }
+.splash-partner .splash-mark .sm-leaf { fill: #FF8A93; }
+.splash-partner .splash-glow { background: radial-gradient(circle, rgba(255,71,87,.18) 0%, rgba(255,71,87,0) 62%); }
+.splash .splash-bar { background: rgba(255,255,255,.2); }
 .splash .splash-bar > span { background: currentColor; }
 .splash-partner .splash-bar > span { background: #FF4757; }
 
@@ -3069,7 +3104,9 @@ input:focus-visible {
 .success-anim { display: block; width: 86px; height: 86px; margin: 4px auto 8px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .splash-logo span, .splash-tag, .fade-up, .ov, .splash-bar > span { animation-duration: .01ms !important; }
+  .splash-logo span, .splash-tag, .fade-up, .ov, .splash-bar > span,
+  .splash-mark, .splash-mark .sm-leaf, .splash-rule, .splash-glow { animation-duration: .01ms !important; }
+  .splash-rule { width: 132px; }
   .ngs-spin, .pl-ring, .ov-ring::before { animation-duration: 1.4s; }
 }
 

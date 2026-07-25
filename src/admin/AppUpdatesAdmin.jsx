@@ -57,7 +57,9 @@ function AppCard({ app, current, onDone }) {
   }
 
   async function publish() {
-    if (!name.trim() || !code || !url.trim()) { setMsg("Version name, code and an APK are all required."); return; }
+    if (uploading) { setMsg("The APK is still uploading — wait for “APK uploaded ✓”."); return; }
+    if (!name.trim() || !code) { setMsg("Version name and code are required."); return; }
+    if (!url.trim()) { setMsg("No APK uploaded yet. Choose the file and wait for “APK uploaded ✓”, or paste an APK link below."); return; }
     if (current && Number(code) <= current.versionCode) { setMsg(`Version code must be higher than ${current.versionCode}.`); return; }
     if (!confirm(`Publish ${app.label} v${name} (code ${code})?\n\nEveryone on an older version will be forced to update.`)) return;
     setBusy(true); setMsg("");
