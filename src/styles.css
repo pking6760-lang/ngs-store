@@ -3030,17 +3030,22 @@ input:focus-visible {
 
 .splash-inner { position: relative; display: flex; flex-direction: column; align-items: center; }
 
-/* brand mark — settles in with a gentle spring, leaf unfurls after */
+/* brand mark — settles in with a gentle spring, the per-app cue lands after */
 .splash-mark { width: 76px; height: 76px; margin-bottom: 20px;
   opacity: 0; transform: scale(.68) translateY(10px);
   animation: splashMark .8s cubic-bezier(.2,.9,.25,1.2) forwards;
   filter: drop-shadow(0 10px 26px rgba(0,0,0,.28)); }
 @keyframes splashMark { to { opacity: 1; transform: none; } }
 .splash-mark .sm-n { fill: #fff; }
-.splash-mark .sm-leaf { fill: #bdf0d0; opacity: 0; transform-origin: 46px 20px;
-  animation: splashLeaf .5s cubic-bezier(.2,.9,.25,1.3) .55s forwards; }
-@keyframes splashLeaf { from { opacity: 0; transform: scale(.4) rotate(-25deg); }
-                        to   { opacity: 1; transform: none; } }
+.splash-mark .sm-cue { opacity: 0; transform-origin: 49px 19px;
+  animation: splashCue .5s cubic-bezier(.2,.9,.25,1.3) .55s forwards; }
+@keyframes splashCue { from { opacity: 0; transform: scale(.4) rotate(-25deg); }
+                       to   { opacity: 1; transform: none; } }
+/* customer keeps the leaf; admin gets the dashboard grid; partner the pin */
+.splash-mark .sm-leaf { fill: #bdf0d0; transform-origin: 46px 20px; }
+.splash-mark .sm-dots { fill: #c3cfff; }
+.splash-mark .sm-pin  { fill: #ff5a4d; }
+.splash-mark .sm-pin-hole { fill: #15171c; }
 
 /* wordmark — each letter rises out of a blur */
 .splash-logo { display: flex; gap: 1px; font-weight: 900; font-size: 58px; letter-spacing: -.035em; line-height: 1; }
@@ -3067,9 +3072,10 @@ input:focus-visible {
 
 .splash-customer { background: radial-gradient(125% 95% at 50% -5%, #17a05c, var(--green-dark)); color: #fff; }
 .splash-admin    { background: radial-gradient(125% 95% at 50% -5%, #5877f7, #22357f); color: #fff; }
-.splash-partner  { background: radial-gradient(125% 95% at 50% -8%, rgba(229,18,46,.42), #08080A 62%); color: #fff; }
+/* The red wash is translucent, so it needs an opaque base underneath — without
+   it the app booting behind the splash ghosts through the top of the screen. */
+.splash-partner  { background: radial-gradient(125% 95% at 50% -8%, rgba(229,18,46,.42), rgba(8,8,10,0) 62%), #08080A; color: #fff; }
 .splash-partner .splash-logo { color: #FF4757; }
-.splash-partner .splash-mark .sm-leaf { fill: #FF8A93; }
 .splash-partner .splash-glow { background: radial-gradient(circle, rgba(255,71,87,.18) 0%, rgba(255,71,87,0) 62%); }
 .splash .splash-bar { background: rgba(255,255,255,.2); }
 .splash .splash-bar > span { background: currentColor; }
@@ -3111,7 +3117,7 @@ input:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .splash-logo span, .splash-tag, .fade-up, .ov, .splash-bar > span,
-  .splash-mark, .splash-mark .sm-leaf, .splash-rule, .splash-glow { animation-duration: .01ms !important; }
+  .splash-mark, .splash-mark .sm-cue, .splash-rule, .splash-glow { animation-duration: .01ms !important; }
   .splash-rule { width: 132px; }
   .ngs-spin, .pl-ring, .ov-ring::before { animation-duration: 1.4s; }
 }

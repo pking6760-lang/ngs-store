@@ -6,6 +6,7 @@ import PartnerDashboard from "./PartnerDashboard.jsx";
 import PartnerRegister from "./PartnerRegister.jsx";
 import ApkPrompt from "../components/ApkPrompt.jsx";
 import { PartnerMark } from "./BrandMark.jsx";
+import { useBootSplashUp } from "../lib/bootsplash.js";
 import PartnerTerms, { TERMS_VERSION } from "./PartnerTerms.jsx";
 import LivenessCapture from "./LivenessCapture.jsx";
 import { Ic } from "./AdminIcons.jsx";
@@ -78,13 +79,16 @@ function PartnerLogin() {
   );
 }
 
-function Splash({ text }) {
+// Boot placeholder. The opening AppSplash is already covering the screen, so
+// showing a second branded "NGS partner" screen underneath it just reads as the
+// app loading twice — stay invisible until the splash has lifted, and even then
+// show only a quiet spinner rather than a rival brand screen.
+function Splash() {
+  const bootUp = useBootSplashUp();
+  if (bootUp) return <div className="partner-boot" />;
   return (
-    <div className="partner-splash">
-      <PartnerMark size={56} />
-      <span className="admin-logo">NGS</span>
-      <span className="admin-logo-sub">partner</span>
-      {text && <p style={{ marginTop: 12, color: "#cfe6d3" }}>{text}</p>}
+    <div className="partner-boot">
+      <span className="partner-boot-spin" aria-label="Loading" role="status" />
     </div>
   );
 }
@@ -139,7 +143,7 @@ function PartnerInner() {
     );
   }
 
-  if (partner === undefined) return <Splash text="Loading…" />;
+  if (partner === undefined) return <Splash />;
 
   // Not registered yet → KYC form.
   if (!partner) return <PartnerRegister email={user?.email} onDone={reload} />;

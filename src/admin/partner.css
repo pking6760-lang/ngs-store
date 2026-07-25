@@ -248,6 +248,16 @@
 .pl-sub { color: var(--p-sec) !important; }
 .partner-splash { background: var(--p-bg) !important; }
 
+/* Boot placeholder — matches the splash backdrop so the handover is seamless.
+   No wordmark: the opening splash already did the branding. */
+.partner-boot { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(125% 95% at 50% -8%, rgba(229,18,46,.42), rgba(8,8,10,0) 62%), #08080A; }
+.partner-boot-spin { width: 26px; height: 26px; border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,.16); border-top-color: var(--p-red-bright, #FF4757);
+  animation: partnerBootSpin .8s linear infinite; }
+@keyframes partnerBootSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .partner-boot-spin { animation-duration: 2s; } }
+
 /* Inputs — dark with red focus */
 .login-input, .preg-field input, .preg-field textarea {
   background: var(--p-card2) !important; color: var(--p-text) !important; border: 1px solid var(--p-line) !important; }
