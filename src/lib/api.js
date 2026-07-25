@@ -1048,29 +1048,47 @@ export async function adminUploadAppApk(file, app, versionCode, onProgress) {
   // to the SDK if anything about the direct call is unavailable.
   const session = (await sb.auth.getSession())?.data?.session;
   const token = session?.access_token;
-  const base = sb.storageUrl || `${FN_URL}/storage/v1`;
-  if (token && typeof XMLHttpRequest !== "undefined") {
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${base}/object/${encodeURIComponent("app-releases")}/${encodeURIComponent(path)}`);
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-      xhr.setRequestHeader("apikey", FN_ANON);
-      xhr.setRequestHeader("Content-Type", "application/vnd.android.package-archive");
-      xhr.setRequestHeader("x-upsert", "true");
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-      };
-      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300)
-        ? resolve()
-        : reject(new Error(`Upload failed (${xhr.status}). Check your connection and try again.`));
-      xhr.onerror = () => reject(new Error("Upload failed — the connection dropped. Try again on Wi-Fi."));
-      xhr.ontimeout = () => reject(new Error("Upload timed out. Try again on Wi-Fi."));
-      xhr.send(file);
-    });
-  } else {
+  const base = `${String(FN_URL).replace(/\/+$/, "")}/storage/v1`;
+  let uploaded = false;
+  if (token && typeof XMLHttpRequest !== "undefined" && typeof FormData !== "undefined") {
+    try {
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${base}/object/app-releases/${encodeURIComponent(path)}`);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.setRequestHeader("apikey", FN_ANON);
+        xhr.setRequestHeader("x-upsert", "true");
+        // Multipart, matching exactly what supabase-js sends. Content-Type is
+        // deliberately NOT set — the browser must add its own MIME boundary.
+        const form = new FormData();
+        form.append("cacheControl", "3600");
+        form.append("", file);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) return resolve();
+          let detail = "";
+          try { detail = JSON.parse(xhr.responseText)?.message || ""; } catch { detail = ""; }
+          reject(new Error(detail || `Upload failed (${xhr.status}).`));
+        };
+        xhr.onerror = () => reject(new Error("network"));
+        xhr.ontimeout = () => reject(new Error("network"));
+        xhr.send(form);
+      });
+      uploaded = true;
+    } catch {
+      uploaded = false; // fall through to the SDK, which is the known-good path
+    }
+  }
+  if (!uploaded) {
+    // No progress here, but it is the battle-tested path — never let the
+    // progress-reporting shortcut be the reason a release cannot be published.
+    if (onProgress) onProgress(0);
     const { error } = await sb.storage.from("app-releases")
       .upload(path, file, { contentType: "application/vnd.android.package-archive", upsert: true });
     if (error) throw new Error(error.message || "Upload failed.");
+    if (onProgress) onProgress(100);
   }
   const { data } = sb.storage.from("app-releases").getPublicUrl(path);
   return `${data.publicUrl}?t=${Date.now()}`; // cache-bust so the new build downloads
