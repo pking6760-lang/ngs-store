@@ -2,6 +2,7 @@
   "name": "Nisha General Store",
   "short_name": "NGS",
   "description": "Groceries & daily essentials from Nisha General Store, Sultanpur, New Delhi — delivered fast.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
