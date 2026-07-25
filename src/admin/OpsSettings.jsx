@@ -20,6 +20,8 @@ const GROUPS = [
       { key: "delivery_fee", label: "Delivery fee (below free threshold)" },
       { key: "free_delivery_threshold", label: "Free delivery above" },
       { key: "surge_fee", label: "Surge charge (rain/peak)" },
+      { key: "small_cart_fee", label: "Small cart charge (0 = off)" },
+      { key: "small_cart_threshold", label: "…charged below this cart value" },
       { key: "cod_customer_limit", label: "COD limit (above → online only)" },
     ],
   },

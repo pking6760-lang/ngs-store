@@ -329,6 +329,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // Surge / bad-weather premium — applies to everyone while surge mode is on.
   const surgeFee = isSurge && itemTotal > 0 ? SURGE_FEE : 0;
 
+  // Small cart charge. Mirrors the server (_place_order_core): measured on the
+  // ITEM TOTAL before discounts, so a coupon can neither trigger it nor dodge
+  // it, and Prime members are exempt. Display only — the server recomputes it.
+  const SMALL_CART_FEE = settings.smallCartFee ?? 0;
+  const SMALL_CART_ABOVE = settings.smallCartThreshold ?? 0;
+  const smallCartFee =
+    itemTotal > 0 && !isMember && SMALL_CART_FEE > 0 && itemTotal < SMALL_CART_ABOVE
+      ? SMALL_CART_FEE : 0;
+
   // ── NGS Prime — buy the membership along with this order ──
   const memPlan = settings.rewards?.membership || {};
   const memEnabled = memPlan.enabled ?? true;
@@ -342,7 +351,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     if (addMembership && !canJoinPrime) setAddMembership(false);
   }, [addMembership, canJoinPrime]);
 
-  const grandTotal = netItems + deliveryFee + handling + surgeFee + memberFee;
+  const grandTotal = netItems + deliveryFee + handling + surgeFee + smallCartFee + memberFee;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
   // ── NGS Wallet (store credit) ──────────────────────────
@@ -736,6 +745,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       deliveryFee,
       handling,
       surgeFee,
+      smallCartFee,
       total: grandTotal,
       count,
     };
@@ -1544,6 +1554,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="bill-note">
                   Milk &amp; dairy carry a delivery &amp; handling charge even on Prime. Tip: a milk <strong>subscription</strong> delivers daily for less.
                 </div>
+              )}
+              {smallCartFee > 0 && (
+                <>
+                  <div className="bill-row">
+                    <span>{tr("Small cart charge")}</span>
+                    <span>₹{smallCartFee}</span>
+                  </div>
+                  <div className="bill-note warn">
+                    No small cart charge on orders above ₹{SMALL_CART_ABOVE - 1}
+                  </div>
+                </>
               )}
               {surgeFee > 0 && (
                 <div className="bill-row">

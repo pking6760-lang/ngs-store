@@ -36,8 +36,18 @@ function AppCard({ app, current, onDone }) {
   const [url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [pct, setPct] = useState(0);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+
+  // A 25 MB upload from a phone takes a while. Warn before the screen is closed
+  // mid-upload, which silently loses it and leaves nothing to publish.
+  useEffect(() => {
+    if (!uploading) return;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [uploading]);
 
   useEffect(() => {
     if (current?.versionCode) setCode(String(current.versionCode + 1));
@@ -47,11 +57,13 @@ function AppCard({ app, current, onDone }) {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!code) { setMsg("Enter the version code first, then choose the APK."); return; }
-    setUploading(true); setMsg("");
+    setUrl("");            // a new file invalidates any previously uploaded one
+    setUploading(true); setPct(0);
+    setMsg(`Uploading ${(f.size / 1048576).toFixed(0)} MB — keep this screen open.`);
     try {
-      const u = await api.adminUploadAppApk(f, app.id, code);
+      const u = await api.adminUploadAppApk(f, app.id, code, setPct);
       setUrl(u);
-      setMsg("APK uploaded ✓");
+      setMsg("APK uploaded ✓ — you can publish now.");
     } catch (err) { setMsg(err.message || "Upload failed."); }
     finally { setUploading(false); }
   }
@@ -106,9 +118,15 @@ function AppCard({ app, current, onDone }) {
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
             placeholder="Shown on the update screen" />
         </label>
+        {uploading && (
+          <div className="appupd-prog" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+            <span style={{ width: `${pct}%` }} />
+            <b>{pct}%</b>
+          </div>
+        )}
         {msg && <div className="appupd-msg">{msg}</div>}
-        <button className="appupd-pub" disabled={busy || uploading} onClick={publish}>
-          {busy ? "Publishing…" : uploading ? "Uploading APK…" : "Publish update"}
+        <button className="appupd-pub" disabled={busy || uploading || !url} onClick={publish}>
+          {busy ? "Publishing…" : uploading ? `Uploading APK… ${pct}%` : "Publish update"}
         </button>
       </div>
     </div>

@@ -103,6 +103,8 @@ function mapSettings(r) {
     offerBanner: r.offer_banner, rewards: r.rewards, deliveryFee: num(r.delivery_fee),
     freeDeliveryAbove: num(r.free_delivery_above), handlingFee: num(r.handling_fee),
     surgeFee: num(r.surge_fee), maxDistanceKm: num(r.max_distance_km),
+    smallCartFee: r.small_cart_fee != null ? num(r.small_cart_fee) : 0,
+    smallCartThreshold: r.small_cart_threshold != null ? num(r.small_cart_threshold) : 0,
     codCustomerLimit: num(r.cod_customer_limit),
     shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold,
     automation: r.automation || null,
@@ -1037,12 +1039,40 @@ export async function fetchAllAppVersions() {
   }));
 }
 // Admin: upload a new APK to the public app-releases bucket; returns its URL.
-export async function adminUploadAppApk(file, app, versionCode) {
+export async function adminUploadAppApk(file, app, versionCode, onProgress) {
   const path = `${app}-v${versionCode}.apk`;
-  const { error } = await must().storage.from("app-releases")
-    .upload(path, file, { contentType: "application/vnd.android.package-archive", upsert: true });
-  if (error) throw new Error(error.message || "Upload failed.");
-  const { data } = must().storage.from("app-releases").getPublicUrl(path);
+  const sb = must();
+  // An APK is ~25 MB and the owner uploads it from a phone, so a silent
+  // "it's working, honest" spinner is not good enough — XHR is used instead of
+  // the SDK's fetch upload purely because it reports real progress. Falls back
+  // to the SDK if anything about the direct call is unavailable.
+  const session = (await sb.auth.getSession())?.data?.session;
+  const token = session?.access_token;
+  const base = sb.storageUrl || `${FN_URL}/storage/v1`;
+  if (token && typeof XMLHttpRequest !== "undefined") {
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${base}/object/${encodeURIComponent("app-releases")}/${encodeURIComponent(path)}`);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      xhr.setRequestHeader("apikey", FN_ANON);
+      xhr.setRequestHeader("Content-Type", "application/vnd.android.package-archive");
+      xhr.setRequestHeader("x-upsert", "true");
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300)
+        ? resolve()
+        : reject(new Error(`Upload failed (${xhr.status}). Check your connection and try again.`));
+      xhr.onerror = () => reject(new Error("Upload failed — the connection dropped. Try again on Wi-Fi."));
+      xhr.ontimeout = () => reject(new Error("Upload timed out. Try again on Wi-Fi."));
+      xhr.send(file);
+    });
+  } else {
+    const { error } = await sb.storage.from("app-releases")
+      .upload(path, file, { contentType: "application/vnd.android.package-archive", upsert: true });
+    if (error) throw new Error(error.message || "Upload failed.");
+  }
+  const { data } = sb.storage.from("app-releases").getPublicUrl(path);
   return `${data.publicUrl}?t=${Date.now()}`; // cache-bust so the new build downloads
 }
 // Admin: publish a version — every installed app below it is forced to update.

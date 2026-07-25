@@ -1392,6 +1392,9 @@ button {
   margin: 2px 0 6px; padding: 7px 10px; background: var(--bg-soft);
   border-radius: 9px;
 }
+/* Small cart charge — orange, like the "add more" nudges, so it reads as
+   something the customer can act on rather than a silent extra. */
+.bill-note.warn { color: #b4530a; background: rgba(240,130,30,.1); font-weight: 600; }
 .bill-row {
   display: flex;
   justify-content: space-between;
