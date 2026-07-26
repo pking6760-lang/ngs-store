@@ -482,7 +482,8 @@ function CouponManager({ coupons, categories }) {
             <>
               <b>Exact.</b> The customer always gets the full{" "}
               {form.type === "percent" ? `${form.value || 0}%` : `₹${form.value || 0}`}. On a
-              thin-margin cart that can exceed what the order earns, so you take the loss.
+              thin-margin cart that exceeds what the order earns, so you take the loss —
+              at worst {form.type === "percent" ? "the full percentage" : `₹${form.value || 0}`} per order.
             </>
           ) : (
             <>
