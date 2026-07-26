@@ -26,11 +26,17 @@ begin;
 -- ── Who to pay, and how much ──────────────────────────────────────────────
 -- Admin-only. One row per approved partner, whatever their role, so pickers
 -- and drivers are both covered by the same weekly run.
+-- Bank details ride along so the payout screen has everything needed to make
+-- the transfer in one place. Sourcing them here rather than joining a
+-- separately-loaded partner list means the account number can never be missing
+-- or, worse, belong to the wrong person because one list loaded before another.
 create or replace function public.admin_payout_due()
 returns table(user_id uuid, emp_code text, name text, role text,
               payable numeric, cash_in_hand numeric,
               week_earnings numeric, week_penalty numeric, week_jobs int,
-              last_payout_at timestamptz, last_payout_amount numeric)
+              last_payout_at timestamptz, last_payout_amount numeric,
+              bank_holder text, bank_account text, bank_ifsc text,
+              bank_name text, bank_branch text)
 language plpgsql stable security definer set search_path to 'public'
 as $$
 declare v_week_start timestamptz;
@@ -52,11 +58,13 @@ begin
       where w.kind = 'earning' and w.created_at >= v_week_start), 0)::int,
     max(w.created_at) filter (where w.kind = 'payout'),
     round(abs(coalesce((array_agg(w.amount order by w.created_at desc)
-                          filter (where w.kind = 'payout'))[1], 0)), 2)
+                          filter (where w.kind = 'payout'))[1], 0)), 2),
+    p.bank_holder, p.bank_account, p.bank_ifsc, p.bank_name, p.bank_branch
   from public.partners p
   left join public.wallet_ledger w on w.partner_id = p.user_id
   where p.status = 'approved'
-  group by p.user_id, p.emp_code, p.full_name, p.role
+  group by p.user_id, p.emp_code, p.full_name, p.role,
+           p.bank_holder, p.bank_account, p.bank_ifsc, p.bank_name, p.bank_branch
   order by 5 desc, p.full_name;
 end; $$;
 

@@ -1286,6 +1286,9 @@ export async function fetchPayoutDue() {
     weekEarnings: Number(r.week_earnings) || 0, weekPenalty: Number(r.week_penalty) || 0,
     weekJobs: Number(r.week_jobs) || 0,
     lastPayoutAt: r.last_payout_at || null, lastPayoutAmount: Number(r.last_payout_amount) || 0,
+    // Same field names as fetchPartners(), so the bank card renders either one.
+    bankHolder: r.bank_holder, bankAccount: r.bank_account, bankIfsc: r.bank_ifsc,
+    bankName: r.bank_name, bankBranch: r.bank_branch,
   }));
 }
 export async function partnerDepositCash(userId, amount) {

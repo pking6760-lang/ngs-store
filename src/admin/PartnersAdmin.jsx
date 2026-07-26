@@ -3,7 +3,7 @@ import { Ic } from "./AdminIcons.jsx";
 import { usePartners } from "../lib/hooks.js";
 import * as api from "../lib/api.js";
 import { kycReport } from "../lib/kyc.js";
-import { withMinTime } from "../lib/ux.js";
+import { withMinTime, copyText } from "../lib/ux.js";
 import { ActionOverlay } from "../components/Motion.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import AdminPortal from "./AdminPortal.jsx";
@@ -156,7 +156,8 @@ function PayoutPanel({ onChanged }) {
               ? `. They're also holding ₹${Math.round(pay.cashInHand)} shop cash — that's separate, take it as a deposit.`
               : "."} Send the money, then record it here.`}
             suggest={Math.round(pay.payable)} okLabel="Record payout"
-            onCancel={() => setPay(null)} onSubmit={record} />
+            onCancel={() => setPay(null)} onSubmit={record}
+            extra={<BankDetails partner={pay} />} />
         </AdminPortal>
       )}
     </section>
@@ -325,7 +326,15 @@ function AmountModal({ title, hint, suggest, okLabel, onCancel, onSubmit, extra 
 
 // The partner's bank/UPI details, so the owner can pay them manually before
 // recording the payout. (Automated bank transfer can come later.)
+// Every row is tap-to-copy, because these get retyped into a banking app and a
+// single wrong digit sends the money to a stranger. "Copy all" puts name,
+// account and IFSC on the clipboard as three labelled lines for a payee form.
+//
+// Copy failure is reported, never swallowed: a WebView with the clipboard
+// blocked would otherwise leave whatever was there before, and the owner would
+// paste the previous partner's account number into the transfer.
 function BankDetails({ partner }) {
+  const [copied, setCopied] = useState("");   // which row flashed, or "!" on failure
   const rows = [
     ["Account holder", partner.bankHolder],
     ["Account no.", partner.bankAccount],
@@ -333,12 +342,36 @@ function BankDetails({ partner }) {
     ["Bank", [partner.bankName, partner.bankBranch].filter(Boolean).join(" · ")],
   ].filter(([, v]) => v);
   if (!rows.length) return <div className="bank-box none">No bank details on file for this partner.</div>;
+
+  async function copy(label, value) {
+    const ok = await copyText(value);
+    setCopied(ok ? label : "!");
+    setTimeout(() => setCopied(""), ok ? 1400 : 2600);
+  }
+  const allText = [
+    partner.bankHolder && `Name: ${partner.bankHolder}`,
+    partner.bankAccount && `A/c: ${partner.bankAccount}`,
+    partner.bankIfsc && `IFSC: ${partner.bankIfsc}`,
+  ].filter(Boolean).join("\n");
+
   return (
     <div className="bank-box">
-      <div className="bank-box-h">Pay to</div>
+      <div className="bank-box-h">
+        <span>Pay to</span>
+        <button type="button" className="bank-copyall" onClick={() => copy("all", allText)}>
+          {copied === "all" ? "✓ Copied" : "Copy all"}
+        </button>
+      </div>
       {rows.map(([k, v]) => (
-        <div className="bank-row" key={k}><span>{k}</span><strong>{v}</strong></div>
+        <button type="button" className="bank-row" key={k} onClick={() => copy(k, v)}>
+          <span>{k}</span>
+          <strong>{v}</strong>
+          <em className="bank-copy">{copied === k ? "✓" : "Copy"}</em>
+        </button>
       ))}
+      {copied === "!" && (
+        <div className="bank-copyfail">Couldn't copy — press and hold the value to select it instead.</div>
+      )}
     </div>
   );
 }

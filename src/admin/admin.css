@@ -2961,10 +2961,22 @@ body {
 /* ─── Bank details in the payout modal ───────────────────── */
 .bank-box { background: #f5f7fa; border: 1px solid #e6ebf1; border-radius: 10px; padding: 10px 12px; margin: 4px 0 12px; text-align: left; }
 .bank-box.none { color: #8792a6; font-size: 12.5px; }
-.bank-box-h { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #8792a6; margin-bottom: 6px; }
-.bank-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
-.bank-row span { color: #6b7885; }
-.bank-row strong { color: #16202c; font-weight: 700; text-align: right; word-break: break-all; }
+.bank-box-h { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #8792a6; margin-bottom: 6px; }
+.bank-copyall { border: 1px solid #ccd6e4; background: #fff; border-radius: 8px; padding: 4px 9px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--a-primary, #3B5BDB); }
+/* Each row is a tap-to-copy button — these get retyped into a banking app, and
+   one wrong digit sends the money to a stranger. */
+.bank-row { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; font-size: 13px; padding: 7px 8px; margin: 2px 0; text-align: left;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; }
+.bank-row:active { background: #eaf0fb; border-color: #ccd9f2; }
+.bank-row span { color: #6b7885; flex: none; }
+.bank-row strong { color: #16202c; font-weight: 700; text-align: right; word-break: break-all;
+  flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.bank-copy { flex: none; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .03em;
+  text-transform: uppercase; color: var(--a-primary, #3B5BDB); opacity: 0.75; }
+.bank-copyfail { margin-top: 6px; font-size: 12px; font-weight: 600; color: #A8322A; line-height: 1.45; }
 .pliveness-btn {
   margin-top: 10px; width: 100%; border: 1px solid var(--line, #dde3ea); background: #f4f6f9;
   border-radius: 10px; padding: 10px; font-weight: 700; font-size: 13px; color: #1c2430;
