@@ -20,7 +20,6 @@ import MoneyAdmin from "./MoneyAdmin.jsx";
 import OpsSettings from "./OpsSettings.jsx";
 import { AdminMark } from "./BrandMark.jsx";
 import { Ic } from "./AdminIcons.jsx";
-import IncomingOrder from "./IncomingOrder.jsx";
 import PullRefresh from "../components/PullRefresh.jsx";
 import { useReveal, PageLoad } from "../components/Motion.jsx";
 import { useSettings, useOrders, usePartners } from "../lib/hooks.js";
@@ -123,8 +122,6 @@ export default function AdminApp() {
       ) : (
         <AdminSection view={view} navArg={navArg} onOpen={openSection} />
       )}
-      {/* Forced new-order screen with alarm (admin only). */}
-      <IncomingOrder />
     </div>
   );
 }
