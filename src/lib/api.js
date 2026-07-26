@@ -1038,6 +1038,14 @@ export async function fetchAllAppVersions() {
     apkUrl: r.apk_url, releaseNotes: r.release_notes, updatedAt: r.updated_at,
   }));
 }
+// What a coupon is really worth on this cart. The payout is capped at the
+// cart's margin, which needs buying prices, so only the server can say — this
+// returns the amount and whether it was capped, and nothing about cost.
+export async function couponQuote(items, code) {
+  const { data, error } = await must().rpc("coupon_quote", { p_items: items, p_code: code });
+  if (error) return null;
+  return data || null;
+}
 // Admin: upload a new APK to the public app-releases bucket; returns its URL.
 export async function adminUploadAppApk(file, app, versionCode, onProgress) {
   const path = `${app}-v${versionCode}.apk`;

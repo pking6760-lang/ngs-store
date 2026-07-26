@@ -468,6 +468,12 @@ function CouponManager({ coupons, categories }) {
           onChange={(e) => set("value", e.target.value)}
           placeholder={form.type === "percent" ? "Percent, e.g. 10" : "Amount, e.g. 30"}
         />
+        <p className="coupon-cap-note">
+          This is a maximum. A coupon never pays out more than the margin on the
+          customer's cart, so on thin-margin items (oil, dairy) it can come to
+          less — the customer is shown "up to ₹{form.value || 0}" and the exact
+          amount for their cart before they pay, so it's never a surprise.
+        </p>
         <input
           type="number"
           min="0"
@@ -546,7 +552,7 @@ function CouponManager({ coupons, categories }) {
               <div>
                 <div className="coupon-code">{c.code}</div>
                 <div className="coupon-desc">
-                  {c.type === "percent" ? `${c.value}% off` : `₹${c.value} off`}
+                  {c.type === "percent" ? `up to ${c.value}% off` : `up to ₹${c.value} off`}
                   {c.category ? ` · only ${catName(c.category)}` : ""}
                   {c.minOrder > 0 ? ` · min ₹${c.minOrder}` : ""}
                   {c.singleUse ? " · one-time per customer/device" : ""}

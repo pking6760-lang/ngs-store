@@ -207,6 +207,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const wallet = useWallet(user?.id);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCode, setAppliedCode] = useState(null);
+  const [couponQuote, setCouponQuote] = useState(null); // server's real discount
   const [couponError, setCouponError] = useState("");
   const [showCoupons, setShowCoupons] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -286,14 +287,25 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     id: product.id, category: product.category, total: unit * qty,
   }));
   const couponCtx = { itemTotal, catTotals, catName, lines: couponLines };
+  // Stable identity for "what is in the cart", so the coupon quote re-runs when
+  // items or quantities change but not on every unrelated render.
+  const cartKey = lines.map(({ product, qty }) => `${product.id}x${qty}`).join(",");
   const activeCoupons = allCoupons.filter((c) => c.active);
 
   // Coupon — re-validated against the current cart each render so it stays
   // correct if items are added/removed.
   const couponResult = appliedCode ? applyCouponFrom(allCoupons, appliedCode, couponCtx) : null;
+  // A coupon's payout is capped at the cart's margin, and only the server can
+  // work that out (it needs buying prices, which must never reach the customer's
+  // device). So the local figure is a ceiling and the server's quote — fetched
+  // whenever the cart or the coupon changes — is what we actually show.
+  const quotedDiscount = couponQuote && couponQuote.code === appliedCode
+    ? couponQuote.discount : null;
   const couponDiscount = couponResult?.ok
-    ? Math.min(couponResult.discount, itemTotal - discount)
+    ? Math.min(quotedDiscount ?? couponResult.discount, itemTotal - discount)
     : 0;
+  const couponCapped = !!(couponQuote && couponQuote.code === appliedCode && couponQuote.capped);
+  const couponFace = couponQuote?.faceValue ?? couponResult?.discount ?? 0;
   const couponInvalid = appliedCode && couponResult && !couponResult.ok;
 
   const netItems = Math.max(0, itemTotal - discount - couponDiscount);
@@ -528,8 +540,24 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     }
   }
 
+  // Keep the server quote in step with the cart. Any change to the items can
+  // change the margin and therefore the real payout, so re-ask on every change.
+  useEffect(() => {
+    if (!BACKEND || !appliedCode || !isLoggedIn || lines.length === 0) {
+      setCouponQuote(null);
+      return;
+    }
+    let alive = true;
+    const items = lines.map(({ product, qty }) => ({ id: product.id, qty }));
+    api.couponQuote(items, appliedCode)
+      .then((q) => { if (alive) setCouponQuote(q?.ok ? { ...q } : null); })
+      .catch(() => { if (alive) setCouponQuote(null); });
+    return () => { alive = false; };
+  }, [appliedCode, isLoggedIn, cartKey]);
+
   function removeCoupon() {
     setAppliedCode(null);
+    setCouponQuote(null);
     setCouponError("");
   }
 
@@ -1428,6 +1456,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="coupon-applied">
                   <span>
                     <strong>{appliedCode}</strong> applied — ₹{couponDiscount} off
+                    {couponCapped && (
+                      <small className="coupon-capped">
+                        Up to ₹{couponFace} on this coupon — this cart qualifies for ₹{couponDiscount}.
+                      </small>
+                    )}
                   </span>
                   <button className="coupon-remove" onClick={removeCoupon}>
                     Remove
@@ -1471,10 +1504,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <div className="coupon-list">
                       {activeCoupons.map((c) => {
                         const ev = applyCouponFrom(allCoupons, c.code, couponCtx);
+                        // "UP TO", because the payout is capped at the cart's
+                        // margin — a ₹49 coupon can pay less on thin-margin items.
                         const off =
                           c.type === "percent"
-                            ? `${c.value}% OFF`
-                            : `₹${c.value} OFF`;
+                            ? `UP TO ${c.value}% OFF`
+                            : `UP TO ₹${c.value} OFF`;
                         const cond = [
                           c.category ? `on ${catName(c.category)}` : null,
                           c.minOrder > 0 ? `min ₹${c.minOrder}` : null,

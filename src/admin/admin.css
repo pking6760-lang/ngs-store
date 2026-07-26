@@ -3503,3 +3503,7 @@ body {
 /* iOS: block double-tap zoom / text inflation (see styles.css note). */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body { touch-action: manipulation; }
+
+/* Coupons: the face value is a ceiling, not a promise — say so on the form. */
+.coupon-cap-note { grid-column: 1 / -1; margin: 2px 0 6px; font-size: 12px;
+  line-height: 1.5; color: var(--a-muted, #5b6780); }
