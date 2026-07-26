@@ -68,9 +68,11 @@ function mapProduct(r) {
     // Public merchandising flags: `bait` (best-price deal) and `hot` (selling
     // fast). Cost, tier and the sales numbers are admin-only (fetchAdminProducts).
     bait: !!r.bait, hot: !!r.hot,
-    // Low-margin item (milk/curd/bread): its value does NOT count toward the
-    // free-delivery threshold. Still buyable and counts toward everything else.
-    freeDeliveryExempt: !!r.free_delivery_exempt || !!r.free_delivery_exempt_auto,
+    // Owner's manual exclusion: this item's value doesn't count toward the
+    // free-delivery bar. MANUAL ONLY — the automatic margin flag is no longer
+    // read by pricing (a per-item flag can't see quantity), and including it
+    // here would put the cart's bar out of step with the server's.
+    freeDeliveryExempt: !!r.free_delivery_exempt,
     // Thin-margin staple: no member discount, no points, no scratch reward.
     noRewards: !!r.no_rewards,
     // Tiered member pricing: the public deep anchor (cost + minimum margin).
@@ -1906,4 +1908,22 @@ export function subscribeTable(table, cb) {
     if (typeof window !== "undefined") window.removeEventListener(LOCAL_CHANGE, onLocal);
     supabase.removeChannel(ch);
   };
+}
+
+// What delivery will actually cost this cart, decided by the server on the same
+// arithmetic checkout uses — so the bill never changes under the customer.
+//
+// It has to be server-side: whether a cart earns free delivery depends on the
+// margin it makes, and buying costs must never reach the client. The RPC takes
+// items and returns a fee; it never returns a cost or a margin.
+export async function quoteDelivery(items, distanceKm = 0, isMember = false) {
+  const payload = (items || [])
+    .filter((i) => i && i.id && i.qty > 0)
+    .map((i) => ({ id: i.id, qty: i.qty }));
+  if (!payload.length) return null;
+  const { data, error } = await must().rpc("quote_delivery", {
+    p_items: payload, p_distance_km: Number(distanceKm) || 0, p_is_member: !!isMember,
+  });
+  if (error) return null;
+  return data || null;
 }

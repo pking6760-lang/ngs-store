@@ -142,6 +142,29 @@ function loadDraft() {
   catch { return {}; }
 }
 
+// Server-decided delivery fee for the current cart. Debounced, because the cart
+// changes on every tap and each change is a round trip. Returns null until an
+// answer lands, and keeps the last good answer while a new one is in flight so
+// the bill doesn't flicker between values.
+function useDeliveryQuote(lines, distanceKm, isMember) {
+  const [quote, setQuote] = useState(null);
+  const key = JSON.stringify([
+    lines.map((l) => [l.product.id, l.qty]).sort(), Number(distanceKm) || 0, !!isMember,
+  ]);
+  useEffect(() => {
+    const items = lines.map((l) => ({ id: l.product.id, qty: l.qty }));
+    if (!items.length) { setQuote(null); return; }
+    let alive = true;
+    const t = setTimeout(() => {
+      api.quoteDelivery(items, distanceKm, isMember)
+        .then((q) => { if (alive && q) setQuote(q); })
+        .catch(() => { /* keep the last answer; the estimate covers the gap */ });
+    }, 250);
+    return () => { alive = false; clearTimeout(t); };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return quote;
+}
+
 export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const { items, add, remove, deleteItem, clear, setQty } = useCart();
   const { user, isLoggedIn, updateProfile, applyRewards } = useAuth();
@@ -349,25 +372,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // distance a small Prime order costs more to ride out than it earns, so the
   // higher far threshold applies to everyone, Prime included — same as the
   // server.
-  const hasThin = itemTotal > qualifyingTotal; // cart holds items that don't count
-  // Name the actual items that don't count toward free delivery. It used to say
-  // "milk, curd & bread", which was true when only dairy was excluded; the rule
-  // now also excludes anything earning under a few rupees a unit (a ₹10 biscuit
-  // has a healthy-looking margin percentage and puts ₹1.50 in the till). Naming
-  // what's really in THIS cart beats a fixed list that quietly goes stale.
-  const thinNames = lines.filter((l) => l.product.freeDeliveryExempt).map((l) => l.product.name);
-  const thinLabel = thinNames.length === 0 ? ""
-    : thinNames.length === 1 ? thinNames[0]
-    : thinNames.length === 2 ? `${thinNames[0]} and ${thinNames[1]}`
-    : `${thinNames[0]} and ${thinNames.length - 1} other items`;
-  const freePerk = isMember && !inFarZone && (!hasThin || qualifyingTotal >= FREE_DELIVERY_ABOVE);
-  let deliveryFee =
-    qualifyingTotal >= freeDeliveryThreshold || itemTotal === 0 ? 0 : DELIVERY_FEE;
-  let freeReason = deliveryFee === 0 && itemTotal > 0 ? "order" : null;
-  if (freePerk && itemTotal > 0 && deliveryFee > 0) {
-    deliveryFee = 0;
-    freeReason = "member";
-  }
+  // Whether a cart earns free delivery depends on the margin it makes, which the
+  // client can't know and must never be told. So the server decides and the cart
+  // just displays the answer — the same arithmetic checkout will run, so the
+  // total can't change under the customer. `quote` is null until it lands (and
+  // if the network is down), in which case the value-only estimate below stands.
+  const quote = useDeliveryQuote(lines, feeDistKm, isMember);
+  const cartCanFund = quote ? quote.affordable : true;
+  const freePerk = isMember && !inFarZone && cartCanFund;
+  let deliveryFee = itemTotal === 0 ? 0
+    : quote ? Number(quote.deliveryFee) || 0
+    : qualifyingTotal >= freeDeliveryThreshold ? 0 : DELIVERY_FEE;
+  let freeReason = deliveryFee === 0 && itemTotal > 0
+    ? (qualifyingTotal >= freeDeliveryThreshold ? "order" : "member") : null;
   // What would be charged before any brand sponsorship — the effect below asks
   // the server whether a campaign can cover exactly this much.
   const rawDeliveryFee = deliveryFee;
@@ -1634,9 +1651,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <span>{tr("Handling charge")}</span>
                 <span>₹{handling}</span>
               </div>
-              {isMember && !freePerk && hasThin && (
+              {isMember && !freePerk && itemTotal > 0 && (
                 <div className="bill-note">
-                  {thinLabel} {thinNames.length === 1 ? "doesn't" : "don't"} count toward free delivery.
+                  This cart doesn't qualify for free delivery.
                 </div>
               )}
               {smallCartFee > 0 && (
@@ -1672,7 +1689,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {!isMember && itemTotal > 0 && (
                 <div className="free-progress">
                   <div className="free-progress-top">
-                    {qualifyingTotal >= freeDeliveryThreshold ? (
+                    {deliveryFee === 0 ? (
                       <span className="free-progress-done">Free delivery unlocked</span>
                     ) : (
                       <span>
@@ -1687,8 +1704,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       }}
                     />
                   </div>
-                  {itemTotal > qualifyingTotal && qualifyingTotal < freeDeliveryThreshold && (
-                    <small className="free-hint-note">{thinLabel} {thinNames.length === 1 ? "doesn't" : "don't"} count toward this</small>
+                  {!cartCanFund && qualifyingTotal >= freeDeliveryThreshold && (
+                    <small className="free-hint-note">low-margin items alone don't earn free delivery</small>
                   )}
                   {inFarZone && (
                     <small className="free-hint-note">you're in the far delivery zone, so the free-delivery bar is higher here</small>

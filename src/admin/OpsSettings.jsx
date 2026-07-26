@@ -54,10 +54,9 @@ const GROUPS = [
   },
   {
     title: "What unlocks free delivery",
-    note: "An item counts toward the free-delivery bar only if it clears both floors. Percent catches thin big-ticket items like oil and atta; rupees catches ₹10 items whose margin looks fine but earns ₹1.50.",
+    note: "A cart earns free delivery only if it still clears this much profit after the fee is waived. Judged on the whole cart, so ten bottles of oil qualify where one doesn't. Raise it to give free delivery away less often.",
     fields: [
-      { key: "free_delivery_min_margin_pct", label: "Minimum margin to count (%)", step: "0.5" },
-      { key: "free_delivery_min_margin_rupees", label: "Minimum margin to count (₹ per unit)", step: "0.5" },
+      { key: "min_free_delivery_profit", label: "Order must still profit at least (₹)" },
     ],
   },
   {

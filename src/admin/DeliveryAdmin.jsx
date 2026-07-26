@@ -172,10 +172,10 @@ export default function DeliveryAdmin() {
           Crossing the free-delivery bar removes the fee at any distance.
         </p>
         <p className="delivery-hint">
-          <strong>Thin-margin items don't unlock free delivery.</strong> An item
-          is left out of the free-delivery total if it earns under <strong>10%</strong> or
-          under <strong>₹3 a unit</strong> — a ₹10 biscuit at 15% only puts ₹1.50 in
-          the till. You can also exclude an item by hand on the product itself.
+          <strong>A cart must be able to pay for its own ride.</strong> Free
+          delivery is given only if the order still clears a small profit with the
+          fee waived — so ten bottles of oil qualify where one doesn't. Set the
+          amount in Ops settings. You can also exclude an item by hand.
         </p>
         <p className="delivery-hint">
           The <strong>cancellation fee</strong> applies after a short free window
