@@ -426,12 +426,22 @@
   border-radius: 10px; padding: 9px 16px; font-weight: 800; font-size: 13px; }
 .kyc-req-btn:disabled { opacity: 0.5; }
 
-/* ═══ Partner run flow: earn banner, sliders, pack checklist ═══════════════ */
-.pd-earn { display: flex; align-items: center; justify-content: space-between;
-  background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(16,185,129,0.05));
-  border: 1px solid rgba(16,185,129,0.4); border-radius: 14px; padding: 12px 16px; }
-.pd-earn-lbl { font-size: 12px; color: var(--p-sec); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
-.pd-earn-amt { font-size: 22px; font-weight: 900; color: var(--p-mint); }
+/* ═══ Partner run flow: payout reveal, sliders, pack checklist ═════════════ */
+/* Shown only AFTER a task completes — the pay is never displayed beforehand. */
+.pd-earned { position: fixed; left: 12px; right: 12px; bottom: 78px; z-index: 90;
+  display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(16,185,129,0.22), rgba(10,12,14,0.96));
+  border: 1px solid rgba(16,185,129,0.45); backdrop-filter: blur(10px);
+  box-shadow: 0 18px 44px -18px rgba(0,0,0,0.85); cursor: pointer;
+  animation: pd-earned-in 340ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes pd-earned-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+.pd-earned-tick { flex: none; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; color: #04150E; background: var(--p-mint); }
+.pd-earned-txt { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 1; min-width: 0; }
+.pd-earned-lbl { font-size: 12.5px; font-weight: 700; color: var(--p-sec); }
+.pd-earned-amt { font-size: 21px; font-weight: 900; color: var(--p-mint);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .pd-earned { animation: none; } }
 
 .pd-run { border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px;
   background: linear-gradient(160deg, #16161B, #101014); border: 1px solid var(--p-line);

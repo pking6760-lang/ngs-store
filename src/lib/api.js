@@ -1413,6 +1413,18 @@ export async function getMyTask() {
   };
 }
 
+// What the partner ACTUALLY earned on an order — read from the wallet ledger, so
+// it returns 0 until the job is finished and the money is credited. That's the
+// point: the payout is never shown up front (it would only invite picking and
+// choosing), and this is the reveal once the work is done. Server-side scoped to
+// the caller, so it can't be used to look up anyone else's pay.
+export async function getOrderEarning(orderId) {
+  if (!orderId) return 0;
+  const { data, error } = await must().rpc("get_order_earning", { p_order: orderId });
+  if (error) return 0;
+  return Number(data) || 0;
+}
+
 // The driver's subscription "milk round" for today — every stop assigned to them
 // (prepaid, so no cash to collect). Each stop pays 70% of its handling.
 export async function getMyRound() {

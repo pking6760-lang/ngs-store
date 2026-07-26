@@ -127,10 +127,25 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
     return () => { alive = false; clearInterval(iv); };
   }, [presence.activeOrderId]);
 
+  // What they earned on the job they just finished — shown only once it's done.
+  const [earned, setEarned] = useState(null);
+  const clearEarned = useCallback(() => setEarned(null), []);
+
   async function taskAction(fn) {
     stopAlarm(); // they're handling it — silence the ring
     setTaskBusy(true);
-    try { await withMinTime(fn, 700, 1500); const t = await api.getMyTask(); setTask(t); await reload(); }
+    const wasId = task?.orderId, wasRole = task?.role;
+    try {
+      await withMinTime(fn, 700, 1500);
+      const t = await api.getMyTask(); setTask(t); await reload();
+      // Task gone (or replaced) after the action ⇒ that one finished. Ask the
+      // server what actually landed in the wallet; it answers 0 for anything
+      // still open, so accepting/passing never reveals a figure.
+      if (wasId && (!t || t.orderId !== wasId)) {
+        const amt = await api.getOrderEarning(wasId).catch(() => 0);
+        if (amt > 0) setEarned({ amount: amt, role: wasRole });
+      }
+    }
     catch (e) { alert(e.message || "Something went wrong."); }
     finally { setTaskBusy(false); }
   }
@@ -219,7 +234,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
   }, [reload]);
 
   const isDelivery = role === "delivery";
-  const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload, task, taskBusy, taskAction };
+  const shared = { role, isDelivery, name, partner, wallet, slots, cfg, presence, setPresence, reload, task, taskBusy, taskAction, onEarned: setEarned };
   const switching = useReveal(tab, 300, 650);
 
   // Any active order takes over the whole screen — from "Accepting…" straight
@@ -253,6 +268,7 @@ export default function PartnerDashboard({ role, name, partner, onLogout }) {
         <RunScreen task={task} cfg={cfg} busy={taskBusy} onAction={taskAction}
           autoFailed={autoFailed} onAccept={manualAccept} onPass={passTask} isNative={isNativeApp} />
       )}
+      {earned && <EarnedCard amount={earned.amount} role={earned.role} onDone={clearEarned} />}
     </div>
   );
 }
@@ -381,11 +397,22 @@ function SlideAction({ label, onConfirm, busy, tone = "green" }) {
   );
 }
 
-function EarnBanner({ amount }) {
+/* Payout reveal — shown ONLY after the task is finished and the money is in the
+   wallet. Nothing about the pay appears while the job is still open (see
+   get_my_task / get_order_earning: the server doesn't even send it), so this
+   card is the partner's first sight of the amount. Auto-dismisses. */
+function EarnedCard({ amount, role, onDone }) {
+  useEffect(() => {
+    const id = setTimeout(onDone, 5000);
+    return () => clearTimeout(id);
+  }, [onDone]);
   return (
-    <div className="pd-earn">
-      <span className="pd-earn-lbl">You earn on this order</span>
-      <span className="pd-earn-amt">{money(amount)}</span>
+    <div className="pd-earned" role="status" onClick={onDone}>
+      <div className="pd-earned-tick"><Ic name="check" size={18} /></div>
+      <div className="pd-earned-txt">
+        <span className="pd-earned-lbl">{role === "picker" ? "Order packed" : "Delivered"} — added to your wallet</span>
+        <span className="pd-earned-amt">+{money(amount)}</span>
+      </div>
     </div>
   );
 }
@@ -401,7 +428,6 @@ function IncomingOrder({ task, busy, onAction }) {
         <span className={`lo-live ${isReturn ? "lo-return" : ""}`}>{isReturn ? "● RETURN PICKUP" : "● NEW ORDER"}</span>
         <span className="lo-code">#{code}</span>
       </div>
-      {task.earning > 0 && <EarnBanner amount={task.earning} />}
       {isDelivery && !isReturn ? (
         <div className="lo-row">
           <span className="lo-lbl">Payment</span>
@@ -488,7 +514,6 @@ function AcceptOffer({ task, cfg, busy, onAccept, onPass }) {
 
   return (
     <>
-      {task.earning > 0 && <EarnBanner amount={task.earning} />}
       {isDelivery && !isReturn ? (
         <div className="pd-run-card">
           <div className="lo-row" style={{ borderTop: "none" }}>
@@ -534,7 +559,6 @@ function AcceptingBody({ task, busy, autoFailed, onAccept }) {
   const isDelivery = task.role === "delivery";
   return (
     <>
-      {task.earning > 0 && <EarnBanner amount={task.earning} />}
       {isDelivery && !isReturn ? (
         <div className="pd-run-card">
           <div className="lo-row" style={{ borderTop: "none" }}>
@@ -592,7 +616,6 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
 
   return (
     <>
-      {task.earning > 0 && <EarnBanner amount={task.earning} />}
       <div className="pd-run-card">
         <div className="lo-row" style={{ borderTop: "none" }}>
           <span className="lo-lbl">Deliver to</span>
@@ -737,7 +760,6 @@ function CashModal({ due, cap = 1000, busy, onClose, onConfirm }) {
 function ReturnBody({ task, busy, onAction }) {
   return (
     <>
-      {task.earning > 0 && <EarnBanner amount={task.earning} />}
       <div className="pd-run-card">
         <div className="lo-row" style={{ borderTop: "none" }}>
           <span className="lo-lbl">Collect from</span>
@@ -812,7 +834,6 @@ function PickBody({ task, busy, onAction }) {
 
   return (
     <>
-      {task.earning > 0 && <EarnBanner amount={task.earning} />}
       <div className="pd-pack-head">
         <span>Scan every item to pack</span>
         <span className="pd-pack-count">{doneUnits}/{totalUnits}</span>
@@ -852,7 +873,7 @@ function PickBody({ task, busy, onAction }) {
 // The subscription "milk round": every stop for today assigned to this driver,
 // shown as one list. Prepaid, so no cash — each stop just slides to Delivered
 // and pays 70% of its handling. Self-fetches so it stays live on the Home tab.
-function MilkRound({ isDelivery, cfg }) {
+function MilkRound({ isDelivery, cfg, onEarned }) {
   const { callParty } = useCall();
   const storePhone = cfg?.storePhone || "";
   const [stops, setStops] = useState(null);
@@ -867,11 +888,16 @@ function MilkRound({ isDelivery, cfg }) {
   }, [isDelivery, load]);
 
   if (!isDelivery || !stops || stops.length === 0) return null;
-  const total = stops.reduce((s, x) => s + x.earning, 0);
+  // No per-stop or round total shown — the pay for a stop appears once it's
+  // delivered (see EarnedCard), never before.
 
   async function deliver(stop) {
     setBusyId(stop.orderId);
-    try { await withMinTime(() => api.partnerMarkDelivered(stop.orderId), 500, 1000); okBeep(); await load(); }
+    try {
+      await withMinTime(() => api.partnerMarkDelivered(stop.orderId), 500, 1000); okBeep(); await load();
+      const amt = await api.getOrderEarning(stop.orderId).catch(() => 0);
+      if (amt > 0 && onEarned) onEarned({ amount: amt, role: "delivery" });
+    }
     catch (e) { errorBeep(); alert(e.message || "Couldn't mark delivered."); }
     finally { setBusyId(null); }
   }
@@ -881,7 +907,6 @@ function MilkRound({ isDelivery, cfg }) {
       <div className="pd-sec">
         <span><Ic name="scooter" size={13} /> Milk round · {stops.length} stop{stops.length === 1 ? "" : "s"}</span>
         <span className="milk-sec-right">
-          <span className="hint">earn {money(total)}</span>
           {storePhone && (
             <a className="milk-store-call" href={`tel:+91${storePhone}`}><Ic name="phone" size={12} /> Store</a>
           )}
@@ -896,7 +921,6 @@ function MilkRound({ isDelivery, cfg }) {
                 <div className="milk-stop-items">{s.items.map((it) => `${it.name} ×${it.qty}`).join(", ")}</div>
                 {s.address && <div className="milk-stop-addr">{s.address}</div>}
               </div>
-              <div className="r-amt amt-pos">+{money(s.earning)}</div>
             </div>
             <div className="milk-stop-actions">
               <button className="lo-nav call" onClick={() => callParty(s.orderId, s.customer)}>
@@ -916,7 +940,7 @@ function MilkRound({ isDelivery, cfg }) {
   );
 }
 
-function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, taskBusy, taskAction, cfg }) {
+function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, taskBusy, taskAction, cfg, onEarned }) {
   const [busy, setBusy] = useState(false);
   const today = istDateISO();
   const earnings = wallet.ledger.filter((l) => l.kind === "earning");
@@ -968,7 +992,7 @@ function Home({ isDelivery, name, wallet, slots, presence, setPresence, task, ta
         </div>
       </div>
 
-      <MilkRound isDelivery={isDelivery} cfg={cfg} />
+      <MilkRound isDelivery={isDelivery} cfg={cfg} onEarned={onEarned} />
 
       {task ? (
         // Any active order is handled by the full-screen run page rendered above
