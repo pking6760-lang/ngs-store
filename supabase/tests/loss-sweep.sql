@@ -20,9 +20,14 @@ declare
   v_ops public.ops_config;
   v_items jsonb; v_oid uuid; v_ord public.orders;
   v_lines int; v_units int; v_marg numeric; v_pick numeric; v_ride numeric;
-  s record; d numeric; m boolean; c text; pts int;
+  s record; d numeric; m boolean; c text; pts int; v_max numeric;
 begin
   select * into v_ops from public.ops_config where id = 1;
+  -- Distances come from the shop's OWN radius, not a hardcoded list. Testing
+  -- past it reports losses on orders the app already refuses ("we're coming to
+  -- your area soon"), which is noise. The one over-radius probe is kept on
+  -- purpose: it must come back as an error, proving the server refuses it too.
+  select coalesce(max_distance_km, 3) into v_max from public.settings where id = 1;
 
   for s in
     -- One row per cart shape, built from the real catalogue.
@@ -52,7 +57,7 @@ begin
                     where p.active and pc.cost>0 limit 20) q)
   loop
     continue when s.items is null;
-    foreach d in array array[0.3, 1.0, 2.0, 3.0, 4.5] loop
+    foreach d in array array[0.3, round(v_max/2, 1), v_max, v_max + 1.5] loop
       foreach m in array array[false, true] loop
         for c in select unnest(array['none','CAPPED49','GUARANTEED49']) loop
           foreach pts in array array[0, 100000] loop
