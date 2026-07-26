@@ -304,8 +304,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const couponDiscount = couponResult?.ok
     ? Math.min(quotedDiscount ?? couponResult.discount, itemTotal - discount)
     : 0;
-  const couponCapped = !!(couponQuote && couponQuote.code === appliedCode && couponQuote.capped);
-  const couponFace = couponQuote?.faceValue ?? couponResult?.discount ?? 0;
+
   const couponInvalid = appliedCode && couponResult && !couponResult.ok;
 
   const netItems = Math.max(0, itemTotal - discount - couponDiscount);
@@ -1458,11 +1457,6 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="coupon-applied">
                   <span>
                     <strong>{appliedCode}</strong> applied — ₹{couponDiscount} off
-                    {couponCapped && (
-                      <small className="coupon-capped">
-                        Up to ₹{couponFace} on this coupon — this cart qualifies for ₹{couponDiscount}.
-                      </small>
-                    )}
                   </span>
                   <button className="coupon-remove" onClick={removeCoupon}>
                     Remove
