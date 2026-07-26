@@ -70,7 +70,7 @@ function mapProduct(r) {
     bait: !!r.bait, hot: !!r.hot,
     // Low-margin item (milk/curd/bread): its value does NOT count toward the
     // free-delivery threshold. Still buyable and counts toward everything else.
-    freeDeliveryExempt: !!r.free_delivery_exempt,
+    freeDeliveryExempt: !!r.free_delivery_exempt || !!r.free_delivery_exempt_auto,
     // Thin-margin staple: no member discount, no points, no scratch reward.
     noRewards: !!r.no_rewards,
     // Tiered member pricing: the public deep anchor (cost + minimum margin).
@@ -107,6 +107,9 @@ function mapSettings(r) {
     smallCartThreshold: r.small_cart_threshold != null ? num(r.small_cart_threshold) : 0,
     farZoneKm: r.far_zone_km != null ? num(r.far_zone_km) : null,
     freeDeliveryFarAbove: r.free_delivery_far_above != null ? num(r.free_delivery_far_above) : null,
+    farZoneKm2: r.far_zone_km_2 != null ? num(r.far_zone_km_2) : null,
+    deliveryFeeMid: r.delivery_fee_mid != null ? num(r.delivery_fee_mid) : null,
+    deliveryFeeFar: r.delivery_fee_far != null ? num(r.delivery_fee_far) : null,
     codCustomerLimit: num(r.cod_customer_limit),
     shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold,
     automation: r.automation || null,

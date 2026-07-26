@@ -15,6 +15,11 @@ export default function DeliveryAdmin() {
     surgeFee: settings.surgeFee ?? 20,
     smallCartFee: settings.smallCartFee ?? 0,
     smallCartThreshold: settings.smallCartThreshold ?? 0,
+    deliveryFeeMid: settings.deliveryFeeMid ?? 0,
+    deliveryFeeFar: settings.deliveryFeeFar ?? 0,
+    farZoneKm: settings.farZoneKm ?? 1.5,
+    farZoneKm2: settings.farZoneKm2 ?? 2.5,
+    freeDeliveryFarAbove: settings.freeDeliveryFarAbove ?? 0,
     maxDistanceKm: settings.maxDistanceKm ?? 5,
     minOrderValue: settings.rewards?.minOrderValue ?? 0,
     walletMinOrder: settings.rewards?.walletMinOrder ?? 199,
@@ -42,6 +47,11 @@ export default function DeliveryAdmin() {
         surge_fee: Math.max(0, Number(form.surgeFee) || 0),
         small_cart_fee: Math.max(0, Number(form.smallCartFee) || 0),
         small_cart_threshold: Math.max(0, Number(form.smallCartThreshold) || 0),
+        delivery_fee_mid: Math.max(0, Number(form.deliveryFeeMid) || 0),
+        delivery_fee_far: Math.max(0, Number(form.deliveryFeeFar) || 0),
+        far_zone_km: Math.max(0, Number(form.farZoneKm) || 0),
+        far_zone_km_2: Math.max(0, Number(form.farZoneKm2) || 0),
+        free_delivery_far_above: Math.max(0, Number(form.freeDeliveryFarAbove) || 0),
       });
       await updateSettings({
         maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
@@ -66,14 +76,39 @@ export default function DeliveryAdmin() {
         <p className="sub">Set what customers pay and how far you deliver.</p>
         <div className="delivery-fields">
           <label className="dfield">
-            <span>Delivery fee (₹)</span>
+            <span>Delivery fee — near (₹)</span>
             <input type="number" min="0" value={form.deliveryFee}
               onChange={(e) => set("deliveryFee", e.target.value)} />
           </label>
           <label className="dfield">
-            <span>Free delivery above (₹)</span>
+            <span>Free delivery above — near (₹)</span>
             <input type="number" min="0" value={form.freeDeliveryAbove}
               onChange={(e) => set("freeDeliveryAbove", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>Mid zone starts at (km)</span>
+            <input type="number" min="0" step="0.1" value={form.farZoneKm}
+              onChange={(e) => set("farZoneKm", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>Delivery fee — mid (₹)</span>
+            <input type="number" min="0" value={form.deliveryFeeMid}
+              onChange={(e) => set("deliveryFeeMid", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>Far zone starts at (km)</span>
+            <input type="number" min="0" step="0.1" value={form.farZoneKm2}
+              onChange={(e) => set("farZoneKm2", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>Delivery fee — far (₹)</span>
+            <input type="number" min="0" value={form.deliveryFeeFar}
+              onChange={(e) => set("deliveryFeeFar", e.target.value)} />
+          </label>
+          <label className="dfield">
+            <span>Free delivery above — mid &amp; far (₹)</span>
+            <input type="number" min="0" value={form.freeDeliveryFarAbove}
+              onChange={(e) => set("freeDeliveryFarAbove", e.target.value)} />
           </label>
           <label className="dfield">
             <span>Minimum order value (₹)</span>
@@ -133,6 +168,22 @@ export default function DeliveryAdmin() {
           covers it and nudges customers to add a little more. It's worked out on
           the item total <em>before</em> any coupon, so a discount can't be used
           to dodge it. Set the charge to 0 to switch it off.
+        </p>
+        <p className="delivery-hint">
+          <strong>Delivery zones.</strong> A doorstep drop costs you about ₹18 in
+          rider pay and a 3 km ride about ₹55, so one flat fee would have your
+          nearest customers subsidising your furthest — and still lose money at
+          the edge. The three fees follow that cost curve. Crossing the
+          free-delivery bar removes the fee at any distance; the bar is higher
+          in the mid and far zones because the ride costs more out there.
+        </p>
+        <p className="delivery-hint">
+          <strong>Thin-margin items don't unlock free delivery.</strong> What pays
+          for a ride is margin, not turnover — a ₹480 cigarette order earns you
+          about ₹30 and would cost more than that to deliver free. Any item
+          earning less than 10% is automatically left out of the free-delivery
+          total, and that's rechecked every time prices refresh. You can still
+          exclude an item by hand on the product itself.
         </p>
         <p className="delivery-hint">
           The <strong>cancellation fee</strong> is charged when a customer cancels

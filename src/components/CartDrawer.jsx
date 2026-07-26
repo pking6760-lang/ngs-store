@@ -319,12 +319,19 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       : 0;
 
   // ── Delivery fee (admin-controlled, with membership + surge rules) ──
-  const DELIVERY_FEE = settings.deliveryFee ?? 25;
+  const NEAR_FEE = settings.deliveryFee ?? 25;
   const FREE_DELIVERY_ABOVE = settings.freeDeliveryAbove ?? 199;
   const FAR_ZONE_KM = settings.farZoneKm ?? Infinity;
+  const FAR_ZONE_KM_2 = settings.farZoneKm2 ?? Infinity;
   const FREE_DELIVERY_FAR_ABOVE = settings.freeDeliveryFarAbove ?? FREE_DELIVERY_ABOVE;
   const inFarZone = feeDistKm >= FAR_ZONE_KM;
   const freeDeliveryThreshold = inFarZone ? FREE_DELIVERY_FAR_ABOVE : FREE_DELIVERY_ABOVE;
+  // The fee follows the same curve as rider pay, so the far customer isn't
+  // subsidised by the near one — mirrors _place_order_core exactly.
+  const DELIVERY_FEE =
+    feeDistKm >= FAR_ZONE_KM_2 ? (settings.deliveryFeeFar ?? NEAR_FEE)
+    : inFarZone ? (settings.deliveryFeeMid ?? NEAR_FEE)
+    : NEAR_FEE;
   const HANDLING_FEE = settings.handlingFee ?? 5;
   // "Add to tomorrow's delivery" estimate: standard prices, normal free-delivery
   // rule on non-exempt items, NO handling (the subscription's fee covers the trip).
