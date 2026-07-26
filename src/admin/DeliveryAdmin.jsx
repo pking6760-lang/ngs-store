@@ -180,10 +180,13 @@ export default function DeliveryAdmin() {
         <p className="delivery-hint">
           <strong>Thin-margin items don't unlock free delivery.</strong> What pays
           for a ride is margin, not turnover — a ₹480 cigarette order earns you
-          about ₹30 and would cost more than that to deliver free. Any item
-          earning less than 10% is automatically left out of the free-delivery
-          total, and that's rechecked every time prices refresh. You can still
-          exclude an item by hand on the product itself.
+          about ₹30 and would cost more than that to deliver free. An item is
+          left out of the free-delivery total if it earns under <strong>10%</strong> or
+          under <strong>₹3 a unit</strong>, rechecked every time prices refresh.
+          Both floors are needed: a ₹10 biscuit at 15% beats a ₹500 item at 6% on
+          percentage, but puts ₹1.50 in the till — and twenty of them take the
+          longest to pick and cost the most to ride. You can still exclude an item
+          by hand on the product itself.
         </p>
         <p className="delivery-hint">
           The <strong>cancellation fee</strong> is charged when a customer cancels

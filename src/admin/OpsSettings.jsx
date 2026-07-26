@@ -53,6 +53,14 @@ const GROUPS = [
     ],
   },
   {
+    title: "What unlocks free delivery",
+    note: "A ride is paid for by margin, not by turnover. An item counts toward the free-delivery bar only if it clears BOTH floors. The percentage floor catches big-ticket thin items (oil, atta, tobacco at ~6%). The rupee floor catches the opposite trap: a ₹10 biscuit at 15% scores better on percentage than a ₹500 item at 6%, but earns ₹1.50 — and twenty of them are the slowest cart to pick and the most expensive to ride. Raise the rupee floor and fewer carts get free delivery; lower it and thin carts start costing you money.",
+    fields: [
+      { key: "free_delivery_min_margin_pct", label: "Minimum margin to count (%)", step: "0.5" },
+      { key: "free_delivery_min_margin_rupees", label: "Minimum margin to count (₹ per unit)", step: "0.5" },
+    ],
+  },
+  {
     title: "Slot guarantee",
     note: "Tops up a booked slot to an hourly minimum if a partner shows up but the shop is quiet — protects them from a bad hour, at the shop's cost. Only worth turning on once a slot reliably clears several orders an hour; check Dashboard for your current order rate before switching this on.",
     bools: [

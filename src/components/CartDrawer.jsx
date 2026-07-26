@@ -349,7 +349,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // distance a small Prime order costs more to ride out than it earns, so the
   // higher far threshold applies to everyone, Prime included — same as the
   // server.
-  const hasThin = itemTotal > qualifyingTotal; // cart contains milk/dairy
+  const hasThin = itemTotal > qualifyingTotal; // cart holds items that don't count
+  // Name the actual items that don't count toward free delivery. It used to say
+  // "milk, curd & bread", which was true when only dairy was excluded; the rule
+  // now also excludes anything earning under a few rupees a unit (a ₹10 biscuit
+  // has a healthy-looking margin percentage and puts ₹1.50 in the till). Naming
+  // what's really in THIS cart beats a fixed list that quietly goes stale.
+  const thinNames = lines.filter((l) => l.product.freeDeliveryExempt).map((l) => l.product.name);
+  const thinLabel = thinNames.length === 0 ? ""
+    : thinNames.length === 1 ? thinNames[0]
+    : thinNames.length === 2 ? `${thinNames[0]} and ${thinNames[1]}`
+    : `${thinNames[0]} and ${thinNames.length - 1} other items`;
   const freePerk = isMember && !inFarZone && (!hasThin || qualifyingTotal >= FREE_DELIVERY_ABOVE);
   let deliveryFee =
     qualifyingTotal >= freeDeliveryThreshold || itemTotal === 0 ? 0 : DELIVERY_FEE;
@@ -1628,7 +1638,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               {isMember && !freePerk && hasThin && (
                 <div className="bill-note">
-                  Milk &amp; dairy carry a delivery &amp; handling charge even on Prime. Tip: a milk <strong>subscription</strong> delivers daily for less.
+                  {thinLabel} {thinNames.length === 1 ? "carries" : "carry"} a delivery &amp; handling charge even on Prime — everyday low-price items don't cover the ride on their own. Tip: a milk <strong>subscription</strong> delivers daily for less.
                 </div>
               )}
               {smallCartFee > 0 && (
@@ -1680,7 +1690,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     />
                   </div>
                   {itemTotal > qualifyingTotal && qualifyingTotal < freeDeliveryThreshold && (
-                    <small className="free-hint-note">milk, curd &amp; bread don't count toward this</small>
+                    <small className="free-hint-note">{thinLabel} {thinNames.length === 1 ? "doesn't" : "don't"} count toward this</small>
                   )}
                   {inFarZone && (
                     <small className="free-hint-note">you're in the far delivery zone, so the free-delivery bar is higher here</small>
