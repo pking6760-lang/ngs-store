@@ -208,6 +208,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [couponInput, setCouponInput] = useState("");
   const [appliedCode, setAppliedCode] = useState(null);
   const [couponQuote, setCouponQuote] = useState(null); // server's real discount
+  const [sponsorBrand, setSponsorBrand] = useState(null); // brand funding delivery, if any
   const [couponError, setCouponError] = useState("");
   const [showCoupons, setShowCoupons] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -356,6 +357,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   if (freePerk && itemTotal > 0 && deliveryFee > 0) {
     deliveryFee = 0;
     freeReason = "member";
+  }
+  // What would be charged before any brand sponsorship — the effect below asks
+  // the server whether a campaign can cover exactly this much.
+  const rawDeliveryFee = deliveryFee;
+  if (sponsorBrand && deliveryFee > 0) {
+    deliveryFee = 0;
+    freeReason = "sponsor";
   }
 
   // Handling is waived only when the Prime perk applies (so milk/dairy keeps it).
@@ -579,6 +587,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       .catch(() => { if (alive) setCouponQuote(null); });
     return () => { alive = false; };
   }, [appliedCode, isLoggedIn, cartKey]);
+
+  // A brand may be funding delivery right now. Asked per computed fee so the
+  // preview matches what checkout will actually charge — including the moment a
+  // campaign runs out mid-day.
+  useEffect(() => {
+    if (!BACKEND || rawDeliveryFee <= 0) { setSponsorBrand(null); return; }
+    let alive = true;
+    api.sponsoredDeliveryNow(rawDeliveryFee)
+      .then((b) => { if (alive) setSponsorBrand(b || null); })
+      .catch(() => { if (alive) setSponsorBrand(null); });
+    return () => { alive = false; };
+  }, [rawDeliveryFee]);
 
   function removeCoupon() {
     setAppliedCode(null);
@@ -1595,6 +1615,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   {deliveryFee === 0 ? (
                     <span className="free">
                       FREE{freeReason === "member" ? " · Prime" : ""}
+                      {freeReason === "sponsor" ? ` · by ${sponsorBrand}` : ""}
                     </span>
                   ) : (
                     `₹${deliveryFee}`

@@ -1043,6 +1043,33 @@ export async function fetchAllAppVersions() {
     apkUrl: r.apk_url, releaseNotes: r.release_notes, updatedAt: r.updated_at,
   }));
 }
+// Brand sponsorship campaigns (admin).
+export async function adminListSponsorships() {
+  const { data, error } = await must().rpc("admin_list_sponsorships");
+  if (error) throw new Error(error.message || "Couldn't load sponsorships.");
+  return (data || []).map((r) => ({
+    id: r.id, brand: r.brand, amount: Number(r.amount), spent: Number(r.spent),
+    remaining: Number(r.remaining), startsOn: r.starts_on, endsOn: r.ends_on,
+    active: r.active, note: r.note, deliveries: r.deliveries, lastUsed: r.last_used,
+  }));
+}
+export async function adminSaveSponsorship({ id, brand, amount, startsOn, endsOn, active, note }) {
+  const { error } = await must().rpc("admin_save_sponsorship", {
+    p_id: id || null, p_brand: brand, p_amount: Number(amount),
+    p_starts: startsOn || null, p_ends: endsOn || null,
+    p_active: active !== false, p_note: note || null,
+  });
+  if (error) throw new Error(error.message || "Couldn't save.");
+  return { ok: true };
+}
+
+// Is a brand currently funding delivery? Returns the brand name, or null.
+// Publishes only the name — never the amount, balance, or commercial terms.
+export async function sponsoredDeliveryNow(fee) {
+  const { data, error } = await must().rpc("sponsored_delivery_now", { p_fee: Number(fee) || 0 });
+  if (error) return null;
+  return data || null;
+}
 // What a coupon is really worth on this cart. The payout is capped at the
 // cart's margin, which needs buying prices, so only the server can say — this
 // returns the amount and whether it was capped, and nothing about cost.

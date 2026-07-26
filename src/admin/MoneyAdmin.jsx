@@ -41,6 +41,7 @@ export default function MoneyAdmin() {
   const [expenses, setExpenses] = useState([]);
   const [top, setTop] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(true);
 
@@ -49,13 +50,14 @@ export default function MoneyAdmin() {
   const load = useCallback(async () => {
     setBusy(true); setErr("");
     try {
-      const [s, e, t, st] = await Promise.all([
+      const [s, e, t, st, sp] = await Promise.all([
         api.adminFinanceSummary(from, to),
         api.adminListExpenses(from, to),
         api.adminTopProducts(from, to, 8),
         api.adminListStaff(),
+        api.adminListSponsorships().catch(() => []),
       ]);
-      setSum(s); setExpenses(e); setTop(t); setStaff(st);
+      setSum(s); setExpenses(e); setTop(t); setStaff(st); setSponsors(sp);
     } catch (e2) {
       setErr(e2.message || "Couldn't load your numbers.");
     } finally { setBusy(false); }
@@ -82,6 +84,7 @@ export default function MoneyAdmin() {
           <ExpenseAdd staff={staff} onSaved={load} />
           <ExpenseList rows={expenses} onChanged={load} />
           <StaffCard staff={staff} onChanged={load} />
+          <SponsorCard rows={sponsors} onChanged={load} />
           <TopProducts rows={top} />
         </>
       )}
@@ -357,6 +360,84 @@ function TopProducts({ rows }) {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+/* ── brand sponsorship: money that buys deliveries, never discounts ────── */
+function SponsorCard({ rows, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [brand, setBrand] = useState("");
+  const [amount, setAmount] = useState("");
+  const [endsOn, setEndsOn] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function save() {
+    if (!brand.trim() || !(Number(amount) > 0)) { setErr("Brand and amount are needed."); return; }
+    setBusy(true); setErr("");
+    try {
+      await api.adminSaveSponsorship({ brand: brand.trim(), amount, endsOn: endsOn || null, note });
+      setBrand(""); setAmount(""); setEndsOn(""); setNote(""); setOpen(false);
+      onChanged();
+    } catch (e) { setErr(e.message || "Couldn't save."); }
+    finally { setBusy(false); }
+  }
+
+  const live = rows.filter((r) => r.active && r.remaining > 0);
+
+  return (
+    <section className="money-card">
+      <h3>Brand sponsorship</h3>
+      <p className="money-sub">
+        A brand pays, and their money covers the delivery fee on real orders — so
+        customers get free delivery without you cutting a single price. Never
+        touches what a product sells for.
+      </p>
+
+      {live.length > 0 ? (
+        <p className="money-sub" style={{ color: "var(--a-good, #17663F)" }}>
+          Delivery is currently free, funded by <b>{live[0].brand}</b>.
+        </p>
+      ) : (
+        <p className="money-sub">No campaign is funding delivery right now.</p>
+      )}
+
+      {rows.length > 0 && (
+        <div className="money-rows">
+          {rows.map((r) => (
+            <div className="money-row" key={r.id}>
+              <span>
+                {r.brand}
+                <small>
+                  ₹{Math.round(r.spent)} of ₹{Math.round(r.amount)} used · {r.deliveries} deliveries
+                  {r.endsOn ? ` · ends ${r.endsOn}` : ""}
+                  {!r.active ? " · paused" : r.remaining <= 0 ? " · finished" : ""}
+                </small>
+              </span>
+              <b>₹{Math.round(r.remaining)}</b>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {open ? (
+        <div className="money-form">
+          <input placeholder="Brand (e.g. Amul)" value={brand} onChange={(e) => setBrand(e.target.value)} />
+          <input type="number" inputMode="decimal" placeholder="Amount they paid (₹)"
+            value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
+          <input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+          {err && <div className="money-err">{err}</div>}
+          <div className="money-form-btns">
+            <button className="money-btn ghost" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="money-btn" disabled={busy} onClick={save}>{busy ? "Saving…" : "Add campaign"}</button>
+          </div>
+        </div>
+      ) : (
+        <button className="money-btn ghost" onClick={() => setOpen(true)}>Add a campaign</button>
+      )}
     </section>
   );
 }
