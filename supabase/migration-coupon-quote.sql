@@ -102,13 +102,17 @@ begin
   if v_coupon.type = 'percent' then v_face := floor(v_eligible * v_coupon.value / 100);
   else v_face := v_coupon.value; end if;
   v_discount := least(v_face, v_eligible, v_item_total);
-  v_discount := least(v_discount, greatest(0, floor(v_item_margin)));
+  -- Mirrors _place_order_core: only a non-guaranteed coupon is capped.
+  if not coalesce(v_coupon.guaranteed, false) then
+    v_discount := least(v_discount, greatest(0, floor(v_item_margin)));
+  end if;
 
   return jsonb_build_object(
     'ok', true,
     'code', v_coupon.code,
     'discount', v_discount,          -- what this cart actually gets
     'faceValue', v_face,             -- the "up to" figure
+    'guaranteed', coalesce(v_coupon.guaranteed, false),
     'capped', v_discount < v_face    -- true when the cart's margin limited it
   );
 end;

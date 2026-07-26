@@ -85,7 +85,7 @@ function mapCategory(r) {
 function mapCoupon(r) {
   return { code: r.code, type: r.type, value: num(r.value),
     minOrder: num(r.min_order), category: r.category || "", active: r.active,
-    singleUse: !!r.single_use,
+    singleUse: !!r.single_use, guaranteed: !!r.guaranteed,
     excludedCategories: r.excluded_categories || [],
     excludedProducts: r.excluded_products || [] };
 }
@@ -93,7 +93,7 @@ function couponToDb(c) {
   return { code: (c.code || "").trim().toUpperCase(), type: c.type === "flat" ? "flat" : "percent",
     value: Number(c.value) || 0, min_order: Number(c.minOrder) || 0,
     category: (c.category || "").trim(), active: c.active !== false,
-    single_use: !!c.singleUse,
+    single_use: !!c.singleUse, guaranteed: !!c.guaranteed,
     excluded_categories: c.excludedCategories || [],
     excluded_products: c.excludedProducts || [] };
 }

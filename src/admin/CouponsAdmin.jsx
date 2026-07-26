@@ -396,6 +396,7 @@ function CouponManager({ coupons, categories }) {
     minOrder: "",
     category: "",
     singleUse: false,
+    guaranteed: false,
     excludedCategories: [],
     excludedProducts: [],
   };
@@ -468,11 +469,34 @@ function CouponManager({ coupons, categories }) {
           onChange={(e) => set("value", e.target.value)}
           placeholder={form.type === "percent" ? "Percent, e.g. 10" : "Amount, e.g. 30"}
         />
+        <Dropdown
+          title="Payout"
+          value={form.guaranteed ? "exact" : "upto"}
+          onChange={(v) => set("guaranteed", v === "exact")}
+          options={[
+            { value: "upto", label: "Up to (protects your margin)" },
+            { value: "exact", label: "Exact — always pay in full" },
+          ]}
+        />
         <p className="coupon-cap-note">
-          This is a maximum. A coupon never pays out more than the margin on the
-          customer's cart, so on thin-margin items (oil, dairy) it can come to
-          less — the customer is shown "up to ₹{form.value || 0}" and the exact
-          amount for their cart before they pay, so it's never a surprise.
+          {form.guaranteed ? (
+            <>
+              <b>Exact.</b> The customer always gets the full{" "}
+              {form.type === "percent" ? `${form.value || 0}%` : `₹${form.value || 0}`}, shown
+              as “{form.type === "percent" ? `${form.value || 0}% OFF` : `₹${form.value || 0} OFF`}”.
+              On a thin-margin cart (oil, dairy) that can cost you more than the
+              order earns, so you take the loss. Good for a welcome offer or an
+              apology credit you're happy to fund.
+            </>
+          ) : (
+            <>
+              <b>Up to.</b> The discount never exceeds the margin on the customer's
+              cart, so you can't be sold below cost. On a thin-margin cart it comes
+              to less, so it's shown as “up to{" "}
+              {form.type === "percent" ? `${form.value || 0}%` : `₹${form.value || 0}`} off”
+              and the customer sees the exact amount for their own cart before paying.
+            </>
+          )}
         </p>
         <input
           type="number"
@@ -552,7 +576,9 @@ function CouponManager({ coupons, categories }) {
               <div>
                 <div className="coupon-code">{c.code}</div>
                 <div className="coupon-desc">
-                  {c.type === "percent" ? `up to ${c.value}% off` : `up to ₹${c.value} off`}
+                  {c.guaranteed
+                    ? (c.type === "percent" ? `${c.value}% off (exact)` : `₹${c.value} off (exact)`)
+                    : (c.type === "percent" ? `up to ${c.value}% off` : `up to ₹${c.value} off`)}
                   {c.category ? ` · only ${catName(c.category)}` : ""}
                   {c.minOrder > 0 ? ` · min ₹${c.minOrder}` : ""}
                   {c.singleUse ? " · one-time per customer/device" : ""}

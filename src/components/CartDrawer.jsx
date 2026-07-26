@@ -1504,12 +1504,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <div className="coupon-list">
                       {activeCoupons.map((c) => {
                         const ev = applyCouponFrom(allCoupons, c.code, couponCtx);
-                        // "UP TO", because the payout is capped at the cart's
-                        // margin — a ₹49 coupon can pay less on thin-margin items.
-                        const off =
-                          c.type === "percent"
-                            ? `UP TO ${c.value}% OFF`
-                            : `UP TO ₹${c.value} OFF`;
+                        // A normal coupon is capped at the cart's margin, so it
+                        // reads "UP TO". A guaranteed one always pays in full.
+                        const amt = c.type === "percent" ? `${c.value}% OFF` : `₹${c.value} OFF`;
+                        const off = c.guaranteed ? amt : `UP TO ${amt}`;
                         const cond = [
                           c.category ? `on ${catName(c.category)}` : null,
                           c.minOrder > 0 ? `min ₹${c.minOrder}` : null,
