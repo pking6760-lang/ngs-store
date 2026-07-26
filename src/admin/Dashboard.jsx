@@ -91,9 +91,9 @@ export default function Dashboard({ onNavigate }) {
     todaysOrders.forEach((o) => {
       if (o.pickerId) {
         const { lines, units } = lineUnitCounts(o.items);
-        pickerPay += payoutPickerPay(ops, lines, units);
+        pickerPay += payoutPickerPay(ops, lines, units, o.surgeMode === "peak" || o.surgeMode === "both");
       }
-      if (o.riderId) driverPay += payoutRiderPay(ops, o.distanceKm, (o.surgeFee || 0) > 0);
+      if (o.riderId) driverPay += payoutRiderPay(ops, o.distanceKm, o.surgeMode === "rain" || o.surgeMode === "both");
     });
     const staffPay = pickerPay + driverPay;
 

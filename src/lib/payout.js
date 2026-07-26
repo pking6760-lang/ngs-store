@@ -12,21 +12,26 @@
 // very short hop is still worth accepting. Identical for every order — Prime
 // membership is a discount the SHOP gives the customer, funded from item
 // margin, never taken out of the rider's pay.
-export function riderPay(ops, distanceKm, surging) {
+// `raining` — NOT any surcharge. Rain pays the rider because they're the one
+// out in it; the peak surcharge pays the picker instead (see pickerPay).
+export function riderPay(ops, distanceKm, raining) {
   const base = Number(ops?.rider_base) || 0;
   const perKm = Number(ops?.rider_per_km) || 0;
   const min = Number(ops?.rider_min) || 0;
-  const peak = surging ? (Number(ops?.peak_bonus) || 0) : 0;
-  return Math.max(base + perKm * (Number(distanceKm) || 0), min) + peak;
+  const rain = raining ? (Number(ops?.rain_bonus) || 0) : 0;
+  return Math.max(base + perKm * (Number(distanceKm) || 0), min) + rain;
 }
 
 // Picking pay: base + per line + per unit. Lines drive walking/finding time,
 // units drive lifting/bagging time — both already recorded on every order.
-export function pickerPay(ops, lines, units) {
+// `peak` — a busy hour is packing pressure, so the peak surcharge lands here,
+// not on the rider.
+export function pickerPay(ops, lines, units, peak) {
   const base = Number(ops?.picker_pack_fee) || 0;
   const perLine = Number(ops?.picker_per_line) || 0;
   const perUnit = Number(ops?.picker_per_unit) || 0;
-  return base + perLine * (Number(lines) || 0) + perUnit * (Number(units) || 0);
+  return base + perLine * (Number(lines) || 0) + perUnit * (Number(units) || 0)
+       + (peak ? (Number(ops?.peak_bonus) || 0) : 0);
 }
 
 // Line/unit counts from an order's items array, for pickerPay() above.

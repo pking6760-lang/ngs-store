@@ -66,9 +66,15 @@ Deno.serve(async (req) => {
       raining = deb === true;
     }
 
-    const surge = (peakOn && !!snap.peak_now) || (rainOn && raining);
+    // Kept separate all the way through. They fund different people: rain pays
+    // the rider, peak pays the picker. Collapsing them into one flag was what
+    // sent a peak-hour surcharge to the driver for the packer's work.
+    const rainNow = rainOn && raining;
+    const peakNow = peakOn && !!snap.peak_now;
+    const surge = rainNow || peakNow;
     const open = !!snap.open_now;
-    const applied = await rpc("store_automation_apply", { p_open: open, p_surge: surge });
+    const applied = await rpc("store_automation_apply",
+      { p_open: open, p_rain: rainNow, p_peak: peakNow });
 
     return Response.json({
       ok: true, open, surge, raining, peak_now: !!snap.peak_now,

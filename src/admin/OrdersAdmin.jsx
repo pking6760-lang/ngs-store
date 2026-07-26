@@ -314,8 +314,8 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
       else missingCost = true;
     });
     const itemCounts = lineUnitCounts(o.items);
-    const pickerPay = o.pickerId ? payoutPickerPay(detailOps, itemCounts.lines, itemCounts.units) : 0;
-    const driverPay = o.riderId ? payoutRiderPay(detailOps, o.distanceKm, (o.surgeFee || 0) > 0) : 0;
+    const pickerPay = o.pickerId ? payoutPickerPay(detailOps, itemCounts.lines, itemCounts.units, o.surgeMode === "peak" || o.surgeMode === "both") : 0;
+    const driverPay = o.riderId ? payoutRiderPay(detailOps, o.distanceKm, o.surgeMode === "rain" || o.surgeMode === "both") : 0;
     // Fees the shop COLLECTS from the customer — income on top of margin.
     const deliveryFee = nn(o.deliveryFee);
     const handling = nn(o.handling);

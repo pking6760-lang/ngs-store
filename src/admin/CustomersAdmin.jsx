@@ -177,9 +177,9 @@ function CustomerDetail({ customer, orders, onClose }) {
       (o.items || []).forEach((it) => { if (cost[it.id] != null) margin += (it.price - cost[it.id]) * it.qty; });
       if (o.pickerId) {
         const { lines, units } = lineUnitCounts(o.items);
-        pickerPay += payoutPickerPay(ops, lines, units);
+        pickerPay += payoutPickerPay(ops, lines, units, o.surgeMode === "peak" || o.surgeMode === "both");
       }
-      if (o.riderId) driverPay += payoutRiderPay(ops, o.distanceKm, (o.surgeFee || 0) > 0);
+      if (o.riderId) driverPay += payoutRiderPay(ops, o.distanceKm, o.surgeMode === "rain" || o.surgeMode === "both");
       if (o.member) {
         freeHandling += stdHandling;
         if (nn(o.itemTotal) < freeThresh) freeDelivery += stdDelivery;

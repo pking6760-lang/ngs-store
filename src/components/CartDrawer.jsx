@@ -281,7 +281,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   // ── Reward redemption ──────────────────────────────────
   const isMember = !!user?.member;
-  const isSurge = settings.deliveryMode === "surge";
+  const isSurge = ["surge", "rain", "peak", "both"].includes(settings.deliveryMode);
   const rewardsCfg = settings.rewards;
   const redeemPer = rewardsCfg?.redeemPer || 10;
   const maxRedeemPct = rewardsCfg?.maxRedeemPct ?? 20;

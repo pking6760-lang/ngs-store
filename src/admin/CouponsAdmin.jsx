@@ -206,6 +206,7 @@ function ScratchSettings({ settings }) {
     walletCutPct: cfg.walletCutPct ?? 10,
     walletMaxRupees: cfg.walletMaxRupees ?? 8,
     minOrder: cfg.minOrder ?? 0,
+    orderChancePct: cfg.orderChancePct ?? 40,
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
@@ -221,6 +222,7 @@ function ScratchSettings({ settings }) {
           walletCutPct: Math.min(100, Math.max(0, Number(form.walletCutPct) || 0)),
           walletMaxRupees: Math.max(0, Number(form.walletMaxRupees) || 0),
           minOrder: Math.max(0, Number(form.minOrder) || 0),
+          orderChancePct: Math.min(100, Math.max(0, Number(form.orderChancePct) || 0)),
         },
       },
     });
@@ -260,6 +262,11 @@ function ScratchSettings({ settings }) {
         <span>Only orders of at least ₹</span>
         <input type="number" min="0" value={form.minOrder} onChange={(e) => set("minOrder", e.target.value)} />
         <span>get a scratch card.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Show a card on</span>
+        <input type="number" min="0" max="100" value={form.orderChancePct} onChange={(e) => set("orderChancePct", e.target.value)} />
+        <span>% of those orders — a reward that always arrives is just a discount.</span>
       </div>
 
       <p className="rewards-preview">

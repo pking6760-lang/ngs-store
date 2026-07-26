@@ -144,6 +144,7 @@ function mapOrder(r) {
     couponDiscount: num(r.discount), couponCode: r.coupon_code,
     pointsDiscount: num(r.points_discount), pointsRedeemed: r.points_redeemed || 0,
     deliveryFee: num(r.delivery_fee), handling: num(r.handling), surgeFee: num(r.surge_fee),
+    surgeMode: r.surge_mode || null,   // 'rain' | 'peak' | 'both' — decides whose bonus it was
     pointsEarned: r.points_earned, total: num(r.total),
     payment: r.payment_method, paymentMethod: r.payment_method, paymentStatus: r.payment_status,
     razorpayPaymentId: r.razorpay_payment_id,

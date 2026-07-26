@@ -259,7 +259,12 @@ export function StoreControls() {
   const [showAuto, setShowAuto] = useState(false);
 
   const storeOpen = pending?.storeOpen ?? settings.storeOpen;
-  const surge = (pending?.deliveryMode ?? settings.deliveryMode) === "surge";
+  // Rain and peak are separate surcharges funding separate people: rain pays the
+  // rider, peak pays the picker. The customer pays one flat charge either way.
+  const mode = pending?.deliveryMode ?? settings.deliveryMode ?? "normal";
+  const rainNow = mode === "rain" || mode === "both" || mode === "surge";
+  const peakNow = mode === "peak" || mode === "both";
+  const modeFrom = (r, p) => (r && p ? "both" : r ? "rain" : p ? "peak" : "normal");
   const auto = pending?.automation ?? settings.automation ?? DEFAULT_AUTOMATION;
   const hoursOn = !!auto?.hours?.on, rainOn = !!auto?.rain?.on, peakOn = !!auto?.peak?.on;
   const autoCount = (hoursOn ? 1 : 0) + (rainOn ? 1 : 0) + (peakOn ? 1 : 0);
@@ -295,14 +300,24 @@ export function StoreControls() {
           {hoursOn && <span className="ap-badge">AUTO</span>}
         </button>
         <button
-          className={`surge-toggle ${surge ? "on" : ""}`}
+          className={`surge-toggle ${rainNow ? "on" : ""}`}
           disabled={busy}
-          onClick={() => save({ deliveryMode: surge ? "normal" : "surge" })}
-          title="Turn on during rain / bad weather / peak — members pay delivery too"
+          onClick={() => save({ deliveryMode: modeFrom(!rainNow, peakNow) })}
+          title="Raining — the surcharge pays the rider's bonus"
         >
-          <Ic name={surge ? "rain" : "sun"} size={17} />
-          {surge ? "Surge ON" : "Normal day"}
-          {(rainOn || peakOn) && <span className="ap-badge">AUTO</span>}
+          <Ic name={rainNow ? "rain" : "sun"} size={17} />
+          {rainNow ? "Rain ON" : "Rain"}
+          {rainOn && <span className="ap-badge">AUTO</span>}
+        </button>
+        <button
+          className={`surge-toggle ${peakNow ? "on" : ""}`}
+          disabled={busy}
+          onClick={() => save({ deliveryMode: modeFrom(rainNow, !peakNow) })}
+          title="Busy hour — the surcharge pays the picker's bonus"
+        >
+          <Ic name="trending" size={17} />
+          {peakNow ? "Peak ON" : "Peak"}
+          {peakOn && <span className="ap-badge">AUTO</span>}
         </button>
       </div>
 
