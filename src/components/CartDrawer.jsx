@@ -309,9 +309,22 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
   const netItems = Math.max(0, itemTotal - discount - couponDiscount);
 
+  // Distance to the nearest shop — needed by the delivery-fee block below (the
+  // far zone charges even Prime past a certain distance), so it's computed
+  // ahead of "Delivery area" further down rather than duplicated there.
+  const feeShops = getShopLocations(settings);
+  const feeDistKm =
+    location && feeShops.length
+      ? Math.round(Math.min(...feeShops.map((s) => distanceKm(location, s))) * 10) / 10
+      : 0;
+
   // ── Delivery fee (admin-controlled, with membership + surge rules) ──
   const DELIVERY_FEE = settings.deliveryFee ?? 25;
   const FREE_DELIVERY_ABOVE = settings.freeDeliveryAbove ?? 199;
+  const FAR_ZONE_KM = settings.farZoneKm ?? Infinity;
+  const FREE_DELIVERY_FAR_ABOVE = settings.freeDeliveryFarAbove ?? FREE_DELIVERY_ABOVE;
+  const inFarZone = feeDistKm >= FAR_ZONE_KM;
+  const freeDeliveryThreshold = inFarZone ? FREE_DELIVERY_FAR_ABOVE : FREE_DELIVERY_ABOVE;
   const HANDLING_FEE = settings.handlingFee ?? 5;
   // "Add to tomorrow's delivery" estimate: standard prices, normal free-delivery
   // rule on non-exempt items, NO handling (the subscription's fee covers the trip).
@@ -324,10 +337,14 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // the shop in loss. The perk applies only when the cart has no such items, OR
   // the qualifying (non-exempt) total already earns free delivery on its own —
   // mirrors the server (place_order). A milk-only Prime order pays like a guest.
+  // The perk is also only guaranteed inside the near zone: past the far-zone
+  // distance a small Prime order costs more to ride out than it earns, so the
+  // higher far threshold applies to everyone, Prime included — same as the
+  // server.
   const hasThin = itemTotal > qualifyingTotal; // cart contains milk/dairy
-  const freePerk = isMember && (!hasThin || qualifyingTotal >= FREE_DELIVERY_ABOVE);
+  const freePerk = isMember && !inFarZone && (!hasThin || qualifyingTotal >= FREE_DELIVERY_ABOVE);
   let deliveryFee =
-    qualifyingTotal >= FREE_DELIVERY_ABOVE || itemTotal === 0 ? 0 : DELIVERY_FEE;
+    qualifyingTotal >= freeDeliveryThreshold || itemTotal === 0 ? 0 : DELIVERY_FEE;
   let freeReason = deliveryFee === 0 && itemTotal > 0 ? "order" : null;
   if (freePerk && itemTotal > 0 && deliveryFee > 0) {
     deliveryFee = 0;
@@ -1619,23 +1636,26 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {!isMember && itemTotal > 0 && (
                 <div className="free-progress">
                   <div className="free-progress-top">
-                    {qualifyingTotal >= FREE_DELIVERY_ABOVE ? (
+                    {qualifyingTotal >= freeDeliveryThreshold ? (
                       <span className="free-progress-done">Free delivery unlocked</span>
                     ) : (
                       <span>
-                        Add <strong>₹{Math.max(0, FREE_DELIVERY_ABOVE - qualifyingTotal)}</strong> more for FREE delivery
+                        Add <strong>₹{Math.max(0, freeDeliveryThreshold - qualifyingTotal)}</strong> more for FREE delivery
                       </span>
                     )}
                   </div>
                   <div className="free-progress-bar">
                     <span
                       style={{
-                        width: `${Math.min(100, Math.round((qualifyingTotal / FREE_DELIVERY_ABOVE) * 100))}%`,
+                        width: `${Math.min(100, Math.round((qualifyingTotal / freeDeliveryThreshold) * 100))}%`,
                       }}
                     />
                   </div>
-                  {itemTotal > qualifyingTotal && qualifyingTotal < FREE_DELIVERY_ABOVE && (
+                  {itemTotal > qualifyingTotal && qualifyingTotal < freeDeliveryThreshold && (
                     <small className="free-hint-note">milk, curd &amp; bread don't count toward this</small>
+                  )}
+                  {inFarZone && (
+                    <small className="free-hint-note">you're in the far delivery zone, so the free-delivery bar is higher here</small>
                   )}
                 </div>
               )}

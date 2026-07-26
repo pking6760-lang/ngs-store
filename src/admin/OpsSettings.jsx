@@ -27,19 +27,41 @@ const GROUPS = [
   },
   {
     title: "Delivery partner payout",
-    note: "Flat, predictable pay: a base per delivery + distance beyond the free radius + a peak (rain/night) bonus. Members get free delivery (handling is charged to everyone), so their orders use the lower member base (distance + peak still apply).",
+    note: "A base fare plus a per-km rate from the first metre (no free distance), floored at a minimum so a very short hop is still worth accepting — worked out to hold net pay roughly flat across every distance, around ₹107/hour after fuel. Paid the same whether the customer is Prime or not: Prime's free-delivery discount is funded from item margin, never taken out of the rider's pay.",
     fields: [
-      { key: "rider_base", label: "Base per delivery (₹)" },
-      { key: "rider_member_base", label: "Base for Prime member deliveries (₹)" },
-      { key: "rider_free_km", label: "Free distance (km)", step: "0.1" },
-      { key: "rider_per_km", label: "₹ per km beyond that" },
+      { key: "rider_base", label: "Base fare (₹)" },
+      { key: "rider_per_km", label: "₹ per km" },
+      { key: "rider_min", label: "Minimum pay per order (₹)" },
       { key: "peak_bonus", label: "Peak bonus when surge is on (₹)" },
     ],
   },
   {
     title: "Picker payout",
+    note: "A base fee plus a per-line and per-unit rate, so a 1-item order and a 12-item order no longer pay the same — lines drive walking/finding time, units drive lifting/bagging time.",
     fields: [
-      { key: "picker_pack_fee", label: "Flat fee per order packed (₹)" },
+      { key: "picker_pack_fee", label: "Base fee per order (₹)" },
+      { key: "picker_per_line", label: "₹ per line item", step: "0.1" },
+      { key: "picker_per_unit", label: "₹ per unit", step: "0.05" },
+    ],
+  },
+  {
+    title: "Delivery zones",
+    note: "A basket that qualifies for free delivery nearby often still loses money once it's ridden to the far edge of your radius, since the ride costs more the farther it goes. Beyond the far-zone distance, the higher threshold applies to everyone — Prime included.",
+    fields: [
+      { key: "far_zone_km", label: "Far zone starts at (km)", step: "0.1" },
+      { key: "free_delivery_far_above", label: "Free delivery above, in the far zone (₹)" },
+    ],
+  },
+  {
+    title: "Slot guarantee",
+    note: "Tops up a booked slot to an hourly minimum if a partner shows up but the shop is quiet — protects them from a bad hour, at the shop's cost. Only worth turning on once a slot reliably clears several orders an hour; check Dashboard for your current order rate before switching this on.",
+    bools: [
+      { key: "slot_guarantee_enabled", label: "Guarantee a minimum hourly pay per slot" },
+    ],
+    fields: [
+      { key: "rider_floor_hourly", label: "Rider guaranteed ₹/hour" },
+      { key: "picker_floor_hourly", label: "Picker guaranteed ₹/hour" },
+      { key: "slot_length_hours", label: "Slot length (hours)", step: "0.5" },
     ],
   },
   {
@@ -84,6 +106,7 @@ export default function OpsSettings() {
       GROUPS.forEach((g) => {
         (g.fields || []).forEach((f) => { patch[f.key] = Number(form[f.key]); });
         (g.toggles || []).forEach((t) => { patch[t.key] = form[t.key]; });
+        (g.bools || []).forEach((b) => { patch[b.key] = !!form[b.key]; });
       });
       await withMinTime(() => api.updateOpsConfig(patch), 650, 1300);
       setSaved(true);
@@ -109,6 +132,18 @@ export default function OpsSettings() {
                     <button className={form[t.key] === "staff" ? "on" : ""} onClick={() => set(t.key, "staff")}>Staff</button>
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {g.bools && (
+            <div className="ops-toggles">
+              {g.bools.map((b) => (
+                <label className="ops-toggle-row" key={b.key}>
+                  <span>{b.label}</span>
+                  <input type="checkbox" checked={!!form[b.key]}
+                    onChange={(e) => set(b.key, e.target.checked)} />
+                </label>
               ))}
             </div>
           )}

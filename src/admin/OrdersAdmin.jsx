@@ -8,6 +8,7 @@ import {
 } from "../lib/actions.js";
 import { googleMapsLink } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, cleanUpiQrFromImage } from "../lib/payments.js";
+import { riderPay as payoutRiderPay, pickerPay as payoutPickerPay, lineUnitCounts } from "../lib/payout.js";
 import { createOrderQr, adminRefundToWallet, adminCreateReturn, getOpsConfigRaw } from "../lib/api.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { useCall } from "../components/CallProvider.jsx";
@@ -312,12 +313,9 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
       if (cost[it.id] != null) margin += (it.price - cost[it.id]) * it.qty;
       else missingCost = true;
     });
-    const pickerPay = o.pickerId ? nn(detailOps?.picker_pack_fee) : 0;
-    const driverPay = o.riderId
-      ? (o.member && detailOps?.rider_member_base != null ? nn(detailOps.rider_member_base) : nn(detailOps?.rider_base))
-        + Math.max(nn(o.distanceKm) - nn(detailOps?.rider_free_km), 0) * nn(detailOps?.rider_per_km)
-        + ((o.surgeFee || 0) > 0 ? nn(detailOps?.peak_bonus) : 0)
-      : 0;
+    const itemCounts = lineUnitCounts(o.items);
+    const pickerPay = o.pickerId ? payoutPickerPay(detailOps, itemCounts.lines, itemCounts.units) : 0;
+    const driverPay = o.riderId ? payoutRiderPay(detailOps, o.distanceKm, (o.surgeFee || 0) > 0) : 0;
     // Fees the shop COLLECTS from the customer — income on top of margin.
     const deliveryFee = nn(o.deliveryFee);
     const handling = nn(o.handling);

@@ -5,6 +5,7 @@ import { useCustomers, useOrders, useUserNotifications, useSettings, useAdminPro
 import { sendNotification } from "../lib/actions.js";
 import { getOpsConfigRaw, fetchCustomerBalance, adminCreditWallet, adminCustomerWalletHistory } from "../lib/api.js";
 import { toast } from "../lib/toast.js";
+import { riderPay as payoutRiderPay, pickerPay as payoutPickerPay, lineUnitCounts } from "../lib/payout.js";
 import AdminPortal from "./AdminPortal.jsx";
 
 export default function CustomersAdmin({ initialCustomerId = null }) {
@@ -174,12 +175,11 @@ function CustomerDetail({ customer, orders, onClose }) {
       refunds += nn(o.refundedAmount);
       feesGot += nn(o.deliveryFee) + nn(o.handling) + nn(o.surgeFee);
       (o.items || []).forEach((it) => { if (cost[it.id] != null) margin += (it.price - cost[it.id]) * it.qty; });
-      if (o.pickerId) pickerPay += nn(ops?.picker_pack_fee);
-      if (o.riderId) {
-        driverPay += (o.member && ops?.rider_member_base != null ? nn(ops.rider_member_base) : nn(ops?.rider_base))
-          + Math.max(nn(o.distanceKm) - nn(ops?.rider_free_km), 0) * nn(ops?.rider_per_km)
-          + ((o.surgeFee || 0) > 0 ? nn(ops?.peak_bonus) : 0);
+      if (o.pickerId) {
+        const { lines, units } = lineUnitCounts(o.items);
+        pickerPay += payoutPickerPay(ops, lines, units);
       }
+      if (o.riderId) driverPay += payoutRiderPay(ops, o.distanceKm, (o.surgeFee || 0) > 0);
       if (o.member) {
         freeHandling += stdHandling;
         if (nn(o.itemTotal) < freeThresh) freeDelivery += stdDelivery;

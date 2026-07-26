@@ -4,6 +4,7 @@ import { getOpsConfigRaw, fetchPartnerWallets, subscribeTable } from "../lib/api
 import { Ic } from "./AdminIcons.jsx";
 import CategoryIcon from "../components/CategoryIcon.jsx";
 import Autopilot from "./Autopilot.jsx";
+import { riderPay as payoutRiderPay, pickerPay as payoutPickerPay, lineUnitCounts } from "../lib/payout.js";
 
 export default function Dashboard({ onNavigate }) {
   const products = useProducts();
@@ -88,13 +89,11 @@ export default function Dashboard({ onNavigate }) {
     const n = (v) => Number(v) || 0;
     let pickerPay = 0, driverPay = 0;
     todaysOrders.forEach((o) => {
-      if (o.pickerId) pickerPay += n(ops?.picker_pack_fee);
-      if (o.riderId) {
-        const base = o.member && ops?.rider_member_base != null ? n(ops.rider_member_base) : n(ops?.rider_base);
-        const perKm = Math.max(n(o.distanceKm) - n(ops?.rider_free_km), 0) * n(ops?.rider_per_km);
-        const peak = (o.surgeFee || 0) > 0 ? n(ops?.peak_bonus) : 0;
-        driverPay += base + perKm + peak;
+      if (o.pickerId) {
+        const { lines, units } = lineUnitCounts(o.items);
+        pickerPay += payoutPickerPay(ops, lines, units);
       }
+      if (o.riderId) driverPay += payoutRiderPay(ops, o.distanceKm, (o.surgeFee || 0) > 0);
     });
     const staffPay = pickerPay + driverPay;
 

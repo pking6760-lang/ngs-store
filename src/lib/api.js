@@ -105,6 +105,8 @@ function mapSettings(r) {
     surgeFee: num(r.surge_fee), maxDistanceKm: num(r.max_distance_km),
     smallCartFee: r.small_cart_fee != null ? num(r.small_cart_fee) : 0,
     smallCartThreshold: r.small_cart_threshold != null ? num(r.small_cart_threshold) : 0,
+    farZoneKm: r.far_zone_km != null ? num(r.far_zone_km) : null,
+    freeDeliveryFarAbove: r.free_delivery_far_above != null ? num(r.free_delivery_far_above) : null,
     codCustomerLimit: num(r.cod_customer_limit),
     shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold,
     automation: r.automation || null,
