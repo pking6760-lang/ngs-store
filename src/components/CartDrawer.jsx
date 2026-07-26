@@ -1638,7 +1638,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               {isMember && !freePerk && hasThin && (
                 <div className="bill-note">
-                  {thinLabel} {thinNames.length === 1 ? "carries" : "carry"} a delivery &amp; handling charge even on Prime — everyday low-price items don't cover the ride on their own. Tip: a milk <strong>subscription</strong> delivers daily for less.
+                  {thinLabel} {thinNames.length === 1 ? "doesn't" : "don't"} count toward free delivery.
                 </div>
               )}
               {smallCartFee > 0 && (
