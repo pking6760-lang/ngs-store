@@ -34,12 +34,16 @@ alter table public.ops_config
     free_delivery_min_margin_pct >= 0 and free_delivery_min_margin_pct <= 100
   );
 
--- Handling fee: Rs12 was 3x Blinkit's Rs4, and Zepto charges nothing at all.
--- It is the most visible "junk fee" on the bill and the one customers compare
--- first, so it comes down to Rs7. On a small order NGS is now Rs47 all-in
--- against Blinkit's Rs54; on a Rs250 order Rs7 against Blinkit's Rs4. The Rs5
--- per order given up here is repaid many times over by section 3 below.
-update public.ops_config set handling_fee = 7 where id = 1;
+-- Handling fee: Rs12 -> Rs10. It is the most visible "junk fee" on the bill and
+-- the line customers compare first.
+--
+-- Calibrated against ground truth, not research: a Blinkit checkout captured at
+-- this shop's own address shows handling Rs12 + delivery Rs30, free above Rs199.
+-- (Published figures claiming Blinkit charges Rs4 handling are wrong.) At Rs10
+-- handling and Rs20 near-zone delivery, an equivalent basket costs Rs215 here
+-- against Rs228 on Blinkit -- visibly cheaper on both fee lines, without giving
+-- away more margin than the position requires.
+update public.ops_config set handling_fee = 10 where id = 1;
 
 -- Prime product discount: members were paying ~7% below the normal price,
 -- which halved margin from 13.6% to 7.2%. On roughly 8 orders a month that
