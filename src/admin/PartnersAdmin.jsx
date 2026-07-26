@@ -63,6 +63,106 @@ function OnShiftPanel({ team, presence }) {
   );
 }
 
+// The weekly payout run. Every Monday a push tells the owner what's due; this
+// is where it lands. One row per person owed money, newest week's context, and
+// the same "Record payout" action as the partner's own card.
+//
+// The amount is `payable` — earnings less penalties, NOT the raw wallet balance.
+// A rider holding undeposited COD cash has a balance below what they've earned;
+// paying that would dock their wages by the shop's own cash (see fetchPayoutDue).
+function PayoutPanel({ onChanged }) {
+  const [rows, setRows] = useState(null);
+  const [pay, setPay] = useState(null);   // the partner being paid
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  useBackGuard(!!pay, () => setPay(null));
+
+  const load = () => api.fetchPayoutDue().then(setRows).catch(() => setRows([]));
+  useEffect(() => {
+    load();
+    const unsub = api.subscribeTable("wallet_ledger", load);
+    return () => unsub && unsub();
+  }, []);
+
+  if (!rows) return null;
+  const due = rows.filter((r) => r.payable > 0);
+  const total = due.reduce((s, r) => s + r.payable, 0);
+  const holdingCash = rows.filter((r) => r.cashInHand > 0);
+  const owing = rows.filter((r) => r.payable < 0);
+
+  async function record(v) {
+    const who = pay;
+    setPay(null); setBusy(true); setMsg("");
+    try {
+      await withMinTime(() => api.partnerRecordPayoutAdmin(who.userId, v, "Weekly payout"), 600, 1200);
+      setMsg(`✓ Paid ${who.name} ₹${Math.round(v)}`);
+      await load();
+      if (onChanged) await onChanged();
+    } catch (e) { setMsg(e.message || "Couldn't record the payout."); }
+    finally { setBusy(false); }
+  }
+
+  if (due.length === 0) {
+    return (
+      <section className="payrun settled">
+        <div className="payrun-head">
+          <span className="payrun-title"><Ic name="payout" size={15} /> Weekly payout</span>
+          <span className="payrun-total ok">All settled</span>
+        </div>
+        <p className="payrun-note">
+          Nobody is owed anything right now.
+          {owing.length > 0 && ` ${owing.length} carrying a penalty balance, which their next jobs work off.`}
+          {msg && ` ${msg}`}
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="payrun">
+      <div className="payrun-head">
+        <span className="payrun-title"><Ic name="payout" size={15} /> Weekly payout</span>
+        <span className="payrun-total">₹{Math.round(total)}</span>
+      </div>
+      <p className="payrun-note">
+        Pay each person by UPI or bank, then record it here to clear their wallet.
+      </p>
+      {holdingCash.length > 0 && (
+        <p className="payrun-warn">
+          ⚠️ {holdingCash.map((r) => `${r.name} ₹${Math.round(r.cashInHand)}`).join(", ")} still
+          holding shop cash — take the deposit before paying.
+        </p>
+      )}
+      <div className="payrun-list">
+        {due.map((r) => (
+          <div className="payrun-row" key={r.userId}>
+            <div className="payrun-who">
+              <strong>{r.name}{r.empCode && <span className="emp-badge">{r.empCode}</span>}</strong>
+              <small>
+                {r.role === "picker" ? "Picker" : "Delivery"} · {r.weekJobs} job{r.weekJobs === 1 ? "" : "s"} this week
+                {r.weekPenalty > 0 ? ` · ₹${Math.round(r.weekPenalty)} penalty` : ""}
+              </small>
+            </div>
+            <span className="payrun-amt">₹{Math.round(r.payable)}</span>
+            <button className="payrun-btn" disabled={busy} onClick={() => setPay(r)}>Pay</button>
+          </div>
+        ))}
+      </div>
+      {msg && <div className="payrun-msg">{msg}</div>}
+      {pay && (
+        <AdminPortal>
+          <AmountModal title={`Pay out — ${pay.name}`}
+            hint={`₹${Math.round(pay.payable)} owed${pay.cashInHand > 0
+              ? `. They're also holding ₹${Math.round(pay.cashInHand)} shop cash — that's separate, take it as a deposit.`
+              : "."} Send the money, then record it here.`}
+            suggest={Math.round(pay.payable)} okLabel="Record payout"
+            onCancel={() => setPay(null)} onSubmit={record} />
+        </AdminPortal>
+      )}
+    </section>
+  );
+}
+
 // One document photo. Loads a preview; tapping opens it full-screen INSIDE the
 // app (never navigates away, so the backend address is never shown).
 function DocView({ path, label, onOpen }) {
@@ -248,7 +348,9 @@ function WalletBlock({ partner, w, onChange }) {
   const [msg, setMsg] = useState("");
   const [modal, setModal] = useState(null); // 'deposit' | 'payout' | 'adjust' | null
   useBackGuard(!!modal, () => setModal(null));
-  const bal = w?.balance || 0, cash = w?.cashInHand || 0, strikes = w?.strikes || 0;
+  // `payable` is what we owe (earnings − penalties); `bal` also nets off any
+  // COD cash they're still holding, which must NOT reduce their pay.
+  const bal = w?.balance || 0, payable = w?.payable ?? bal, cash = w?.cashInHand || 0, strikes = w?.strikes || 0;
 
   async function submit(kind, v) {
     setModal(null); setBusy(true); setMsg("");
@@ -279,13 +381,13 @@ function WalletBlock({ partner, w, onChange }) {
   return (
     <div className="pwallet">
       <div className="pwallet-stats">
-        <div className="pw-stat"><span>Balance</span><strong className={bal < 0 ? "neg" : ""}>₹{Math.round(bal)}</strong></div>
+        <div className="pw-stat"><span>Owed</span><strong className={payable < 0 ? "neg" : ""}>₹{Math.round(payable)}</strong></div>
         <div className="pw-stat"><span>Cash in hand</span><strong className={cash > 0 ? "warn" : ""}>₹{Math.round(cash)}</strong></div>
         <div className="pw-stat"><span>Strikes</span><strong className={strikes >= 2 ? "neg" : ""}>{strikes}</strong></div>
       </div>
       <div className="pwallet-actions">
         <button disabled={busy || cash <= 0} onClick={() => setModal("deposit")}>Confirm cash deposit</button>
-        <button disabled={busy || bal <= 0} onClick={() => setModal("payout")}>Record payout</button>
+        <button disabled={busy || payable <= 0} onClick={() => setModal("payout")}>Record payout</button>
       </div>
       <div className="pwallet-fix">
         <button className="fix-btn" disabled={busy} onClick={() => setModal("adjust")}>Adjust balance / fix mistake</button>
@@ -305,8 +407,10 @@ function WalletBlock({ partner, w, onChange }) {
       {modal === "payout" && (
         <AdminPortal>
           <AmountModal title={`Pay out — ${partner.fullName}`}
-            hint={`Balance ₹${Math.round(bal)}. Pay this to the partner (UPI/bank), then record it here to clear their wallet.`}
-            suggest={Math.max(0, Math.round(bal))} okLabel="Record payout" onCancel={() => setModal(null)}
+            hint={`₹${Math.round(payable)} owed${cash > 0
+              ? `. Separately they hold ₹${Math.round(cash)} shop cash — take that as a deposit, don't dock it from their pay.`
+              : "."} Pay this to the partner (UPI/bank), then record it here to clear their wallet.`}
+            suggest={Math.max(0, Math.round(payable))} okLabel="Record payout" onCancel={() => setModal(null)}
             onSubmit={(v) => submit("payout", v)}
             extra={<BankDetails partner={partner} />} />
         </AdminPortal>
@@ -401,6 +505,7 @@ export default function PartnersAdmin() {
       {view === "team" ? (
         <>
           <OnShiftPanel team={team} presence={presence} />
+          <PayoutPanel onChanged={loadWallets} />
           {pending.length > 0 && (
             <button className="pending-banner" onClick={() => setView("requests")}>
               {pending.length} partner{pending.length === 1 ? "" : "s"} waiting for your approval — review →

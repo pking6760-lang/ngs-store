@@ -1248,16 +1248,45 @@ export async function updateOpsConfig(patch) {
 }
 
 // Admin: every partner's wallet balance, cash-in-hand and strike count.
+//
+// `payable` is what we actually OWE them and is the number to pay out — it
+// excludes the two COD cash kinds. cod_collected books a negative amount while
+// the rider holds the shop's cash and cod_deposited cancels it on return, so a
+// rider still carrying cash has a `balance` below what they've earned. Paying
+// `balance` would dock their wages by cash they haven't handed back yet — two
+// unrelated debts silently netted. Cash-in-hand is settled by "Confirm cash
+// deposit" instead, and is shown on its own.
+const COD_KINDS = new Set(["cod_collected", "cod_deposited"]);
 export async function fetchPartnerWallets() {
   const [led, strk] = await Promise.all([
-    must().from("wallet_ledger").select("partner_id,amount,cash_delta"),
+    must().from("wallet_ledger").select("partner_id,amount,cash_delta,kind"),
     must().from("partner_strikes").select("partner_id"),
   ]);
   const map = {};
-  const get = (id) => (map[id] || (map[id] = { balance: 0, cashInHand: 0, strikes: 0 }));
-  (led.data || []).forEach((r) => { const m = get(r.partner_id); m.balance += Number(r.amount); m.cashInHand += Number(r.cash_delta); });
+  const get = (id) => (map[id] || (map[id] = { balance: 0, payable: 0, cashInHand: 0, strikes: 0 }));
+  (led.data || []).forEach((r) => {
+    const m = get(r.partner_id);
+    m.balance += Number(r.amount);
+    m.cashInHand += Number(r.cash_delta);
+    if (!COD_KINDS.has(r.kind)) m.payable += Number(r.amount);
+  });
   (strk.data || []).forEach((r) => { get(r.partner_id).strikes += 1; });
   return map;
+}
+
+// Admin: the weekly payout run — who to pay, how much, and the week's context.
+// Same `payable` rule as above, computed server-side so the Monday push and the
+// admin screen can never disagree.
+export async function fetchPayoutDue() {
+  const { data, error } = await must().rpc("admin_payout_due");
+  if (error) throw new Error(error.message || "Couldn't load the payout list.");
+  return (data || []).map((r) => ({
+    userId: r.user_id, empCode: r.emp_code || "", name: r.name || "", role: r.role,
+    payable: Number(r.payable) || 0, cashInHand: Number(r.cash_in_hand) || 0,
+    weekEarnings: Number(r.week_earnings) || 0, weekPenalty: Number(r.week_penalty) || 0,
+    weekJobs: Number(r.week_jobs) || 0,
+    lastPayoutAt: r.last_payout_at || null, lastPayoutAmount: Number(r.last_payout_amount) || 0,
+  }));
 }
 export async function partnerDepositCash(userId, amount) {
   const { error } = await must().rpc("partner_deposit_cash", { p_user: userId, p_amount: amount });
