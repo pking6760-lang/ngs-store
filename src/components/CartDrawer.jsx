@@ -520,13 +520,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   async function applyCouponCode(code) {
     const res = applyCouponFrom(allCoupons, code ?? couponInput, couponCtx);
     if (res.ok) {
-      // One-time coupons: tell them now if this account/device already used it,
-      // instead of failing at checkout. (Server re-checks authoritatively.)
+      // One-time coupons: tell them now instead of failing at checkout. The
+      // block is per account AND per device, but the customer is never told
+      // which — spelling out the anti-fraud mechanics reads badly and tells a
+      // farmer exactly what to work around. (Server re-checks authoritatively.)
       const c = allCoupons.find((x) => x.code === res.code);
       if (c?.singleUse) {
         try {
           if (await api.couponUsed(res.code)) {
-            setCouponError("This coupon has already been used on this account or device.");
+            setCouponError(tr("You've already used this coupon."));
             return;
           }
         } catch { /* offline → let checkout decide */ }

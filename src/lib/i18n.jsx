@@ -111,6 +111,8 @@ const HI = {
   "Apply": "लगाएं",
   "View available coupons": "उपलब्ध कूपन देखें",
   "Hide coupons": "कूपन छिपाएं",
+  "You've already used this coupon.": "आप यह कूपन पहले ही इस्तेमाल कर चुके हैं।",
+  "Small cart charge": "छोटे कार्ट शुल्क",
   "Points discount": "पॉइंट्स छूट",
   "Extra discount": "अतिरिक्त छूट",
   "Surge charge": "सर्ज शुल्क",
