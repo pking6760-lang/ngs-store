@@ -162,44 +162,30 @@ export default function DeliveryAdmin() {
           on the customer's live order screen, so they can reach you about an order.
         </p>
         <p className="delivery-hint">
-          The <strong>small cart charge</strong> is added to every order whose
-          items come to less than the amount beside it — Prime members included.
-          A tiny basket costs the same to pick and ride out as a big one, so this
-          covers it and nudges customers to add a little more. It's worked out on
-          the item total <em>before</em> any coupon, so a discount can't be used
-          to dodge it. Set the charge to 0 to switch it off.
+          The <strong>small cart charge</strong> applies below the amount beside
+          it, Prime included. Counted on the item total <em>before</em> any coupon,
+          so a discount can't dodge it. Set to 0 to switch it off.
         </p>
         <p className="delivery-hint">
-          <strong>Delivery zones.</strong> A doorstep drop costs you about ₹18 in
-          rider pay and a 3 km ride about ₹55, so one flat fee would have your
-          nearest customers subsidising your furthest — and still lose money at
-          the edge. The three fees follow that cost curve. Crossing the
-          free-delivery bar removes the fee at any distance; the bar is higher
-          in the mid and far zones because the ride costs more out there.
+          <strong>Delivery zones.</strong> A doorstep drop costs about ₹18 in
+          rider pay, a 3 km ride about ₹55 — the three fees follow that curve.
+          Crossing the free-delivery bar removes the fee at any distance.
         </p>
         <p className="delivery-hint">
-          <strong>Thin-margin items don't unlock free delivery.</strong> What pays
-          for a ride is margin, not turnover — a ₹480 cigarette order earns you
-          about ₹30 and would cost more than that to deliver free. An item is
-          left out of the free-delivery total if it earns under <strong>10%</strong> or
-          under <strong>₹3 a unit</strong>, rechecked every time prices refresh.
-          Both floors are needed: a ₹10 biscuit at 15% beats a ₹500 item at 6% on
-          percentage, but puts ₹1.50 in the till — and twenty of them take the
-          longest to pick and cost the most to ride. You can still exclude an item
-          by hand on the product itself.
+          <strong>Thin-margin items don't unlock free delivery.</strong> An item
+          is left out of the free-delivery total if it earns under <strong>10%</strong> or
+          under <strong>₹3 a unit</strong> — a ₹10 biscuit at 15% only puts ₹1.50 in
+          the till. You can also exclude an item by hand on the product itself.
         </p>
         <p className="delivery-hint">
-          The <strong>cancellation fee</strong> is charged when a customer cancels
-          after a short free window (≈90s) or once you've started packing. What
-          they paid is refunded to their wallet minus this fee. Set to 0 to allow
-          free cancellation.
+          The <strong>cancellation fee</strong> applies after a short free window
+          (≈90s) or once packing starts. They're refunded to their wallet minus this
+          fee. Set to 0 for free cancellation.
         </p>
         <p className="delivery-hint">
           <strong>Wallet usable above</strong> is the smallest cart on which a
-          customer can spend their NGS Wallet (referral bonus, change, refunds).
-          Below it the wallet stays locked — this stops a ₹30 referral credit
-          being burned on a tiny order that doesn't cover the delivery. Set to 0
-          to allow wallet on any order.
+          customer can spend their NGS Wallet. Below it the wallet stays locked, so
+          a ₹30 referral credit can't be burned on a tiny order. Set to 0 for any order.
         </p>
         <p className="delivery-hint">
           The <strong>surge charge</strong> is added to every order only while

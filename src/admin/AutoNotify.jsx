@@ -60,7 +60,7 @@ export default function AutoNotify() {
   return (
     <section className="panel">
       <h3>Auto notifications</h3>
-      <p className="panel-sub">A bank of ready messages that send themselves at the right time — mornings, festivals, weekends and more. The weather groups (Rain, Too hot, Cold) send automatically based on each customer's live local weather — just keep a few messages in each.</p>
+      <p className="panel-sub">Ready messages that send themselves — mornings, festivals, weekends. The weather groups follow each customer's live local weather; just keep a few messages in each.</p>
 
       <div className="seg-toggle" role="tablist">
         <button className={`seg ${tab === "bank" ? "seg-on" : ""}`} onClick={() => setTab("bank")}>Message bank</button>

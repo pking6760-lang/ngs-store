@@ -1165,8 +1165,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               {needsLocation && (
                 <div className="area-hint">
-                  Tip: pin your exact spot on the map so delivery reaches the
-                  right door. You can still order without it.
+                  Pin your exact spot so we reach the right door — optional.
                 </div>
               )}
               {location && (
@@ -1361,9 +1360,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             <div className="co-policy">
               <strong>Cancellation policy</strong>
               <p>
-                You can cancel free of charge before your order is packed. Once
-                the rider is on the way it may not be cancellable. Prepaid refunds
-                go back to your NGS Wallet.
+                Free to cancel before your order is packed. Prepaid refunds go
+                to your NGS Wallet.
               </p>
             </div>
 

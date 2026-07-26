@@ -81,10 +81,9 @@ function LifecycleSettings({ settings }) {
       <h3>Member pricing &amp; honeymoon</h3>
       <p className="sub">
         Each member type sees its own price between your buying price and the MRP —
-        <b> New Prime deepest, Renewal middle, Normal smallest</b> — and after their
-        order limit it rises gently to the settled level. 0% = the deepest price
-        (cost + minimum margin), 100% = MRP. Prices are fixed per tier (never random);
-        points &amp; scratch carry the surprises. No item ever sells below cost.
+        <b> New Prime deepest, Renewal middle, Normal smallest</b> — rising to the
+        settled level after their order limit. 0% = cost + minimum margin, 100% = MRP.
+        No item ever sells below cost.
       </p>
       <label className="preg-ev" style={{ marginBottom: 6 }}>
         <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
@@ -482,19 +481,15 @@ function CouponManager({ coupons, categories }) {
           {form.guaranteed ? (
             <>
               <b>Exact.</b> The customer always gets the full{" "}
-              {form.type === "percent" ? `${form.value || 0}%` : `₹${form.value || 0}`}, shown
-              as “{form.type === "percent" ? `${form.value || 0}% OFF` : `₹${form.value || 0} OFF`}”.
-              On a thin-margin cart (oil, dairy) that can cost you more than the
-              order earns, so you take the loss. Good for a welcome offer or an
-              apology credit you're happy to fund.
+              {form.type === "percent" ? `${form.value || 0}%` : `₹${form.value || 0}`}. On a
+              thin-margin cart that can exceed what the order earns, so you take the loss.
             </>
           ) : (
             <>
-              <b>Up to.</b> The discount never exceeds the margin on the customer's
-              cart, so you can't be sold below cost. On a thin-margin cart it comes
-              to less, so it's shown as “up to{" "}
-              {form.type === "percent" ? `${form.value || 0}%` : `₹${form.value || 0}`} off”
-              and the customer sees the exact amount for their own cart before paying.
+              <b>Up to.</b> The discount never exceeds the margin on the cart, so you
+              can't be sold below cost. Shown as “up to{" "}
+              {form.type === "percent" ? `${form.value || 0}%` : `₹${form.value || 0}`} off”, with
+              the exact amount visible before they pay.
             </>
           )}
         </p>

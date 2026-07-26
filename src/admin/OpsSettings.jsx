@@ -27,7 +27,7 @@ const GROUPS = [
   },
   {
     title: "Delivery partner payout",
-    note: "A base fare plus a per-km rate from the first metre (no free distance), floored at a minimum so a very short hop is still worth accepting — worked out to hold net pay roughly flat across every distance, around ₹107/hour after fuel. Paid the same whether the customer is Prime or not: Prime's free-delivery discount is funded from item margin, never taken out of the rider's pay.",
+    note: "Base fare plus per-km from the first metre, floored so a short hop is still worth taking. Holds pay near ₹107/hour at any distance. Prime's free delivery comes out of item margin, never the rider's pay.",
     fields: [
       { key: "rider_base", label: "Base fare (₹)" },
       { key: "rider_per_km", label: "₹ per km" },
@@ -46,7 +46,7 @@ const GROUPS = [
   },
   {
     title: "Delivery zones",
-    note: "A basket that qualifies for free delivery nearby often still loses money once it's ridden to the far edge of your radius, since the ride costs more the farther it goes. Beyond the far-zone distance, the higher threshold applies to everyone — Prime included.",
+    note: "A ride costs more the farther it goes, so beyond the far-zone distance a higher free-delivery bar applies to everyone, Prime included.",
     fields: [
       { key: "far_zone_km", label: "Far zone starts at (km)", step: "0.1" },
       { key: "free_delivery_far_above", label: "Free delivery above, in the far zone (₹)" },
@@ -54,7 +54,7 @@ const GROUPS = [
   },
   {
     title: "What unlocks free delivery",
-    note: "A ride is paid for by margin, not by turnover. An item counts toward the free-delivery bar only if it clears BOTH floors. The percentage floor catches big-ticket thin items (oil, atta, tobacco at ~6%). The rupee floor catches the opposite trap: a ₹10 biscuit at 15% scores better on percentage than a ₹500 item at 6%, but earns ₹1.50 — and twenty of them are the slowest cart to pick and the most expensive to ride. Raise the rupee floor and fewer carts get free delivery; lower it and thin carts start costing you money.",
+    note: "An item counts toward the free-delivery bar only if it clears both floors. Percent catches thin big-ticket items like oil and atta; rupees catches ₹10 items whose margin looks fine but earns ₹1.50.",
     fields: [
       { key: "free_delivery_min_margin_pct", label: "Minimum margin to count (%)", step: "0.5" },
       { key: "free_delivery_min_margin_rupees", label: "Minimum margin to count (₹ per unit)", step: "0.5" },
@@ -62,7 +62,7 @@ const GROUPS = [
   },
   {
     title: "Slot guarantee",
-    note: "Tops up a booked slot to an hourly minimum if a partner shows up but the shop is quiet — protects them from a bad hour, at the shop's cost. Only worth turning on once a slot reliably clears several orders an hour; check Dashboard for your current order rate before switching this on.",
+    note: "Tops up a booked slot to an hourly minimum if a partner shows up and the shop is quiet. Only worth turning on once slots reliably clear a few orders an hour.",
     bools: [
       { key: "slot_guarantee_enabled", label: "Guarantee a minimum hourly pay per slot" },
     ],

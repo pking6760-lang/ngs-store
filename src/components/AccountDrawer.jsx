@@ -253,8 +253,7 @@ function SkipSheet({ sub, onClose, onDone }) {
         </div>
         <div className="sub-body">
           <p className="skip-lead">
-            Skip the days you'll be away — you're not charged for them, and every
-            skipped day moves to the end, so you still get all {sub.daysTotal} deliveries you paid for.
+            Skipped days aren't charged and move to the end — you still get all {sub.daysTotal} deliveries.
           </p>
 
           <div className="sub-field-lbl">{tr("How many days away?")}</div>
