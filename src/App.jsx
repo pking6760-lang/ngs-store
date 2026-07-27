@@ -21,6 +21,8 @@ import PullToRefresh from "./components/PullToRefresh.jsx";
 import OfflineBanner from "./components/OfflineBanner.jsx";
 import ApkPrompt from "./components/ApkPrompt.jsx";
 import { fetchBuyAgain, saveCart, applyReferral } from "./lib/api.js";
+import SearchSuggest from "./components/SearchSuggest.jsx";
+import { rankProducts, didYouMean, rememberSearch } from "./lib/search.js";
 import { toast } from "./lib/toast.js";
 import { initCustomerPush } from "./lib/customerPush.js";
 import { initWebPush } from "./lib/webPush.js";
@@ -95,6 +97,7 @@ const banners = [
 export default function App() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("relevance");
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -285,19 +288,29 @@ export default function App() {
   }
 
   const searching = query.trim().length > 0;
+  // Products the customer has bought before — search puts those first, because
+  // in a grocery shop the thing you bought last week is usually the thing you
+  // are looking for now.
+  const boughtSet = useMemo(() => new Set(buyAgainIds), [buyAgainIds]);
   const searchResults = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return [];
-    const cat = categories.find((c) => c.name.toLowerCase().includes(q));
-    const matched = products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        // Tags: Hindi/Hinglish/alternate names ("sarson tel", "doodh", "biskut")
-        (p.tags || []).some((t) => t.includes(q) || q.includes(t)) ||
-        (cat && p.category === cat.id)
-    );
-    return sortProducts(matched, sort);
-  }, [query, products, categories, sort]);
+    // A category name still counts as a match, so "dairy" lists the aisle.
+    const cat = categories.find((c) => c.name.toLowerCase() === q.toLowerCase());
+    const ranked = rankProducts(products, q, { bought: boughtSet });
+    const byCat = cat ? products.filter((p) => p.category === cat.id && !ranked.includes(p)) : [];
+    const all = ranked.concat(byCat);
+    // Relevance is the default. Any other sort is the shopper's explicit choice,
+    // so it wins — ranking must not quietly override what they picked.
+    return sort && sort !== "relevance" ? sortProducts(all, sort) : all;
+  }, [query, products, categories, sort, boughtSet]);
+
+  // Offered only when nothing was found, and only when a real product word is
+  // one letter away from what was typed.
+  const suggestion = useMemo(
+    () => (searching && searchResults.length === 0 ? didYouMean(products, query) : null),
+    [searching, searchResults.length, products, query]
+  );
 
   const cartValue = useMemo(() => {
     return Object.entries(items).reduce((sum, [id, qty]) => {
@@ -323,13 +336,27 @@ export default function App() {
       />
       <Header
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={(v) => { setQuery(v); setSuggestOpen(true); }}
+        onSearchFocus={() => setSuggestOpen(true)}
+        onSearchSubmit={(v) => { rememberSearch(v); setSuggestOpen(false); }}
         onCartClick={() => setCartOpen(true)}
         onLogoClick={goHome}
         onAccountClick={handleAccountClick}
         onBellClick={handleBellClick}
         onWalletClick={openWallet}
         onAddressClick={openAddress}
+        searchSlot={suggestOpen && (
+          <SearchSuggest
+            query={query}
+            products={products}
+            categories={categories}
+            bought={boughtSet}
+            onPick={(p) => { rememberSearch(p.name); setQuery(p.name); setSuggestOpen(false); }}
+            onSearch={(q) => { rememberSearch(q); setQuery(q); setSuggestOpen(false); }}
+            onCategory={(c) => { setQuery(""); setSuggestOpen(false); setActiveCategory(c); }}
+            onClose={() => setSuggestOpen(false)}
+          />
+        )}
       />
 
       {!settings.storeOpen && !settings.__stale && (
@@ -356,16 +383,24 @@ export default function App() {
           <section className="section">
             <h2 className="section-title">
               {searchResults.length > 0
-                ? `Results for "${query}"`
-                : `No results for "${query}"`}
+                ? `Showing results for “${query.trim()}”`
+                : `No results for “${query.trim()}”`}
             </h2>
             {searchResults.length === 0 && (
               <p className="empty-search">
-                Try searching for milk, bread, chips, or eggs.
+                {suggestion ? (
+                  <>Did you mean{" "}
+                    <button type="button" className="dym" onClick={() => setQuery(suggestion)}>
+                      {suggestion}
+                    </button>?
+                  </>
+                ) : "We don't have this yet. Try milk, bread, biscuit or oil."}
               </p>
             )}
             {searchResults.length > 1 && (
-              <SortBar sort={sort} onChange={setSort} />
+              /* In a search, the default order IS the best match — saying
+                 "Popular" there would describe the wrong thing. */
+              <SortBar sort={sort} onChange={setSort} firstLabel="Best match" />
             )}
             <div className="product-grid">
               {searchResults.map((p) => (
@@ -636,7 +671,7 @@ const SORTS = [
   { id: "discount", label: "Discount" },
 ];
 
-function SortBar({ sort, onChange }) {
+function SortBar({ sort, onChange, firstLabel }) {
   return (
     <div className="sort-bar">
       <span className="sort-label">Sort</span>
@@ -646,7 +681,7 @@ function SortBar({ sort, onChange }) {
           className={`sort-chip ${sort === s.id ? "active" : ""}`}
           onClick={() => onChange(s.id)}
         >
-          {s.label}
+          {s.id === "relevance" && firstLabel ? firstLabel : s.label}
         </button>
       ))}
     </div>

@@ -38,6 +38,9 @@ export default function Header({
   onBellClick,
   onWalletClick,
   onAddressClick,
+  onSearchFocus,
+  onSearchSubmit,
+  searchSlot,
 }) {
   const { totalCount } = useCart();
   const { user, isLoggedIn } = useAuth();
@@ -117,9 +120,23 @@ export default function Header({
               type="text"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
+              onFocus={onSearchFocus}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); onSearchSubmit?.(query); }
+                                  if (e.key === "Escape") onQueryChange(""); }}
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
               placeholder={t('Search "milk", "bread", "atta"...')}
             />
+            {query && (
+              <button type="button" className="search-clear" aria-label="Clear search"
+                onClick={() => onQueryChange("")}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            )}
           </div>
+          {searchSlot}
         </div>
       </div>
     </>

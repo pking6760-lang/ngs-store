@@ -5130,3 +5130,89 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 /* Free-delivery flag on the cart's attach suggestion. */
 .addons-free { margin-left: 8px; font-size: 10px; font-weight: 900; letter-spacing: .04em;
   padding: 3px 7px; border-radius: 999px; background: #E7F7EF; color: #0F7A50; }
+
+/* ═══ Search suggestions ═══════════════════════════════════════════════════
+   The panel that answers "is this what you meant?" while someone types. Our
+   own look, not a copy of anyone's: the emerald accent, the same 14px radius
+   as the rest of the app, and a quiet card rather than a full-bleed takeover —
+   the shop behind it stays visible, so it never feels like a different screen. */
+.header-searchrow { position: relative; }
+
+.search-clear {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; margin-left: 4px; border: none; border-radius: 50%;
+  background: #e3e7ee; color: #56606d; cursor: pointer; flex: 0 0 auto;
+}
+.search-clear:active { background: #d5dae3; }
+
+.sgst {
+  position: absolute; left: 16px; right: 16px; top: calc(100% - 4px); z-index: 60;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); overflow: hidden;
+  max-height: min(62vh, 460px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.sgst-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px 6px; font-size: 11px; font-weight: 800; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--muted);
+}
+.sgst-head button {
+  border: none; background: none; padding: 0; font-size: 11px; font-weight: 800;
+  letter-spacing: .04em; color: var(--green); cursor: pointer;
+}
+.sgst-row {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 9px 14px; border: none; background: none; text-align: left; cursor: pointer;
+  border-top: 1px solid #f2f4f8;
+}
+.sgst-row:first-child { border-top: none; }
+.sgst-row:active { background: var(--green-tint); }
+.sgst-thumb {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px; overflow: hidden;
+  background: var(--bg-soft); display: flex; align-items: center; justify-content: center;
+}
+.sgst-ic {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--bg-soft);
+  display: flex; align-items: center; justify-content: center; color: var(--muted);
+}
+.sgst-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+/* The typed part solid, the rest lighter — the eye sees instantly why this row
+   is here, which is the whole job of a suggestion. */
+.sgst-name {
+  font-size: 13.5px; color: var(--muted); line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sgst-name b { font-weight: 800; color: var(--ink); }
+.sgst-sub { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.sgst-tag {
+  font-style: normal; font-weight: 800; font-size: 10px; letter-spacing: .03em;
+  color: var(--green); background: var(--green-tint); border-radius: 999px; padding: 2px 7px;
+}
+.sgst-tag.out { color: #98461f; background: #fdf0e7; }
+.sgst-price {
+  flex: 0 0 auto; font-size: 13.5px; font-weight: 800; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.sgst-plain .sgst-txt { font-size: 14px; font-weight: 700; color: var(--ink); }
+.sgst-count { flex: 0 0 auto; font-size: 11.5px; color: var(--muted); }
+.sgst-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 2px 14px 12px; }
+.sgst-chip {
+  display: inline-flex; align-items: center; gap: 7px; max-width: 100%;
+  border: 1px solid var(--line); border-radius: 999px; background: #fff;
+  padding: 5px 12px 5px 5px; font-size: 12.5px; font-weight: 700; color: var(--ink);
+  cursor: pointer;
+}
+.sgst-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+.sgst-chip:active { background: var(--green-tint); border-color: var(--green); }
+.sgst-all {
+  display: block; width: 100%; padding: 12px 14px; border: none; border-top: 1px solid var(--line);
+  background: var(--bg-soft); font-size: 13px; font-weight: 800; color: var(--green);
+  text-align: left; cursor: pointer;
+}
+.sgst-all:active { background: var(--green-tint); }
+
+/* "Did you mean" — one tap to the corrected search. */
+.dym {
+  border: none; background: none; padding: 0; font: inherit; font-weight: 800;
+  color: var(--green); text-decoration: underline; cursor: pointer;
+}
