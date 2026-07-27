@@ -126,6 +126,10 @@ export default function ProductsAdmin() {
           // Margin is the number the owner actually needs and the old table
           // didn't show it at all. Banded, because 3% and 30% are different jobs.
           const band = !knowCost ? "none" : marg < 0 ? "loss" : margPct < 6 ? "thin" : margPct < 12 ? "ok" : "good";
+          // A MAGNET brings people in but can't fund a delivery — it fails on
+          // rupees OR on percentage. An EARNER clears both. Same rule the attach
+          // engine uses server-side, so the two never disagree.
+          const isMagnet = knowCost && (marg < 5 || margPct < 8);
           const isCombo = (p.comboItems || []).length > 0;
           return (
             <button type="button" className="prodcard" key={p.id} onClick={() => setEditing(p)}>
@@ -134,6 +138,7 @@ export default function ProductsAdmin() {
                 <div className="prodcard-name">
                   {p.name}
                   {isCombo && <span className="ptag combo">Pack</span>}
+                  {isMagnet && <span className="ptag magnet">Magnet</span>}
                   {p.inStock === false && <span className="ptag out">Out of stock</span>}
                 </div>
                 <div className="prodcard-meta">

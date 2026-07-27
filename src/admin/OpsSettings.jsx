@@ -61,6 +61,14 @@ const GROUPS = [
     ],
   },
   {
+    title: "Magnets vs earners",
+    note: "Milk, ₹10 biscuits and oil bring people in but can't pay for a delivery — they're magnets, not profit. An EARNER has to clear BOTH numbers: enough rupees to matter and enough percentage to be worth selling. Oil passes on rupees (₹10) and fails on percentage (5%); a ₹10 biscuit does the opposite. The cart suggests an earner whenever a basket is all magnets.",
+    fields: [
+      { key: "magnet_margin_rupees", label: "An earner makes at least (₹/unit)", step: "0.5" },
+      { key: "magnet_margin_pct", label: "…and at least this margin (%)", step: "0.5" },
+    ],
+  },
+  {
     title: "Slot guarantee",
     note: "Tops up a booked slot to an hourly minimum if a partner shows up and the shop is quiet. Only worth turning on once slots reliably clear a few orders an hour.",
     bools: [

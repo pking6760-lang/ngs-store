@@ -1606,7 +1606,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
             </div>
 
-            <AddonSuggestions lines={lines} onAdd={add} user={user} rewardsCfg={settings.rewards} />
+            <AttachSuggestion lines={lines} distanceKm={feeDistKm} onAdd={add}
+              user={user} rewardsCfg={settings.rewards} />
 
             {canJoinPrime && (
               <PrimeAddon price={memPrice} mrp={memMrp} checked={addMembership}
@@ -1785,6 +1786,54 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
 // "Add something extra" — high-margin add-ons the customer can tap into the cart
 // right before checkout. Ranked by our margin server-side (cost stays private).
+// What to add to this cart. The server picks it, because choosing well needs
+// buying costs — which items are magnets (milk, ₹10 biscuits, oil: they bring
+// people in but can't pay for the trip) and which are earners that can.
+//
+// It also says how hard to push. Suggesting costs nothing; free delivery costs
+// ₹20, so that line only appears when taking two of these genuinely leaves the
+// shop better off than charging the fee. Silence when there's nothing to say.
+function AttachSuggestion({ lines, distanceKm, onAdd, user, rewardsCfg }) {
+  const [sug, setSug] = useState(null);
+  const key = JSON.stringify([lines.map((l) => [l.product.id, l.qty]).sort(), Number(distanceKm) || 0]);
+  useEffect(() => {
+    const items = lines.map((l) => ({ id: l.product.id, qty: l.qty }));
+    if (!items.length) { setSug(null); return; }
+    let alive = true;
+    const t = setTimeout(() => {
+      api.suggestAttach(items, distanceKm, 3)
+        .then((r) => { if (alive) setSug(r); })
+        .catch(() => {});
+    }, 300);
+    return () => { alive = false; clearTimeout(t); };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const items = sug?.items || [];
+  if (!items.length) return null;
+  const headline = sug.unlocksFree
+    ? "Add any two — delivery's on us"
+    : sug.magnetOnly ? "Goes well with this" : "You might also want";
+
+  return (
+    <div className="addons">
+      <div className="addons-head">
+        {tr(headline)}
+        {sug.unlocksFree && <span className="addons-free">FREE DELIVERY</span>}
+      </div>
+      <div className="addons-row">
+        {items.map((p) => (
+          <div className="addon-card" key={p.id}>
+            <ProductThumb image={p.image} name={p.name} size={56} radius={10} />
+            <div className="addon-name">{p.name}</div>
+            <div className="addon-price">₹{Math.round(p.price)}</div>
+            <button className="addon-add" onClick={() => onAdd(p.id)}>{tr("ADD")}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AddonSuggestions({ lines, onAdd, user, rewardsCfg }) {
   const [items, setItems] = useState([]);
   const ids = lines.map((l) => l.product.id).sort().join(",");

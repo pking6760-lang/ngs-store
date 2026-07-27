@@ -1923,3 +1923,21 @@ export async function quoteDelivery(items, distanceKm = 0, isMember = false) {
   if (error) return null;
   return data || null;
 }
+
+// What to attach to this cart, and how hard to push for it.
+//
+// The shop's money is made by getting an EARNER into a cart that's all magnets
+// (milk, ₹10 biscuits, oil) — those bring people in but can't pay for the trip.
+// The server decides, because it needs buying costs to know which is which, and
+// those never reach the client. Returns null when there's nothing worth saying.
+export async function suggestAttach(items, distanceKm = 0, limit = 3) {
+  const payload = (items || [])
+    .filter((i) => i && i.id && i.qty > 0)
+    .map((i) => ({ id: i.id, qty: i.qty }));
+  if (!payload.length) return null;
+  const { data, error } = await must().rpc("suggest_attach", {
+    p_items: payload, p_distance_km: Number(distanceKm) || 0, p_limit: limit,
+  });
+  if (error) return null;
+  return data || null;
+}

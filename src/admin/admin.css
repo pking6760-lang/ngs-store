@@ -3520,3 +3520,4 @@ html, body { touch-action: manipulation; }
 .margin-read.thin strong, .margin-read.thin .margin-pct { color: #8A5A00; }
 .margin-read.ok { background: #EEF2FF; border-color: #ccd9f2; }
 .margin-read.ok strong, .margin-read.ok .margin-pct { color: #3B5BDB; }
+.ptag.magnet { background: #FEF3C7; color: #92610A; }
