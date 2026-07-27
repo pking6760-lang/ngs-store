@@ -1,30 +1,28 @@
 import { useMemo, useState, useEffect } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
-import { useCustomers, useOrders, useUserNotifications, useSettings, useAdminProducts } from "../lib/hooks.js";
+import { useCustomers, useUserNotifications, useSettings, useAdminProducts } from "../lib/hooks.js";
 import { sendNotification } from "../lib/actions.js";
-import { getOpsConfigRaw, fetchCustomerBalance, adminCreditWallet, adminCustomerWalletHistory } from "../lib/api.js";
+import { getOpsConfigRaw, fetchCustomerBalance, adminCreditWallet, adminCustomerWalletHistory, fetchCustomerTotals, fetchCustomerOrders } from "../lib/api.js";
 import { toast } from "../lib/toast.js";
 import { riderPay as payoutRiderPay, pickerPay as payoutPickerPay, lineUnitCounts } from "../lib/payout.js";
 import AdminPortal from "./AdminPortal.jsx";
 
 export default function CustomersAdmin({ initialCustomerId = null }) {
   const customers = useCustomers();
-  const orders = useOrders();
   const [selectedId, setSelectedId] = useState(initialCustomerId);
+  // Lifetime counts come from the database, not from adding up an array of every
+  // order ever placed — that array stops being downloadable long before the
+  // shop stops growing.
+  const [totals, setTotals] = useState({});
+  useEffect(() => { fetchCustomerTotals().then(setTotals).catch(() => {}); }, []);
   // Deep-link: opening Customers with a target (e.g. tapped from an order) jumps
   // straight into that customer's profile.
   useEffect(() => { if (initialCustomerId) setSelectedId(initialCustomerId); }, [initialCustomerId]);
   useBackGuard(!!selectedId, () => setSelectedId(null));
 
   // Quick per-customer stats for the list.
-  const statsFor = (userId) => {
-    const theirs = orders.filter(
-      (o) => o.userId === userId && o.status !== "Cancelled"
-    );
-    const spend = theirs.reduce((s, o) => s + (o.total || 0), 0);
-    return { orders: theirs.length, spend };
-  };
+  const statsFor = (userId) => totals[userId] || { orders: 0, spend: 0 };
 
   const selected = customers.find((c) => c.id === selectedId) || null;
   const list = useShowMore(customers, 20);
@@ -78,7 +76,6 @@ export default function CustomersAdmin({ initialCustomerId = null }) {
         <AdminPortal>
           <CustomerDetail
             customer={selected}
-            orders={orders.filter((o) => o.userId === selected.id)}
             onClose={() => setSelectedId(null)}
           />
         </AdminPortal>
@@ -137,8 +134,17 @@ function WalletCredit({ customerId }) {
   );
 }
 
-function CustomerDetail({ customer, orders, onClose }) {
+function CustomerDetail({ customer, onClose }) {
   const { notes } = useUserNotifications(customer.id);
+  // This one customer's full history, fetched for this screen. The lifetime
+  // profit below has to see every order they ever placed, and the shop-floor
+  // list deliberately only carries recent ones.
+  const [orders, setOrders] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    fetchCustomerOrders(customer.id).then((o) => { if (alive) setOrders(o); }).catch(() => {});
+    return () => { alive = false; };
+  }, [customer.id]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sent, setSent] = useState(false);

@@ -476,14 +476,27 @@ export async function walletBalance() {
   if (error) throw error;
   return Number(data) || 0;
 }
+// Balance AND recent history in one go.
+//
+// The balance comes from the server, deliberately. The screen used to add up
+// every ledger row on the phone, which meant the history could never be capped
+// without the balance going wrong — and an uncapped fetch of a years-old wallet
+// is exactly the kind of thing that gets slower every month. The server sums the
+// whole ledger; the phone only draws the recent part of it.
 export async function fetchWalletLedger() {
-  const { data, error } = await must()
-    .from("customer_wallet").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data || []).map((r) => ({
-    id: r.id, amount: Number(r.amount), kind: r.kind, note: r.note,
-    orderId: r.order_id, at: r.created_at,
-  }));
+  const [balance, res] = await Promise.all([
+    walletBalance(),
+    must().from("customer_wallet").select("*")
+      .order("created_at", { ascending: false }).limit(200),
+  ]);
+  if (res.error) throw res.error;
+  return {
+    balance,
+    ledger: (res.data || []).map((r) => ({
+      id: r.id, amount: Number(r.amount), kind: r.kind, note: r.note,
+      orderId: r.order_id, at: r.created_at,
+    })),
+  };
 }
 // Admin: refund an order to the customer's NGS wallet.
 export async function adminRefundToWallet(orderDbId, amount, note) {
@@ -657,7 +670,11 @@ export async function fetchMyOrders() {
     // Subscription advance payments are not delivery orders (the daily deliveries
     // they create show normally).
     .eq("is_subscription", false)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    // A customer of two years has hundreds of orders and the screen shows the
+    // recent ones. Without a cap this fetch grows for life, on a phone, every
+    // time the app opens.
+    .limit(100);
   if (error) throw error;
   return (data || []).map(mapOrder);
 }
@@ -743,7 +760,9 @@ export async function redeemPoints(points) {
 
 export async function fetchMyNotifications() {
   const { data, error } = await must()
-    .from("notifications").select("*").order("created_at", { ascending: false });
+    .from("notifications").select("*").order("created_at", { ascending: false })
+    // The bell shows recent messages, not a lifetime archive.
+    .limit(60);
   if (error) throw error;
   // Map to the app shape (createdAt) so timestamps render in the inbox.
   return (data || []).map((n) => ({
@@ -1687,7 +1706,19 @@ export async function updateSettings(patch) {
 
 /* ─── Admin: orders ─────────────────────────────────────────────────────── */
 
-export async function fetchAllOrders() {
+// The shop-floor order list: everything still moving, plus recent history.
+//
+// It used to fetch every order ever placed, with its line items, every five
+// seconds. At 70 orders that's nothing; at 70,000 it's tens of megabytes a
+// minute, forever, and the phone has to parse all of it. The screens that use
+// this list show today's work and recent orders, so that is what it returns.
+// Anything that needs a customer's whole history asks for that customer
+// (fetchCustomerOrders) and anything that needs totals asks the database
+// (fetchCustomerTotals) instead of adding up an array of everything.
+const ORDER_WINDOW_DAYS = 45;
+const ORDER_WINDOW_MAX = 2000;
+export async function fetchAllOrders({ days = ORDER_WINDOW_DAYS, limit = ORDER_WINDOW_MAX } = {}) {
+  const since = new Date(Date.now() - days * 86400000).toISOString();
   const { data, error } = await must()
     // Pull the customer's searchable code (customer_code) alongside the order so
     // the admin can look them up from feedback / order lists.
@@ -1700,9 +1731,38 @@ export async function fetchAllOrders() {
     // them out of the ops list (they're payments, not deliveries).
     .eq("is_membership", false)
     .eq("is_topup", false)
+    // An order older than the window that is somehow still open is still work,
+    // so it stays in the list however old it is.
+    .or(`created_at.gte.${since},status.not.in.("Delivered","Cancelled")`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []).map(mapOrder);
+}
+
+// One customer's complete history, for their profile screen. Scoped by the
+// server, so it stays one customer's worth of rows no matter how big the shop
+// gets. Admin-only by RLS.
+export async function fetchCustomerOrders(userId) {
+  if (!userId) return [];
+  const { data, error } = await must()
+    .from("orders").select("*, order_items(*)")
+    .eq("user_id", userId)
+    .neq("status", "Awaiting payment")
+    .neq("status", "Payment failed")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(mapOrder);
+}
+
+// Lifetime orders and spend for every customer, counted by the database in one
+// indexed pass instead of by shipping the whole order history to the phone.
+export async function fetchCustomerTotals() {
+  const { data, error } = await must().rpc("admin_customer_totals");
+  if (error) throw error;
+  const m = {};
+  (data || []).forEach((r) => { m[r.user_id] = { orders: r.orders, spend: Number(r.spend) || 0 }; });
+  return m;
 }
 
 export async function updateOrderById(dbId, patch) {
@@ -1907,20 +1967,93 @@ export function pingLocal(table) {
     window.dispatchEvent(new CustomEvent(LOCAL_CHANGE, { detail: { table } }));
 }
 
+// Same-device only: refresh right after a write made in this app, with no
+// realtime subscription at all. For tables that are deliberately not published
+// (an admin screen editing its own list, say) — the poll covers other devices.
+export function subscribeLocal(table, cb) {
+  if (typeof window === "undefined") return () => {};
+  const onLocal = (e) => { if (!e?.detail || e.detail.table === table) cb(); };
+  window.addEventListener(LOCAL_CHANGE, onLocal);
+  return () => window.removeEventListener(LOCAL_CHANGE, onLocal);
+}
+
 let channelSeq = 0;
-export function subscribeTable(table, cb) {
+// `filter` is a PostgREST match string like `user_id=eq.<uuid>`. Pass it for
+// anything per-customer: the server then only sends that customer their own
+// rows. Without it every phone in the city wakes up each time anyone anywhere
+// places an order — one write costing as many pushes as there are users online.
+export function subscribeTable(table, cb, filter) {
   if (!supabase) return () => {};
   // Local (same-device) updates.
   const onLocal = (e) => { if (!e?.detail || e.detail.table === table) cb(); };
   if (typeof window !== "undefined") window.addEventListener(LOCAL_CHANGE, onLocal);
   // Cross-device updates via Realtime. Unique channel name per subscription.
+  const opts = { event: "*", schema: "public", table };
+  if (filter) opts.filter = filter;
   const ch = supabase
     .channel(`rt-${table}-${++channelSeq}`)
-    .on("postgres_changes", { event: "*", schema: "public", table }, cb)
+    .on("postgres_changes", opts, cb)
     .subscribe();
   return () => {
     if (typeof window !== "undefined") window.removeEventListener(LOCAL_CHANGE, onLocal);
     supabase.removeChannel(ch);
+  };
+}
+
+/* ─── Catalogue change signal ────────────────────────────────────────────
+   The catalogue, categories, settings and coupons are the same for everyone and
+   change rarely, so nobody needs row-by-row news about them — they need to know
+   THAT something changed. catalog_state is one row of counters bumped once per
+   changing statement (see migration-scale-realtime.sql).
+
+   One shared channel for the whole app, not one per hook: the repricer's ten
+   statements arrive as ten tiny rows, and each screen re-reads only the list it
+   actually shows, once. Before this, that same run made every open app download
+   the full 76 KB catalogue 118 times over. */
+let catalogChannel = null;
+let catalogSeen = null;
+const catalogSubs = new Set();
+
+function notifyCatalog(row) {
+  const prev = catalogSeen;
+  catalogSeen = row;
+  if (!prev) return; // first read is the baseline, not a change
+  catalogSubs.forEach((s) => {
+    if (s.keys.some((k) => row[k] !== prev[k])) s.cb();
+  });
+}
+
+export async function fetchCatalogState() {
+  if (!supabase) return null;
+  const { data } = await supabase.from("catalog_state").select("*").eq("id", 1).maybeSingle();
+  return data || null;
+}
+
+export function subscribeCatalog(keys, cb) {
+  if (!supabase) return () => {};
+  const sub = { keys, cb };
+  catalogSubs.add(sub);
+  // Same-device writes still bypass the round trip.
+  const onLocal = () => cb();
+  if (typeof window !== "undefined") window.addEventListener(LOCAL_CHANGE, onLocal);
+
+  if (!catalogChannel) {
+    fetchCatalogState().then((row) => { if (row && !catalogSeen) catalogSeen = row; });
+    catalogChannel = supabase
+      .channel("rt-catalog-state")
+      .on("postgres_changes",
+          { event: "UPDATE", schema: "public", table: "catalog_state" },
+          (payload) => notifyCatalog(payload.new))
+      .subscribe();
+  }
+  return () => {
+    catalogSubs.delete(sub);
+    if (typeof window !== "undefined") window.removeEventListener(LOCAL_CHANGE, onLocal);
+    if (catalogSubs.size === 0 && catalogChannel) {
+      supabase.removeChannel(catalogChannel);
+      catalogChannel = null;
+      catalogSeen = null;
+    }
   };
 }
 

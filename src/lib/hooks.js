@@ -45,26 +45,53 @@ function writeCache(key, data) {
 function markStale(v) {
   return v && typeof v === "object" && !Array.isArray(v) ? { ...v, __stale: true } : v;
 }
-function useBackend(fetcher, tables, initial, pollMs = 30000, cacheKey = null) {
+// Collapse a burst of change events into ONE fetch. Realtime delivers a row at
+// a time, so a single statement that touches many rows used to fire a full
+// re-fetch per row — the repricer alone did that 118 times in a row, to every
+// open app at once. Nothing is lost by waiting a moment: the fetch that runs
+// still returns the final state.
+function coalesce(fn, ms = 400) {
+  let t = null;
+  const run = () => { t = null; fn(); };
+  const wrapped = () => { if (t) clearTimeout(t); t = setTimeout(run, ms); };
+  wrapped.cancel = () => { if (t) clearTimeout(t); t = null; };
+  return wrapped;
+}
+
+// `source` says how this data learns it has changed:
+//   ["orders"]                 row-level realtime — for tables a screen truly
+//                              needs live, and only a handful of staff devices
+//   { catalog: ["products_v"] } the shop-wide change signal: one small event for
+//                              the whole shop instead of one per row per user.
+//                              The right default for anything everyone shares.
+//   { local: ["profiles"] }    same-device refresh only, plus the poll. For
+//                              tables deliberately left unpublished.
+function useBackend(fetcher, source, initial, pollMs = 30000, cacheKey = null) {
   const [data, setData] = useState(() => markStale(readCache(cacheKey, initial)));
   useEffect(() => {
     let alive = true;
     const load = () =>
       fetcher().then((d) => { if (alive) { setData(d); writeCache(cacheKey, d); } }).catch(() => {});
+    const reload = coalesce(load);
     load();
     // Live updates: same-device bus + cross-device Realtime.
-    const unsubs = tables.map((t) => api.subscribeTable(t, load));
+    const unsubs = Array.isArray(source)
+      ? source.map((t) => api.subscribeTable(t, reload))
+      : source.catalog
+        ? [api.subscribeCatalog(source.catalog, reload)]
+        : source.local.map((t) => api.subscribeLocal(t, reload));
     // Safety net so data never gets stuck stale even if Realtime is off:
     // refetch when the tab is refocused/made visible, and on a light timer.
-    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    const onVisible = () => { if (document.visibilityState === "visible") reload(); };
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", load);
+    window.addEventListener("focus", reload);
     const poll = setInterval(load, pollMs);
     return () => {
       alive = false;
+      reload.cancel();
       unsubs.forEach((u) => u && u());
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", load);
+      window.removeEventListener("focus", reload);
       clearInterval(poll);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -72,7 +99,7 @@ function useBackend(fetcher, tables, initial, pollMs = 30000, cacheKey = null) {
 }
 
 export function useProducts() {
-  if (BACKEND) return useBackend(api.fetchProducts, ["products"], [], 30000, "ngs_cache_products");
+  if (BACKEND) return useBackend(api.fetchProducts, { catalog: ["products_v"] }, [], 600000, "ngs_cache_products");
   const [products, setProducts] = useState(getProducts);
   useEffect(() => subscribe(() => setProducts(getProducts())), []);
   return products;
@@ -82,7 +109,7 @@ export function useProducts() {
 // (cost) merged in. Never use this in the customer app — it reads the admin
 // product_costs table.
 export function useAdminProducts() {
-  if (BACKEND) return useBackend(api.fetchAdminProducts, ["products"], []);
+  if (BACKEND) return useBackend(api.fetchAdminProducts, { catalog: ["products_v"] }, [], 120000);
   const [products, setProducts] = useState(getProducts);
   useEffect(() => subscribe(() => setProducts(getProducts())), []);
   return products;
@@ -92,6 +119,10 @@ export function useAdminProducts() {
 // user id so it RESETS on login/logout, live-updating via realtime + poll +
 // focus. On error it surfaces the message (no silent false-empty) and offers a
 // retry. `map` transforms the fetched rows into the shape a screen renders.
+// `table` may be "orders" or ["orders", "user_id"] — the second form subscribes
+// with a server-side filter on that column, so this customer is only told about
+// their own rows. Unfiltered, every customer is pushed every other customer's
+// order and re-fetches on each one.
 function useUserFetch(fetcher, table, userId, empty, map = (x) => x) {
   const [data, setData] = useState(empty);
   const [loading, setLoading] = useState(true);
@@ -106,16 +137,18 @@ function useUserFetch(fetcher, table, userId, empty, map = (x) => x) {
       fetcher()
         .then((d) => { if (alive) { setData(map(d)); setError(""); setLoading(false); } })
         .catch((e) => { if (alive) { setError(e?.message || "Couldn't load. Please retry."); setLoading(false); } });
+    const refresh = coalesce(load);
     load();
-    const onVisible = () => { if (document.visibilityState === "visible") load(); };
-    const u1 = api.subscribeTable(table, load);
+    const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    const [tbl, col] = Array.isArray(table) ? table : [table, null];
+    const u1 = api.subscribeTable(tbl, refresh, col ? `${col}=eq.${userId}` : undefined);
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", load);
-    const poll = setInterval(load, 30000);
+    window.addEventListener("focus", refresh);
+    const poll = setInterval(load, 60000);
     return () => {
-      alive = false; u1 && u1();
+      alive = false; u1 && u1(); refresh.cancel();
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", load);
+      window.removeEventListener("focus", refresh);
       clearInterval(poll);
     };
   }, [userId, tick]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,23 +166,26 @@ export function useWallet(userId) {
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data, loading, error, reload } = useUserFetch(
-    api.fetchWalletLedger, "customer_wallet", userId, empty,
-    (ledger) => ({ balance: ledger.reduce((s, e) => s + e.amount, 0), ledger })
+    api.fetchWalletLedger, ["customer_wallet", "user_id"], userId, empty
   );
   return { ...data, loading, error, reload };
 }
 
 export function useCategories() {
-  if (BACKEND) return useBackend(api.fetchCategories, ["categories"], [], 30000, "ngs_cache_categories");
+  if (BACKEND) return useBackend(api.fetchCategories, { catalog: ["categories_v"] }, [], 600000, "ngs_cache_categories");
   const [categories, setCategories] = useState(getCategories);
   useEffect(() => subscribe(() => setCategories(getCategories())), []);
   return categories;
 }
 
 export function useOrders() {
-  // Admin watches for incoming orders — poll fast (5s) as a fallback so a new
-  // order shows quickly even before Realtime pushes it.
-  if (BACKEND) return useBackend(api.fetchAllOrders, ["orders", "order_items"], [], 5000);
+  // The shop floor: a new order has to appear immediately, so this keeps its
+  // row-level subscription on orders and order_items. Only staff run this
+  // screen, so the fan-out is a handful of devices, not the whole customer base.
+  // The 5-second poll behind it is now 20: Realtime is the live path, and the
+  // poll is only the safety net for when it drops. Each run is a windowed list
+  // (see fetchAllOrders), not the whole history.
+  if (BACKEND) return useBackend(api.fetchAllOrders, ["orders", "order_items"], [], 20000);
   const [orders, setOrders] = useState(getOrders);
   useEffect(() => subscribe(() => setOrders(getOrders())), []);
   return orders;
@@ -170,14 +206,14 @@ export function useMyOrders(userId) {
     return { orders, loading: false, error: "", reload: () => {} };
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { data, loading, error, reload } = useUserFetch(api.fetchMyOrders, "orders", userId, []);
+  const { data, loading, error, reload } = useUserFetch(api.fetchMyOrders, ["orders", "user_id"], userId, []);
   return { orders: data, loading, error, reload };
 }
 
 export function useSettings() {
   // Start from the demo defaults so the UI has sensible values before the first
   // fetch resolves.
-  if (BACKEND) return useBackend(api.fetchSettings, ["settings"], getSettings(), 30000, "ngs_cache_settings");
+  if (BACKEND) return useBackend(api.fetchSettings, { catalog: ["settings_v"] }, getSettings(), 300000, "ngs_cache_settings");
   const [settings, setSettings] = useState(getSettings);
   useEffect(() => subscribe(() => setSettings(getSettings())), []);
   return settings;
@@ -186,25 +222,25 @@ export function useSettings() {
 // Festival theme the customer app should paint right now (null = default look).
 // Cached so a repeat open paints the festive skin instantly, revalidated live.
 export function useActiveTheme() {
-  if (BACKEND) return useBackend(api.fetchActiveTheme, ["customer_themes"], null, 60000, "ngs_cache_theme");
+  if (BACKEND) return useBackend(api.fetchActiveTheme, { catalog: ["themes_v"] }, null, 600000, "ngs_cache_theme");
   return null;
 }
 
 // Admin-side list of all saved themes.
 export function useThemes() {
-  if (BACKEND) return useBackend(api.fetchThemes, ["customer_themes"], []);
+  if (BACKEND) return useBackend(api.fetchThemes, { catalog: ["themes_v"] }, [], 120000);
   return [];
 }
 
 export function useCoupons() {
-  if (BACKEND) return useBackend(api.fetchCoupons, ["coupons"], []);
+  if (BACKEND) return useBackend(api.fetchCoupons, { catalog: ["coupons_v"] }, [], 300000);
   const [coupons, setCoupons] = useState(getCoupons);
   useEffect(() => subscribe(() => setCoupons(getCoupons())), []);
   return coupons;
 }
 
 export function useCustomers() {
-  if (BACKEND) return useBackend(api.fetchCustomers, ["profiles"], []);
+  if (BACKEND) return useBackend(api.fetchCustomers, { local: ["profiles"] }, [], 60000);
   const [users, setUsers] = useState(getUsers);
   useEffect(() => subscribe(() => setUsers(getUsers())), []);
   return users;
@@ -228,6 +264,6 @@ export function useUserNotifications(userId) {
     return { notes, loading: false, error: "", reload: () => {} };
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { data, loading, error, reload } = useUserFetch(api.fetchMyNotifications, "notifications", userId, []);
+  const { data, loading, error, reload } = useUserFetch(api.fetchMyNotifications, ["notifications", "user_id"], userId, []);
   return { notes: data, loading, error, reload };
 }
