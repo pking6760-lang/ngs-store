@@ -197,7 +197,7 @@ export default function AddToDeliverySheet({
                 <div className="sub-total-line"><span>{tr("Handling")}</span><span>₹0 · covered</span></div>
                 <div className="sub-total-row"><span>{tr("To pay")}</span><strong>₹{totalR}</strong></div>
                 {shortForFree > 0 && (
-                  <div className="sub-total-note">Add ₹{shortForFree} more of regular items to get free delivery.</div>
+                  <div className="sub-total-note">Add ₹{shortForFree} more of regular items to qualify for free delivery.</div>
                 )}
               </div>
             </div>

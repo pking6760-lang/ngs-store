@@ -54,7 +54,7 @@ const banners = [
     id: "b2",
     kicker: "No delivery fee",
     title: "Free delivery over ₹199",
-    subtitle: "On every daily-essentials order",
+    subtitle: "On most daily-essentials orders",
     icon: (<svg {...svgProps}><path d="M1 4h12v11H1zM13 8h4l4 4v3h-8" /><circle cx="5.5" cy="18" r="1.7" /><circle cx="16.5" cy="18" r="1.7" /></svg>),
     grad: "linear-gradient(135deg, #2f6fb0, #133a63)",
     fg: "#ffffff",

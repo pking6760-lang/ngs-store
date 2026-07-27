@@ -378,6 +378,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // total can't change under the customer. `quote` is null until it lands (and
   // if the network is down), in which case the value-only estimate below stands.
   const quote = useDeliveryQuote(lines, feeDistKm, isMember);
+  // How much MORE the customer must spend to clear the value bar. Zero once
+  // they're past it — being past it doesn't guarantee free delivery, so this
+  // must never be shown as "add ₹0 more".
+  const shortForFree = Math.max(0, freeDeliveryThreshold - qualifyingTotal);
   const cartCanFund = quote ? quote.affordable : true;
   const freePerk = isMember && !inFarZone && cartCanFund;
   let deliveryFee = itemTotal === 0 ? 0
@@ -1691,21 +1695,28 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <div className="free-progress-top">
                     {deliveryFee === 0 ? (
                       <span className="free-progress-done">Free delivery unlocked</span>
-                    ) : (
+                    ) : shortForFree > 0 ? (
                       <span>
-                        Add <strong>₹{Math.max(0, freeDeliveryThreshold - qualifyingTotal)}</strong> more for FREE delivery
+                        Add <strong>₹{shortForFree}</strong> more for FREE delivery
                       </span>
+                    ) : (
+                      <span>Free delivery doesn't apply to this basket</span>
                     )}
                   </div>
-                  <div className="free-progress-bar">
-                    <span
-                      style={{
-                        width: `${Math.min(100, Math.round((qualifyingTotal / freeDeliveryThreshold) * 100))}%`,
-                      }}
-                    />
-                  </div>
-                  {!cartCanFund && qualifyingTotal >= freeDeliveryThreshold && (
-                    <small className="free-hint-note">low-margin items alone don't earn free delivery</small>
+                  {/* Only show a progress bar when there IS progress to make. Past
+                      the bar but blocked on margin, a full green bar next to a
+                      delivery charge reads as a broken promise. */}
+                  {(deliveryFee === 0 || shortForFree > 0) && (
+                    <div className="free-progress-bar">
+                      <span
+                        style={{
+                          width: `${Math.min(100, Math.round((qualifyingTotal / freeDeliveryThreshold) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                  {deliveryFee > 0 && shortForFree === 0 && (
+                    <small className="free-hint-note">low-price staples on their own don't cover the delivery</small>
                   )}
                   {inFarZone && (
                     <small className="free-hint-note">you're in the far delivery zone, so the free-delivery bar is higher here</small>
@@ -1833,7 +1844,7 @@ function PrimeAddon({ price, mrp, checked, onToggle }) {
           Add <b>NGS Prime</b> to this order
           <span className="prime-addon-badge">FREE delivery</span>
         </span>
-        <span className="prime-addon-sub">Free delivery &amp; member deals for 30 days</span>
+        <span className="prime-addon-sub">Free delivery on most orders &amp; member deals for 30 days</span>
       </span>
       <span className="prime-addon-price">
         {mrp > price && <s>₹{mrp}</s>}
