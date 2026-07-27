@@ -102,94 +102,68 @@ export default function ProductsAdmin() {
             ...categories.map((c) => ({ value: c.id, label: c.name })),
           ]}
         />
-        <button className="ghost-btn" onClick={() => setManagingCats(true)}>
+        <button className="chip-btn" onClick={() => setManagingCats(true)}>
           Categories
         </button>
-        <button className="ghost-btn" onClick={() => setBulkTags(true)}>
+        <button className="chip-btn" onClick={() => setBulkTags(true)}>
           Bulk tags
         </button>
         <button
-          className="primary-btn"
+          className="chip-btn add"
           onClick={() =>
             setEditing({ ...EMPTY, category: categories[0]?.id || "" })
           }
         >
-          + Add product
+          + Add
         </button>
       </div>
 
-      <p className="products-hint">Tap a product to edit it.</p>
-
-      <section className="panel no-pad">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Category</th>
-              <th>Unit</th>
-              <th>Price</th>
-              <th>MRP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.shown.map((p) => (
-              <tr
-                key={p.id}
-                className="row-clickable"
-                onClick={() => setEditing(p)}
-              >
-                <td>
-                  <div className="cell-product">
-                    <ProductThumb
-                      image={p.image}
-                      name={p.name}
-                      category={p.category}
-                      size={40}
-                      radius={8}
-                    />
-                    <span className="cell-name">
-                      {p.name}
-                      {p.inStock === false && (
-                        <span className="stock-tag out">Out of stock</span>
-                      )}
-                      {p.freeDeliveryExempt && (
-                        <span className="stock-tag exempt">No free-del</span>
-                      )}
-                      <span className={`cell-barcode ${p.barcode ? "has" : "none"}`}>
-                        {p.barcode ? `${p.barcode}` : "no barcode"}
-                      </span>
-                    </span>
-                  </div>
-                </td>
-                <td>{catName(p.category)}</td>
-                <td>{p.unit}</td>
-                <td className="mono">₹{p.price}</td>
-                <td className="mono muted">₹{p.mrp}</td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={5} className="empty-cell">
-                  No products match your filters.
-                </td>
-              </tr>
-            )}
-            {list.more && (
-              <tr>
-                <td colSpan={5} style={{ padding: 0 }}>
-                  <button
-                    type="button"
-                    className="show-more-btn"
-                    onClick={list.toggle}
-                  >
-                    {list.label}
-                  </button>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
+      <div className="prodlist">
+        {list.shown.map((p) => {
+          const cost = Number(p.cost);
+          const knowCost = p.cost != null && Number.isFinite(cost) && p.price > 0;
+          const marg = knowCost ? p.price - cost : null;
+          const margPct = knowCost && p.price > 0 ? (marg / p.price) * 100 : 0;
+          // Margin is the number the owner actually needs and the old table
+          // didn't show it at all. Banded, because 3% and 30% are different jobs.
+          const band = !knowCost ? "none" : marg < 0 ? "loss" : margPct < 6 ? "thin" : margPct < 12 ? "ok" : "good";
+          const isCombo = (p.comboItems || []).length > 0;
+          return (
+            <button type="button" className="prodcard" key={p.id} onClick={() => setEditing(p)}>
+              <ProductThumb image={p.image} name={p.name} category={p.category} size={46} radius={10} />
+              <div className="prodcard-main">
+                <div className="prodcard-name">
+                  {p.name}
+                  {isCombo && <span className="ptag combo">Pack</span>}
+                  {p.inStock === false && <span className="ptag out">Out of stock</span>}
+                  {p.freeDeliveryExempt && <span className="ptag exempt">No free-del</span>}
+                </div>
+                <div className="prodcard-meta">
+                  {catName(p.category)}{p.unit ? ` · ${p.unit}` : ""}
+                  {p.barcode ? "" : " · no barcode"}
+                </div>
+              </div>
+              <div className="prodcard-right">
+                <div className="prodcard-price">
+                  ₹{p.price}
+                  {p.mrp > p.price && <s>₹{p.mrp}</s>}
+                </div>
+                <span className={`marg ${band}`}>
+                  {band === "none" ? "no cost" : `${marg < 0 ? "−" : ""}₹${fmtMoney(Math.abs(marg))} · ${margPct.toFixed(0)}%`}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p className="panel-empty">No products match your filters.</p>
+        )}
+        {list.more && (
+          <button type="button" className="show-more-btn" onClick={list.toggle}>
+            {list.label}
+          </button>
+        )}
+      </div>
 
       {editing && (
         <AdminPortal>
@@ -473,6 +447,113 @@ function BulkPacks({ tiers, manual, cost, price, onChange, onToggle }) {
   );
 }
 
+// Combo pack builder. A combo is a normal product with components; at checkout
+// the server expands it into those components, so the picker scans real
+// barcodes and stock comes off each part.
+//
+// The whole point of a combo is choosing the blended margin instead of taking
+// whatever the individual prices happen to give, so the numbers that decide
+// that are on screen while the price is being typed: what the parts cost you,
+// what they'd sell for separately, and what you actually keep. A combo priced
+// below what its parts cost is called out in red — building one by accident is
+// otherwise very easy, and it breaks the rule that nothing sells at a loss.
+function ComboBuilder({ items, products, price, onChange }) {
+  const rows = Array.isArray(items) ? items : [];
+  const byId = Object.fromEntries(products.map((p) => [p.id, p]));
+  const isCombo = rows.length > 0;
+
+  const partsCost = rows.reduce((s, r) => {
+    const p = byId[r.id];
+    const c = Number(p?.cost);
+    return s + (Number.isFinite(c) ? c * (Number(r.qty) || 0) : NaN);
+  }, 0);
+  const partsPrice = rows.reduce((s, r) => s + (Number(byId[r.id]?.price) || 0) * (Number(r.qty) || 0), 0);
+  const comboPrice = Number(price) || 0;
+  const knowCost = Number.isFinite(partsCost);
+  const margin = knowCost ? comboPrice - partsCost : null;
+  const marginPct = knowCost && comboPrice > 0 ? (margin / comboPrice) * 100 : 0;
+  const saves = partsPrice - comboPrice;
+
+  const setRow = (i, key, val) => onChange(rows.map((r, j) => (j === i ? { ...r, [key]: val } : r)));
+  const addable = products.filter((p) => !(p.comboItems || []).length && !rows.some((r) => r.id === p.id));
+
+  return (
+    <div className="field wide">
+      <span className="field-lbl">What's in the pack</span>
+
+      {!isCombo && (
+        <small className="field-note">
+          Add products below to turn this into a combo pack. Leave it empty for a
+          normal product.
+        </small>
+      )}
+
+      <div className="combo">
+        {rows.map((r, i) => {
+          const p = byId[r.id];
+          return (
+            <div className="combo-row" key={i}>
+              <div className="combo-pick">
+                <label>Item</label>
+                <Dropdown
+                  title="Choose a product"
+                  value={r.id}
+                  placeholder="Choose a product"
+                  onChange={(v) => setRow(i, "id", v)}
+                  options={[
+                    ...(p ? [{ value: p.id, label: p.name }] : []),
+                    ...addable.map((x) => ({ value: x.id, label: x.name })),
+                  ]}
+                />
+              </div>
+              <div className="combo-qty">
+                <label>Qty</label>
+                <input type="number" min="1" inputMode="numeric" value={r.qty ?? 1}
+                  onChange={(e) => setRow(i, "qty", e.target.value)} />
+              </div>
+              <div className="combo-read">
+                <strong>₹{fmtMoney((Number(p?.price) || 0) * (Number(r.qty) || 0))}</strong>
+                <small>on its own</small>
+              </div>
+              <button type="button" className="pack-x" title="Remove"
+                onClick={() => onChange(rows.filter((_, j) => j !== i))}>✕</button>
+            </div>
+          );
+        })}
+
+        <button type="button" className="pack-add"
+          onClick={() => onChange([...rows, { id: addable[0]?.id || "", qty: 1 }])}>
+          + Add an item
+        </button>
+
+        {isCombo && (
+          <div className={`combo-sum ${knowCost && margin < 0 ? "bad" : ""}`}>
+            <div><span>Parts cost you</span><strong>{knowCost ? `₹${fmtMoney(partsCost)}` : "—"}</strong></div>
+            <div><span>Sold separately</span><strong>₹{fmtMoney(partsPrice)}</strong></div>
+            <div><span>Pack price</span><strong>₹{fmtMoney(comboPrice)}</strong></div>
+            <div className="combo-sum-main">
+              <span>You keep</span>
+              <strong>
+                {!knowCost ? "add cost prices"
+                  : `${margin < 0 ? "–₹" : "₹"}${fmtMoney(Math.abs(margin))} · ${marginPct.toFixed(1)}%`}
+              </strong>
+            </div>
+            {knowCost && margin < 0 && (
+              <p className="combo-warn">This pack sells below what its parts cost you. Raise the pack price.</p>
+            )}
+            {saves > 0 && (
+              <p className="combo-note">Customer sees a ₹{fmtMoney(saves)} saving against buying separately.</p>
+            )}
+            {saves <= 0 && knowCost && margin >= 0 && (
+              <p className="combo-note">No saving vs buying separately — customers rarely take a pack that isn't cheaper.</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProductModal({ product, categories, products = [], onOpenExisting, onClose, onSave, onDelete }) {
   const isNew = !product.id;
 
@@ -493,6 +574,7 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
     });
   }
   const [form, setForm] = useState(product);
+  const [tab, setTab] = useState("basics");
   const [imgBusy, setImgBusy] = useState(false);
   const [imgError, setImgError] = useState("");
   const [scanBusy, setScanBusy] = useState(false);
@@ -681,6 +763,28 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
         </div>
 
         <div className="modal-body">
+          <div className="pform-tabs" role="tablist">
+            <button type="button" role="tab" aria-selected={tab === "basics"}
+              className={`pform-tab ${tab === "basics" ? "on" : ""}`}
+              onClick={() => setTab("basics")}>Basics</button>
+            <button type="button" role="tab" aria-selected={tab === "price"}
+              className={`pform-tab ${tab === "price" ? "on" : ""}`}
+              onClick={() => setTab("price")}>Price</button>
+            <button type="button" role="tab" aria-selected={tab === "packs"}
+              className={`pform-tab ${tab === "packs" ? "on" : ""}`}
+              onClick={() => setTab("packs")}>Packs</button>
+            <button type="button" role="tab" aria-selected={tab === "combo"}
+              className={`pform-tab ${tab === "combo" ? "on" : ""}`}
+              onClick={() => setTab("combo")}>Combo</button>
+            <button type="button" role="tab" aria-selected={tab === "stock"}
+              className={`pform-tab ${tab === "stock" ? "on" : ""}`}
+              onClick={() => setTab("stock")}>Stock</button>
+            <button type="button" role="tab" aria-selected={tab === "rules"}
+              className={`pform-tab ${tab === "rules" ? "on" : ""}`}
+              onClick={() => setTab("rules")}>Rules</button>
+          </div>
+
+          {tab === "basics" && (<>
           <div className="field wide scan-field">
             <button type="button" className="scan-btn" onClick={doScan} disabled={scanBusy}>
               {scanBusy ? "Opening camera…" : "Scan barcode to auto-fill"}
@@ -786,6 +890,48 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             />
           </label>
 
+          <div className="pform-sec"><h4>Photo</h4></div>
+
+          <label className="field wide">
+            <span>Product image</span>
+            <div className="image-uploader">
+              <ProductThumb
+                image={form.image}
+                name={form.name}
+                category={form.category}
+                size={64}
+                radius={10}
+              />
+              <div className="image-uploader-actions">
+                <label className="upload-btn">
+                  {imgBusy
+                    ? "Processing…"
+                    : form.image
+                    ? "Change photo"
+                    : "Upload photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={pickImage}
+                    hidden
+                  />
+                </label>
+                {form.image && (
+                  <button
+                    type="button"
+                    className="image-remove"
+                    onClick={() => update("image", "")}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            {imgError && <div className="auth-error">{imgError}</div>}
+          </label>
+          </>)}
+
+          {tab === "price" && (<>
           <div className="pform-sec"><h4>Price</h4></div>
 
           <label className="field">
@@ -828,7 +974,7 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
 
           <div className="field wide margin-box">
             {hasMargin ? (
-              <div className={`margin-read ${profit < 0 ? "loss" : ""}`}>
+              <div className={`margin-read ${profit < 0 ? "loss" : marginPct < 6 ? "thin" : marginPct < 12 ? "ok" : "good"}`}>
                 <span className="margin-lbl">Margin</span>
                 <strong>{profit < 0 ? "–₹" : "₹"}{fmtMoney(Math.abs(profit))}</strong>
                 <span className="margin-pct">{marginPct.toFixed(1)}%</span>
@@ -846,7 +992,9 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
               </div>
             )}
           </div>
+          </>)}
 
+          {tab === "packs" && (<>
           <div className="pform-sec"><h4>Pack sizes</h4></div>
 
           <BulkPacks
@@ -857,47 +1005,20 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             onChange={(t) => update("bulkTiers", t)}
             onToggle={(v) => update("manualBulk", v)}
           />
+          </>)}
 
-          <div className="pform-sec"><h4>Photo</h4></div>
+          {tab === "combo" && (<>
+          <div className="pform-sec"><h4>Combo pack</h4></div>
 
-          <label className="field wide">
-            <span>Product image</span>
-            <div className="image-uploader">
-              <ProductThumb
-                image={form.image}
-                name={form.name}
-                category={form.category}
-                size={64}
-                radius={10}
-              />
-              <div className="image-uploader-actions">
-                <label className="upload-btn">
-                  {imgBusy
-                    ? "Processing…"
-                    : form.image
-                    ? "Change photo"
-                    : "Upload photo"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={pickImage}
-                    hidden
-                  />
-                </label>
-                {form.image && (
-                  <button
-                    type="button"
-                    className="image-remove"
-                    onClick={() => update("image", "")}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-            {imgError && <div className="auth-error">{imgError}</div>}
-          </label>
+          <ComboBuilder
+            items={form.comboItems}
+            products={products.filter((p) => p.id !== form.id)}
+            price={form.price}
+            onChange={(v) => update("comboItems", v)}
+          />
+          </>)}
 
+          {tab === "stock" && (<>
           <div className="pform-sec"><h4>Stock</h4></div>
 
           <label className="field wide stock-field">
@@ -924,7 +1045,9 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
               placeholder="e.g. 20 — for low-stock alerts"
             />
           </label>
+          </>)}
 
+          {tab === "rules" && (<>
           <div className="pform-sec"><h4>Pricing rules</h4></div>
 
           <label className="field wide stock-field">
@@ -940,8 +1063,7 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
               </span>
             </button>
             <small className="field-note">
-              Turn OFF for ultra-low-margin items (milk, curd, bread) so their
-              value doesn't help unlock free delivery. Customers can still buy them.
+              Off for milk, curd, bread — still buyable, just doesn't count toward the free-delivery bar.
             </small>
           </label>
 
@@ -958,12 +1080,11 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
               </span>
             </button>
             <small className="field-note">
-              Turn ON for zero-margin staples. Everyone pays the normal price
-              (no member discount), and the item earns no points and no scratch
-              reward. Still fully buyable.
+              Off for zero-margin staples — normal price for everyone, no points or scratch reward.
             </small>
           </label>
 
+          </>)}
         </div>
 
         <div className="modal-foot">
@@ -1137,3 +1258,4 @@ ${list}`);
     </div>
   );
 }
+

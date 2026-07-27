@@ -1992,7 +1992,7 @@ body {
 .stock-toggle.on .stock-knob { background: var(--green); }
 .stock-toggle.on .stock-knob::after { transform: translateX(16px); }
 .stock-toggle.on .stock-label { color: var(--green-dark, #2B44A8); }
-.stock-toggle.off .stock-label { color: #c0392b; }
+.stock-toggle.off .stock-label { color: var(--a-sub, #6b7488); }
 .field-note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
 
 /* ─── Offers / coupons admin ─────────────────────────────── */
@@ -3440,3 +3440,83 @@ html, body { touch-action: manipulation; }
 .pack-add { align-self: flex-start; border: 1px dashed var(--a-line); background: #fff;
   border-radius: 10px; padding: 8px 14px; font-size: 12.5px; font-weight: 800;
   color: var(--a-primary); }
+
+/* Combo pack builder */
+.combo { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.combo-row { display: grid; grid-template-columns: 1fr 66px auto auto; gap: 8px; align-items: end;
+  padding: 9px 10px; border: 1px solid var(--a-line); border-radius: 12px; background: #fbfcff; }
+.combo-row label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+  text-transform: uppercase; color: var(--a-sub); margin-bottom: 3px; }
+.combo-row input { width: 100%; border: 1px solid var(--a-line); border-radius: 8px;
+  padding: 7px 8px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.combo-read { text-align: right; line-height: 1.2; }
+.combo-read strong { display: block; font-size: 14px; font-weight: 800; color: var(--a-ink);
+  font-variant-numeric: tabular-nums; }
+.combo-read small { font-size: 10.5px; color: var(--a-sub); }
+.combo-sum { margin-top: 4px; padding: 11px 12px; border-radius: 12px;
+  background: var(--a-tint); border: 1px solid #d8e0f7; }
+.combo-sum.bad { background: #FFF6F5; border-color: #F0B4AE; }
+.combo-sum > div { display: flex; justify-content: space-between; gap: 10px;
+  font-size: 12.5px; color: var(--a-sub); padding: 2px 0; }
+.combo-sum > div strong { color: var(--a-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.combo-sum-main { margin-top: 5px; padding-top: 7px !important; border-top: 1px solid #d8e0f7; }
+.combo-sum-main span { font-weight: 700; color: var(--a-ink) !important; }
+.combo-sum-main strong { font-size: 15px; font-weight: 900; }
+.combo-sum.bad .combo-sum-main strong { color: #A8322A; }
+.combo-warn { margin: 7px 0 0; font-size: 12px; font-weight: 700; color: #A8322A; }
+.combo-note { margin: 6px 0 0; font-size: 12px; color: var(--a-sub); }
+
+/* ═══ Products tab — redesigned ════════════════════════════════════════════
+   Was a 5-column table on a phone: scrolling across to read the price hid the
+   product name, so you couldn't tell which row you were looking at. Cards keep
+   name, price and margin on screen together. */
+.prodlist { display: flex; flex-direction: column; gap: 8px; }
+.prodcard { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  padding: 10px 12px; border: 1px solid var(--a-line); border-radius: 14px;
+  background: var(--a-surface); box-shadow: var(--a-shadow-sm); }
+.prodcard:active { background: #f6f8ff; }
+.prodcard-main { flex: 1; min-width: 0; }
+.prodcard-name { font-size: 14px; font-weight: 800; color: var(--a-ink); line-height: 1.3;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.prodcard-meta { margin-top: 2px; font-size: 11.5px; color: var(--a-sub); }
+.prodcard-right { flex: none; text-align: right; }
+.prodcard-price { font-size: 15px; font-weight: 900; color: var(--a-ink);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prodcard-price s { margin-left: 5px; font-size: 12px; font-weight: 600; color: var(--a-sub); }
+
+/* Margin, banded — the number that decides everything and the old table
+   never showed it. */
+.marg { display: inline-block; margin-top: 3px; padding: 2px 7px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.marg.good { background: #E7F7EF; color: #0F7A50; }
+.marg.ok   { background: #EEF2FF; color: #3B5BDB; }
+.marg.thin { background: #FFF4E3; color: #8A5A00; }
+.marg.loss { background: #FDEDEA; color: #A8322A; }
+.marg.none { background: #F1F3F7; color: #8792a6; }
+
+.ptag { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px;
+  letter-spacing: .02em; white-space: nowrap; }
+.ptag.out    { background: #FDEDEA; color: #A8322A; }
+.ptag.exempt { background: #FFF4E3; color: #8A5A00; }
+.ptag.combo  { background: #EDE9FE; color: #5B34C7; }
+
+.chip-btn { border: 1px solid var(--a-line); background: var(--a-surface); border-radius: 999px;
+  padding: 9px 15px; font-size: 13px; font-weight: 800; color: var(--a-ink); }
+.chip-btn.add { background: var(--a-primary); border-color: var(--a-primary); color: #fff; }
+
+/* Editor tabs — six sections in one scroll was a lot of thumb. */
+.pform-tabs { grid-column: 1 / -1; display: flex; gap: 6px; overflow-x: auto;
+  padding: 2px 0 10px; margin-bottom: 2px; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; }
+.pform-tabs::-webkit-scrollbar { display: none; }
+.pform-tab { flex: none; border: 1px solid var(--a-line); background: var(--a-surface);
+  border-radius: 999px; padding: 8px 15px; font-size: 13px; font-weight: 800;
+  color: var(--a-sub); white-space: nowrap; }
+.pform-tab.on { background: var(--a-primary); border-color: var(--a-primary); color: #fff; }
+
+/* Margin readout, banded like the list. ₹1 on a ₹31 item isn't good news and
+   shouldn't be shown in green. */
+.margin-read.thin { background: #FFF4E3; border-color: #FBD38D; }
+.margin-read.thin strong, .margin-read.thin .margin-pct { color: #8A5A00; }
+.margin-read.ok { background: #EEF2FF; border-color: #ccd9f2; }
+.margin-read.ok strong, .margin-read.ok .margin-pct { color: #3B5BDB; }

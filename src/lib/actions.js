@@ -42,6 +42,11 @@ function productToDb(p) {
             .filter((t) => t.q > 1 && t.price > 0)
             .sort((a, b) => a.q - b.q) }
       : { manual_bulk: false }),
+    // Combo components. Stored on the product itself; the order engine expands
+    // them into real items at checkout (see expand_combos).
+    combo_items: (Array.isArray(p.comboItems) ? p.comboItems : [])
+      .map((c) => ({ id: String(c.id), qty: Math.max(1, Number(c.qty) || 0) }))
+      .filter((c) => c.id),
     active: p.active !== false };
 }
 export async function upsertProduct(p) {

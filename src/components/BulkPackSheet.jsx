@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useSettings } from "../lib/hooks.js";
+import { useSettings, useProducts } from "../lib/hooks.js";
 import { tierUnitPrice } from "../lib/bulk.js";
 import ProductThumb from "./ProductThumb.jsx";
 
@@ -12,6 +12,12 @@ export default function BulkPackSheet({ product, onClose }) {
   const { items, setQty } = useCart();
   const { user } = useAuth();
   const settings = useSettings();
+  const allProducts = useProducts();
+  // A combo is bought as one thing but arrives as several, so the sheet has to
+  // say which — otherwise "Kitchen Starter Pack ₹245" tells the customer nothing.
+  const comboParts = (Array.isArray(product.comboItems) ? product.comboItems : [])
+    .map((c) => ({ qty: Number(c.qty) || 1, p: (allProducts || []).find((x) => x.id === c.id) }))
+    .filter((c) => c.p);
   const inCart = items[product.id] || 0;
   const base = Number(product.price) || 0;
   const mrp = Math.max(Number(product.mrp) || 0, base);
@@ -56,6 +62,13 @@ export default function BulkPackSheet({ product, onClose }) {
           <div className="pd-hero-info">
             <div className="pd-hero-name">{product.name}</div>
             {product.unit && <div className="pd-hero-unit">{product.unit}</div>}
+            {comboParts.length > 0 && (
+              <ul className="pd-combo">
+                {comboParts.map(({ qty, p }) => (
+                  <li key={p.id}><span>{qty}×</span> {p.name}</li>
+                ))}
+              </ul>
+            )}
             <div className="pd-hero-eta">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
               12 min delivery

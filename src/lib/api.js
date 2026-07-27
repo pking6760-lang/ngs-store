@@ -80,7 +80,8 @@ function mapProduct(r) {
     // client mirrors the server exactly (see tierUnitPrice in bulk.js).
     memberPriceFloor: r.member_price_floor != null ? Number(r.member_price_floor) : null,
     bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [],
-    manualBulk: !!r.manual_bulk };
+    manualBulk: !!r.manual_bulk,
+    comboItems: Array.isArray(r.combo_items) ? r.combo_items : [] };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color, image: r.image_url || "" };
