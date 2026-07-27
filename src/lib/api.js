@@ -1187,17 +1187,28 @@ export async function bookSlot(role, dateISO, hour) {
   return { ok: true };
 }
 
-// Wallet: full ledger + derived balance and cash-in-hand.
+// Wallet: the last few months of entries, with the totals worked out by the
+// server over the WHOLE ledger.
+//
+// The split matters. Cash-in-hand is money the rider is physically carrying and
+// is checked against what they hand over; balance is what they are owed. Adding
+// those up from a shortened list on the phone would understate both. So the list
+// is windowed and the totals are not.
+const LEDGER_MONTHS = 3;
 export async function getMyWallet() {
   const uid = await myUid();
   if (!uid) return { balance: 0, cashInHand: 0, ledger: [] };
-  // Prefer the RPC that joins the real order code; fall back to the plain table.
-  let rows = null;
-  const { data: rpcRows, error: rpcErr } = await must().rpc("get_my_ledger");
-  if (!rpcErr && Array.isArray(rpcRows)) rows = rpcRows;
+  const [totalsRes, ledgerRes] = await Promise.all([
+    must().rpc("get_my_wallet_totals"),
+    must().rpc("get_my_ledger", { p_months: LEDGER_MONTHS }),
+  ]);
+  let rows = Array.isArray(ledgerRes.data) ? ledgerRes.data : null;
   if (!rows) {
+    // Older database without the windowed RPC — read the table directly.
+    const since = new Date(Date.now() - LEDGER_MONTHS * 31 * 86400000).toISOString();
     const { data, error } = await must().from("wallet_ledger")
-      .select("*").eq("partner_id", uid).order("created_at", { ascending: false });
+      .select("*").eq("partner_id", uid).gte("created_at", since)
+      .order("created_at", { ascending: false });
     if (error) throw error;
     rows = data || [];
   }
@@ -1205,9 +1216,16 @@ export async function getMyWallet() {
     id: r.id, kind: r.kind, amount: Number(r.amount), cashDelta: Number(r.cash_delta),
     note: r.note, orderId: r.order_id, code: r.code || null, at: r.at || r.created_at,
   }));
-  const balance = ledger.reduce((s, l) => s + l.amount, 0);
-  const cashInHand = ledger.reduce((s, l) => s + l.cashDelta, 0);
-  return { balance, cashInHand, ledger };
+  const t = totalsRes.data || null;
+  return {
+    // Fall back to the visible rows only if the server totals are unavailable,
+    // which is the one case where a short list is better than no number at all.
+    balance: t ? Number(t.balance) || 0 : ledger.reduce((s, l) => s + l.amount, 0),
+    cashInHand: t ? Number(t.cashInHand) || 0 : ledger.reduce((s, l) => s + l.cashDelta, 0),
+    lifetimeEarned: t ? Number(t.lifetimeEarned) || 0 : null,
+    lifetimePenalty: t ? Number(t.lifetimePenalty) || 0 : null,
+    ledger,
+  };
 }
 
 // Reliability record (strikes).

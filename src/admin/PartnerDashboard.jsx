@@ -1201,8 +1201,13 @@ function Wallet({ isDelivery, wallet, cfg }) {
   const cashKinds = new Set(["cod_collected", "cod_deposited"]);
   const payoutRows = wallet.ledger.filter((l) => !cashKinds.has(l.kind));
   const cashRows = wallet.ledger.filter((l) => cashKinds.has(l.kind));
-  const earnedTotal = wallet.ledger.filter((l) => l.kind === "earning").reduce((s, l) => s + l.amount, 0);
-  const penaltyTotal = wallet.ledger.filter((l) => l.kind === "penalty").reduce((s, l) => s + Math.abs(l.amount), 0);
+  // Lifetime figures come from the server. The list below is the last three
+  // months, so adding it up here would quietly shrink a long-serving partner's
+  // earnings every month — the one number they check most.
+  const earnedTotal = wallet.lifetimeEarned != null ? wallet.lifetimeEarned
+    : wallet.ledger.filter((l) => l.kind === "earning").reduce((s, l) => s + l.amount, 0);
+  const penaltyTotal = wallet.lifetimePenalty != null ? wallet.lifetimePenalty
+    : wallet.ledger.filter((l) => l.kind === "penalty").reduce((s, l) => s + Math.abs(l.amount), 0);
 
   const time = (at) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", timeZone: IST }).format(new Date(at));
   const row = (l, value, muted) => (
@@ -1222,7 +1227,7 @@ function Wallet({ isDelivery, wallet, cfg }) {
           : "Your order earnings, less any penalty — paid out every Monday"}</div>
         {(earnedTotal > 0 || penaltyTotal > 0) && (
           <div className="pd-wbreak">
-            <span>Earned {money(earnedTotal)}</span>
+            <span>Earned {money(earnedTotal)} lifetime</span>
             {penaltyTotal > 0 && <span>− Penalty {money(penaltyTotal)}</span>}
           </div>
         )}

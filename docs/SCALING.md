@@ -193,6 +193,43 @@ new customer install, every re-install is now a fifth of the bandwidth — and i
 installs in a quarter of the time on a weak connection, which matters more here
 than the bill does.
 
+### Storing the same thing in less space
+
+Measured before changing anything, and the obvious suspect was wrong:
+
+| | |
+|---|---|
+| The entire business database — every order, product, customer | **6.5 MB** |
+| `cron.job_run_details`, a log of every scheduled job that ran | **9.8 MB** |
+
+**The biggest table in the project was a log nobody has ever read.** The dispatch
+tick runs every 30 seconds and writes a row each time: 4,259 rows a day, heading
+for 1.5 million rows and about 205 MB a year. Postgres never cleans it up. Now
+kept for three days — 9.8 MB down to 2.7 MB, and it stops there.
+
+An order itself is **431 bytes**, an order line **93** — so a three-line order is
+about 700 bytes, and a thousand orders a day is 365 MB a year. Inside those 431
+bytes:
+
+| | |
+|---|---|
+| `location` (jsonb) | 98 bytes — two numbers, stored as text with braces and key names |
+| 17 text columns | 205 bytes |
+| 19 money columns (`numeric`) | 81 bytes |
+| 6 uuids | 80 bytes — unavoidable |
+
+`location` is now two plain numbers: **98 bytes → 16**. A trigger keeps the old
+jsonb field in step in both directions, so apps already installed carry on
+working either way.
+
+**The money columns were left alone deliberately.** Converting 19 `numeric`
+columns to integers would save about 30 bytes an order and put every price,
+refund and payout through a type conversion. A rounding bug there costs more
+than a decade of the storage it saves.
+
+Dead space was also reclaimed: `order_items`' primary key was 272 kB for 77 rows
+of data. Database 29 MB → 22 MB overall.
+
 ### Where the remaining money goes, in order
 
 1. **App downloads.** 5.8 MB × every customer × every update. Now small enough
@@ -216,6 +253,10 @@ A weekly clean-up (Sunday night) trims the customer side:
 - **notifications** — deleted, for real: read after 7 days, anything after 30
 - **order history** — finished orders drop off the customer's list after 90 days
 - **abandoned carts** — deleted after 30 days
+
+The partner app shows the last **3 months** of earnings and payouts. Their
+balance, cash-in-hand and lifetime earnings are computed by the server over the
+whole ledger, so a shorter list never changes a number they are paid on.
 
 Orders, order lines, wallet and points ledgers and payouts are **never deleted**.
 They are the books: refunds, GST and every profit number in this app are computed
