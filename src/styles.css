@@ -705,9 +705,37 @@ button {
 .pd-pack {
   display: flex; align-items: center; gap: 12px; width: 100%;
   border: 1.5px solid var(--line); border-radius: 14px; padding: 13px 14px;
-  background: #fff; cursor: pointer; text-align: left;
+  background: #fff; cursor: pointer; text-align: left; position: relative;
   transition: border-color 0.12s ease, background 0.12s ease;
 }
+/* The best-value pack. A ribbon notched into the top edge, in our emerald —
+   quiet enough to sit above a price without shouting over it, and only ever
+   drawn when the saving behind it is real. */
+.pd-pack.best { border-color: #bfe0cb; }
+.pd-pack.best.on { border-color: var(--green); }
+.pd-pack-ribbon {
+  position: absolute; top: -11px; left: 46px; z-index: 1;
+  display: grid; align-items: center; min-width: 104px; height: 22px;
+  padding: 0 11px; border-radius: 999px;
+  background: linear-gradient(180deg, var(--green) 0%, var(--green-dark) 100%);
+  box-shadow: 0 3px 10px rgba(15, 92, 52, 0.28);
+  font-size: 10.5px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase;
+  color: #fff; white-space: nowrap; text-align: center; pointer-events: none;
+}
+/* Both labels occupy the same cell, so the ribbon never changes width as the
+   text swaps — a badge that jiggles reads as a glitch, not a deal. */
+.pd-pack-ribbon > span {
+  grid-area: 1 / 1; transition: opacity .45s ease, transform .45s ease;
+}
+.pd-pack-ribbon > span.off { opacity: 0; transform: translateY(-4px); }
+@media (prefers-reduced-motion: reduce) {
+  .pd-pack-ribbon > span { transition: none; }
+}
+/* Room for the ribbon to sit on the top edge without touching the row above.
+   A badge that overlaps its neighbour reads as a rendering fault, not a flag. */
+.pd-pack.best { margin-top: 13px; }
+.pd-packs > .pd-pack.best:first-child { margin-top: 0; }
+.pd-packs > .pd-pack.best:first-child .pd-pack-ribbon { top: 8px; }
 .pd-pack.on { border-color: var(--green); background: var(--green-tint); }
 .pd-pack-radio {
   width: 20px; height: 20px; flex: 0 0 auto; border-radius: 50%;
@@ -719,7 +747,7 @@ button {
 }
 .pd-pack-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .pd-pack-qty { font-size: 15px; font-weight: 800; color: var(--ink); }
-.pd-pack-per { font-size: 12px; color: var(--muted); }
+.pd-pack-per { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pd-pack-price { font-size: 16px; font-weight: 800; color: var(--ink); text-align: right; white-space: nowrap; }
 .pd-pack-price s { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); }
 .pd-sheet-foot {

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSettings, useProducts } from "../lib/hooks.js";
 import { tierUnitPrice } from "../lib/bulk.js";
 import { money } from "../lib/money.js";
+import { rateText } from "../lib/unitRate.js";
 import ProductThumb from "./ProductThumb.jsx";
 
 // Product-detail bottom sheet: product image + price, then selectable pack
@@ -46,6 +47,31 @@ export default function BulkPackSheet({ product, onClose }) {
   const selTotal = selUnit * sel;
   const selSave = refTotal(sel) - selTotal;
 
+  // What the PACK is worth, measured against buying the same number one at a
+  // time at this shopper's own price. Deliberately not measured against MRP:
+  // an MRP saving applies to a single too, so calling it the pack's benefit
+  // would be claiming credit for something the pack didn't do.
+  const singleUnit = tierUnitPrice(product, 1, user, settings.rewards);
+  const packSave = (q) => singleUnit * q - tierUnitPrice(product, q, user, settings.rewards) * q;
+
+  // The pack that genuinely costs least per unit — and only if it beats a single
+  // by at least a rupee. No badge otherwise: on a ₹10 biscuit with no room for a
+  // discount, a "BEST VALUE" ribbon over the same price would be a lie the
+  // customer can check in two seconds.
+  const best = packs.reduce(
+    (b, q) => (packSave(q) >= 1 && (b === null || packSave(q) > packSave(b)) ? q : b), null);
+
+  // The ribbon says what it is, then what it's worth. Two states, because one
+  // number alone reads as decoration and one label alone says nothing.
+  const [flip, setFlip] = useState(false);
+  useEffect(() => {
+    if (best === null) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (reduce) return;
+    const t = setInterval(() => setFlip((f) => !f), 2600);
+    return () => clearInterval(t);
+  }, [best]);
+
   function add() {
     setQty(product.id, Math.min(sel, stock));
     onClose();
@@ -86,17 +112,29 @@ export default function BulkPackSheet({ product, onClose }) {
             const ref = refTotal(q);
             const save = ref - total;
             const on = sel === q;
+            const isBest = q === best;
+            // Price per 100 g / 100 ml / piece — the number that settles
+            // "is the bigger one actually cheaper" without any arithmetic.
+            const rate = rateText(total, q, product.unit);
             return (
               <button
                 type="button"
                 key={q}
-                className={`pd-pack ${on ? "on" : ""}`}
+                className={`pd-pack ${on ? "on" : ""} ${isBest ? "best" : ""}`}
                 onClick={() => setSel(q)}
               >
+                {isBest && (
+                  <span className="pd-pack-ribbon" aria-label={`Best value, saves ₹${money(packSave(q))}`}>
+                    <span className={flip ? "off" : ""}>Best value</span>
+                    <span className={flip ? "" : "off"}>Save ₹{money(packSave(q))}</span>
+                  </span>
+                )}
                 <span className="pd-pack-radio" aria-hidden="true" />
                 <span className="pd-pack-main">
-                  <span className="pd-pack-qty">Pack of {q}</span>
-                  <span className="pd-pack-per">₹{money(unit)} / unit{save > 0 ? ` · save ₹${money(save)}` : ""}</span>
+                  <span className="pd-pack-qty">{q === 1 ? "Single" : `Pack of ${q}`}</span>
+                  <span className="pd-pack-per">
+                    ₹{money(unit)} each{rate ? ` · ${rate}` : ""}
+                  </span>
                 </span>
                 <span className="pd-pack-price">
                   ₹{money(total)}
