@@ -16,14 +16,11 @@ create or replace function public.run_retention()
 returns void
 language plpgsql security definer set search_path to 'public'
 as $$
-declare v_n int;
 begin
-  -- Read messages older than 90 days, and anything older than 180 days whether
-  -- it was read or not.
-  delete from public.notifications
-   where (read and created_at < now() - interval '90 days')
-      or created_at < now() - interval '180 days';
-  get diagnostics v_n = row_count;
+  -- NOTE: notifications are NOT handled here any more. The weekly customer
+  -- clean-up owns them (7 days read, 30 days anything) -- see
+  -- migration-delete-and-weekly-clean.sql. Two rules for one table is how they
+  -- drift apart and one of them silently stops mattering.
 
   -- Send-log tables: they exist only to stop the same customer being messaged
   -- twice in a campaign, so a season of history is more than enough.
@@ -33,10 +30,6 @@ begin
   -- Partner presence heartbeats and one-time codes: minutes matter, months don't.
   delete from public.partner_otps   where created_at < now() - interval '7 days';
   delete from public.partner_online_log where started_at < now() - interval '90 days';
-
-  if v_n > 0 then
-    raise notice 'retention: removed % notifications', v_n;
-  end if;
 end $$;
 
 revoke all on function public.run_retention() from public, anon, authenticated;

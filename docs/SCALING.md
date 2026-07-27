@@ -75,7 +75,7 @@ Three more things were waiting behind it:
 | Ops order list windowed (45 days + everything still open, capped) | Stops growing with history. |
 | Customer totals computed in the database | One indexed pass instead of downloading every order to add them up. |
 | Fetch caps: 100 orders, 60 notifications, 200 wallet rows | Nothing grows for life. Wallet **balance** now comes from the server, so capping the visible history cannot make the balance wrong. |
-| Nightly retention job | `notifications` was on track for 20 million rows a year at 5,000 customers. Read messages are dropped after 90 days, everything after 180. The books — orders, ledgers, payouts — are never touched. |
+| Nightly + weekly clean-up | `notifications` was on track for 20 million rows a year at 5,000 customers. They now go after 7 days read / 30 days unread, along with campaign send-logs and stale carts. The books — orders, ledgers, payouts — are never touched. |
 | Daily capacity watchdog | Tells you what to do *before* it hurts. See below. |
 
 ---
@@ -156,6 +156,71 @@ The last two matter most in the long run: they catch a *new* mistake of the same
 kind, which is how this class of problem always comes back.
 
 ---
+
+## Paying less
+
+Bandwidth and storage are billed; the database at this size is not. So the money
+is in bytes leaving the building, and the biggest single object leaving it is the
+app itself.
+
+### What was found
+
+| | Was | Now |
+|---|---|---|
+| Storage used | **1.45 GB** in 47 APK files | **96 MB** |
+| Customer app download | 26 MB | **5.8 MB** |
+| Admin / partner download | 26 MB | **14.3 / 14.2 MB** |
+| One update round for all three | 78 MB | 34 MB |
+
+**Old builds were never deleted.** Forty-seven APKs had piled up — every version
+since v1.0 — for builds nobody could install any more. That alone was past the
+1 GB the free plan includes. Forty-four were deleted; the release script now
+keeps the current build plus one rollback and prunes the rest automatically, so
+it cannot happen again.
+
+**The apps were shipping code no phone here runs.** Android builds pack a copy of
+every native library for x86 and x86_64 as well as ARM — those exist for desktop
+emulators. That was 11 MB of a 26 MB download that every customer paid for on
+every update.
+
+**The customer app carried a barcode scanner it never opens.** Scanning is the
+admin's stock-taking tool and the partner's pickup check. The customer storefront
+has no code path to it, yet it shipped ML Kit's 5 MB scanning library and 700 KB
+of models. Removed from the customer build only.
+
+Together that is the customer app at **22% of its old size**. Every update, every
+new customer install, every re-install is now a fifth of the bandwidth — and it
+installs in a quarter of the time on a weak connection, which matters more here
+than the bill does.
+
+### Where the remaining money goes, in order
+
+1. **App downloads.** 5.8 MB × every customer × every update. Now small enough
+   that 5,000 customers updating costs 29 GB, inside Pro's 250 GB.
+2. **Product photos** — 4 MB total, but served with `cache-control: no-cache`, so
+   every phone re-downloads them on every visit. Fixed by the Pro plan's CDN, not
+   by code. This is the main reason to take Step 2 when traffic justifies it.
+3. **The catalogue JSON** — already cut 20× by the change signal.
+4. **The database** — 30 MB, and cheap to keep. Storage is not where the money is.
+
+### What is deleted, and what never is
+
+Deleting from the admin app removes the row for good — there is no soft-delete
+anywhere. What was missing is that a deleted product's **photo** stayed in
+storage forever, as did every photo replaced by a better one. The database now
+records those files the moment they are orphaned and the admin app removes them
+for real on next open. Eleven already-orphaned photos were queued and cleared.
+
+A weekly clean-up (Sunday night) trims the customer side:
+
+- **notifications** — deleted, for real: read after 7 days, anything after 30
+- **order history** — finished orders drop off the customer's list after 90 days
+- **abandoned carts** — deleted after 30 days
+
+Orders, order lines, wallet and points ledgers and payouts are **never deleted**.
+They are the books: refunds, GST and every profit number in this app are computed
+from them, and an order costs about 9 KB to keep. What the weekly job does is
+stop the customer *seeing* old ones — the shop's copy stays whole.
 
 ## Rules to keep it fast
 

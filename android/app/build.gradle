@@ -15,9 +15,14 @@ android {
         applicationId "com.ngsstore.admin"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 26
-        versionName "3.5"
+        versionCode 27
+        versionName "3.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Ship only the processor types real phones use. The default build also
+        // packs x86 and x86_64 builds of every native library — those exist for
+        // desktop emulators, and they were 11 MB of a 26 MB download that every
+        // customer pays for on every update.
+        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61

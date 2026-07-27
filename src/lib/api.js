@@ -670,6 +670,9 @@ export async function fetchMyOrders() {
     // Subscription advance payments are not delivery orders (the daily deliveries
     // they create show normally).
     .eq("is_subscription", false)
+    // Aged out by the weekly clean-up. The order still exists in full for the
+    // shop's books, refunds and accounts — it just leaves the customer's list.
+    .eq("hidden_for_customer", false)
     .order("created_at", { ascending: false })
     // A customer of two years has hundreds of orders and the screen shows the
     // recent ones. Without a cap this fetch grows for life, on a phone, every
@@ -1633,6 +1636,28 @@ export async function fetchAdminProducts() {
       hotOverride: x.hotOverride || null,
     };
   });
+}
+
+// Delete the files whose owning row is gone — a deleted product's photo, or the
+// one it replaced. The database queues them (it cannot reach object storage
+// itself); this empties the queue. Runs from the admin app, which already has
+// permission to delete product photos, so no new key or service goes anywhere.
+export async function sweepDeletedFiles(limit = 200) {
+  const { data, error } = await must().rpc("storage_gc_list", { p_limit: limit });
+  if (error) throw error;
+  const rows = data || [];
+  if (!rows.length) return { removed: 0 };
+  let removed = 0;
+  for (const bucket of [...new Set(rows.map((r) => r.bucket))]) {
+    const names = rows.filter((r) => r.bucket === bucket).map((r) => r.name);
+    const { error: e2 } = await must().storage.from(bucket).remove(names);
+    // A file that is already gone is a success, not a failure — the queue entry
+    // still needs clearing or it would be retried forever.
+    if (e2 && !/not found/i.test(e2.message || "")) continue;
+    const { data: n } = await must().rpc("storage_gc_done", { p_bucket: bucket, p_names: names });
+    removed += Number(n) || 0;
+  }
+  return { removed };
 }
 
 export async function deleteProduct(id) {

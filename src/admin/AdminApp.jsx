@@ -97,6 +97,17 @@ export default function AdminApp() {
     if (role === "admin") initAdminPush();
   }, [role]);
 
+  // Finish off deletes: when a product is deleted or its photo replaced, the
+  // database notes that the old file should go, and this removes it for real.
+  // It runs here because storage files can only be deleted by something holding
+  // a session — and the admin app already has one. Silent either way; there is
+  // nothing for anyone to do about it.
+  useEffect(() => {
+    if (role !== "admin" || !BACKEND) return;
+    const t = setTimeout(() => { api.sweepDeletedFiles().catch(() => {}); }, 4000);
+    return () => clearTimeout(t);
+  }, [role]);
+
   function signIn(nextRole, displayName) {
     sessionStorage.setItem(ROLE_KEY, nextRole);
     sessionStorage.setItem(NAME_KEY, displayName);
