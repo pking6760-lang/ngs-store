@@ -43,6 +43,7 @@ const EMPTY = {
   inStock: true,
   stock: "",
   tags: "",
+  caseSize: "",
   bulkMode: "auto",
   bulkQtys: [],
 };
@@ -367,7 +368,18 @@ function CategoryManager({ categories, products, onClose }) {
 // Margins are on screen in every mode, because a ₹10 item with ₹1.14 of margin
 // cannot fund a bulk discount at all — that has to be visible while the price is
 // being typed, not discovered later.
-function BulkPacks({ mode, tiers, qtys, cost, price, productId, onChange, onQtys, onMode }) {
+// Half a laddi and a whole laddi — mirrors qtys_from_case() in the database, so
+// the note under the field says exactly what the engine will do.
+function ladderFor(n) {
+  const c = Math.round(Number(n) || 0);
+  if (c < 3) return [];
+  if (c >= 20 && c % 4 === 0) return [c / 4, c / 2, c];
+  if (c % 2 === 0) return [c / 2, c];
+  if (c % 3 === 0) return [c / 3, c];
+  return [c];
+}
+
+function BulkPacks({ mode, tiers, qtys, cost, price, productId, caseSize, onCaseSize, onChange, onQtys, onMode }) {
   const rows = Array.isArray(tiers) ? tiers : [];
   const qs = Array.isArray(qtys) ? qtys : [];
   const c = Number(cost);
@@ -396,14 +408,40 @@ function BulkPacks({ mode, tiers, qtys, cost, price, productId, onChange, onQtys
         ))}
       </div>
 
+      {mode !== "manual" && (
+        <div className="laddi">
+          <label className="laddi-lbl" htmlFor="laddi-size">Pieces in one laddi / packet</label>
+          <div className="laddi-row">
+            <input id="laddi-size" type="number" min="0" inputMode="numeric" placeholder="—"
+              value={caseSize ?? ""} onChange={(e) => onCaseSize(e.target.value)} />
+            {[6, 10, 12, 24].map((n) => (
+              <button type="button" key={n} className={Number(caseSize) === n ? "on" : ""}
+                onClick={() => onCaseSize(n)}>{n}</button>
+            ))}
+            {caseSize ? (
+              <button type="button" className="laddi-clear" onClick={() => onCaseSize("")}>Clear</button>
+            ) : null}
+          </div>
+          <small className="field-note">
+            {caseSize
+              ? `Packs follow the laddi: ${ladderFor(caseSize).join(" and ")}.`
+              : "How many come in one laddi from your distributor. Set it and the pack sizes follow."}
+          </small>
+        </div>
+      )}
+
       {!knowCost && mode !== "manual" && (
         <p className="packs-warn">
           No cost price on this item, so nothing can be priced. Add it on the Price tab.
         </p>
       )}
 
-      {mode === "auto" && (
-        <small className="field-note">2, 3 and 4 units, priced from your selling price.</small>
+      {mode === "auto" && !caseSize && (
+        <small className="field-note">
+          No laddi set, so sizes are chosen from the price — bigger packs for cheap
+          items, smaller for costly ones. A pack only appears if the margin can
+          fund a real saving.
+        </small>
       )}
 
       {mode === "manual" && (
@@ -1104,6 +1142,8 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
 
           <BulkPacks
             mode={form.bulkMode || (form.manualBulk ? "manual" : "auto")}
+            caseSize={form.caseSize}
+            onCaseSize={(v) => update("caseSize", v === "" ? "" : Number(v))}
             tiers={form.bulkTiers}
             qtys={form.bulkQtys}
             cost={form.cost}

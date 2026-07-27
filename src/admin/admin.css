@@ -3552,3 +3552,15 @@ html, body { touch-action: manipulation; }
   border-radius: 9px; padding: 7px 12px; font-size: 12.5px; font-weight: 800;
   color: var(--a-primary);
 }
+/* The laddi size — a fact about the product, so it sits above the mode choice
+   rather than inside one of them. */
+.laddi { margin: 4px 0 10px; }
+.laddi-lbl { display: block; font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--a-sub); margin-bottom: 6px; }
+.laddi-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.laddi-row input { width: 74px; border: 1px solid var(--a-line); border-radius: 9px;
+  padding: 7px 10px; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.laddi-row button { border: 1px solid var(--a-line); background: #fff; border-radius: 9px;
+  padding: 7px 12px; font-size: 13px; font-weight: 800; color: var(--a-primary); }
+.laddi-row button.on { background: var(--a-primary); border-color: var(--a-primary); color: #fff; }
+.laddi-clear { color: var(--a-sub) !important; font-weight: 700 !important; }

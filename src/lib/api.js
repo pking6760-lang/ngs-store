@@ -76,6 +76,8 @@ function mapProduct(r) {
     // How the pack sizes are decided: auto (engine picks both), qty (owner picks
     // the quantities, engine prices them) or manual (owner sets both).
     bulkMode: r.bulk_mode || (r.manual_bulk ? "manual" : "auto"),
+    // How many come in one laddi / outer packet. The pack sizes follow from it.
+    caseSize: r.case_size != null ? Number(r.case_size) : null,
     bulkQtys: Array.isArray(r.bulk_qtys) ? r.bulk_qtys.map(Number).filter((q) => q > 1) : [],
     manualBulk: !!r.manual_bulk,
     comboItems: Array.isArray(r.combo_items) ? r.combo_items : [] };

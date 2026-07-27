@@ -46,6 +46,10 @@ function productToDb(p) {
     // takes the last tier the quantity clears, so an out-of-order list would
     // quietly charge the wrong price.
     bulk_mode: bulkMode,
+    // Pieces in one laddi, as bought from the distributor. A physical fact about
+    // the product, so it stays set whichever pack mode is chosen.
+    case_size: p.caseSize === "" || p.caseSize == null ? null
+      : Math.max(0, Math.round(Number(p.caseSize))) || null,
     bulk_qtys: bulkMode === "qty" ? bulkQtys : [],
     ...(bulkMode === "manual"
       ? { manual_bulk: true,
