@@ -29,8 +29,6 @@ function productToDb(p) {
     // Search tags: accepts the comma-separated admin input or an array as-is.
     tags: (Array.isArray(p.tags) ? p.tags : String(p.tags || "").split(","))
       .map((t) => String(t).trim().toLowerCase()).filter(Boolean),
-    free_delivery_exempt: p.freeDeliveryExempt === true,
-    no_rewards: p.noRewards === true,
     manual_price: manual,
     // Hand-set pack sizes. Kept ASCENDING by quantity: the pricing engine walks
     // the list and takes the last tier the quantity clears, so an out-of-order

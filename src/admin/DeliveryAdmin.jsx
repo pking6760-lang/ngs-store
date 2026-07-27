@@ -175,7 +175,7 @@ export default function DeliveryAdmin() {
           <strong>A cart must be able to pay for its own ride.</strong> Free
           delivery is given only if the order still clears a small profit with the
           fee waived — so ten bottles of oil qualify where one doesn't. Set the
-          amount in Ops settings. You can also exclude an item by hand.
+          amount in Ops settings.
         </p>
         <p className="delivery-hint">
           The <strong>cancellation fee</strong> applies after a short free window

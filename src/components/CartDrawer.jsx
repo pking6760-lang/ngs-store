@@ -268,12 +268,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const minOrder = Number(settings.rewards?.minOrderValue) || 0;
   const belowMin = itemTotal > 0 && itemTotal < minOrder;
   const minShortfall = belowMin ? Math.ceil(minOrder - itemTotal) : 0;
-  // Ultra-low-margin items (milk, curd, bread) don't count toward the
-  // free-delivery minimum. They're still in the cart total — just excluded here.
-  const qualifyingTotal = lines.reduce(
-    (sum, l) => sum + (l.product.freeDeliveryExempt ? 0 : l.unit * l.qty),
-    0
-  );
+  // Every item counts toward the free-delivery bar. Whether the cart actually
+  // earns it is the server's call (see useDeliveryQuote) and depends on whether
+  // the order still profits with the fee waived — a question about the cart, not
+  // about any one product.
+  const qualifyingTotal = itemTotal;
   const savings = lines.reduce(
     (sum, l) => sum + (l.product.mrp - l.unit) * l.qty,
     0
@@ -357,21 +356,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     : inFarZone ? (settings.deliveryFeeMid ?? NEAR_FEE)
     : NEAR_FEE;
   const HANDLING_FEE = settings.handlingFee ?? 5;
-  // "Add to tomorrow's delivery" estimate: standard prices, normal free-delivery
-  // rule on non-exempt items, NO handling (the subscription's fee covers the trip).
-  const addonQualify = lines.reduce((s, l) => s + (l.product.freeDeliveryExempt ? 0 : bulkUnitPrice(l.product, l.qty) * l.qty), 0);
+  // "Add to tomorrow's delivery" estimate: standard prices, NO handling (the
+  // subscription's fee covers the trip).
+  const addonQualify = subItemsTotal;
   const addonDelivery = addonQualify >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_FEE;
   const addonTotal = subItemsTotal + addonDelivery;
   const SURGE_FEE = settings.surgeFee ?? 0;
-  // Prime perk (free delivery) is funded by item margin. Milk &
-  // dairy (freeDeliveryExempt) have almost none, so waiving both fees would put
-  // the shop in loss. The perk applies only when the cart has no such items, OR
-  // the qualifying (non-exempt) total already earns free delivery on its own —
-  // mirrors the server (place_order). A milk-only Prime order pays like a guest.
-  // The perk is also only guaranteed inside the near zone: past the far-zone
-  // distance a small Prime order costs more to ride out than it earns, so the
-  // higher far threshold applies to everyone, Prime included — same as the
-  // server.
+  // Prime's free delivery is funded by what the order actually earns, so it
+  // applies only when the cart can still fund the ride — and only inside the
+  // near zone, since a small order ridden to the edge costs more than it makes.
   // Whether a cart earns free delivery depends on the margin it makes, which the
   // client can't know and must never be told. So the server decides and the cart
   // just displays the answer — the same arithmetic checkout will run, so the

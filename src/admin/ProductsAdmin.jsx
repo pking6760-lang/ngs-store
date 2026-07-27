@@ -42,7 +42,6 @@ const EMPTY = {
   image: "",
   inStock: true,
   stock: "",
-  noRewards: false,
   tags: "",
 };
 
@@ -136,7 +135,6 @@ export default function ProductsAdmin() {
                   {p.name}
                   {isCombo && <span className="ptag combo">Pack</span>}
                   {p.inStock === false && <span className="ptag out">Out of stock</span>}
-                  {p.freeDeliveryExempt && <span className="ptag exempt">No free-del</span>}
                 </div>
                 <div className="prodcard-meta">
                   {catName(p.category)}{p.unit ? ` · ${p.unit}` : ""}
@@ -779,9 +777,6 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             <button type="button" role="tab" aria-selected={tab === "stock"}
               className={`pform-tab ${tab === "stock" ? "on" : ""}`}
               onClick={() => setTab("stock")}>Stock</button>
-            <button type="button" role="tab" aria-selected={tab === "rules"}
-              className={`pform-tab ${tab === "rules" ? "on" : ""}`}
-              onClick={() => setTab("rules")}>Rules</button>
           </div>
 
           {tab === "basics" && (<>
@@ -1047,44 +1042,6 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
           </label>
           </>)}
 
-          {tab === "rules" && (<>
-          <div className="pform-sec"><h4>Pricing rules</h4></div>
-
-          <label className="field wide stock-field">
-            <span>Free-delivery counting</span>
-            <button
-              type="button"
-              className={`stock-toggle ${form.freeDeliveryExempt ? "off" : "on"}`}
-              onClick={() => update("freeDeliveryExempt", !form.freeDeliveryExempt)}
-            >
-              <span className="stock-knob" />
-              <span className="stock-label">
-                {form.freeDeliveryExempt ? "Excluded from ₹ minimum" : "Counts toward free delivery"}
-              </span>
-            </button>
-            <small className="field-note">
-              Off for milk, curd, bread — still buyable, just doesn't count toward the free-delivery bar.
-            </small>
-          </label>
-
-          <label className="field wide stock-field">
-            <span>Thin margin (rewards)</span>
-            <button
-              type="button"
-              className={`stock-toggle ${form.noRewards ? "off" : "on"}`}
-              onClick={() => update("noRewards", !form.noRewards)}
-            >
-              <span className="stock-knob" />
-              <span className="stock-label">
-                {form.noRewards ? "No discount / points / reward" : "Earns member price + rewards"}
-              </span>
-            </button>
-            <small className="field-note">
-              Off for zero-margin staples — normal price for everyone, no points or scratch reward.
-            </small>
-          </label>
-
-          </>)}
         </div>
 
         <div className="modal-foot">

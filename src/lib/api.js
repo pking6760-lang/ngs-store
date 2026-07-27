@@ -68,13 +68,6 @@ function mapProduct(r) {
     // Public merchandising flags: `bait` (best-price deal) and `hot` (selling
     // fast). Cost, tier and the sales numbers are admin-only (fetchAdminProducts).
     bait: !!r.bait, hot: !!r.hot,
-    // Owner's manual exclusion: this item's value doesn't count toward the
-    // free-delivery bar. MANUAL ONLY — the automatic margin flag is no longer
-    // read by pricing (a per-item flag can't see quantity), and including it
-    // here would put the cart's bar out of step with the server's.
-    freeDeliveryExempt: !!r.free_delivery_exempt,
-    // Thin-margin staple: no member discount, no points, no scratch reward.
-    noRewards: !!r.no_rewards,
     // Tiered member pricing: the public deep anchor (cost + minimum margin).
     // The shopper's price sits between this and the MRP per their tier — the
     // client mirrors the server exactly (see tierUnitPrice in bulk.js).

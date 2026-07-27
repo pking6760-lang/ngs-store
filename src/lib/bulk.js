@@ -23,8 +23,6 @@ export function bulkUnitPrice(product, qty) {
 // so the price shown always equals the price charged.
 export function tierUnitPrice(product, qty, user, rewardsCfg) {
   const bulk = bulkUnitPrice(product, qty);
-  // Thin-margin staples opt out of member pricing entirely — normal price for all.
-  if (product?.noRewards) return bulk;
   const L = rewardsCfg?.lifecycle;
   const P = L?.pricing;
   if (!user || !L || L.enabled === false || !P || P.enabled === false) return bulk;
