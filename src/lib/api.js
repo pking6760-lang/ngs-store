@@ -73,6 +73,10 @@ function mapProduct(r) {
     // client mirrors the server exactly (see tierUnitPrice in bulk.js).
     memberPriceFloor: r.member_price_floor != null ? Number(r.member_price_floor) : null,
     bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [],
+    // How the pack sizes are decided: auto (engine picks both), qty (owner picks
+    // the quantities, engine prices them) or manual (owner sets both).
+    bulkMode: r.bulk_mode || (r.manual_bulk ? "manual" : "auto"),
+    bulkQtys: Array.isArray(r.bulk_qtys) ? r.bulk_qtys.map(Number).filter((q) => q > 1) : [],
     manualBulk: !!r.manual_bulk,
     comboItems: Array.isArray(r.combo_items) ? r.combo_items : [] };
 }
@@ -1560,6 +1564,20 @@ export async function upsertProduct(product, cost) {
   }
   pingLocal("products");
   return { ok: true };
+}
+
+// Admin: what the pricing engine will charge for the owner's pack sizes. Price
+// and cost come from the open editor, not the saved row, so the preview matches
+// what's on screen while it's being typed.
+export async function previewBulkTiers(productId, qtys, price, cost) {
+  const n = (v) => (v === "" || v == null || Number.isNaN(Number(v)) ? null : Number(v));
+  const { data, error } = await must().rpc("preview_bulk_tiers", {
+    p_product: productId,
+    p_qtys: (qtys || []).map(Number).filter((q) => q > 1),
+    p_price: n(price), p_cost: n(cost),
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
 }
 
 // Admin: private per-product data (cost + sales analytics), keyed by product id.

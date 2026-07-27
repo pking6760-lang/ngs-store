@@ -3414,6 +3414,24 @@ html, body { touch-action: manipulation; }
 .pform-sec h4 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .06em;
   text-transform: uppercase; color: var(--a-sub); }
 
+.packs-mode { display: inline-flex; align-self: flex-start; margin: 6px 0 2px; }
+.packs-mode button { padding: 8px 14px; font-size: 12.5px; }
+/* Quantities the owner types; prices come back from the engine below them. */
+.qpack-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.qpack-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--a-line);
+  background: #fff; border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 13px;
+  font-weight: 800; color: var(--a-ink); font-variant-numeric: tabular-nums; }
+.qpack-chip button { border: none; background: transparent; color: var(--a-sub);
+  font-size: 12px; line-height: 1; padding: 3px 5px; }
+.qpack-chips input { width: 76px; border: 1px dashed var(--a-line); border-radius: 999px;
+  padding: 6px 12px; font-size: 13px; font-weight: 700; }
+.qpack-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline;
+  padding: 10px 12px; border: 1px solid var(--a-line); border-radius: 12px; background: #fbfcff; }
+.qpack-q { font-size: 13.5px; font-weight: 800; color: var(--a-ink); }
+.qpack-unit { font-size: 12.5px; color: var(--a-sub); font-variant-numeric: tabular-nums; }
+.qpack-tot { text-align: right; font-size: 15px; font-weight: 900; color: var(--a-ink);
+  font-variant-numeric: tabular-nums; }
+.qpack-tot small { display: block; font-size: 11px; font-weight: 700; color: var(--a-sub); }
 .packs { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
 .packs-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   font-size: 12px; color: var(--a-sub); }

@@ -1445,7 +1445,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
             <div className="cart-lines">
               {lines.map(({ product, qty, unit }) => {
-                const nextTier = (product.bulkTiers || []).find((t) => t.q > qty);
+                // Only nudge towards a bigger pack when it's actually cheaper per
+                // unit. Packs can now exist at the same price (a ₹10 item can't
+                // fund a discount), and "add 5 more → ₹10/ea" would be a lie.
+                const nextTier = (product.bulkTiers || []).find((t) => t.q > qty && Number(t.price) < unit);
                 const bulkOn = unit < product.price;
                 const lineMrp = Math.max(Number(product.mrp) || 0, unit);
                 return (

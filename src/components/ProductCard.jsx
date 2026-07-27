@@ -42,12 +42,13 @@ export default function ProductCard({ product, badge }) {
   const lowStock = hasStockLimit && product.stock > 0 && product.stock <= LOW_STOCK;
   const atMax = hasStockLimit && qty >= product.stock;
   const bulkTier = firstBulkTier(product);
-  // Only surface pack options when a bulk tier actually beats this shopper's
-  // per-unit price. A Prime member's rate can already be lower than every bulk
-  // tier — then the packs would all show the same price, which looks pointless,
-  // so we show a plain ADD instead.
+  // Surface pack options unless every tier would cost this shopper MORE per unit
+  // than a single — that can happen once a Prime rate is already below the bulk
+  // price, and offering a worse deal is pointless. Equal is still worth showing:
+  // on a ₹10 biscuit no discount is affordable, but "pack of 6" is exactly what
+  // the shopper wants to tap.
   const bulkHelps = (product.bulkTiers || []).some(
-    (t) => tierUnitPrice(product, Number(t.q), user, settings.rewards) < price
+    (t) => tierUnitPrice(product, Number(t.q), user, settings.rewards) <= price
   );
   const [showPacks, setShowPacks] = useState(false);
   const opensPacks = qty === 0 && bulkTier && bulkHelps;

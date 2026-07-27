@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
 import { useAdminProducts, useCategories } from "../lib/hooks.js";
@@ -12,7 +12,7 @@ import {
   updateCategory,
 } from "../lib/actions.js";
 import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory, proposeNewCategory } from "../lib/productLookup.js";
-import { smartReprice, uploadProductImage, uploadCategoryImage, bulkUpdateProductTags } from "../lib/api.js";
+import { smartReprice, uploadProductImage, uploadCategoryImage, bulkUpdateProductTags, previewBulkTiers } from "../lib/api.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { Ic } from "./AdminIcons.jsx";
@@ -43,6 +43,8 @@ const EMPTY = {
   inStock: true,
   stock: "",
   tags: "",
+  bulkMode: "auto",
+  bulkQtys: [],
 };
 
 export default function ProductsAdmin() {
@@ -354,16 +356,26 @@ function CategoryManager({ categories, products, onClose }) {
   );
 }
 
-// Pack sizes for one product. The automatic tiers are 2/3/4 units, which fit a
-// bottle of oil and are meaningless for biscuits — nobody buys three. This is
-// the hand-set override, and it shows the margin on every pack because a ₹10
-// item with ₹1.67 of margin cannot fund a bulk discount at all: the numbers
-// have to be visible while the price is being typed, not discovered later.
-function BulkPacks({ tiers, manual, cost, price, onChange, onToggle }) {
+// Pack sizes for one product, in three modes.
+//
+// Automatic gives 2/3/4 units, which fits a bottle of oil and is meaningless for
+// biscuits — nobody buys three. By-hand fixes that but then every price has to
+// be retyped whenever a buying cost moves. My-sizes is the useful middle: the
+// owner knows the pack sizes, the engine works out what each one can be sold
+// for and keeps it following cost.
+//
+// Margins are on screen in every mode, because a ₹10 item with ₹1.14 of margin
+// cannot fund a bulk discount at all — that has to be visible while the price is
+// being typed, not discovered later.
+function BulkPacks({ mode, tiers, qtys, cost, price, productId, onChange, onQtys, onMode }) {
   const rows = Array.isArray(tiers) ? tiers : [];
+  const qs = Array.isArray(qtys) ? qtys : [];
   const c = Number(cost);
   const base = Number(price) || 0;
   const knowCost = cost !== "" && cost != null && c >= 0;
+
+  const setQtys = (next) => onQtys([...new Set(next.map(Number).filter((q) => q > 1 && q <= 500))]
+    .sort((a, b) => a - b).slice(0, 6));
 
   const setRow = (i, key, val) => {
     const next = rows.map((r, j) => (j === i ? { ...r, [key]: val } : r));
@@ -373,26 +385,27 @@ function BulkPacks({ tiers, manual, cost, price, onChange, onToggle }) {
     const lastQ = rows.length ? Number(rows[rows.length - 1].q) || 1 : 1;
     onChange([...rows, { q: lastQ * 2, price: base }]);
   };
-  const preset = (qs) => onChange(qs.map((q) => ({ q, price: base })));
+  const preset = (list) => onChange(list.map((q) => ({ q, price: base })));
 
   return (
     <div className="field wide">
-      <span className="field-lbl">Pack sizes</span>
-      <button
-        type="button"
-        className={`stock-toggle ${manual ? "on" : "off"}`}
-        onClick={() => onToggle(!manual)}
-      >
-        <span className="stock-knob" />
-        <span className="stock-label">{manual ? "Set by hand" : "Automatic (2 / 3 / 4)"}</span>
-      </button>
+      <div className="ops-seg packs-mode">
+        {[["auto", "Automatic"], ["qty", "My sizes"], ["manual", "By hand"]].map(([k, label]) => (
+          <button type="button" key={k} className={mode === k ? "on" : ""}
+            onClick={() => onMode(k)}>{label}</button>
+        ))}
+      </div>
 
-      {!manual ? (
-        <small className="field-note">
-          Packs are generated from your selling price every few hours. Switch to
-          by-hand for things sold in sixes and dozens.
-        </small>
-      ) : (
+      {mode === "auto" && (
+        <small className="field-note">2, 3 and 4 units, priced from your selling price.</small>
+      )}
+
+      {mode === "qty" && (
+        <QtyPacks qtys={qs} setQtys={setQtys} cost={cost} price={price}
+          productId={productId} knowCost={knowCost} c={c} />
+      )}
+
+      {mode === "manual" && (
         <div className="packs">
           <div className="packs-presets">
             <span>Quick set:</span>
@@ -445,6 +458,79 @@ function BulkPacks({ tiers, manual, cost, price, onChange, onToggle }) {
 
           <button type="button" className="pack-add" onClick={addRow}>+ Add a pack</button>
         </div>
+      )}
+    </div>
+  );
+}
+
+// The owner types the quantities; the engine returns what it will charge for
+// them. The preview is live and uses the price and cost currently in the form,
+// not the saved ones — otherwise it would answer a question that wasn't asked.
+//
+// A pack at the same price as a single is a normal, correct answer for a ₹10
+// biscuit: it can't fund a discount, and the pack still earns six times as much
+// on one line for the same picking and delivery. It's labelled, not hidden.
+function QtyPacks({ qtys, setQtys, cost, price, productId, knowCost, c }) {
+  const [preview, setPreview] = useState(null);
+  const [err, setErr] = useState("");
+  const [add, setAdd] = useState("");
+  const key = `${qtys.join(",")}|${price}|${cost}`;
+
+  useEffect(() => {
+    if (!qtys.length || !knowCost || !(Number(price) > 0)) { setPreview([]); setErr(""); return; }
+    let alive = true;
+    const t = setTimeout(() => {
+      previewBulkTiers(productId, qtys, price, cost)
+        .then((r) => { if (alive) { setPreview(r); setErr(""); } })
+        .catch((e) => { if (alive) { setPreview(null); setErr(e.message || "Couldn't price these."); } });
+    }, 350);
+    return () => { alive = false; clearTimeout(t); };
+  }, [key]);
+
+  const addQty = () => { const q = Number(add); if (q > 1) { setQtys([...qtys, q]); setAdd(""); } };
+
+  return (
+    <div className="packs">
+      <div className="packs-presets">
+        <span>Quick set:</span>
+        <button type="button" onClick={() => setQtys([6, 12])}>6 · 12</button>
+        <button type="button" onClick={() => setQtys([2, 4, 6])}>2 · 4 · 6</button>
+        <button type="button" onClick={() => setQtys([3, 6, 12])}>3 · 6 · 12</button>
+      </div>
+
+      <div className="qpack-chips">
+        {qtys.map((q) => (
+          <span className="qpack-chip" key={q}>
+            {q}
+            <button type="button" onClick={() => setQtys(qtys.filter((x) => x !== q))}
+              aria-label={`Remove pack of ${q}`}>✕</button>
+          </span>
+        ))}
+        <input type="number" min="2" inputMode="numeric" placeholder="Add" value={add}
+          onChange={(e) => setAdd(e.target.value)} onBlur={addQty}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQty(); } }} />
+      </div>
+
+      {qtys.length === 0 && <p className="packs-empty">No packs yet — customers can only buy singles.</p>}
+      {qtys.length > 0 && !knowCost && <p className="packs-empty">Add the cost price to price these.</p>}
+      {err && <p className="packs-empty" style={{ color: "#A8322A" }}>{err}</p>}
+
+      {Array.isArray(preview) && preview.map((t) => {
+        const unit = Number(t.price) || 0;
+        const q = Number(t.q) || 0;
+        return (
+          <div className="qpack-row" key={q}>
+            <span className="qpack-q">Pack of {q}</span>
+            <span className="qpack-unit">₹{fmtMoney(unit)} each</span>
+            <span className="qpack-tot">
+              ₹{fmtMoney(unit * q)}
+              <small>you make ₹{fmtMoney((unit - c) * q)}</small>
+            </span>
+          </div>
+        );
+      })}
+      {Array.isArray(preview) && preview.length > 0 && (
+        <small className="field-note">Prices follow your cost automatically.</small>
       )}
     </div>
   );
@@ -998,12 +1084,15 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
           <div className="pform-sec"><h4>Pack sizes</h4></div>
 
           <BulkPacks
+            mode={form.bulkMode || (form.manualBulk ? "manual" : "auto")}
             tiers={form.bulkTiers}
-            manual={!!form.manualBulk}
+            qtys={form.bulkQtys}
             cost={form.cost}
             price={form.price}
+            productId={form.id}
             onChange={(t) => update("bulkTiers", t)}
-            onToggle={(v) => update("manualBulk", v)}
+            onQtys={(q) => update("bulkQtys", q)}
+            onMode={(m) => update("bulkMode", m)}
           />
           </>)}
 

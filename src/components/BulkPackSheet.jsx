@@ -23,15 +23,16 @@ export default function BulkPackSheet({ product, onClose }) {
   const mrp = Math.max(Number(product.mrp) || 0, base);
   const tiers = Array.isArray(product.bulkTiers) ? product.bulkTiers : [];
   const stock = typeof product.stock === "number" ? product.stock : Infinity;
-  // Only keep packs that actually lower THIS shopper's per-unit price. A member's
-  // rate can already match a bulk tier, which would otherwise show identical-price
-  // packs — so we drop any pack that doesn't beat the previous one.
+  // Drop any pack that costs MORE per unit than a smaller one — that would never
+  // make sense to buy. A pack at the same per-unit price is kept: on a ₹10
+  // biscuit no discount is affordable, but a six-pack is still the thing the
+  // shopper came for, and hiding it makes the packs the owner set look broken.
   const rawPacks = [1, ...tiers.map((t) => Number(t.q))].filter((q) => q <= stock || q === 1);
   const packs = [];
   let lastUnit = Infinity;
   for (const q of rawPacks) {
     const u = tierUnitPrice(product, q, user, settings.rewards);
-    if (q === 1 || u < lastUnit) { packs.push(q); lastUnit = u; }
+    if (q === 1 || u <= lastUnit) { packs.push(q); lastUnit = u; }
   }
 
   // The crossed-out reference on every pack is the MRP total (MRP × quantity),

@@ -18,6 +18,13 @@ function productToDb(p) {
   // Owner set their OWN selling price (below MRP) → lock it from auto-pricing.
   // Selling price == MRP → leave automation on.
   const manual = mrp != null && price > 0 && price < mrp;
+  // manualBulk is the older form's boolean; a form that predates the three-way
+  // selector still has to land on a valid mode.
+  const bulkMode = ["auto", "qty", "manual"].includes(p.bulkMode)
+    ? p.bulkMode : (p.manualBulk ? "manual" : "auto");
+  const bulkQtys = [...new Set((Array.isArray(p.bulkQtys) ? p.bulkQtys : [])
+    .map(Number).filter((q) => Number.isFinite(q) && q > 1 && q <= 500))]
+    .sort((a, b) => a - b).slice(0, 6);
   return { id: p.id, name: p.name, unit: p.unit || "", price,
     mrp, icon: p.icon || "",
     barcode: p.barcode ? String(p.barcode).replace(/\D/g, "") || null : null,
@@ -30,10 +37,17 @@ function productToDb(p) {
     tags: (Array.isArray(p.tags) ? p.tags : String(p.tags || "").split(","))
       .map((t) => String(t).trim().toLowerCase()).filter(Boolean),
     manual_price: manual,
-    // Hand-set pack sizes. Kept ASCENDING by quantity: the pricing engine walks
-    // the list and takes the last tier the quantity clears, so an out-of-order
-    // list would quietly charge the wrong price.
-    ...(p.manualBulk
+    // Pack sizes, in one of three modes:
+    //   auto    the engine picks the quantities and the prices
+    //   qty     the owner picks the quantities (6, 12), the engine prices them
+    //           and keeps them following the buying cost
+    //   manual  the owner sets both, and the engine leaves them alone
+    // Tiers are kept ASCENDING by quantity: the pricing engine walks the list and
+    // takes the last tier the quantity clears, so an out-of-order list would
+    // quietly charge the wrong price.
+    bulk_mode: bulkMode,
+    bulk_qtys: bulkMode === "qty" ? bulkQtys : [],
+    ...(bulkMode === "manual"
       ? { manual_bulk: true,
           bulk_tiers: (Array.isArray(p.bulkTiers) ? p.bulkTiers : [])
             .map((t) => ({ q: Number(t.q) || 0, price: Number(t.price) || 0 }))
