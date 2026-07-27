@@ -54,9 +54,10 @@ const GROUPS = [
   },
   {
     title: "What unlocks free delivery",
-    note: "A cart earns free delivery only if it still clears this much profit after the fee is waived. Judged on the whole cart, so ten bottles of oil qualify where one doesn't. Raise it to give free delivery away less often.",
+    note: "A cart earns free delivery only if it still clears this much profit after the fee is waived, judged on the whole cart. The floor is whichever is HIGHER — the rupee amount or the percentage — so it rises with the order: ₹12 on a ₹200 cart, ₹15 on ₹250, ₹24 on ₹400.",
     fields: [
-      { key: "min_free_delivery_profit", label: "Order must still profit at least (₹)" },
+      { key: "min_free_delivery_profit", label: "Must still profit at least (₹)" },
+      { key: "min_free_delivery_profit_pct", label: "…or this % of the cart, whichever is more", step: "0.5" },
     ],
   },
   {

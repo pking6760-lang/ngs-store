@@ -33,7 +33,8 @@ function LifecycleSettings({ settings }) {
     enabled: cfg.enabled ?? true,
     w_normal: W.normal ?? 6, w_prime: W.prime ?? 10, w_renew: W.renew ?? 7,
     taperOrders: cfg.taperOrders ?? 15,
-    shopFloorRupees: cfg.shopFloorRupees ?? 6,
+    shopFloorRupees: cfg.shopFloorRupees ?? 15,
+    rewardMaxRupees: cfg.rewardMaxRupees ?? 8,
     shopFloorPct: cfg.shopFloorPct ?? 3,
     deepMarginPct: P.deepMarginPct ?? 7,
     maxDiscountPct: P.maxDiscountPct ?? 20,
@@ -55,6 +56,7 @@ function LifecycleSettings({ settings }) {
           enabled: !!form.enabled,
           taperOrders: Math.max(1, Math.round(num(form.taperOrders))),
           shopFloorRupees: num(form.shopFloorRupees),
+          rewardMaxRupees: num(form.rewardMaxRupees),
           shopFloorPct: num(form.shopFloorPct),
           windows: {
             normal: Math.max(0, Math.round(num(form.w_normal))),
@@ -112,7 +114,12 @@ function LifecycleSettings({ settings }) {
         <input type="number" min="0" value={form.shopFloorRupees} onChange={(e) => set("shopFloorRupees", e.target.value)} />
         <span>or</span>
         <input type="number" min="0" value={form.shopFloorPct} onChange={(e) => set("shopFloorPct", e.target.value)} />
-        <span>% profit per order.</span>
+        <span>% profit per order — rewards come only out of what's left above that.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>And never give more than ₹</span>
+        <input type="number" min="0" value={form.rewardMaxRupees} onChange={(e) => set("rewardMaxRupees", e.target.value)} />
+        <span>back on one order, however well it did.</span>
       </div>
       <p className="sub" style={{ margin: "10px 0 4px", fontWeight: 700 }}>Price position (0% deepest → 100% MRP): start → settled</p>
       <div className="rewards-rule">
