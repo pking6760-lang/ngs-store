@@ -32,6 +32,16 @@ function productToDb(p) {
     free_delivery_exempt: p.freeDeliveryExempt === true,
     no_rewards: p.noRewards === true,
     manual_price: manual,
+    // Hand-set pack sizes. Kept ASCENDING by quantity: the pricing engine walks
+    // the list and takes the last tier the quantity clears, so an out-of-order
+    // list would quietly charge the wrong price.
+    ...(p.manualBulk
+      ? { manual_bulk: true,
+          bulk_tiers: (Array.isArray(p.bulkTiers) ? p.bulkTiers : [])
+            .map((t) => ({ q: Number(t.q) || 0, price: Number(t.price) || 0 }))
+            .filter((t) => t.q > 1 && t.price > 0)
+            .sort((a, b) => a.q - b.q) }
+      : { manual_bulk: false }),
     active: p.active !== false };
 }
 export async function upsertProduct(p) {

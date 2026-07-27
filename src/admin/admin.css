@@ -3404,3 +3404,39 @@ html, body { touch-action: manipulation; }
   background: var(--a-primary); color: #fff; font-size: 12.5px; font-weight: 800; }
 .payrun-btn:disabled { opacity: 0.5; }
 .payrun-msg { margin-top: 9px; font-size: 12.5px; font-weight: 700; color: #0F9D6E; }
+
+/* ═══ Product editor: sections + pack sizes ════════════════════════════════
+   The form was 13 fields in one flat column, so pricing sat next to search
+   tags and nothing showed where one concern ended. */
+.pform-sec { grid-column: 1 / -1; margin: 14px 0 2px; padding-top: 12px;
+  border-top: 1px solid var(--a-line); }
+.pform-sec:first-of-type { margin-top: 4px; padding-top: 0; border-top: none; }
+.pform-sec h4 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--a-sub); }
+
+.packs { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.packs-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 12px; color: var(--a-sub); }
+.packs-presets button { border: 1px solid var(--a-line); background: #fff; border-radius: 8px;
+  padding: 5px 10px; font-size: 12px; font-weight: 800; color: var(--a-primary); }
+.packs-empty { margin: 2px 0; font-size: 12.5px; color: var(--a-sub); }
+
+.pack-row { display: grid; grid-template-columns: 72px 88px 1fr auto; gap: 8px;
+  align-items: end; padding: 9px 10px; border: 1px solid var(--a-line);
+  border-radius: 12px; background: #fbfcff; }
+.pack-row.bad { border-color: #F0B4AE; background: #FFF6F5; }
+.pack-row label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+  text-transform: uppercase; color: var(--a-sub); margin-bottom: 3px; }
+.pack-row input { width: 100%; border: 1px solid var(--a-line); border-radius: 8px;
+  padding: 7px 8px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pack-read { text-align: right; line-height: 1.25; }
+.pack-read strong { display: block; font-size: 15px; font-weight: 900; color: var(--a-ink);
+  font-variant-numeric: tabular-nums; }
+.pack-read small { font-size: 11px; color: var(--a-sub); }
+.pack-row.bad .pack-read small { color: #A8322A; font-weight: 800; }
+.pack-x { border: none; background: transparent; color: var(--a-sub); font-size: 15px;
+  padding: 6px; line-height: 1; }
+.pack-warn { grid-column: 1 / -1; font-size: 11.5px; font-weight: 600; color: #7A4A05; }
+.pack-add { align-self: flex-start; border: 1px dashed var(--a-line); background: #fff;
+  border-radius: 10px; padding: 8px 14px; font-size: 12.5px; font-weight: 800;
+  color: var(--a-primary); }

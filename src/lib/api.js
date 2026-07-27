@@ -79,7 +79,8 @@ function mapProduct(r) {
     // The shopper's price sits between this and the MRP per their tier — the
     // client mirrors the server exactly (see tierUnitPrice in bulk.js).
     memberPriceFloor: r.member_price_floor != null ? Number(r.member_price_floor) : null,
-    bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [] };
+    bulkTiers: Array.isArray(r.bulk_tiers) ? r.bulk_tiers : [],
+    manualBulk: !!r.manual_bulk };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color, image: r.image_url || "" };

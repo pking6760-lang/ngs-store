@@ -377,6 +377,102 @@ function CategoryManager({ categories, products, onClose }) {
   );
 }
 
+// Pack sizes for one product. The automatic tiers are 2/3/4 units, which fit a
+// bottle of oil and are meaningless for biscuits — nobody buys three. This is
+// the hand-set override, and it shows the margin on every pack because a ₹10
+// item with ₹1.67 of margin cannot fund a bulk discount at all: the numbers
+// have to be visible while the price is being typed, not discovered later.
+function BulkPacks({ tiers, manual, cost, price, onChange, onToggle }) {
+  const rows = Array.isArray(tiers) ? tiers : [];
+  const c = Number(cost);
+  const base = Number(price) || 0;
+  const knowCost = cost !== "" && cost != null && c >= 0;
+
+  const setRow = (i, key, val) => {
+    const next = rows.map((r, j) => (j === i ? { ...r, [key]: val } : r));
+    onChange(next);
+  };
+  const addRow = () => {
+    const lastQ = rows.length ? Number(rows[rows.length - 1].q) || 1 : 1;
+    onChange([...rows, { q: lastQ * 2, price: base }]);
+  };
+  const preset = (qs) => onChange(qs.map((q) => ({ q, price: base })));
+
+  return (
+    <div className="field wide">
+      <span className="field-lbl">Pack sizes</span>
+      <button
+        type="button"
+        className={`stock-toggle ${manual ? "on" : "off"}`}
+        onClick={() => onToggle(!manual)}
+      >
+        <span className="stock-knob" />
+        <span className="stock-label">{manual ? "Set by hand" : "Automatic (2 / 3 / 4)"}</span>
+      </button>
+
+      {!manual ? (
+        <small className="field-note">
+          Packs are generated from your selling price every few hours. Switch to
+          by-hand for things sold in sixes and dozens.
+        </small>
+      ) : (
+        <div className="packs">
+          <div className="packs-presets">
+            <span>Quick set:</span>
+            <button type="button" onClick={() => preset([6, 12])}>6 · 12</button>
+            <button type="button" onClick={() => preset([2, 4, 6])}>2 · 4 · 6</button>
+            <button type="button" onClick={() => preset([3, 6, 12])}>3 · 6 · 12</button>
+          </div>
+
+          {rows.length === 0 && (
+            <p className="packs-empty">No packs yet — customers can only buy singles.</p>
+          )}
+
+          {rows.map((r, i) => {
+            const q = Number(r.q) || 0;
+            const unit = Number(r.price) || 0;
+            const packTotal = unit * q;
+            const packMargin = knowCost ? (unit - c) * q : null;
+            const belowCost = knowCost && unit < c;
+            const worseThanSingle = knowCost && q > 0 && (unit - c) * q < (base - c);
+            return (
+              <div className={`pack-row ${belowCost ? "bad" : ""}`} key={i}>
+                <div className="pack-qty">
+                  <label>Buy</label>
+                  <input type="number" min="2" inputMode="numeric" value={r.q ?? ""}
+                    onChange={(e) => setRow(i, "q", e.target.value)} />
+                </div>
+                <div className="pack-price">
+                  <label>₹ each</label>
+                  <input type="number" min="0" step="0.5" inputMode="decimal" value={r.price ?? ""}
+                    onChange={(e) => setRow(i, "price", e.target.value)} />
+                </div>
+                <div className="pack-read">
+                  <strong>₹{fmtMoney(packTotal)}</strong>
+                  <small>
+                    {packMargin == null ? "add cost price"
+                      : belowCost ? "below cost!"
+                      : `you make ₹${fmtMoney(packMargin)}`}
+                  </small>
+                </div>
+                <button type="button" className="pack-x" title="Remove"
+                  onClick={() => onChange(rows.filter((_, j) => j !== i))}>✕</button>
+                {!belowCost && worseThanSingle && (
+                  <small className="pack-warn">
+                    This pack earns less than selling one — raise the price or drop the pack.
+                  </small>
+                )}
+              </div>
+            );
+          })}
+
+          <button type="button" className="pack-add" onClick={addRow}>+ Add a pack</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProductModal({ product, categories, products = [], onOpenExisting, onClose, onSave, onDelete }) {
   const isNew = !product.id;
 
@@ -620,6 +716,8 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             )}
           </div>
 
+          <div className="pform-sec"><h4>Identity</h4></div>
+
           <label className="field wide">
             <span>Barcode {form.barcode ? "✓ saved" : "(scan or type)"}</span>
             <input
@@ -688,6 +786,8 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             />
           </label>
 
+          <div className="pform-sec"><h4>Price</h4></div>
+
           <label className="field">
             <span>Cost price (₹)</span>
             <input
@@ -747,6 +847,19 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             )}
           </div>
 
+          <div className="pform-sec"><h4>Pack sizes</h4></div>
+
+          <BulkPacks
+            tiers={form.bulkTiers}
+            manual={!!form.manualBulk}
+            cost={form.cost}
+            price={form.price}
+            onChange={(t) => update("bulkTiers", t)}
+            onToggle={(v) => update("manualBulk", v)}
+          />
+
+          <div className="pform-sec"><h4>Photo</h4></div>
+
           <label className="field wide">
             <span>Product image</span>
             <div className="image-uploader">
@@ -785,6 +898,8 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             {imgError && <div className="auth-error">{imgError}</div>}
           </label>
 
+          <div className="pform-sec"><h4>Stock</h4></div>
+
           <label className="field wide stock-field">
             <span>Availability</span>
             <button
@@ -798,6 +913,19 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
               </span>
             </button>
           </label>
+
+          <label className="field">
+            <span>Stock quantity (optional)</span>
+            <input
+              type="number"
+              min="0"
+              value={form.stock ?? ""}
+              onChange={(e) => update("stock", e.target.value)}
+              placeholder="e.g. 20 — for low-stock alerts"
+            />
+          </label>
+
+          <div className="pform-sec"><h4>Pricing rules</h4></div>
 
           <label className="field wide stock-field">
             <span>Free-delivery counting</span>
@@ -836,16 +964,6 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
             </small>
           </label>
 
-          <label className="field">
-            <span>Stock quantity (optional)</span>
-            <input
-              type="number"
-              min="0"
-              value={form.stock ?? ""}
-              onChange={(e) => update("stock", e.target.value)}
-              placeholder="e.g. 20 — for low-stock alerts"
-            />
-          </label>
         </div>
 
         <div className="modal-foot">
