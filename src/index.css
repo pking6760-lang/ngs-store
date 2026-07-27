@@ -1,6 +1,0 @@
-
-/* What's inside a combo pack, on the product sheet. */
-.pd-combo { list-style: none; margin: 6px 0 0; padding: 0; display: flex;
-  flex-direction: column; gap: 2px; }
-.pd-combo li { font-size: 12.5px; color: #5b6672; line-height: 1.35; }
-.pd-combo li span { font-weight: 800; color: #16202c; margin-right: 2px; }
