@@ -3539,3 +3539,16 @@ html, body { touch-action: manipulation; }
 .margin-read.ok { background: #EEF2FF; border-color: #ccd9f2; }
 .margin-read.ok strong, .margin-read.ok .margin-pct { color: #3B5BDB; }
 .ptag.magnet { background: #FEF3C7; color: #92610A; }
+/* A pack setup that cannot work, said plainly — the owner set 6/12/18 by hand
+   in an older build and the engine has been correctly leaving them alone ever
+   since. Silence there reads as the automation being broken. */
+.packs-warn {
+  margin: 6px 0 2px; padding: 10px 12px; border-radius: 10px;
+  background: #FFF8E8; border: 1px solid #F0DFAE; color: #7A5A05;
+  font-size: 12.5px; line-height: 1.45;
+}
+.packs-fix {
+  display: block; margin-top: 8px; border: 1px solid var(--a-primary); background: #fff;
+  border-radius: 9px; padding: 7px 12px; font-size: 12.5px; font-weight: 800;
+  color: var(--a-primary);
+}

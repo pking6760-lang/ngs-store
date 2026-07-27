@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSettings, useProducts } from "../lib/hooks.js";
 import { tierUnitPrice } from "../lib/bulk.js";
+import { money } from "../lib/money.js";
 import ProductThumb from "./ProductThumb.jsx";
 
 // Product-detail bottom sheet: product image + price, then selectable pack
@@ -95,11 +96,11 @@ export default function BulkPackSheet({ product, onClose }) {
                 <span className="pd-pack-radio" aria-hidden="true" />
                 <span className="pd-pack-main">
                   <span className="pd-pack-qty">Pack of {q}</span>
-                  <span className="pd-pack-per">₹{unit} / unit{save > 0 ? ` · save ₹${save}` : ""}</span>
+                  <span className="pd-pack-per">₹{money(unit)} / unit{save > 0 ? ` · save ₹${money(save)}` : ""}</span>
                 </span>
                 <span className="pd-pack-price">
-                  ₹{total}
-                  {save > 0 && <s>₹{ref}</s>}
+                  ₹{money(total)}
+                  {save > 0 && <s>₹{money(ref)}</s>}
                 </span>
               </button>
             );
@@ -108,8 +109,8 @@ export default function BulkPackSheet({ product, onClose }) {
 
         <div className="pd-sheet-foot">
           <div className="pd-foot-price">
-            <strong>₹{selTotal}</strong>
-            {selSave > 0 && <span className="pd-foot-save">Save ₹{selSave}</span>}
+            <strong>₹{money(selTotal)}</strong>
+            {selSave > 0 && <span className="pd-foot-save">Save ₹{money(selSave)}</span>}
           </div>
           <button className="pd-foot-add" onClick={add}>
             {inCart === sel ? "Update cart" : "Add to cart"}

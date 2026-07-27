@@ -290,11 +290,14 @@ begin
     end
     from public.product_costs pc where pc.product_id = p.id;
 
+  -- The pack floor keeps its paise. Rounding it up to a whole rupee is what made
+  -- a discount impossible on a Rs10 item -- see migration-pack-discount-from-extra.
+  -- The SHELF price above still rounds to whole rupees.
   update public.products p set
     bulk_tiers = case
       when p.bulk_mode = 'qty'
-        then public.build_bulk_tiers_at(p.price, pc.cost, ceil(pc.cost * (1 + cfg.floor_markup)), cfg, p.bulk_qtys)
-      else public.build_bulk_tiers(p.price, pc.cost, ceil(pc.cost * (1 + cfg.floor_markup)), cfg)
+        then public.build_bulk_tiers_at(p.price, pc.cost, pc.cost * (1 + cfg.floor_markup), cfg, p.bulk_qtys)
+      else public.build_bulk_tiers(p.price, pc.cost, pc.cost * (1 + cfg.floor_markup), cfg)
     end
     from public.product_costs pc
     where pc.product_id = p.id and pc.cost is not null and pc.speed_tier <> 'unpriced'

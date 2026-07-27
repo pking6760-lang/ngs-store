@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useSettings } from "../lib/hooks.js";
 import ProductThumb from "./ProductThumb.jsx";
 import { firstBulkTier, tierUnitPrice } from "../lib/bulk.js";
+import { money } from "../lib/money.js";
 import BulkPackSheet from "./BulkPackSheet.jsx";
 import { useStockAlerts } from "../lib/stockAlerts.js";
 import { useT } from "../lib/i18n.jsx";
@@ -116,12 +117,12 @@ export default function ProductCard({ product, badge }) {
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M3 7l4.5 3L12 4l4.5 6L21 7l-1.8 11H4.8L3 7z" />
             </svg>
-            ₹{primePrice} with Prime
+            ₹{money(primePrice)} with Prime
           </span>
         )}
         <div className="pcard-pricewrap">
           <div className="pcard-price">
-            <span className="pcard-now">₹{price}</span>
+            <span className="pcard-now">₹{money(price)}</span>
             {product.mrp > price && <span className="pcard-was">₹{product.mrp}</span>}
           </div>
           {savings > 0 && !outOfStock && (

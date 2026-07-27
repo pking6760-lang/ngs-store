@@ -396,8 +396,27 @@ function BulkPacks({ mode, tiers, qtys, cost, price, productId, onChange, onQtys
         ))}
       </div>
 
+      {!knowCost && mode !== "manual" && (
+        <p className="packs-warn">
+          No cost price on this item, so nothing can be priced. Add it on the Price tab.
+        </p>
+      )}
+
       {mode === "auto" && (
         <small className="field-note">2, 3 and 4 units, priced from your selling price.</small>
+      )}
+
+      {mode === "manual" && (
+        <p className="packs-warn">
+          By hand means the engine leaves these alone — prices won't follow your
+          cost, and no discount is worked out for you.
+          {rows.length > 0 && (
+            <button type="button" className="packs-fix"
+              onClick={() => { setQtys(rows.map((r) => Number(r.q))); onMode("qty"); }}>
+              Keep these sizes, let the engine price them
+            </button>
+          )}
+        </p>
       )}
 
       {mode === "qty" && (

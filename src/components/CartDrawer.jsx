@@ -9,6 +9,7 @@ import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import { tierUnitPrice, bulkUnitPrice } from "../lib/bulk.js";
+import { money } from "../lib/money.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useT, tr } from "../lib/i18n.jsx";
 import ProductThumb from "./ProductThumb.jsx";
@@ -1089,7 +1090,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <span>{qty}</span>
                     <button type="button" onClick={() => add(product.id, product.stock)} aria-label="Add one">+</button>
                   </div>
-                  <span className="co-item-price">₹{unit * qty}</span>
+                  <span className="co-item-price">₹{money(unit * qty)}</span>
                 </div>
               ))}
             </div>
@@ -1465,11 +1466,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <div className="cart-line-name">{product.name}</div>
                     <div className="cart-line-unit">
                       {product.unit}
-                      {bulkOn && <span className="cart-line-bulk"> · ₹{unit}/ea bulk</span>}
+                      {bulkOn && <span className="cart-line-bulk"> · ₹{money(unit)}/ea bulk</span>}
                     </div>
                     {nextTier && (
                       <div className="cart-line-nudge">
-                        Add {nextTier.q - qty} more → ₹{nextTier.price}/ea
+                        Add {nextTier.q - qty} more → ₹{money(nextTier.price)}/ea
                       </div>
                     )}
                   </div>
@@ -1486,8 +1487,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       <div className="cart-line-max">Only {product.stock} in stock</div>
                     )}
                     <div className="cart-line-price">
-                      ₹{unit * qty}
-                      {lineMrp > unit && <span className="cart-line-was">₹{lineMrp * qty}</span>}
+                      ₹{money(unit * qty)}
+                      {lineMrp > unit && <span className="cart-line-was">₹{money(lineMrp * qty)}</span>}
                     </div>
                     <button
                       className="line-delete"
