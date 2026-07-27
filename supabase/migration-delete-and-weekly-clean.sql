@@ -64,14 +64,15 @@ create trigger trg_product_image_gc
   after update of image_url or delete on public.products
   for each row execute function public.mark_product_image_gone();
 
--- Anything already orphaned before this existed.
-insert into public.storage_gc (bucket, name, reason)
-select 'product-images', o.name, 'orphaned before cleanup existed'
-  from storage.objects o
- where o.bucket_id = 'product-images'
-   and not exists (select 1 from public.products p
-                    where p.image_url like '%/product-images/' || o.name)
-on conflict (bucket, name) do nothing;
+-- REMOVED, and see migration-gc-bug-fix.sql for why.
+--
+-- This block swept the whole bucket for files "no product references" and queued
+-- them. Category photos live in the same bucket (cat<timestamp>.jpg), so all
+-- nine of them matched and were deleted. The assumption — one bucket, one owner
+-- — was wrong, and a delete is the one thing that cannot be taken back.
+--
+-- Nothing replaces it. Files are now only ever queued one at a time, by the
+-- trigger above, for the product that owned them.
 
 -- What the sweep should delete. Admin-only; the sweeper reads it with the
 -- service key and reports back.
