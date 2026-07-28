@@ -17,14 +17,25 @@ function LangToggle() {
   );
 }
 
-// Compact wallet balance chip — sits in the location row (native chrome).
-function WalletChip({ balance, onClick, className }) {
+// NGS Wallet chip — the premium piece of chrome in the header. A deep-green
+// "card" with a struck-gold coin bearing the rupee mark, then the balance. Reads
+// as store money you'd want to spend, not a grey utility button.
+function WalletChip({ balance, onClick }) {
   return (
-    <button className={className} onClick={onClick} aria-label="NGS Wallet">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-3M3 7h16a1 1 0 0 1 1 1v3h-4a2 2 0 0 0 0 4h4" />
-      </svg>
-      ₹{Number(balance || 0).toFixed(2)}
+    <button className="wallet-chip" onClick={onClick} aria-label="NGS Wallet">
+      <span className="wallet-coin" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" fill="url(#wc-g)" />
+          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,.55)" strokeWidth="1" />
+          <path d="M9 7.5h6M9 10.5h6M14.5 7.5c0 3.2-4.5 3-4.5 3l4 3.5" stroke="#6b4a06" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <defs>
+            <linearGradient id="wc-g" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#FDE8A6" /><stop offset=".55" stopColor="#EBAE36" /><stop offset="1" stopColor="#C6871A" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </span>
+      <span className="wallet-amt">{Number(balance || 0).toFixed(2)}</span>
     </button>
   );
 }
@@ -63,22 +74,22 @@ export default function Header({
       <div className="header-top">
         <Logo onClick={onLogoClick} />
 
-        {/* Cart and Account now live in the bottom nav — the header keeps only
-            the notifications bell so they're never shown twice. For a logged-out
-            visitor a small Login button stands in for the bell. */}
+        {/* Cart and Profile live in the bottom nav. The header keeps the
+            notifications bell (logged in) and the NGS Wallet — no login/logout
+            button here; a guest logs in from the Profile tab or by tapping the
+            wallet. */}
         <div className="header-icons">
-          {isLoggedIn ? (
+          {isLoggedIn && (
             <button className="bell-button" onClick={onBellClick} aria-label="Notifications">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
               {unread > 0 && <span className="bell-badge">{unread}</span>}
             </button>
-          ) : (
-            <button className="header-login" onClick={onAccountClick}>{t("Login")}</button>
           )}
+          <WalletChip balance={balance} onClick={isLoggedIn ? onWalletClick : onAccountClick} />
         </div>
       </div>
 
-      {/* Row 2 — delivery ETA + address (tap to manage) + wallet */}
+      {/* Row 2 — delivery ETA + address (tap to manage) */}
       <div className="header-locrow">
         <button className="header-loc" onClick={onAddressClick}>
           <span className="hl-bolt" aria-hidden="true">
@@ -93,9 +104,6 @@ export default function Header({
           </span>
         </button>
         <LangToggle />
-        {isLoggedIn && (
-          <WalletChip balance={balance} onClick={onWalletClick} className="hl-wallet" />
-        )}
       </div>
       </header>
 
