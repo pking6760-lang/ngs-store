@@ -86,7 +86,7 @@ export default function Receipt({ order, shop }) {
       <div className="rc-hr" />
       <div className="rc-thanks strong">Thank you! Visit again</div>
       <div className="rc-thanks">Groceries delivered in 12 min</div>
-      {shop.phone && <div className="rc-thanks">Order again: {shop.phone}</div>}
+      {shop.site && <div className="rc-thanks site">Order again: {shop.site}</div>}
     </div>
   );
 }

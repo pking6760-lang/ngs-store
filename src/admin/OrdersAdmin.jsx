@@ -27,6 +27,7 @@ const SHOP = {
   name: "Nisha General Store",
   address: "Sultanpur, New Delhi 110030",
   phone: "",
+  site: "www.ngsstore.in",
 };
 // The receipt's phone was hardcoded empty, so every bill the shop has ever
 // printed carried no number to call. The real one is already in settings.

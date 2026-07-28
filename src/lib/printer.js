@@ -252,7 +252,10 @@ export function buildReceiptBytes(order, shop) {
   mid(true);
   bold(true); p(line("Thank you! Visit again")); bold(false);
   p(line("Groceries delivered in 12 min"));
-  if (shop.phone) p(line("Order again: " + shop.phone));
+  // The last line is the one people keep. Bold, because it is the only thing on
+  // the paper asking them to come back, and the shop's number is already in the
+  // masthead — repeating it here said nothing new.
+  if (shop.site) { bold(true); p(line("Order again: " + shop.site)); bold(false); }
   mid(false);
   feed(1);
 
