@@ -5394,29 +5394,36 @@ body { background: var(--bg-soft); }
 /* ── Greeting hero ─────────────────────────────────────────────────────── */
 .home-hero {
   position: relative; overflow: hidden;
-  margin: 12px 14px 4px;
-  padding: 16px 18px;
-  border-radius: 20px;
+  margin: 14px 14px 6px;
+  padding: 22px 20px 20px;
+  border-radius: 24px;
   color: #fff;
-  background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 55%, var(--green-deep) 100%);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, #1a9152 0%, var(--green-dark) 52%, var(--green-deep) 100%);
+  box-shadow: 0 18px 40px -18px rgba(9, 63, 38, .65);
 }
+/* Two big soft orbs give the panel real depth instead of a flat wash. */
 .home-hero-glow {
-  position: absolute; top: -60px; right: -40px; width: 200px; height: 200px;
+  position: absolute; top: -70px; right: -50px; width: 240px; height: 240px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,.18), rgba(255,255,255,0) 70%);
+  background: radial-gradient(circle, rgba(255,255,255,.22), rgba(255,255,255,0) 70%);
   pointer-events: none;
 }
+.home-hero-glow::after {
+  content: ""; position: absolute; left: -160px; top: 150px; width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(231,165,44,.30), rgba(231,165,44,0) 70%);
+}
 .home-hero-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; }
-.home-hero-greet { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.home-hero-hi { font-size: 18px; font-weight: 850; letter-spacing: -0.02em; }
-.home-hero-line { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.82); }
+.home-hero-greet { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.home-hero-hi { font-size: 25px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; }
+.home-hero-line { font-size: 14px; font-weight: 650; color: rgba(255,255,255,.86); }
 .home-hero-eta {
-  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; font-weight: 800; letter-spacing: .01em;
-  background: rgba(255,255,255,.16); color: #fff;
-  padding: 6px 11px; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.22);
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 900; letter-spacing: .01em;
+  background: rgba(255,255,255,.20); color: #fff;
+  padding: 8px 13px; border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,.30);
+  backdrop-filter: blur(2px);
 }
 .home-hero-offer {
   position: relative; margin-top: 13px;
@@ -5455,25 +5462,29 @@ body { background: var(--bg-soft); }
 
 /* ── Colourful category tiles ──────────────────────────────────────────── */
 .cat-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 10px;
-  padding: 2px 14px 6px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px 11px;
+  padding: 4px 14px 8px;
 }
 .cat-tile {
-  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
   background: none; border: none; padding: 0; cursor: pointer;
 }
 .cat-thumb {
-  width: 100%; aspect-ratio: 1; border-radius: 18px;
+  width: 100%; aspect-ratio: 1; border-radius: 22px;
   background: var(--tint, var(--green-tint));
   display: grid; place-items: center; overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(24,32,25,.04);
+  /* A deeper ring of the tile's own colour + a real drop shadow = weight. */
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tint, var(--green)) 62%, #7a5a1e 10%),
+              0 8px 16px -8px color-mix(in srgb, var(--tint, #000) 70%, #000 30%);
   transition: transform .12s ease;
 }
-.cat-tile:active .cat-thumb { transform: scale(.94); }
-.cat-img { width: 78%; height: 78%; object-fit: contain; }
+.cat-tile:active .cat-thumb { transform: scale(.93); }
+.cat-img { width: 82%; height: 82%; object-fit: contain; }
+/* Drawn fallback icons get a bold dark stroke so they pop on the colour. */
+.cat-thumb svg { width: 52% !important; height: 52% !important; color: #223022; }
 .cat-name {
-  font-size: 11.5px; font-weight: 700; color: var(--ink); text-align: center;
-  line-height: 1.2; letter-spacing: -0.01em;
+  font-size: 12.5px; font-weight: 800; color: var(--ink); text-align: center;
+  line-height: 1.15; letter-spacing: -0.02em;
 }
 
 /* ── Cards & rails: warmer shadow, cleaner edges on the ivory ground ────── */

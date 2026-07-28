@@ -533,9 +533,12 @@ function HomeSkeleton() {
 
 // Soft per-tile backgrounds for the category grid — warm, food-friendly hues
 // that cycle so the wall of tiles reads as colourful rather than one flat green.
+// Bolder, more saturated tile colours — they should read as a colourful wall,
+// not a row of pale pastels. Each is paired (in CSS) with a deeper ring of the
+// same family so the tile has real edge and weight.
 const CAT_TINTS = [
-  "#FDEBD2", "#E4F1E1", "#E6EEF9", "#FBE6E6", "#F1E9F7",
-  "#E3F1F1", "#FCEEDD", "#EAF3E4", "#FDE8EF", "#E8EFF7", "#F3EDE2",
+  "#FBD8A0", "#BFE6B8", "#BFD4F5", "#F6BEBE", "#DCC6F0",
+  "#AEE0E0", "#F8CE96", "#C6E5AE", "#F7BAD3", "#B9CEF2", "#E6D2A8",
 ];
 
 // The greeting hero — the first thing the eye lands on. Personal (name +
