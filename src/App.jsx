@@ -541,59 +541,66 @@ const CAT_TINTS = [
   "#AEE0E0", "#F8CE96", "#C6E5AE", "#F7BAD3", "#B9CEF2", "#E6D2A8",
 ];
 
-// The greeting hero — the first thing the eye lands on. Personal (name +
-// time of day), reassuring (delivery promise), and premium (deep-green
-// gradient with a soft glow), it replaces the old flat "Welcome" strip that
-// took the same space to say nothing.
-function HomeHero({ offer }) {
+// A slim, professional greeting — one quiet line, no giant gradient box. The
+// header already carries the delivery promise and address, so this just adds a
+// touch of warmth without eating half the first screen.
+function HomeGreeting() {
   const { user, isLoggedIn } = useAuth();
   const h = new Date().getHours();
   const part = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   const name = isLoggedIn && user?.name ? user.name.split(" ")[0] : null;
   return (
-    <section className="home-hero">
-      <div className="home-hero-glow" aria-hidden="true" />
-      <div className="home-hero-row">
-        <div className="home-hero-greet">
-          <span className="home-hero-hi">{part}{name ? `, ${name}` : ""} 👋</span>
-          <span className="home-hero-line">What are we getting today?</span>
-        </div>
-        <span className="home-hero-eta">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
-          12 min
-        </span>
-      </div>
-      {offer && offer.trim() && (
-        <div className="home-hero-offer">
-          <span className="home-hero-tag">OFFER</span>
-          {offer}
-        </div>
-      )}
-    </section>
+    <div className="home-greet">
+      <span className="home-greet-hi">{part}{name ? `, ${name}` : ""}</span>
+      <span className="home-greet-sub">What would you like today?</span>
+    </div>
+  );
+}
+
+// Clean, consistent line icons — one drawing style, brand green. No emoji: a
+// professional store uses proper iconography, not a phone's cartoon set.
+const ICONS = {
+  deals: "M20.6 12.6 12.4 20.8a2 2 0 0 1-2.8 0L3 14.2a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h7.8a2 2 0 0 1 1.4.6l7 7a2 2 0 0 1 0 2.8zM7.5 7.5h.01",
+  rupee: "M4 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM9 8h6M9 11h6M13.5 8c0 3-4.5 3-4.5 3l3.5 4",
+  milk:  "M9 2h6v3l1.6 3.2A3 3 0 0 1 17 9.5V19a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9.5a3 3 0 0 1 .4-1.3L9 5zM7.5 11h9",
+  bolt:  "M13 2 4.3 13.2A1 1 0 0 0 5 15h5l-1 7 8.7-11.2A1 1 0 0 0 17 9h-5z",
+  leaf:  "M11 20A7 7 0 0 1 4 13C4 7.5 8.5 4 20 4c0 11.5-3.5 16-9 16zM8.5 15.5C10.5 11 14 8.5 18 7.5",
+  gift:  "M4 9h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM3 9V6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3M12 5v16M12 5S9.5 1.5 7.5 3s.5 4 4.5 4M12 5s2.5-3.5 4.5-2-.5 4-4.5 4",
+  cup:   "M5 8h11v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5zM16 9h2.5a2.5 2.5 0 0 1 0 5H16M8 3.5c-.5 1 .5 1.5 0 2.5M11.5 3.5c-.5 1 .5 1.5 0 2.5",
+  snack: "M4 11h16a8 8 0 0 1-16 0zM7 11a2 2 0 1 1 4 0M13 11a2 2 0 1 1 4 0M12 4v3",
+  soda:  "M6 8h12l-1.2 11.8a1 1 0 0 1-1 .9H8.2a1 1 0 0 1-1-.9L6 8zM6 8l-.5-3h13L18 8M14.5 4l-2.5 5",
+  pot:   "M4 10h16v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6zM4 12H2M20 12h2M9 6.5C9 5 10 5 10 3.5M14 6.5C14 5 15 5 15 3.5",
+  spray: "M8 8h5v3H8zM10 5h3v3M8 11v9a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-9M14 5h3M14 8h4M14 11h2",
+  care:  "M9 8h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2zM10 8V5a2 2 0 0 1 2-2 2 2 0 0 1 2 2v3M9 13h6",
+};
+function LineIcon({ d, size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      {d.split("|").map((p, i) => <path key={i} d={p} />)}
+    </svg>
   );
 }
 
 // ── Story bubbles ──────────────────────────────────────────────────────────
-// The row of tappable circles at the very top — the "this app is alive" element
-// from Zepto/Blinkit/Instagram, in NGS colours. Each opens a real, useful view:
-// a category, the milk plan, or a scroll to the deals rail. Counts are live, so
-// "Under ₹49 · 40 items" is never a lie.
-const STORY_RINGS = [
-  "conic-gradient(from 210deg, #F5A623, #E7452C, #C1177A, #F5A623)",
-  "conic-gradient(from 200deg, #16A34A, #0C7A3E, #0A5A2E, #16A34A)",
-  "conic-gradient(from 230deg, #2F7BE0, #6A3EE0, #2F7BE0)",
-  "conic-gradient(from 180deg, #E7A52C, #B26E12, #E7A52C)",
-  "conic-gradient(from 250deg, #E0457B, #9A2CE0, #E0457B)",
-  "conic-gradient(from 160deg, #12A5A5, #0C6E6E, #12A5A5)",
-];
+// The row of tappable circles at the top. Each shows a real product photo when
+// one exists (like Zepto/Swiggy), and falls back to a clean brand-green icon.
+// Each opens a real, useful view; counts stay live so nothing is a lie.
 function StoryStrip({ stories }) {
   if (!stories.length) return null;
   return (
     <div className="story-strip" role="list">
-      {stories.map((s, i) => (
+      {stories.map((s) => (
         <button className="story" key={s.key} role="listitem" onClick={s.onTap}>
-          <span className="story-ring" style={{ background: STORY_RINGS[i % STORY_RINGS.length] }}>
-            <span className="story-face">{s.emoji}</span>
+          <span className="story-ring">
+            <span className="story-face">
+              {/* Clean icon always sits underneath; the photo (when it exists
+                  and loads) covers it. A missing/broken image just reveals the
+                  icon — never a blank circle. */}
+              <LineIcon d={ICONS[s.icon]} size={26} />
+              {s.img && <img className="story-img" src={s.img} alt="" loading="lazy"
+                onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+            </span>
           </span>
           <span className="story-label">{s.label}</span>
         </button>
@@ -605,15 +612,16 @@ function StoryStrip({ stories }) {
 // ── "What's on your mind?" — shop by moment ────────────────────────────────
 // Swiggy/Zomato's cuisine circles, reimagined for a grocery: real life moments
 // (breakfast, chai, dinner, cleaning) instead of dry category names. Ordered by
-// time of day, so the shop leads with what you probably need right now.
+// time of day, so the shop leads with what you probably need right now. Uses the
+// category photo when the owner has set one, else a clean line icon.
 const MOMENTS = [
-  { key: "breakfast", emoji: "🍳", label: "Breakfast", match: ["dairy", "bread", "egg"], from: 5,  to: 11 },
-  { key: "chai",      emoji: "☕", label: "Chai time", match: ["snack", "bakery", "biscuit"], from: 6,  to: 19 },
-  { key: "munchies",  emoji: "🍿", label: "Munchies",  match: ["snack"],                     from: 16, to: 23 },
-  { key: "cold",      emoji: "🥤", label: "Cool off",  match: ["beverage", "cold", "drink"], from: 10, to: 22 },
-  { key: "dinner",    emoji: "🍚", label: "Cook dinner", match: ["atta", "rice", "dal", "oil", "instant"], from: 16, to: 22 },
-  { key: "clean",     emoji: "🧹", label: "Cleaning",  match: ["clean", "household"],        from: 8,  to: 20 },
-  { key: "care",      emoji: "🧴", label: "Self care", match: ["personal", "care"],          from: 0,  to: 24 },
+  { key: "breakfast", icon: "milk",  label: "Breakfast", match: ["dairy", "bread", "egg"], from: 5,  to: 11 },
+  { key: "chai",      icon: "cup",   label: "Chai time", match: ["snack", "bakery", "biscuit"], from: 6,  to: 19 },
+  { key: "munchies",  icon: "snack", label: "Munchies",  match: ["snack"],                     from: 16, to: 23 },
+  { key: "cold",      icon: "soda",  label: "Cool off",  match: ["beverage", "cold", "drink"], from: 10, to: 22 },
+  { key: "dinner",    icon: "pot",   label: "Cook dinner", match: ["atta", "rice", "dal", "oil", "instant"], from: 16, to: 22 },
+  { key: "clean",     icon: "spray", label: "Cleaning",  match: ["clean", "household"],        from: 8,  to: 20 },
+  { key: "care",      icon: "care",  label: "Self care", match: ["personal", "care"],          from: 0,  to: 24 },
 ];
 function MomentChips({ categories, onCategoryClick }) {
   const h = new Date().getHours();
@@ -630,7 +638,11 @@ function MomentChips({ categories, onCategoryClick }) {
       <div className="moment-row">
         {items.map((m) => (
           <button className="moment" key={m.key} onClick={() => onCategoryClick(m.cat)}>
-            <span className="moment-disc">{m.emoji}</span>
+            <span className="moment-disc">
+              <LineIcon d={ICONS[m.icon]} size={30} />
+              {m.cat.image && <img className="moment-img" src={m.cat.image} alt="" loading="lazy"
+                onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+            </span>
             <span className="moment-label">{m.label}</span>
           </button>
         ))}
@@ -674,20 +686,24 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
   const combos = shown.filter((p) => Array.isArray(p.comboItems) && p.comboItems.length > 0);
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const milkCat = homeCategories.find((c) => /dairy|milk/i.test(c.name));
+  const cheapest = [...under49].sort((a, b) => a.price - b.price)[0];
+  const img = (p) => (p && p.image ? p.image : null);
   const stories = [
-    bestPrices.length && { key: "deals", emoji: "🔥", label: "Deals", onTap: () => scrollTo("sec-best") },
-    under49.length >= 4 && { key: "u49", emoji: "💸", label: "Under ₹49", onTap: () => onCategoryClick({ id: "__under49", name: "Under ₹49", _filter: (p) => p.price > 0 && p.price <= 49 }) },
-    { key: "milk", emoji: "🥛", label: "Milk plan", onTap: () => onPromo("milk") },
-    combos.length && { key: "combos", emoji: "🎁", label: "Combos", onTap: () => onCategoryClick({ id: "__combos", name: "Combo packs", _filter: (p) => Array.isArray(p.comboItems) && p.comboItems.length > 0 }) },
-    almostGone.length && { key: "fast", emoji: "⚡", label: "Selling fast", onTap: () => scrollTo("sec-gone") },
-    milkCat && { key: "fresh", emoji: "🥚", label: "Fresh daily", onTap: () => onCategoryClick(milkCat) },
+    bestPrices.length && { key: "deals", icon: "deals", img: img(bestPrices[0]), label: "Deals", onTap: () => scrollTo("sec-best") },
+    under49.length >= 4 && { key: "u49", icon: "rupee", img: img(cheapest), label: "Under ₹49", onTap: () => onCategoryClick({ id: "__under49", name: "Under ₹49", _filter: (p) => p.price > 0 && p.price <= 49 }) },
+    { key: "milk", icon: "milk", img: img(milkCat && byCategory(milkCat.id)[0]), label: "Milk plan", onTap: () => onPromo("milk") },
+    combos.length && { key: "combos", icon: "gift", img: img(combos[0]), label: "Combos", onTap: () => onCategoryClick({ id: "__combos", name: "Combo packs", _filter: (p) => Array.isArray(p.comboItems) && p.comboItems.length > 0 }) },
+    almostGone.length && { key: "fast", icon: "bolt", img: img(almostGone[0]), label: "Selling fast", onTap: () => scrollTo("sec-gone") },
+    milkCat && { key: "fresh", icon: "leaf", img: img(byCategory(milkCat.id)[1]), label: "Fresh daily", onTap: () => onCategoryClick(milkCat) },
   ].filter(Boolean);
 
   return (
     <>
       <FestiveMasthead theme={theme} />
 
-      <HomeHero offer={offer} />
+      <HomeGreeting />
+
+      {offer && offer.trim() && <div className="offer-strip">{offer}</div>}
 
       <StoryStrip stories={stories} />
 

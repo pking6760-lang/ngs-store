@@ -5556,3 +5556,53 @@ body { background: var(--bg-soft); }
   font-size: 12px; font-weight: 800; color: var(--ink); text-align: center;
   letter-spacing: -0.02em; line-height: 1.15;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME v2 — professional pass: kill the giant greeting box, drop every emoji
+   for clean icons / real product photos, tighten the stories & moments.
+   ══════════════════════════════════════════════════════════════════════════ */
+.home-hero { display: none !important; }   /* retired: the oversized greeting box */
+
+.home-greet { padding: 12px 16px 2px; display: flex; flex-direction: column; gap: 1px; }
+.home-greet-hi  { font-size: 17px; font-weight: 850; letter-spacing: -0.02em; color: var(--ink); }
+.home-greet-sub { font-size: 13px; font-weight: 600; color: var(--muted); }
+
+.offer-strip {
+  margin: 8px 14px 2px; padding: 10px 13px; border-radius: 12px;
+  background: var(--gold-tint); color: var(--gold-deep);
+  font-size: 12.5px; font-weight: 750; line-height: 1.4;
+  border: 1px solid color-mix(in srgb, var(--gold) 24%, transparent);
+}
+
+/* ── Stories: photo-first, clean icon fallback, restrained ring ── */
+.story-strip { gap: 14px; padding: 12px 14px 6px; }
+.story { width: 68px; }
+.story-ring {
+  width: 66px; height: 66px; border-radius: 50%; padding: 2px;
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+.story-face {
+  position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+  background: var(--green-tint); color: var(--green-dark);
+  display: grid; place-items: center; box-shadow: none;
+}
+.story-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.story:active .story-ring { box-shadow: inset 0 0 0 2px var(--green); }
+.story-label { font-size: 11.5px; font-weight: 700; color: var(--ink); }
+
+/* ── Moments: photo-first, clean icon fallback, one calm tint ── */
+.moment-row { gap: 12px; padding: 4px 14px 6px; }
+.moment { width: 76px; }
+.moment-disc {
+  position: relative; width: 76px; height: 76px; border-radius: 20px; overflow: hidden;
+  background: var(--green-tint); color: var(--green-dark);
+  display: grid; place-items: center;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 12%, transparent);
+}
+/* clean single-tone tiles; no rainbow */
+.moment:nth-child(2n) .moment-disc { background: var(--gold-tint); color: var(--gold-deep); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 16%, transparent); }
+.moment:nth-child(3n) .moment-disc { background: #EAF0FB; color: #2C5AA8; box-shadow: inset 0 0 0 1px rgba(44,90,168,.12); }
+.moment-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.moment-label { font-size: 12px; font-weight: 750; color: var(--ink); letter-spacing: -0.01em; }
