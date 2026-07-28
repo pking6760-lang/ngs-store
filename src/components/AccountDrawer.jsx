@@ -712,17 +712,41 @@ function WalletTab({ userId }) {
   const { balance, ledger, loading, error, reload } = useWallet(userId);
   const [addOpen, setAddOpen] = useState(false);
   const list = useShowMore(ledger, 12);
+  // Balance counts up smoothly, and the card gives a brief green glow whenever
+  // the balance jumps up (money added, a refund landed).
+  const shownBal = useCountUp(balance);
+  const glow = useBalanceGlow(balance);
+  const stats = useMemo(() => walletStats(ledger), [ledger]);
+  const groups = useMemo(() => groupLedgerByDay(list.shown), [list.shown]);
   if (error) return <RetryState error="Couldn't load your wallet." onRetry={reload} label="your wallet" />;
+
   return (
     <div className="wallet-tab">
-      <div className="wallet-card">
-        <div className="wallet-card-lbl">{tr("NGS Wallet balance")}</div>
-        <div className="wallet-card-bal">₹{balance.toFixed(2)}</div>
-        <div className="wallet-card-note">Refunds land here and apply on your next order.</div>
+      <div className={`wallet-card ${glow ? "glow" : ""}`}>
+        <div className="wallet-card-head">
+          <span className="wallet-card-lbl">{tr("NGS Wallet balance")}</span>
+          <span className="wallet-card-mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="11" fill="rgba(255,255,255,.14)" />
+              <path d="M8.5 7.5h7M8.5 10.5h7M14.6 7.5c0 3.4-4.6 3.2-4.6 3.2l4.2 3.8" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        </div>
+        <div className="wallet-card-bal">₹{shownBal.toFixed(2)}</div>
+        <div className="wallet-card-note">{tr("Refunds and rewards land here, ready for your next order.")}</div>
         <button className="wallet-add-btn" onClick={() => setAddOpen(true)}>
-          + Add money
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h15a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11" /><circle cx="16.5" cy="12.5" r="1.4" fill="currentColor" stroke="none" /></svg>
+          {tr("Add money")}
         </button>
       </div>
+
+      {ledger.length > 0 && (
+        <div className="wallet-stats">
+          <WalletStat kind="earned" label={tr("Earned")} value={stats.earned} />
+          <WalletStat kind="spent"  label={tr("Spent")}  value={stats.spent} />
+          <WalletStat kind="added"  label={tr("Added")}  value={stats.added} />
+        </div>
+      )}
 
       {addOpen && (
         <WalletTopup
@@ -731,22 +755,18 @@ function WalletTab({ userId }) {
         />
       )}
 
-      <h4 className="wallet-h">{tr("History")}</h4>
       {loading && ledger.length === 0 ? (
         <p className="account-empty">Loading…</p>
       ) : ledger.length === 0 ? (
-        <p className="account-empty">{tr("No wallet activity yet.")}</p>
+        <WalletEmpty />
       ) : (
-        <div className="wallet-list">
-          {list.shown.map((e) => (
-            <div className="wallet-row" key={e.id}>
-              <div className="wallet-row-main">
-                <span className="wallet-row-note">{walletLabel(e)}</span>
-                <span className="wallet-row-date">{fmtWalletDate(e.at)}</span>
+        <div className="wallet-history">
+          {groups.map((g) => (
+            <div className="wallet-group" key={g.key}>
+              <div className="wallet-group-lbl">{g.label}</div>
+              <div className="wallet-list">
+                {g.items.map((e) => <WalletRow key={e.id} e={e} />)}
               </div>
-              <span className={`wallet-row-amt ${e.amount >= 0 ? "cr" : "dr"}`}>
-                {e.amount >= 0 ? "+" : "−"}₹{Math.abs(e.amount).toFixed(2)}
-              </span>
             </div>
           ))}
           {list.more && (
@@ -756,6 +776,66 @@ function WalletTab({ userId }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// One ledger line: a typed icon (credit ↑ / debit ↓ / refund ↻), the label +
+// time, and the signed amount. Slides in from the top on first mount.
+function WalletRow({ e }) {
+  const credit = e.amount >= 0;
+  const refund = e.kind === "refund";
+  const type = refund ? "refund" : credit ? "cr" : "dr";
+  return (
+    <div className="wallet-row">
+      <span className={`wallet-ic ${type}`} aria-hidden="true">
+        {refund ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+        ) : credit ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+        )}
+      </span>
+      <div className="wallet-row-main">
+        <span className="wallet-row-note">{walletLabel(e)}</span>
+        <span className="wallet-row-date">{fmtWalletTime(e.at)}</span>
+      </div>
+      <span className={`wallet-row-amt ${credit ? "cr" : "dr"}`}>
+        {credit ? "+" : "−"}₹{Math.abs(e.amount).toFixed(2)}
+      </span>
+    </div>
+  );
+}
+
+// A quick-stat cell under the balance (Earned / Spent / Added).
+function WalletStat({ kind, label, value }) {
+  const ICON = {
+    earned: <path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8M2 7.5h20v4.5H2zM12 21V7.5M12 7.5H7.6a2.5 2.5 0 0 1 0-5C11 2.5 12 7.5 12 7.5zM12 7.5h4.4a2.5 2.5 0 0 0 0-5C13 2.5 12 7.5 12 7.5z" />,
+    spent:  <path d="M3 7h18M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7M3 7l2.5-4h13L21 7M16 12h2" />,
+    added:  <path d="M12 5v14M5 12h14" />,
+  }[kind];
+  return (
+    <div className={`wallet-stat ${kind}`}>
+      <span className="wallet-stat-ic" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{ICON}</svg>
+      </span>
+      <span className="wallet-stat-val">₹{Math.round(value).toLocaleString("en-IN")}</span>
+      <span className="wallet-stat-lbl">{label}</span>
+    </div>
+  );
+}
+
+// Nothing to show yet — a friendly illustration instead of a blank panel.
+function WalletEmpty() {
+  return (
+    <div className="wallet-empty">
+      <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 7h15a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11" />
+        <circle cx="16.5" cy="12.5" r="1.6" />
+      </svg>
+      <p className="wallet-empty-title">{tr("No wallet activity yet")}</p>
+      <p className="wallet-empty-sub">{tr("Refunds and cashback will appear here.")}</p>
     </div>
   );
 }
@@ -921,12 +1001,95 @@ function TopupPay({ amount, onPaid, onBack }) {
 
 function walletLabel(e) {
   if (e.note) return e.note;
-  return { refund: tr("Refund"), topup: tr("Money added"), spent: tr("Used on order"), adjust: tr("Adjustment") }[e.kind] || e.kind;
+  return {
+    refund: tr("Refund"), topup: tr("Money added"), spent: tr("Used on order"),
+    referral: tr("Referral reward"), change: tr("Change returned"),
+    cancel_fee: tr("Cancellation fee"), adjust: tr("Adjustment"), adjustment: tr("Adjustment"),
+  }[e.kind] || e.kind;
 }
-function fmtWalletDate(iso) {
+// Rows sit under a day header (Today / Yesterday / date), so the line itself
+// only needs the time.
+function fmtWalletTime(iso) {
   try {
-    return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   } catch { return ""; }
+}
+
+// Three honest buckets from the ledger, no overlap: money you added (top-ups),
+// money you earned another way (refunds + rewards + change), and money you spent
+// from the wallet on orders.
+function walletStats(ledger) {
+  let added = 0, earned = 0, spent = 0;
+  for (const e of ledger || []) {
+    const amt = Number(e.amount) || 0;
+    if (amt < 0) spent += -amt;
+    else if (e.kind === "topup") added += amt;
+    else earned += amt;
+  }
+  return { added, earned, spent };
+}
+
+// Group ledger rows under Today / Yesterday / "26 Jul" headers, newest first.
+function groupLedgerByDay(items) {
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+  const today = startOfDay(new Date());
+  const dayMs = 86400000;
+  const out = [];
+  const byKey = new Map();
+  for (const e of items || []) {
+    const d = new Date(e.at);
+    const key = startOfDay(d);
+    let label;
+    if (key === today) label = tr("Today");
+    else if (key === today - dayMs) label = tr("Yesterday");
+    else {
+      const sameYear = d.getFullYear() === new Date().getFullYear();
+      label = d.toLocaleDateString("en-IN", { day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }) });
+    }
+    if (!byKey.has(key)) { const g = { key, label, items: [] }; byKey.set(key, g); out.push(g); }
+    byKey.get(key).items.push(e);
+  }
+  return out;
+}
+
+// Smoothly animates a number toward its target (~600ms ease-out). Used for the
+// wallet balance so it "counts up" when the screen opens or money lands.
+function useCountUp(target) {
+  const [val, setVal] = useState(target);
+  const fromRef = useRef(target);
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = Number(target) || 0;
+    if (from === to) { setVal(to); return; }
+    const dur = 600, t0 = performance.now();
+    let raf;
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(from + (to - from) * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = to;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return val;
+}
+
+// Brief green glow on the card whenever the balance jumps UP.
+function useBalanceGlow(balance) {
+  const [glow, setGlow] = useState(false);
+  const prev = useRef(balance);
+  useEffect(() => {
+    if (balance > prev.current) {
+      setGlow(true);
+      const id = setTimeout(() => setGlow(false), 1300);
+      prev.current = balance;
+      return () => clearTimeout(id);
+    }
+    prev.current = balance;
+  }, [balance]);
+  return glow;
 }
 
 function Row({ k, v, good, bold }) {
