@@ -112,6 +112,20 @@ Deno.serve(async (req) => {
     if (!tokens.length) return new Response("no devices", { status: 200 });
 
     const accessToken = await getAccessToken();
+    // A caller may say exactly what the alarm should read. Used by the
+    // due-delivery sweep, where "🛒 New order" would be a lie — the order is a
+    // day old and what actually needs saying is "the 8 AM round is yours".
+    // Absent an override this behaves exactly as before.
+    if (typeof payload.title === "string" && payload.title.trim()) {
+      const results = await Promise.all(
+        tokens.map((t) => sendFcm(accessToken, t, payload.title, String(payload.body ?? ""))),
+      );
+      const dead = results.filter((r) => r.status === 404 || r.status === 400).map((r) => r.token);
+      await deleteTokens(dead);
+      return new Response(JSON.stringify({ sent: results.length, dead: dead.length }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
+    }
     const title = `🛒 New order ${order.human_code ?? ""}`.trim();
     const method = order.payment_method ?? "";
     const online = method === "razorpay" || method === "online" || method === "card";
