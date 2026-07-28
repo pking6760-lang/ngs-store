@@ -533,22 +533,30 @@ function HomeSkeleton() {
 
 function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo, theme }) {
   if (products.length === 0) return <HomeSkeleton />;
-  const byCategory = (id) => products.filter((p) => p.category === id);
+  // Categories the shop keeps off its front page — cigarettes today. Everything
+  // in one is filtered out of EVERY rail below, not just the obvious tile: a
+  // single carousel that forgets undoes the whole intention. They remain on sale
+  // — search finds them and the category page opens — the app simply stops
+  // putting them in front of people who did not ask.
+  const hiddenCats = new Set(categories.filter((c) => c.hiddenFromHome).map((c) => c.id));
+  const shown = products.filter((p) => !hiddenCats.has(p.category));
+  const homeCategories = categories.filter((c) => !c.hiddenFromHome);
+  const byCategory = (id) => shown.filter((p) => p.category === id);
   // Resolve the buy-again ids against the live catalog (fresh price/stock), keep
   // the server's recency order, drop anything no longer buyable.
   const buyAgain = buyAgainIds
-    .map((id) => products.find((p) => p.id === id))
+    .map((id) => shown.find((p) => p.id === id))
     .filter((p) => p && p.active !== false)
     .slice(0, 12);
   // Best Prices: biggest genuine deals first (highest % off MRP), then any other
   // flagged deals — so the products you've discounted lead the section.
-  const bestPrices = products
+  const bestPrices = shown
     .filter((p) => p.bait)
     .map((p) => ({ p, off: p.mrp > p.price ? (p.mrp - p.price) / p.mrp : 0 }))
     .sort((a, b) => b.off - a.off)
     .slice(0, 12)
     .map((x) => x.p);
-  const almostGone = products
+  const almostGone = shown
     .filter((p) => typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && p.inStock !== false)
     .sort((a, b) => a.stock - b.stock)
     .slice(0, 12);
@@ -598,7 +606,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
       <section className="section">
         <h2 className="section-title">Shop by category</h2>
         <div className="category-grid">
-          {categories.map((c) => (
+          {homeCategories.map((c) => (
             <button
               key={c.id}
               className="category-tile"
@@ -615,7 +623,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
         </div>
       </section>
 
-      {categories
+      {homeCategories
         .filter((c) => byCategory(c.id).length > 0)
         .map((c) => (
           <section className="section" key={c.id}>

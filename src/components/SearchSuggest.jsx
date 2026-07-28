@@ -25,9 +25,17 @@ export default function SearchSuggest({
     [trimmed, products, categories, ctx]
   );
   const recent = useMemo(() => (trimmed ? [] : recentSearches()), [trimmed]);
+  // "You buy this often" shows before a single letter is typed, so it is the
+  // home screen offering something, not the shopper asking for it. A category
+  // the shop keeps off its front page stays out of here too. Typed results are
+  // a different matter — those the customer asked for, and they still appear.
+  const hidden = useMemo(
+    () => new Set((categories || []).filter((c) => c.hiddenFromHome).map((c) => c.id)),
+    [categories]
+  );
   const usual = useMemo(
-    () => (trimmed ? [] : products.filter((p) => bought?.has(p.id)).slice(0, 6)),
-    [trimmed, products, bought]
+    () => (trimmed ? [] : products.filter((p) => bought?.has(p.id) && !hidden.has(p.category)).slice(0, 6)),
+    [trimmed, products, bought, hidden]
   );
 
   // Tapping the shop behind closes it. The search ROW counts as inside — tapping

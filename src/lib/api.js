@@ -83,7 +83,11 @@ function mapProduct(r) {
     comboItems: Array.isArray(r.combo_items) ? r.combo_items : [] };
 }
 function mapCategory(r) {
-  return { id: r.id, name: r.name, icon: r.icon, color: r.color, image: r.image_url || "" };
+  return { id: r.id, name: r.name, icon: r.icon, color: r.color, image: r.image_url || "",
+    // Kept off the home page entirely — no tile, no rail, and nothing from it in
+    // Best Prices, Almost Gone, Buy again or the cart's suggestion. Still sold:
+    // search finds it and the category page works if opened directly.
+    hiddenFromHome: !!r.hidden_from_home };
 }
 function mapCoupon(r) {
   return { code: r.code, type: r.type, value: num(r.value),
@@ -1699,6 +1703,7 @@ export async function updateCategory(id, patch) {
   if (patch.name !== undefined) p.name = patch.name;
   if (patch.icon !== undefined) p.icon = patch.icon;
   if (patch.image !== undefined) p.image_url = patch.image || null;
+  if (patch.hiddenFromHome !== undefined) p.hidden_from_home = !!patch.hiddenFromHome;
   const { error } = await must().from("categories").update(p).eq("id", id);
   if (error) throw error;
   pingLocal("categories");

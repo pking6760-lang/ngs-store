@@ -3564,3 +3564,12 @@ html, body { touch-action: manipulation; }
   padding: 7px 12px; font-size: 13px; font-weight: 800; color: var(--a-primary); }
 .laddi-row button.on { background: var(--a-primary); border-color: var(--a-primary); color: #fff; }
 .laddi-clear { color: var(--a-sub) !important; font-weight: 700 !important; }
+/* A category kept off the home page. Still sold and still searchable, so the
+   marker says what it is rather than reading like "deleted". */
+.cat-hidden-tag {
+  display: inline-block; margin-left: 7px; padding: 2px 7px; border-radius: 999px;
+  background: #FFF1DC; color: #8A5A00; font-size: 10px; font-weight: 900;
+  letter-spacing: .03em; text-transform: uppercase; vertical-align: 1px;
+}
+.cat-list-eye { border: none; background: transparent; color: var(--a-sub); padding: 6px; line-height: 1; }
+.cat-list-eye.off { color: #B07400; }

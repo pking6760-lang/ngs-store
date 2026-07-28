@@ -328,8 +328,29 @@ function CategoryManager({ categories, products, onClose }) {
                       ? <img className="cat-list-img" src={c.image} alt="" />
                       : <CategoryIcon id={c.id} name={c.name} size={18} />}
                   </span>
-                  <span className="cat-list-name">{c.name}</span>
+                  <span className="cat-list-name">
+                    {c.name}
+                    {c.hiddenFromHome && <span className="cat-hidden-tag">off home page</span>}
+                  </span>
                   <span className="cat-list-count">{count} items</span>
+                  <button
+                    type="button"
+                    className={`cat-list-eye ${c.hiddenFromHome ? "off" : ""}`}
+                    title={c.hiddenFromHome
+                      ? "Hidden from the home page — still on sale, still in search"
+                      : "Showing on the home page"}
+                    aria-label={c.hiddenFromHome ? `Show ${c.name} on the home page` : `Hide ${c.name} from the home page`}
+                    onClick={async () => {
+                      const r = await updateCategory(c.id, { hiddenFromHome: !c.hiddenFromHome });
+                      if (!r.ok) setError(r.error);
+                    }}
+                  >
+                    {c.hiddenFromHome ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l18 18" /><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" /><path d="M9.4 5.2A9.7 9.7 0 0 1 12 5c5 0 9 4.5 9 7a11 11 0 0 1-2.4 3.4M6.2 6.7C3.9 8.2 3 10.4 3 12c0 2.5 4 7 9 7 1.2 0 2.3-.2 3.3-.6" /></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z" /><circle cx="12" cy="12" r="2.6" /></svg>
+                    )}
+                  </button>
                   <label className="cat-list-photo" title={c.image ? "Change photo" : "Add photo"}>
                     {busy === c.id ? "…" : <Ic name="camera" size={16} />}
                     <input type="file" accept="image/*" hidden onChange={(e) => setCatImage(c, e)} />
