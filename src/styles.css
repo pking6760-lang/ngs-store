@@ -5763,3 +5763,11 @@ main.main { padding-bottom: calc(var(--nav-h) + 18px); }
 .cart-bar { bottom: calc(var(--nav-h) + 12px) !important; }
 .live-pill { bottom: calc(var(--nav-h) + 12px) !important; }
 .live-pill.raised { bottom: calc(var(--nav-h) + 78px) !important; }
+
+/* Logged-out Login button in the header (replaces the removed account/cart) */
+.header-login {
+  border: 1.5px solid var(--green); background: var(--green-tint);
+  color: var(--green-dark); font-weight: 800; font-size: 13px;
+  padding: 8px 16px; border-radius: 999px;
+}
+.header-login:active { transform: scale(.96); }

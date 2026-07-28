@@ -63,27 +63,18 @@ export default function Header({
       <div className="header-top">
         <Logo onClick={onLogoClick} />
 
+        {/* Cart and Account now live in the bottom nav — the header keeps only
+            the notifications bell so they're never shown twice. For a logged-out
+            visitor a small Login button stands in for the bell. */}
         <div className="header-icons">
-          {isLoggedIn && (
+          {isLoggedIn ? (
             <button className="bell-button" onClick={onBellClick} aria-label="Notifications">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
               {unread > 0 && <span className="bell-badge">{unread}</span>}
             </button>
+          ) : (
+            <button className="header-login" onClick={onAccountClick}>{t("Login")}</button>
           )}
-          <button className="account-button" onClick={onAccountClick} aria-label={isLoggedIn ? "Account" : "Log in"}>
-            <span className="account-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
-            </span>
-            <span className="account-label">{isLoggedIn ? firstName : t("Login")}</span>
-          </button>
-          <button className="cart-button" onClick={onCartClick}>
-            <span className="cart-icon">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.5 3h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6" /></svg>
-            </span>
-            <span className="cart-label">
-              {totalCount > 0 ? `${totalCount} ${t(totalCount > 1 ? "items" : "item")}` : t("My Cart")}
-            </span>
-          </button>
         </div>
       </div>
 
