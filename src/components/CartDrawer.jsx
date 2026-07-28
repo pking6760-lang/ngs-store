@@ -424,6 +424,23 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const grandTotal = netItems + deliveryFee + handling + surgeFee + smallCartFee + memberFee;
   const pointsEarned = pointsForSpend(netItems, rewardsCfg);
 
+  // What the bill shows as "saved".
+  //
+  // `savings` alone counts only the gap to MRP on the items, so a Prime cart
+  // with a waived ₹20 delivery was announcing "You save ₹3" — understating the
+  // thing that actually justifies the membership. A waived fee is money the
+  // customer would otherwise have paid, so it belongs in the same number, and
+  // the parts are listed underneath so the total can always be checked.
+  const deliverySaved = itemTotal > 0 && deliveryFee === 0 ? DELIVERY_FEE : 0;
+  const totalSaved = savings + deliverySaved + discount + couponDiscount;
+  const savedParts = [
+    savings > 0 ? `₹${savings} off MRP` : null,
+    deliverySaved > 0 ? `₹${deliverySaved} delivery waived` : null,
+    discount > 0 ? `₹${discount} points` : null,
+    couponDiscount > 0 ? `₹${couponDiscount} coupon` : null,
+  ].filter(Boolean);
+  const billItemCount = lines.reduce((n, l) => n + l.qty, 0);
+
   // ── NGS Wallet (store credit) ──────────────────────────
   // The customer can apply their wallet balance to this order. The server caps
   // it at the balance and the total; we mirror that here for the bill display.
@@ -1618,32 +1635,51 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 onToggle={() => setAddMembership((v) => !v)} />
             )}
 
-            <div className="bill">
-              <h4>{tr("Bill details")}</h4>
+            <div className="bill bill-pro">
+              <div className="bill-head">
+                <span className="bill-head-ic" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 3v18l2.5-1.6L10 21l2-1.6L14 21l2.5-1.6L19 21V3z" />
+                    <path d="M9 8h6M9 12h6" />
+                  </svg>
+                </span>
+                <h4>{tr("Bill details")}</h4>
+                {billItemCount > 0 && (
+                  <span className="bill-head-n">
+                    {billItemCount} {billItemCount === 1 ? "item" : "items"}
+                  </span>
+                )}
+              </div>
+
               <div className="bill-row">
                 <span>{tr("Item total")}</span>
-                <span>₹{itemTotal}</span>
+                <span className="bill-amt">₹{itemTotal}</span>
               </div>
               {discount > 0 && (
                 <div className="bill-row">
                   <span>{tr("Points discount")}</span>
-                  <span className="free">−₹{discount}</span>
+                  <span className="bill-amt free">−₹{discount}</span>
                 </div>
               )}
               {couponDiscount > 0 && (
                 <div className="bill-row">
                   <span>Coupon ({appliedCode})</span>
-                  <span className="free">−₹{couponDiscount}</span>
+                  <span className="bill-amt free">−₹{couponDiscount}</span>
                 </div>
               )}
               <div className="bill-row">
                 <span>{tr("Delivery fee")}</span>
-                <span>
+                <span className="bill-amt">
                   {deliveryFee === 0 ? (
-                    <span className="free">
-                      FREE{freeReason === "member" ? " · Prime" : ""}
-                      {freeReason === "sponsor" ? ` · by ${sponsorBrand}` : ""}
-                    </span>
+                    <>
+                      {/* Show what it WOULD have cost. "FREE" on its own reads as
+                          "delivery is never charged"; struck through against the
+                          real fee, it reads as money kept. */}
+                      {DELIVERY_FEE > 0 && itemTotal > 0 && <s>₹{DELIVERY_FEE}</s>}
+                      <b className="free">FREE</b>
+                      {freeReason === "member" && <em className="bill-tag">PRIME</em>}
+                      {freeReason === "sponsor" && <em className="bill-tag brand">by {sponsorBrand}</em>}
+                    </>
                   ) : (
                     `₹${deliveryFee}`
                   )}
@@ -1651,10 +1687,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               <div className="bill-row">
                 <span>{tr("Handling charge")}</span>
-                <span>₹{handling}</span>
+                <span className="bill-amt">₹{handling}</span>
               </div>
               {isMember && !freePerk && itemTotal > 0 && (
-                <div className="bill-note">
+                <div className="bill-hint">
                   This cart doesn't qualify for free delivery.
                 </div>
               )}
@@ -1662,38 +1698,62 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <>
                   <div className="bill-row">
                     <span>{tr("Small cart charge")}</span>
-                    <span>₹{smallCartFee}</span>
+                    <span className="bill-amt">₹{smallCartFee}</span>
                   </div>
-                  <div className="bill-note warn">
-                    No small cart charge on orders above ₹{SMALL_CART_ABOVE - 1}
+                  {/* Tied to its own row rather than floated as a banner — it is
+                      a footnote about that charge, not a second headline. */}
+                  <div className="bill-hint act">
+                    Free on orders above ₹{SMALL_CART_ABOVE - 1}
                   </div>
                 </>
               )}
               {surgeFee > 0 && (
                 <div className="bill-row">
                   <span>{tr("Surge charge")} <small>(bad weather / peak)</small></span>
-                  <span>₹{surgeFee}</span>
+                  <span className="bill-amt">₹{surgeFee}</span>
                 </div>
               )}
               {memberFee > 0 && (
                 <div className="bill-row">
                   <span>NGS Prime membership</span>
-                  <span>₹{memberFee}</span>
+                  <span className="bill-amt">₹{memberFee}</span>
                 </div>
               )}
-              <div className="bill-row total">
-                <span>{tr("To pay")}</span>
-                <span>₹{grandTotal}</span>
+
+              {/* A real bill tears here. The notches are cut out of the card's
+                  own edges, which is what makes the box read as a receipt
+                  instead of another rounded rectangle. */}
+              <div className="bill-tear" aria-hidden="true" />
+
+              <div className="bill-pay">
+                <span className="bill-pay-l">
+                  <b>{tr("To pay")}</b>
+                  <small>incl. all charges</small>
+                </span>
+                <span className="bill-pay-amt">₹{grandTotal}</span>
               </div>
-              {savings > 0 && (
-                <div className="savings-pill">You save ₹{savings} on this order</div>
+
+              {totalSaved > 0 && (
+                <div className="bill-saved">
+                  <span className="bill-saved-ic" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                    </svg>
+                  </span>
+                  <span className="bill-saved-txt">
+                    <b>You saved ₹{totalSaved} on this order</b>
+                    {savedParts.length > 1 && <small>{savedParts.join("  ·  ")}</small>}
+                  </span>
+                </div>
               )}
-              {!isMember && itemTotal > 0 && (
+              {/* Only while there is still something to say. Once delivery is
+                  free the row shows FREE and the savings strip says what it was
+                  worth — a third "Free delivery unlocked" plus a full green bar
+                  is the same fact told three times. */}
+              {!isMember && itemTotal > 0 && deliveryFee > 0 && (
                 <div className="free-progress">
                   <div className="free-progress-top">
-                    {deliveryFee === 0 ? (
-                      <span className="free-progress-done">Free delivery unlocked</span>
-                    ) : shortForFree > 0 ? (
+                    {shortForFree > 0 ? (
                       <span>
                         Add <strong>₹{shortForFree}</strong> more for FREE delivery
                       </span>
@@ -1704,7 +1764,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   {/* Only show a progress bar when there IS progress to make. Past
                       the bar but blocked on margin, a full green bar next to a
                       delivery charge reads as a broken promise. */}
-                  {(deliveryFee === 0 || shortForFree > 0) && (
+                  {shortForFree > 0 && (
                     <div className="free-progress-bar">
                       <span
                         style={{
@@ -1713,17 +1773,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       />
                     </div>
                   )}
-                  {deliveryFee > 0 && shortForFree === 0 && (
+                  {shortForFree === 0 && (
                     <small className="free-hint-note">low-price staples on their own don't cover the delivery</small>
                   )}
                   {inFarZone && (
                     <small className="free-hint-note">you're in the far delivery zone, so the free-delivery bar is higher here</small>
                   )}
-                </div>
-              )}
-              {itemTotal > 0 && (
-                <div className="earn-hint">
-                  You'll earn reward points on this order
                 </div>
               )}
             </div>
