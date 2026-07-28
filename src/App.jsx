@@ -681,22 +681,6 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
     .sort((a, b) => a.stock - b.stock)
     .slice(0, 12);
 
-  // Live story bubbles, each with a real destination and a real count.
-  const under49 = shown.filter((p) => p.price > 0 && p.price <= 49);
-  const combos = shown.filter((p) => Array.isArray(p.comboItems) && p.comboItems.length > 0);
-  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  const milkCat = homeCategories.find((c) => /dairy|milk/i.test(c.name));
-  const cheapest = [...under49].sort((a, b) => a.price - b.price)[0];
-  const img = (p) => (p && p.image ? p.image : null);
-  const stories = [
-    bestPrices.length && { key: "deals", icon: "deals", img: img(bestPrices[0]), label: "Deals", onTap: () => scrollTo("sec-best") },
-    under49.length >= 4 && { key: "u49", icon: "rupee", img: img(cheapest), label: "Under ₹49", onTap: () => onCategoryClick({ id: "__under49", name: "Under ₹49", _filter: (p) => p.price > 0 && p.price <= 49 }) },
-    { key: "milk", icon: "milk", img: img(milkCat && byCategory(milkCat.id)[0]), label: "Milk plan", onTap: () => onPromo("milk") },
-    combos.length && { key: "combos", icon: "gift", img: img(combos[0]), label: "Combos", onTap: () => onCategoryClick({ id: "__combos", name: "Combo packs", _filter: (p) => Array.isArray(p.comboItems) && p.comboItems.length > 0 }) },
-    almostGone.length && { key: "fast", icon: "bolt", img: img(almostGone[0]), label: "Selling fast", onTap: () => scrollTo("sec-gone") },
-    milkCat && { key: "fresh", icon: "leaf", img: img(byCategory(milkCat.id)[1]), label: "Fresh daily", onTap: () => onCategoryClick(milkCat) },
-  ].filter(Boolean);
-
   return (
     <>
       <FestiveMasthead theme={theme} />
@@ -705,11 +689,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
 
       {offer && offer.trim() && <div className="offer-strip">{offer}</div>}
 
-      <StoryStrip stories={stories} />
-
       <PromoCarousel slides={banners} onSelect={onPromo} />
-
-      <MomentChips categories={homeCategories} onCategoryClick={onCategoryClick} />
 
       {buyAgain.length > 0 && (
         <section className="section">
