@@ -35,7 +35,15 @@ function dayLabel(iso) {
   const dm = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: IST }).format(d);
   return { wd, dm };
 }
-const money = (n) => `₹${Math.round(Number(n) || 0).toLocaleString("en-IN")}`;
+// Show the true amount, not a rounded one. Rounding every figure to a whole
+// rupee made a ₹5.50 packing fee read as ₹6 — disagreeing with the admin (which
+// shows ₹5.50) and, worse, drifting from the partner's own wallet: two ₹5.50
+// jobs are ₹11, but two cards each rounded to ₹6 look like ₹12. Whole rupees
+// print plain; paise show to two places, same as the customer app.
+const money = (n) => {
+  const v = Number(n) || 0;
+  return `₹${Number.isInteger(v) ? v.toLocaleString("en-IN") : v.toFixed(2)}`;
+};
 
 /* ── icons ──────────────────────────────────────────────────────────────── */
 const IC = {

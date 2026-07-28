@@ -21,6 +21,14 @@ import {
   openAppSettings,
 } from "../lib/printer.js";
 
+// Money that may carry paise (staff pay), shown the same way the partner app
+// shows it: whole rupees plain, paise to two places. So ₹5.50 reads identically
+// on both screens instead of ₹5.5 here and ₹6 there.
+const payFmt = (n) => {
+  const v = Number(n) || 0;
+  return Number.isInteger(v) ? v.toLocaleString("en-IN") : v.toFixed(2);
+};
+
 // Shop details printed on the receipt header.
 const SHOP = {
   brand: "NGS",
@@ -494,11 +502,14 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
               )}
               <div className="od-bill-row">
                 <span>Picker pay {o.pickerId ? "" : "· you packed"}</span>
-                <span className={pnl.pickerPay ? "" : "free"}>{pnl.pickerPay ? `−₹${pnl.pickerPay}` : "₹0"}</span>
+                {/* Two-decimal so a ₹5.50 fee reads the same here as it does in
+                    the partner's app — a whole rupee gap between the two screens
+                    is exactly what looked like a mismatch. */}
+                <span className={pnl.pickerPay ? "" : "free"}>{pnl.pickerPay ? `−₹${payFmt(pnl.pickerPay)}` : "₹0"}</span>
               </div>
               <div className="od-bill-row">
                 <span>Driver pay {o.riderId ? "" : "· you delivered"}</span>
-                <span className={pnl.driverPay ? "" : "free"}>{pnl.driverPay ? `−₹${pnl.driverPay}` : "₹0"}</span>
+                <span className={pnl.driverPay ? "" : "free"}>{pnl.driverPay ? `−₹${payFmt(pnl.driverPay)}` : "₹0"}</span>
               </div>
               {rewardCost > 0 && (
                 <div className="od-bill-row"><span>Scratch reward given</span><span>−₹{rewardCost}</span></div>
