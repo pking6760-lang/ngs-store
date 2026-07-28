@@ -19,6 +19,10 @@ const HI = {
   "Recently viewed": "हाल ही में देखा",
   "Flash sale": "फ्लैश सेल",
   "Ends in": "समाप्त",
+  "Appearance": "रूप",
+  "System": "सिस्टम",
+  "Light": "लाइट",
+  "Dark": "डार्क",
   "Categories": "श्रेणियाँ",
   "All products": "सभी उत्पाद",
   "Welcome to Nisha General Store — daily essentials, delivered fast.":

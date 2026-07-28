@@ -15,7 +15,35 @@ import { useBackGuard } from "../lib/useBackGuard.js";
 import { useShowMore } from "../lib/useShowMore.js";
 import ScratchCard from "./ScratchCard.jsx";
 import ProductThumb from "./ProductThumb.jsx";
+import { useTheme } from "../lib/darkMode.js";
 import { tr } from "../lib/i18n.jsx";
+
+// Appearance control — System / Light / Dark, remembered on the device. Shown to
+// everyone (guests too), since the theme is a device choice, not an account one.
+function ThemeToggle() {
+  const { pref, setTheme } = useTheme();
+  const opts = [
+    { id: "system", label: tr("System"), d: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 0v18" },
+    { id: "light", label: tr("Light"), d: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M18.4 5.6l1.4-1.4M4.2 19.8l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" },
+    { id: "dark", label: tr("Dark"), d: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" },
+  ];
+  return (
+    <div className="theme-toggle">
+      <span className="theme-toggle-lbl">{tr("Appearance")}</span>
+      <div className="theme-seg" role="group" aria-label={tr("Appearance")}>
+        {opts.map((o) => (
+          <button key={o.id} type="button"
+            className={pref === o.id ? "on" : ""}
+            aria-pressed={pref === o.id}
+            onClick={() => setTheme(o.id)}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d={o.d} /></svg>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Slide-in account panel. Extend it by adding a TABS entry + a matching panel.
 const TABS = [
@@ -135,6 +163,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
         )}
 
         <div className="account-foot">
+          <ThemeToggle />
           <nav className="legal-links">
             <a href="/privacy.html" target="_blank" rel="noopener noreferrer">{tr("Privacy")}</a>
             <a href="/terms.html" target="_blank" rel="noopener noreferrer">{tr("Terms")}</a>
