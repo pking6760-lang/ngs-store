@@ -146,15 +146,49 @@ function nominatimLabel(item) {
   return clean.join(", ") || item.display_name || "";
 }
 
+// Google Places — the only source that has local landmarks (a village chaupal,
+// a named gali) the way the customer's Google Maps does. The API key is never
+// in the app; this calls our own `places-search` edge function, which holds the
+// key server-side. Returns a list (possibly empty) from Google, or null when
+// the server isn't configured or errored.
+async function googlePlaces(query, bias) {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anon) return null;
+  const body = { q: query };
+  if (bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng)) {
+    body.lat = bias.lat; body.lng = bias.lng;
+  }
+  try {
+    const res = await fetch(`${url}/functions/v1/places-search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${anon}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // items === null means "not configured / upstream error" → fall back.
+    return data && "items" in data ? data.items : null;
+  } catch { return null; }
+}
+
 // Address autocomplete: as the customer types, return matching places (with
 // coordinates) so they can pick their location on the "map" without granting
-// GPS permission. Free, no API key (OpenStreetMap via Nominatim). `bias` is an
-// optional {lat,lng} (e.g. the shop) — we search inside a box around it so
-// results stay in the deliverable area and rank the way a maps app would,
-// instead of returning same-named places in other cities.
+// GPS permission. Tries Google Places first (has the local landmarks), then
+// falls back to free OpenStreetMap (Nominatim, then Photon) if Google isn't
+// configured or is down. `bias` is an optional {lat,lng} (e.g. the shop) — used
+// to prefer nearby places and rank the way a maps app would, instead of
+// returning same-named places in other cities.
 export async function searchAddress(query, bias) {
   const q = (query || "").trim();
   if (q.length < 3) return [];
+
+  // Google first — it's the only one with the chaupal-level landmarks. If it
+  // finds anything, use it. If it finds nothing (or isn't configured), fall
+  // through to the free OpenStreetMap sources rather than showing an empty box.
+  const g = await googlePlaces(q, bias);
+  if (Array.isArray(g) && g.length) return g;
+
   const hasBias = bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng);
   let url =
     `https://nominatim.openstreetmap.org/search?format=jsonv2` +
