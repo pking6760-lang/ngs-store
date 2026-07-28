@@ -54,13 +54,13 @@ function joinLabel(name: string, addr: string): string {
 // ── Ola Maps ─────────────────────────────────────────────────────────────────
 // Autocomplete returns predictions with the place name AND its coordinates in
 // one call, so there is no second "details" request per suggestion.
-async function ola(q: string, lat: number, lng: number): Promise<Item[] | null> {
+async function olaOnce(q: string, lat: number, lng: number): Promise<Item[] | null> {
   let url = `https://api.olamaps.io/places/v1/autocomplete?input=${encodeURIComponent(q)}&api_key=${OLA_KEY}`;
   if (Number.isFinite(lat) && Number.isFinite(lng)) url += `&location=${lat},${lng}`;
   const res = await fetchT(url, {}, 7000);
   if (!res.ok) {
     console.error("ola autocomplete", res.status, (await res.text().catch(() => "")).slice(0, 300));
-    return null;
+    return null; // network/quota error → let the caller fall back
   }
   const data = await res.json().catch(() => ({}));
   const preds = Array.isArray(data.predictions) ? data.predictions : [];
@@ -73,6 +73,30 @@ async function ola(q: string, lat: number, lng: number): Promise<Item[] | null> 
     })
     .filter((s: Item) => s.label && Number.isFinite(s.lat) && Number.isFinite(s.lng))
     .slice(0, 6);
+}
+
+// Hinglish spellings of the same Devanagari sound vary — चौपाल is written both
+// "choupal" and "chaupal", गली as "gali"/"galee". Ola matches strictly, so
+// "sultanpur choupal" finds nothing while "sultanpur chaupal" finds the place.
+// When a real word has one of these swappable vowel clusters, offer the variant.
+function spellingVariant(q: string): string | null {
+  if (/ou/i.test(q)) return q.replace(/ou/gi, "au");
+  if (/au/i.test(q)) return q.replace(/au/gi, "ou");
+  return null;
+}
+
+async function ola(q: string, lat: number, lng: number): Promise<Item[] | null> {
+  const first = await olaOnce(q, lat, lng);
+  if (first === null) return null;          // upstream error → fall back to OSM
+  if (first.length > 0) return first;       // got matches → done
+  // Empty, but the endpoint answered fine. Try the alternate spelling ONCE
+  // before giving up — the extra call only ever happens on a miss.
+  const alt = spellingVariant(q);
+  if (alt && alt.toLowerCase() !== q.toLowerCase()) {
+    const second = await olaOnce(alt, lat, lng);
+    if (second && second.length > 0) return second;
+  }
+  return first;                             // still nothing → [] (asked, no match)
 }
 
 // ── Google Places (New) ──────────────────────────────────────────────────────
