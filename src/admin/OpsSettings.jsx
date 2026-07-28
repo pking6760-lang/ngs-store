@@ -96,9 +96,10 @@ const GROUPS = [
       { key: "store_close_hour", label: "Close hour (0–24)" },
       { key: "dispatch_stagger_seconds", label: "Delivery ring delay (sec)" },
       { key: "assignment_timeout_seconds", label: "Rollover if unaccepted (sec)" },
-      // How much warning a scheduled delivery gives. The order goes live this
-      // many minutes early, and if no rider has it by then the alarm rings.
-      { key: "prep_lead_minutes", label: "Warn before a booked delivery (min)" },
+      // Daily rounds only. The round goes live this many minutes early and, if
+      // no rider has taken it, the alarm rings then. Customer-booked slots are
+      // deliberately not affected — they go live and ring at their slot time.
+      { key: "prep_lead_minutes", label: "Daily delivery head start (min)" },
     ],
   },
 ];
