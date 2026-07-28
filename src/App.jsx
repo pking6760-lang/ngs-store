@@ -20,7 +20,8 @@ import InstallPrompt from "./components/InstallPrompt.jsx";
 import PullToRefresh from "./components/PullToRefresh.jsx";
 import OfflineBanner from "./components/OfflineBanner.jsx";
 import ApkPrompt from "./components/ApkPrompt.jsx";
-import { fetchBuyAgain, saveCart, applyReferral } from "./lib/api.js";
+import { fetchBuyAgain, fetchTrending, saveCart, applyReferral } from "./lib/api.js";
+import { getRecentIds } from "./lib/recentViews.js";
 import SearchSuggest from "./components/SearchSuggest.jsx";
 import { rankProducts, didYouMean, rememberSearch } from "./lib/search.js";
 import { toast } from "./lib/toast.js";
@@ -193,6 +194,32 @@ export default function App() {
       .catch(() => {});
     return () => { alive = false; };
   }, [isLoggedIn, user?.id]);
+
+  // "Trending now": ids the shop is actually selling, ranked server-side. Public
+  // (guests see it too); resolved against the live catalog in HomeView so an item
+  // gone out of stock drops out on its own.
+  const [trendingIds, setTrendingIds] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    fetchTrending(14, 12)
+      .then((ids) => { if (alive) setTrendingIds(ids); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // "Recently viewed": this device's own memory (localStorage), so it works for
+  // guests too. We mirror it into state and re-read whenever a card records a new
+  // view, so the rail updates live without a reload.
+  const [recentIds, setRecentIds] = useState(() => getRecentIds());
+  useEffect(() => {
+    const sync = () => setRecentIds(getRecentIds());
+    window.addEventListener("ngs:recent-views", sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener("ngs:recent-views", sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
 
   // Mirror the cart to the server (debounced) so an abandoned cart can be nudged
   // later. Only when signed in; emptying the cart on checkout syncs {} and clears
@@ -430,6 +457,8 @@ export default function App() {
             categories={categories}
             offer={settings.offerBanner}
             buyAgainIds={buyAgainIds}
+            trendingIds={trendingIds}
+            recentIds={recentIds}
             onCategoryClick={setActiveCategory}
             onPromo={handlePromo}
             theme={activeTheme}
@@ -722,7 +751,7 @@ function CategoryChips({ categories }) {
   );
 }
 
-function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo, theme }) {
+function HomeView({ products, categories, offer, buyAgainIds = [], trendingIds = [], recentIds = [], onCategoryClick, onPromo, theme }) {
   if (products.length === 0) return <HomeSkeleton />;
   // Categories the shop keeps off its front page — cigarettes today. Everything
   // in one is filtered out of EVERY rail below, not just the obvious tile: a
@@ -751,6 +780,23 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
     .filter((p) => typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && p.inStock !== false)
     .sort((a, b) => a.stock - b.stock)
     .slice(0, 12);
+  // A live product must be shoppable to sit in a dynamic rail.
+  const buyable = (p) =>
+    p && p.active !== false && p.inStock !== false &&
+    !(typeof p.stock === "number" && p.stock <= 0);
+  // Trending now: server ranks the ids, we resolve to live products keeping that
+  // order. Only render when it's a full-looking rail (≥4), never a lonely tile.
+  const trending = trendingIds
+    .map((id) => shown.find((p) => p.id === id))
+    .filter(buyable)
+    .slice(0, 12);
+  // Recently viewed: this device's own trail. Skip anything already in "Buy
+  // again" right above so we don't show the same tile twice in a row.
+  const buyAgainSet = new Set(buyAgain.map((p) => p.id));
+  const recent = recentIds
+    .map((id) => shown.find((p) => p.id === id))
+    .filter((p) => buyable(p) && !buyAgainSet.has(p.id))
+    .slice(0, 12);
 
   return (
     <>
@@ -775,12 +821,41 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
         </section>
       )}
 
+      {recent.length >= 4 && (
+        <section className="section" id="sec-recent">
+          <h2 className="section-title">{tr("Recently viewed")}</h2>
+          <div className="product-row">
+            {recent.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {bestPrices.length > 0 && (
         <section className="section best-prices" id="sec-best">
           <h2 className="section-title">Best Prices</h2>
           <div className="product-row">
             {bestPrices.map((p) => (
               <ProductCard key={p.id} product={p} badge="Best price" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {trending.length >= 4 && (
+        <section className="section" id="sec-trending">
+          <div className="section-head">
+            <h2 className="section-title">
+              <span className="trend-spark" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8" /><path d="M17 7h4v4" /></svg>
+              </span>
+              {tr("Trending now")}
+            </h2>
+          </div>
+          <div className="product-row">
+            {trending.map((p) => (
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>

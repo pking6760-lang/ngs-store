@@ -318,6 +318,16 @@ export async function fetchAddonSuggestions(excludeIds = [], limit = 8) {
   return (data || []).map(mapProduct);
 }
 
+// "Trending now" — product ids ranked by units sold in a recent window. The RPC
+// returns ids only (nothing private), so the caller resolves them against the
+// products already in memory; that also means a trending id that's since gone
+// out of stock simply drops out of the rail. Returns [] on any error.
+export async function fetchTrending(days = 14, limit = 12) {
+  const { data, error } = await must().rpc("trending_products", { p_days: days, p_limit: limit });
+  if (error) return [];
+  return (data || []).map((r) => String(r.id));
+}
+
 // Mirror the signed-in customer's cart to the server so an abandoned cart can be
 // nudged later. Fire-and-forget; never blocks the UI. No-op for guests (RLS).
 export async function saveCart(items) {

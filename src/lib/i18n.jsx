@@ -15,6 +15,8 @@ const HI = {
   'Search "milk", "bread", "atta"...': 'खोजें "दूध", "ब्रेड", "आटा"...',
   // Home / sections
   "Buy again": "फिर से खरीदें",
+  "Trending now": "अभी ट्रेंडिंग",
+  "Recently viewed": "हाल ही में देखा",
   "Categories": "श्रेणियाँ",
   "All products": "सभी उत्पाद",
   "Welcome to Nisha General Store — daily essentials, delivered fast.":

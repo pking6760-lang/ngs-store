@@ -7,6 +7,7 @@ import { firstBulkTier, tierUnitPrice } from "../lib/bulk.js";
 import { money } from "../lib/money.js";
 import BulkPackSheet from "./BulkPackSheet.jsx";
 import { useStockAlerts } from "../lib/stockAlerts.js";
+import { recordView } from "../lib/recentViews.js";
 import { useT } from "../lib/i18n.jsx";
 
 // Show scarcity urgency when stock is running low.
@@ -90,7 +91,7 @@ export default function ProductCard({ product, badge }) {
           qty === 0 ? (
             <button
               className={`pcard-act ${opensPacks ? "has-packs" : ""}`}
-              onClick={() => (opensPacks ? setShowPacks(true) : add(product.id, product.stock))}
+              onClick={() => { recordView(product.id); opensPacks ? setShowPacks(true) : add(product.id, product.stock); }}
             >
               {t("ADD")}{opensPacks && <i>packs ›</i>}
             </button>
