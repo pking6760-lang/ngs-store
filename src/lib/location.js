@@ -104,10 +104,33 @@ export function googleMapsLink({ lat, lng }) {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
-// Turn GPS coordinates into a human-readable street address (free, no API key,
-// via OpenStreetMap Nominatim). Returns a formatted address string, or "" if it
-// can't be resolved. The customer can still edit the result (e.g. add flat no).
+// Ask our server (which holds the Ola key) to turn coordinates into an address.
+// Returns a string, or null when the server isn't configured / errored — same
+// fall-back signal as the search path.
+async function googleReverse(lat, lng) {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anon) return null;
+  try {
+    const res = await fetch(`${url}/functions/v1/places-search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${anon}` },
+      body: JSON.stringify({ reverse: true, lat, lng }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && typeof data.address === "string" && data.address ? data.address : null;
+  } catch { return null; }
+}
+
+// Turn GPS coordinates into a human-readable street address — used by "Use my
+// current location" and the map pin. Ola first (correct pincode, real road
+// names), OpenStreetMap Nominatim as the free fallback. Returns "" if neither
+// can resolve it; the customer can still edit the result (e.g. add flat no).
 export async function reverseGeocode(lat, lng) {
+  const g = await googleReverse(lat, lng);
+  if (g) return g;
+
   const url =
     `https://nominatim.openstreetmap.org/reverse?format=jsonv2` +
     `&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;

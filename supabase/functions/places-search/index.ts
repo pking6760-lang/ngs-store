@@ -99,6 +99,35 @@ async function ola(q: string, lat: number, lng: number): Promise<Item[] | null> 
   return first;                             // still nothing → [] (asked, no match)
 }
 
+// Ola reverse-geocode: coordinates -> a tidy street address. Used by "Use my
+// current location" and the map pin. Built from address_components (predictable)
+// rather than formatted_address, whose lead is often a random nearby business
+// ("Trillion Hotel, ...") that isn't where the customer actually lives.
+async function olaReverse(lat: number, lng: number): Promise<string | null> {
+  const url = `https://api.olamaps.io/places/v1/reverse-geocode?latlng=${lat},${lng}&api_key=${OLA_KEY}`;
+  const res = await fetchT(url, {}, 7000);
+  if (!res.ok) {
+    console.error("ola reverse", res.status, (await res.text().catch(() => "")).slice(0, 300));
+    return null;
+  }
+  const data = await res.json().catch(() => ({}));
+  const r = (Array.isArray(data.results) ? data.results : [])[0];
+  if (!r) return null;
+  const by: Record<string, string> = {};
+  for (const c of (r.address_components || []) as Array<{ long_name: string; types: string[] }>) {
+    for (const t of c.types || []) if (!by[t]) by[t] = c.long_name;
+  }
+  const street = by.street_address || [by.street_number, by.route].filter(Boolean).join(" ");
+  const parts = [
+    street,
+    by.neighborhood || by.sublocality,
+    by.locality || by.administrative_area_level_2,
+    by.postal_code,
+  ].filter(Boolean);
+  const clean = parts.filter((v, i) => v !== parts[i - 1]);
+  return clean.join(", ") || (r.formatted_address as string) || null;
+}
+
 // ── Google Places (New) ──────────────────────────────────────────────────────
 async function google(q: string, lat: number, lng: number): Promise<Item[] | null> {
   const payload: Record<string, unknown> = { textQuery: q, regionCode: "IN", maxResultCount: 6, languageCode: "en" };
@@ -134,11 +163,23 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const body = await req.json().catch(() => ({}));
-    const q = String(body.q || "").trim();
-    if (q.length < 3) return json({ items: [] });
-
     const lat = Number(body.lat);
     const lng = Number(body.lng);
+
+    // Reverse geocode: coordinates in, one address string out. The app sends
+    // this for "Use my current location" and the map pin. { address: null }
+    // means fall back to the free source, same contract as search.
+    if (body.reverse) {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return json({ address: null });
+      if (OLA_KEY) {
+        const address = await olaReverse(lat, lng);
+        if (address) return json({ address });
+      }
+      return json({ address: null });
+    }
+
+    const q = String(body.q || "").trim();
+    if (q.length < 3) return json({ items: [] });
 
     // Ola first (Indian, no-card key); Google if that's the one configured.
     if (OLA_KEY) {
