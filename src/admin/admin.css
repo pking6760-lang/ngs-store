@@ -3539,6 +3539,7 @@ html, body { touch-action: manipulation; }
 .ptag.out    { background: #FDEDEA; color: #A8322A; }
 .ptag.exempt { background: #FFF4E3; color: #8A5A00; }
 .ptag.combo  { background: #EDE9FE; color: #5B34C7; }
+.ptag.flash  { background: #FDE7E7; color: #C81E1E; }
 
 .chip-btn { border: 1px solid var(--a-line); background: var(--a-surface); border-radius: 999px;
   padding: 9px 15px; font-size: 13px; font-weight: 800; color: var(--a-ink); }
@@ -3595,3 +3596,45 @@ html, body { touch-action: manipulation; }
 }
 .cat-list-eye { border: none; background: transparent; color: var(--a-sub); padding: 6px; line-height: 1; }
 .cat-list-eye.off { color: #B07400; }
+
+/* ── Flash-sale control (Price tab of the product editor) ──────────────────── */
+.flash-box {
+  border: 1px solid #F2C9C9; border-radius: 12px; padding: 12px 13px 13px;
+  background: linear-gradient(180deg, #FFF6F6, #FFFCFC);
+}
+.flash-box-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.flash-box-title { font-weight: 800; color: #B3261E; font-size: 14px; }
+.flash-box-live {
+  font-size: 11px; font-weight: 900; color: #fff; letter-spacing: .4px;
+  background: linear-gradient(135deg, #FF4D4D, #E11414);
+  padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums;
+}
+.flash-box-on { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.flash-box-on p { margin: 0; font-size: 13.5px; color: #333; }
+.flash-box-on strong { color: #B3261E; }
+.flash-stop {
+  flex: none; border: 1px solid #E11414; background: #fff; color: #C81E1E;
+  font-weight: 800; font-size: 13px; padding: 7px 14px; border-radius: 9px;
+}
+.flash-stop:active { background: #FDECEC; }
+.flash-box-set { display: flex; flex-direction: column; gap: 10px; }
+.flash-price-in { display: flex; flex-direction: column; gap: 4px; }
+.flash-price-in span { font-size: 12px; font-weight: 700; color: #555; }
+.flash-price-in input {
+  border: 1px solid #E4C3C3; border-radius: 9px; padding: 9px 11px; font-size: 15px;
+  background: #fff; width: 100%;
+}
+.flash-mins { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.flash-mins > span { font-size: 12px; font-weight: 700; color: #555; margin-right: 2px; }
+.flash-mins button {
+  border: 1px solid #E4C3C3; background: #fff; color: #7A3B3B;
+  font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 999px;
+}
+.flash-mins button.on { background: #E11414; border-color: #E11414; color: #fff; }
+.flash-start {
+  border: none; background: linear-gradient(135deg, #FF4D4D, #D91414); color: #fff;
+  font-weight: 800; font-size: 14px; padding: 10px; border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(217,20,20,.28);
+}
+.flash-start:disabled, .flash-stop:disabled { opacity: .6; }
+.flash-err { margin: 4px 0 0; color: #C0271E; font-size: 12.5px; font-weight: 600; }

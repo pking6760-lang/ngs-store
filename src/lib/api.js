@@ -80,7 +80,12 @@ function mapProduct(r) {
     caseSize: r.case_size != null ? Number(r.case_size) : null,
     bulkQtys: Array.isArray(r.bulk_qtys) ? r.bulk_qtys.map(Number).filter((q) => q > 1) : [],
     manualBulk: !!r.manual_bulk,
-    comboItems: Array.isArray(r.combo_items) ? r.combo_items : [] };
+    comboItems: Array.isArray(r.combo_items) ? r.combo_items : [],
+    // Flash sale overlay: a time-boxed price with an end time. The client treats
+    // it as active only while flashEndsAt is in the future (the server does the
+    // same at checkout), so an ended flash simply stops applying with no reload.
+    flashPrice: r.flash_price != null ? Number(r.flash_price) : null,
+    flashEndsAt: r.flash_ends_at || null };
 }
 function mapCategory(r) {
   return { id: r.id, name: r.name, icon: r.icon, color: r.color, image: r.image_url || "",
@@ -1275,6 +1280,25 @@ export async function smartReprice() {
   pingLocal("products");
   return { ok: true };
 }
+// Start a flash sale on a product: a price for N minutes. The server refuses
+// anything that would sell at a loss or isn't a real short discount, and returns
+// the end time. Throws with the server's message so the admin sees exactly why.
+export async function setFlashSale(productId, price, minutes) {
+  const { data, error } = await must().rpc("set_flash_sale", {
+    p_id: productId, p_price: Number(price), p_minutes: Math.round(Number(minutes)),
+  });
+  if (error) throw new Error(error.message || "Couldn't start the flash sale.");
+  pingLocal("products");
+  return { endsAt: data };
+}
+// End a flash sale early (or clear a stale one).
+export async function clearFlashSale(productId) {
+  const { error } = await must().rpc("clear_flash_sale", { p_id: productId });
+  if (error) throw new Error(error.message || "Couldn't end the flash sale.");
+  pingLocal("products");
+  return { ok: true };
+}
+
 // Owner override for the advertised "best price" strip: 'pin' | 'hide' | null.
 export async function setBaitOverride(productId, value) {
   const { error } = await must().from("product_costs")

@@ -12,7 +12,8 @@ import {
   updateCategory,
 } from "../lib/actions.js";
 import { lookupProductByBarcode, lookupProductByName, guessCategory, resolveSuggestedCategory, proposeNewCategory } from "../lib/productLookup.js";
-import { smartReprice, uploadProductImage, uploadCategoryImage, bulkUpdateProductTags, previewBulkTiers } from "../lib/api.js";
+import { smartReprice, uploadProductImage, uploadCategoryImage, bulkUpdateProductTags, previewBulkTiers, setFlashSale, clearFlashSale } from "../lib/api.js";
+import { flashActive, fmtCountdown, useFlashCountdown } from "../lib/flash.js";
 import { scanBarcode } from "../lib/scanner.js";
 import ProductThumb from "../components/ProductThumb.jsx";
 import { Ic } from "./AdminIcons.jsx";
@@ -141,6 +142,7 @@ export default function ProductsAdmin() {
                 <div className="prodcard-name">
                   {p.name}
                   {isCombo && <span className="ptag combo">Pack</span>}
+                  {flashActive(p) && <span className="ptag flash">⚡ Flash</span>}
                   {isMagnet && <span className="ptag magnet">Magnet</span>}
                   {p.inStock === false && <span className="ptag out">Out of stock</span>}
                 </div>
@@ -721,6 +723,83 @@ function ComboBuilder({ items, products, price, onChange }) {
   );
 }
 
+// Run a flash sale on one product: a sale price for a set time, with a live
+// countdown. The server refuses anything below cost or that isn't a real short
+// discount, so the owner can't accidentally sell at a loss. Start/stop are
+// immediate (independent of the Save button); the countdown ticks here so the
+// owner sees it end.
+function FlashControl({ product, sellingPrice }) {
+  const [ends, setEnds] = useState(product.flashEndsAt || null);
+  const [priceIn, setPriceIn] = useState("");
+  const [mins, setMins] = useState(60);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const left = useFlashCountdown(ends);
+  const live = ends && left > 0;
+  const flashPrice = live ? Number(product.flashPrice) : null;
+
+  async function start() {
+    setErr("");
+    const price = Number(priceIn);
+    if (!(price > 0)) { setErr("Enter a flash price."); return; }
+    if (sellingPrice > 0 && price >= sellingPrice) {
+      setErr(`Must be below the current price ₹${sellingPrice}.`); return;
+    }
+    setBusy(true);
+    try {
+      const { endsAt } = await setFlashSale(product.id, price, mins);
+      setEnds(endsAt);
+      setPriceIn("");
+    } catch (e) { setErr(e.message || "Couldn't start."); }
+    finally { setBusy(false); }
+  }
+  async function stop() {
+    setBusy(true); setErr("");
+    try { await clearFlashSale(product.id); setEnds(null); }
+    catch (e) { setErr(e.message || "Couldn't stop."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="field wide flash-box">
+      <div className="flash-box-head">
+        <span className="flash-box-title">⚡ Flash sale</span>
+        {live && <span className="flash-box-live">LIVE · {fmtCountdown(left)}</span>}
+      </div>
+      {live ? (
+        <div className="flash-box-on">
+          <p>Selling at <strong>₹{fmtMoney(flashPrice)}</strong> — ends in {fmtCountdown(left)}.</p>
+          <button type="button" className="flash-stop" onClick={stop} disabled={busy}>
+            {busy ? "…" : "Stop now"}
+          </button>
+        </div>
+      ) : (
+        <div className="flash-box-set">
+          <label className="flash-price-in">
+            <span>Flash price (₹)</span>
+            <input type="number" min="0" step="0.01" inputMode="decimal"
+              value={priceIn} onChange={(e) => setPriceIn(e.target.value)}
+              placeholder={sellingPrice > 0 ? `below ${sellingPrice}` : "sale price"} />
+          </label>
+          <div className="flash-mins">
+            <span>For</span>
+            {[30, 60, 120, 240].map((m) => (
+              <button key={m} type="button"
+                className={mins === m ? "on" : ""} onClick={() => setMins(m)}>
+                {m < 60 ? `${m}m` : `${m / 60}h`}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="flash-start" onClick={start} disabled={busy}>
+            {busy ? "Starting…" : "Start flash"}
+          </button>
+        </div>
+      )}
+      {err && <p className="flash-err">{err}</p>}
+    </div>
+  );
+}
+
 function ProductModal({ product, categories, products = [], onOpenExisting, onClose, onSave, onDelete }) {
   const isNew = !product.id;
 
@@ -1156,6 +1235,10 @@ function ProductModal({ product, categories, products = [], onOpenExisting, onCl
               </div>
             )}
           </div>
+
+          {!isNew && (
+            <FlashControl product={product} sellingPrice={Number(form.price) || 0} />
+          )}
           </>)}
 
           {tab === "packs" && (<>

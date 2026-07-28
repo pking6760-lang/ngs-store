@@ -9,6 +9,7 @@ import * as api from "../lib/api.js";
 import { getCurrentLocation, googleMapsLink, distanceKm, reverseGeocode, searchAddress } from "../lib/location.js";
 import { buildUpiLink, qrDataUri, SHOP_UPI_ID, RAZORPAY_ENABLED, loadRazorpay, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import { tierUnitPrice, bulkUnitPrice } from "../lib/bulk.js";
+import { flashActive } from "../lib/flash.js";
 import { money } from "../lib/money.js";
 import { useBackGuard } from "../lib/useBackGuard.js";
 import { useT, tr } from "../lib/i18n.jsx";
@@ -246,8 +247,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     .map(([id, qty]) => {
       const product = products.find((p) => p.id === id);
       if (!product) return null;
-      // Tier price: the discount lives in the price itself (mirrors the server).
-      return { product, qty, unit: tierUnitPrice(product, qty, user, settings.rewards) };
+      // A live flash sale is a flat price for everyone (no member/bulk stack),
+      // exactly what the server charges; otherwise the tier price, whose discount
+      // lives in the price itself. Mirrors checkout so the bill can't move.
+      const unit = flashActive(product)
+        ? product.flashPrice
+        : tierUnitPrice(product, qty, user, settings.rewards);
+      return { product, qty, unit };
     })
     .filter(Boolean);
 
@@ -1458,11 +1464,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
             <div className="cart-lines">
               {lines.map(({ product, qty, unit }) => {
+                // A flash price is flat, so there's no bigger-pack nudge and no
+                // "bulk" label — it's just the flash price for everyone.
+                const onFlash = flashActive(product);
                 // Only nudge towards a bigger pack when it's actually cheaper per
                 // unit. Packs can now exist at the same price (a ₹10 item can't
                 // fund a discount), and "add 5 more → ₹10/ea" would be a lie.
-                const nextTier = (product.bulkTiers || []).find((t) => t.q > qty && Number(t.price) < unit);
-                const bulkOn = unit < product.price;
+                const nextTier = onFlash ? null
+                  : (product.bulkTiers || []).find((t) => t.q > qty && Number(t.price) < unit);
+                const bulkOn = !onFlash && unit < product.price;
                 const lineMrp = Math.max(Number(product.mrp) || 0, unit);
                 return (
                 <div className="cart-line" key={product.id}>
@@ -1478,6 +1488,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <div className="cart-line-name">{product.name}</div>
                     <div className="cart-line-unit">
                       {product.unit}
+                      {onFlash && <span className="cart-line-flash"> · ⚡ flash price</span>}
                       {bulkOn && <span className="cart-line-bulk"> · ₹{money(unit)}/ea bulk</span>}
                     </div>
                     {nextTier && (

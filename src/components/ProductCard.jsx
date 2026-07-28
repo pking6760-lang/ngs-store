@@ -8,6 +8,7 @@ import { money } from "../lib/money.js";
 import BulkPackSheet from "./BulkPackSheet.jsx";
 import { useStockAlerts } from "../lib/stockAlerts.js";
 import { recordView } from "../lib/recentViews.js";
+import { flashActive, fmtCountdown, useFlashCountdown } from "../lib/flash.js";
 import { useT } from "../lib/i18n.jsx";
 
 // Show scarcity urgency when stock is running low.
@@ -28,8 +29,13 @@ export default function ProductCard({ product, badge }) {
   const alerted = alerts.has(product.id);
   const { t } = useT();
   const qty = items[product.id] || 0;
-  // The price this shopper actually pays (their member tier's price).
-  const price = tierUnitPrice(product, 1, user, settings.rewards);
+  // A live flash sale ticks down; when it hits zero this re-renders and the
+  // normal price returns on its own (the server does the same at checkout).
+  const flashLeft = useFlashCountdown(product.flashEndsAt);
+  const onFlash = flashActive(product) && flashLeft > 0;
+  // The price this shopper actually pays. A flash price is flat for everyone —
+  // no member/bulk discount stacks on it, exactly as the server charges.
+  const price = onFlash ? product.flashPrice : tierUnitPrice(product, 1, user, settings.rewards);
   const discount = product.mrp > 0 ? Math.round(((product.mrp - price) / product.mrp) * 100) : 0;
   const savings = product.mrp - price;
   // Entry Prime price (a brand-new Prime member's rate) — shown to guests and
@@ -53,13 +59,21 @@ export default function ProductCard({ product, badge }) {
     (t) => tierUnitPrice(product, Number(t.q), user, settings.rewards) <= price
   );
   const [showPacks, setShowPacks] = useState(false);
-  const opensPacks = qty === 0 && bulkTier && bulkHelps;
+  // A flash price is flat, so packs (which are just bulk discounts) don't apply
+  // during a flash — the ADD button adds straight to the cart.
+  const opensPacks = qty === 0 && bulkTier && bulkHelps && !onFlash;
 
   return (
     <div className={`pcard ${outOfStock ? "is-oos" : ""}`}>
       <div className={`pcard-media ${outOfStock ? "grey" : ""}`}>
-        {/* Top-left flag: the discount %, or a custom badge (e.g. "Best price"). */}
-        {discount > 0 && !outOfStock ? (
+        {/* Top-left flag: a live flash countdown wins; else the discount %, or a
+            custom badge (e.g. "Best price"). */}
+        {onFlash && !outOfStock ? (
+          <span className="pcard-flag flash">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+            {fmtCountdown(flashLeft)}
+          </span>
+        ) : discount > 0 && !outOfStock ? (
           <span className="pcard-flag">{discount}% OFF</span>
         ) : badge && !outOfStock && !product.hot ? (
           <span className="pcard-flag alt">{badge}</span>

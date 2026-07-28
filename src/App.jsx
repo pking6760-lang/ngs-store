@@ -22,6 +22,7 @@ import OfflineBanner from "./components/OfflineBanner.jsx";
 import ApkPrompt from "./components/ApkPrompt.jsx";
 import { fetchBuyAgain, fetchTrending, saveCart, applyReferral } from "./lib/api.js";
 import { getRecentIds } from "./lib/recentViews.js";
+import { flashActive, fmtCountdown, useFlashCountdown } from "./lib/flash.js";
 import SearchSuggest from "./components/SearchSuggest.jsx";
 import { rankProducts, didYouMean, rememberSearch } from "./lib/search.js";
 import { toast } from "./lib/toast.js";
@@ -751,6 +752,39 @@ function CategoryChips({ categories }) {
   );
 }
 
+// Home "Flash sale" rail — a red-hot band with one shared countdown to the
+// soonest-ending item. The timer lives here (not per card) so the whole rail
+// reads as a single event; when it hits zero the parent re-filters and the rail
+// disappears on its own.
+function FlashRail({ items }) {
+  const soonest = items.reduce(
+    (min, p) => (min && new Date(min) < new Date(p.flashEndsAt) ? min : p.flashEndsAt),
+    items[0]?.flashEndsAt
+  );
+  const ms = useFlashCountdown(soonest);
+  if (ms <= 0) return null;
+  return (
+    <section className="section flash-rail" id="sec-flash">
+      <div className="section-head">
+        <h2 className="section-title">
+          <span className="flash-spark" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+          </span>
+          {tr("Flash sale")}
+        </h2>
+        <span className="flash-timer">
+          {tr("Ends in")} <b>{fmtCountdown(ms)}</b>
+        </span>
+      </div>
+      <div className="product-row">
+        {items.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function HomeView({ products, categories, offer, buyAgainIds = [], trendingIds = [], recentIds = [], onCategoryClick, onPromo, theme }) {
   if (products.length === 0) return <HomeSkeleton />;
   // Categories the shop keeps off its front page — cigarettes today. Everything
@@ -784,6 +818,12 @@ function HomeView({ products, categories, offer, buyAgainIds = [], trendingIds =
   const buyable = (p) =>
     p && p.active !== false && p.inStock !== false &&
     !(typeof p.stock === "number" && p.stock <= 0);
+  // Flash sale: shoppable items on a live flash, soonest-ending first so the
+  // rail's shared timer counts down to the next thing to expire.
+  const flashItems = shown
+    .filter((p) => buyable(p) && flashActive(p))
+    .sort((a, b) => new Date(a.flashEndsAt) - new Date(b.flashEndsAt))
+    .slice(0, 12);
   // Trending now: server ranks the ids, we resolve to live products keeping that
   // order. Only render when it's a full-looking rail (≥4), never a lonely tile.
   const trending = trendingIds
@@ -809,6 +849,8 @@ function HomeView({ products, categories, offer, buyAgainIds = [], trendingIds =
       {offer && offer.trim() && <div className="offer-strip">{offer}</div>}
 
       <PromoCarousel slides={banners} onSelect={onPromo} />
+
+      {flashItems.length > 0 && <FlashRail items={flashItems} />}
 
       {buyAgain.length > 0 && (
         <section className="section">

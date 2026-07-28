@@ -791,6 +791,7 @@ button {
 .bulk-card.sel .bulk-card-add { background: var(--green); color: #fff; }
 .bulk-card-add:active { transform: scale(0.97); }
 .cart-line-bulk { color: var(--green-dark); font-weight: 700; }
+.cart-line-flash { color: #C81E1E; font-weight: 800; }
 .cart-line-nudge {
   font-size: 10.5px;
   font-weight: 700;
@@ -5804,3 +5805,39 @@ main.main { padding-bottom: calc(var(--nav-h) + 18px); }
   box-shadow: inset 0 0 0 1px rgba(180,83,9,.14);
 }
 #sec-trending .section-head { margin-bottom: 0; }
+
+/* ── FLASH SALE ─────────────────────────────────────────────────────────────
+   The flag turns into a hot red pill with a bolt + live countdown, so a
+   flash card reads as "now or never" the moment your eye lands on it. */
+.pcard-flag.flash {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: linear-gradient(135deg, #FF4D4D, #E11414) !important;
+  box-shadow: 0 4px 12px rgba(225,20,20,.38) !important;
+  font-variant-numeric: tabular-nums; letter-spacing: .2px;
+  animation: flashPulse 1.1s ease-in-out infinite;
+}
+.pcard-flag.flash svg { margin-top: -1px; }
+@keyframes flashPulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(225,20,20,.38); }
+  50%      { box-shadow: 0 4px 18px rgba(225,20,20,.62); }
+}
+@media (prefers-reduced-motion: reduce) { .pcard-flag.flash { animation: none; } }
+
+/* Home "Flash sale" rail — a red-hot header band with a shared countdown. */
+.flash-rail .section-title { color: #C81E1E; }
+.flash-rail .section-title::before { background: linear-gradient(180deg, #FF4D4D, #C81E1E); }
+.flash-spark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 7px; flex: none; color: #fff;
+  background: linear-gradient(135deg, #FF4D4D, #E11414);
+  box-shadow: 0 2px 8px rgba(225,20,20,.4);
+}
+.flash-timer {
+  margin-left: auto; margin-right: 14px;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; font-weight: 800; color: #C81E1E;
+  background: #FDECEC; border: 1px solid #F7C7C7;
+  padding: 3px 10px; border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.flash-timer b { font-weight: 900; letter-spacing: .3px; }

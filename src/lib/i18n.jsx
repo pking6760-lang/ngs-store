@@ -17,6 +17,8 @@ const HI = {
   "Buy again": "फिर से खरीदें",
   "Trending now": "अभी ट्रेंडिंग",
   "Recently viewed": "हाल ही में देखा",
+  "Flash sale": "फ्लैश सेल",
+  "Ends in": "समाप्त",
   "Categories": "श्रेणियाँ",
   "All products": "सभी उत्पाद",
   "Welcome to Nisha General Store — daily essentials, delivered fast.":
