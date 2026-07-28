@@ -18,6 +18,7 @@ import { StatusPill } from "./Dashboard.jsx";
 import { withMinTime } from "../lib/ux.js";
 import {
   isPrinterSupported, listPairedPrinters, savedPrinter, savePrinter, printReceiptBluetooth,
+  openAppSettings,
 } from "../lib/printer.js";
 
 // Shop details printed on the receipt header.
@@ -27,9 +28,16 @@ const SHOP = {
   address: "Sultanpur, New Delhi 110030",
   phone: "",
 };
+// The receipt's phone was hardcoded empty, so every bill the shop has ever
+// printed carried no number to call. The real one is already in settings.
+function shopFor(settings) {
+  const phone = settings?.supportPhone || "";
+  return phone ? { ...SHOP, phone } : SHOP;
+}
 
 export default function OrdersAdmin({ onOpen }) {
   const orders = useOrders();
+  const shopSettings = useSettings();
   const partners = usePartners();
   // Who handled a step: a staff member (name + employee ID), or the owner
   // ("Admin") when there's no partner. `happened` = the step actually occurred.
@@ -112,6 +120,9 @@ export default function OrdersAdmin({ onOpen }) {
 
   // ── Thermal printing ──────────────────────────────────────────────────────
   const [printMsg, setPrintMsg] = useState("");
+  // Set when Android has stopped asking for the Bluetooth permission — the only
+  // way out is the app's own settings page, so the UI has to offer it.
+  const [printBlocked, setPrintBlocked] = useState(false);
   const [picker, setPicker] = useState(null); // { order, devices } when choosing a printer
   useBackGuard(!!picker, () => setPicker(null));
 
@@ -133,8 +144,12 @@ export default function OrdersAdmin({ onOpen }) {
         return;
       }
       setPicker({ order, devices });
-    } catch {
-      setPrintMsg("Turn on Bluetooth and allow the permission, then try again.");
+    } catch (e) {
+      // Say what actually went wrong. The old code threw the real error away and
+      // printed a fixed guess, which is why a permission that could never be
+      // granted looked like a Bluetooth that was merely switched off.
+      setPrintBlocked(!!e.blocked);
+      setPrintMsg(e.message || "Couldn't reach Bluetooth. Turn it on and try again.");
     }
   }
 
@@ -147,11 +162,13 @@ export default function OrdersAdmin({ onOpen }) {
 
   async function sendToPrinter(order, address) {
     setPrintMsg("Printing…");
+    setPrintBlocked(false);
     try {
-      await printReceiptBluetooth(order, SHOP, address);
+      await printReceiptBluetooth(order, shopFor(shopSettings), address);
       setPrintMsg("Sent to printer");
       setTimeout(() => setPrintMsg(""), 2500);
     } catch (e) {
+      setPrintBlocked(!!e.blocked);
       setPrintMsg("" + (e.message || "Print failed. Check the printer is on and paired."));
     }
   }
@@ -261,6 +278,7 @@ export default function OrdersAdmin({ onOpen }) {
             onPrint={printReceipt}
             onChangePrinter={() => openPicker(selected)}
             printMsg={printMsg}
+            printBlocked={printBlocked}
             onOpenCustomer={(uid) => { closeDetail(); onOpen && onOpen("customers", uid); }}
           />
         </AdminPortal>
@@ -289,7 +307,7 @@ export default function OrdersAdmin({ onOpen }) {
   );
 }
 
-function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg, onOpenCustomer }) {
+function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState, openQr, changeStatus, onPrint, onChangePrinter, printMsg, printBlocked, onOpenCustomer }) {
   const { callParty } = useCall();
   const customers = useCustomers();
   const custCode = customers.find((c) => c.id === o.userId)?.customerCode || null;
@@ -504,6 +522,11 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
               {savedPrinter() && <span className="print-saved">{savedPrinter().name}</span>}
             </div>
             {printMsg && <p className="print-msg">{printMsg}</p>}
+            {printBlocked && (
+              <button className="print-settings" onClick={() => openAppSettings()}>
+                Open app settings
+              </button>
+            )}
           </section>
 
           {o.paymentStatus !== "paid" && o.status !== "Cancelled" && (
@@ -609,7 +632,7 @@ function OrderDetail({ order: o, deliveredBy, packedBy, onClose, qrFor, qrState,
         </div>
       </div>
       {/* Hidden on screen; the print stylesheet reveals only this at 58mm. */}
-      <Receipt order={o} shop={SHOP} />
+      <Receipt order={o} shop={shopFor(detailSettings)} />
     </div>
   );
 }

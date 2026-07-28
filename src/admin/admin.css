@@ -2493,18 +2493,39 @@ body {
   @page { size: 58mm auto; margin: 0; }
 }
 
-.receipt-print .rc-brand { text-align: center; font-weight: 800; font-size: 18px; letter-spacing: 1px; }
-.receipt-print .rc-shop { text-align: center; font-weight: 700; font-size: 13px; }
+.receipt-print .rc-brand { text-align: center; font-weight: 900; font-size: 22px; letter-spacing: 3px; line-height: 1.1; }
+.receipt-print .rc-shop { text-align: center; font-weight: 800; font-size: 13px; }
 .receipt-print .rc-addr { text-align: center; font-size: 10px; }
+/* Two weights of rule, so the eye can tell a section break from a row break. */
 .receipt-print .rc-hr { border-top: 1px dashed #000; margin: 4px 0; }
+.receipt-print .rc-hr.thick { border-top: 2px solid #000; margin: 5px 0; }
 .receipt-print .rc-kv { display: flex; justify-content: space-between; gap: 6px; }
-.receipt-print .rc-kv.rc-total { font-weight: 800; font-size: 14px; }
-.receipt-print .rc-item { display: flex; font-size: 10.5px; }
-.receipt-print .rc-item-head { font-weight: 700; }
-.receipt-print .rc-i-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 4px; }
-.receipt-print .rc-i-qty { width: 26px; text-align: center; }
+.receipt-print .rc-kv > span:first-child { letter-spacing: .02em; }
+.receipt-print .rc-kv.rc-total { font-weight: 900; font-size: 16px; letter-spacing: .01em; }
+.receipt-print .rc-addr-line { font-size: 10px; padding-left: 8px; }
+/* Four columns, tabular figures — the amounts must stack, or the customer
+   cannot scan down them and check the total. */
+.receipt-print .rc-item { display: flex; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.receipt-print .rc-item-head { font-weight: 800; letter-spacing: .04em; }
+.receipt-print .rc-i-name { flex: 1; padding-right: 4px; overflow-wrap: anywhere; }
+.receipt-print .rc-i-long { font-size: 10.5px; overflow-wrap: anywhere; }
+.receipt-print .rc-i-qty { width: 24px; text-align: right; }
+.receipt-print .rc-i-rate { width: 38px; text-align: right; }
 .receipt-print .rc-i-amt { width: 46px; text-align: right; }
+/* Reversed out — the thermal print does the same with GS B. */
+.receipt-print .rc-badge {
+  text-align: center; font-weight: 900; font-size: 12px; letter-spacing: .12em;
+  background: #000; color: #fff; padding: 4px 0; margin: 5px 0;
+}
 .receipt-print .rc-thanks { text-align: center; font-size: 10.5px; margin-top: 2px; }
+.receipt-print .rc-thanks.strong { font-weight: 800; font-size: 11.5px; }
+/* The "open app settings" escape hatch, shown only when Android has stopped
+   asking for the Bluetooth permission and nothing else can grant it. */
+.print-settings {
+  display: block; width: 100%; margin-top: 8px; padding: 10px;
+  border: 1.5px solid var(--a-primary); background: transparent; border-radius: 10px;
+  color: var(--a-primary); font-weight: 800; font-size: 13px;
+}
 
 /* ── Printer picker + status ──────────────────────────────────────────────── */
 .print-sub { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
