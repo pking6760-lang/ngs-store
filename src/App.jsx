@@ -730,8 +730,11 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
           {homeCategories.map((c, i) => (
             <button
               key={c.id}
-              className="cat-tile"
-              style={{ "--tint": CAT_TINTS[i % CAT_TINTS.length] }}
+              // With a photo the image IS the tile (fills edge to edge, no
+              // coloured frame — that frame is what made it look pasted). Only
+              // the drawn-icon fallback keeps a soft colour behind it.
+              className={`cat-tile ${c.image ? "has-photo" : ""}`}
+              style={c.image ? undefined : { "--tint": CAT_TINTS[i % CAT_TINTS.length] }}
               onClick={() => onCategoryClick(c)}
             >
               <span className="cat-thumb">

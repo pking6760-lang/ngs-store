@@ -5606,3 +5606,19 @@ body { background: var(--bg-soft); }
 .moment:nth-child(3n) .moment-disc { background: #EAF0FB; color: #2C5AA8; box-shadow: inset 0 0 0 1px rgba(44,90,168,.12); }
 .moment-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .moment-label { font-size: 12px; font-weight: 750; color: var(--ink); letter-spacing: -0.01em; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CATEGORY TILES v2 — photo fills the tile, so it stops looking "pasted"
+   The earlier tiles framed an 82%-scaled photo inside a coloured square, so the
+   photo (with its own white background) read as a sticker stuck on a colour.
+   With a real photo the image now IS the tile, edge to edge on a clean white
+   card. Only icon-only categories keep a soft colour behind the drawn glyph.
+   ══════════════════════════════════════════════════════════════════════════ */
+.cat-tile.has-photo .cat-thumb {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(20, 32, 25, .07),
+              0 8px 16px -10px rgba(20, 32, 25, .28);
+}
+.cat-tile.has-photo .cat-img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
+}
