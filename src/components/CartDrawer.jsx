@@ -1200,16 +1200,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   Pin your exact spot so we reach the right door — optional.
                 </div>
               )}
-              {location && (
-                <div className={`location-captured ${outOfArea ? "bad" : ""}`}>
-                  <span>
-                    Location captured
-                    <br />
-                    <small>
-                      {location.lat}, {location.lng}
-                      {dist != null ? ` · ${dist} km from shop` : ""}
-                    </small>
-                  </span>
+              {/* The customer doesn't need our coordinates or how far the shop
+                  is — that's our arithmetic, not their information. Just confirm
+                  the pin landed, with a way to check it on the map. */}
+              {location && !outOfArea && (
+                <div className="location-captured">
+                  <span>Location captured</span>
                   <a
                     href={googleMapsLink(location)}
                     target="_blank"
@@ -1222,10 +1218,9 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {outOfArea && (
                 <div className="area-blocked">
-                  Sorry, you're about <strong>{dist} km</strong> away — we
-                  currently deliver within <strong>{maxKm} km</strong>.
+                  <strong>We're coming to your area soon 💚</strong>
                   <br />
-                  We're coming to your area soon.
+                  We don't deliver to this location just yet.
                 </div>
               )}
               {dist != null && !outOfArea && (
