@@ -5495,3 +5495,64 @@ body { background: var(--bg-soft); }
   box-shadow: var(--shadow);
 }
 .product-row { padding: 0 14px 4px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STORY BUBBLES + "WHAT'S ON YOUR MIND" MOMENTS
+   The two elements that make the home feel like a modern app rather than a
+   catalogue: a live row of collection stories (Zepto/Insta) and life-moment
+   circles (Swiggy/Zomato) — both in NGS colours, both opening real views.
+   ══════════════════════════════════════════════════════════════════════════ */
+.story-strip {
+  display: flex; gap: 15px; overflow-x: auto; scroll-snap-type: x proximity;
+  padding: 14px 14px 6px; margin: 0;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.story-strip::-webkit-scrollbar { display: none; }
+.story {
+  flex: 0 0 auto; scroll-snap-align: start;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: none; border: none; padding: 0; cursor: pointer; width: 66px;
+}
+.story-ring {
+  width: 66px; height: 66px; border-radius: 50%;
+  padding: 3px; display: grid; place-items: center;
+  box-shadow: 0 6px 14px -6px rgba(24,40,28,.4);
+}
+.story-face {
+  width: 100%; height: 100%; border-radius: 50%;
+  background: var(--bg); display: grid; place-items: center;
+  font-size: 27px; line-height: 1;
+  box-shadow: inset 0 0 0 2px var(--bg);
+}
+.story-label {
+  font-size: 11px; font-weight: 800; color: var(--ink); text-align: center;
+  letter-spacing: -0.01em; line-height: 1.1;
+  white-space: nowrap; max-width: 74px; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── moments ── */
+.moments-sec { padding-top: 8px; }
+.moment-row {
+  display: flex; gap: 13px; overflow-x: auto; padding: 2px 14px 6px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.moment-row::-webkit-scrollbar { display: none; }
+.moment {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: none; border: none; padding: 0; cursor: pointer; width: 78px;
+}
+.moment-disc {
+  width: 78px; height: 78px; border-radius: 22px;
+  display: grid; place-items: center; font-size: 34px; line-height: 1;
+  background:
+    radial-gradient(120% 120% at 30% 20%, #ffffff 0%, var(--green-tint) 60%, #DCEFE0 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(21,128,72,.14), 0 10px 20px -12px rgba(12,80,44,.4);
+  transition: transform .12s ease;
+}
+.moment:nth-child(2n) .moment-disc { background: radial-gradient(120% 120% at 30% 20%, #fff 0%, var(--gold-tint) 62%, #F6E2BE 100%); box-shadow: inset 0 0 0 1.5px rgba(178,110,18,.16), 0 10px 20px -12px rgba(120,80,20,.36); }
+.moment:nth-child(3n) .moment-disc { background: radial-gradient(120% 120% at 30% 20%, #fff 0%, #E9EEFB 62%, #D9E2F6 100%); box-shadow: inset 0 0 0 1.5px rgba(47,110,224,.16), 0 10px 20px -12px rgba(30,60,140,.34); }
+.moment:active .moment-disc { transform: scale(.93); }
+.moment-label {
+  font-size: 12px; font-weight: 800; color: var(--ink); text-align: center;
+  letter-spacing: -0.02em; line-height: 1.15;
+}

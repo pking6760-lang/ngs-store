@@ -573,6 +573,72 @@ function HomeHero({ offer }) {
   );
 }
 
+// ── Story bubbles ──────────────────────────────────────────────────────────
+// The row of tappable circles at the very top — the "this app is alive" element
+// from Zepto/Blinkit/Instagram, in NGS colours. Each opens a real, useful view:
+// a category, the milk plan, or a scroll to the deals rail. Counts are live, so
+// "Under ₹49 · 40 items" is never a lie.
+const STORY_RINGS = [
+  "conic-gradient(from 210deg, #F5A623, #E7452C, #C1177A, #F5A623)",
+  "conic-gradient(from 200deg, #16A34A, #0C7A3E, #0A5A2E, #16A34A)",
+  "conic-gradient(from 230deg, #2F7BE0, #6A3EE0, #2F7BE0)",
+  "conic-gradient(from 180deg, #E7A52C, #B26E12, #E7A52C)",
+  "conic-gradient(from 250deg, #E0457B, #9A2CE0, #E0457B)",
+  "conic-gradient(from 160deg, #12A5A5, #0C6E6E, #12A5A5)",
+];
+function StoryStrip({ stories }) {
+  if (!stories.length) return null;
+  return (
+    <div className="story-strip" role="list">
+      {stories.map((s, i) => (
+        <button className="story" key={s.key} role="listitem" onClick={s.onTap}>
+          <span className="story-ring" style={{ background: STORY_RINGS[i % STORY_RINGS.length] }}>
+            <span className="story-face">{s.emoji}</span>
+          </span>
+          <span className="story-label">{s.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── "What's on your mind?" — shop by moment ────────────────────────────────
+// Swiggy/Zomato's cuisine circles, reimagined for a grocery: real life moments
+// (breakfast, chai, dinner, cleaning) instead of dry category names. Ordered by
+// time of day, so the shop leads with what you probably need right now.
+const MOMENTS = [
+  { key: "breakfast", emoji: "🍳", label: "Breakfast", match: ["dairy", "bread", "egg"], from: 5,  to: 11 },
+  { key: "chai",      emoji: "☕", label: "Chai time", match: ["snack", "bakery", "biscuit"], from: 6,  to: 19 },
+  { key: "munchies",  emoji: "🍿", label: "Munchies",  match: ["snack"],                     from: 16, to: 23 },
+  { key: "cold",      emoji: "🥤", label: "Cool off",  match: ["beverage", "cold", "drink"], from: 10, to: 22 },
+  { key: "dinner",    emoji: "🍚", label: "Cook dinner", match: ["atta", "rice", "dal", "oil", "instant"], from: 16, to: 22 },
+  { key: "clean",     emoji: "🧹", label: "Cleaning",  match: ["clean", "household"],        from: 8,  to: 20 },
+  { key: "care",      emoji: "🧴", label: "Self care", match: ["personal", "care"],          from: 0,  to: 24 },
+];
+function MomentChips({ categories, onCategoryClick }) {
+  const h = new Date().getHours();
+  const find = (m) => categories.find((c) => m.match.some((w) => c.name.toLowerCase().includes(w)));
+  const items = MOMENTS
+    .map((m) => ({ ...m, cat: find(m), live: h >= m.from && h < m.to }))
+    .filter((m) => m.cat)
+    // Live-for-now moments first, then the rest — a gentle contextual nudge.
+    .sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
+  if (items.length < 3) return null;
+  return (
+    <section className="section moments-sec">
+      <h2 className="section-title">What's on your mind?</h2>
+      <div className="moment-row">
+        {items.map((m) => (
+          <button className="moment" key={m.key} onClick={() => onCategoryClick(m.cat)}>
+            <span className="moment-disc">{m.emoji}</span>
+            <span className="moment-label">{m.label}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo, theme }) {
   if (products.length === 0) return <HomeSkeleton />;
   // Categories the shop keeps off its front page — cigarettes today. Everything
@@ -602,13 +668,32 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
     .filter((p) => typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && p.inStock !== false)
     .sort((a, b) => a.stock - b.stock)
     .slice(0, 12);
+
+  // Live story bubbles, each with a real destination and a real count.
+  const under49 = shown.filter((p) => p.price > 0 && p.price <= 49);
+  const combos = shown.filter((p) => Array.isArray(p.comboItems) && p.comboItems.length > 0);
+  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const milkCat = homeCategories.find((c) => /dairy|milk/i.test(c.name));
+  const stories = [
+    bestPrices.length && { key: "deals", emoji: "🔥", label: "Deals", onTap: () => scrollTo("sec-best") },
+    under49.length >= 4 && { key: "u49", emoji: "💸", label: "Under ₹49", onTap: () => onCategoryClick({ id: "__under49", name: "Under ₹49", _filter: (p) => p.price > 0 && p.price <= 49 }) },
+    { key: "milk", emoji: "🥛", label: "Milk plan", onTap: () => onPromo("milk") },
+    combos.length && { key: "combos", emoji: "🎁", label: "Combos", onTap: () => onCategoryClick({ id: "__combos", name: "Combo packs", _filter: (p) => Array.isArray(p.comboItems) && p.comboItems.length > 0 }) },
+    almostGone.length && { key: "fast", emoji: "⚡", label: "Selling fast", onTap: () => scrollTo("sec-gone") },
+    milkCat && { key: "fresh", emoji: "🥚", label: "Fresh daily", onTap: () => onCategoryClick(milkCat) },
+  ].filter(Boolean);
+
   return (
     <>
       <FestiveMasthead theme={theme} />
 
       <HomeHero offer={offer} />
 
+      <StoryStrip stories={stories} />
+
       <PromoCarousel slides={banners} onSelect={onPromo} />
+
+      <MomentChips categories={homeCategories} onCategoryClick={onCategoryClick} />
 
       {buyAgain.length > 0 && (
         <section className="section">
@@ -622,7 +707,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
       )}
 
       {bestPrices.length > 0 && (
-        <section className="section best-prices">
+        <section className="section best-prices" id="sec-best">
           <h2 className="section-title">Best Prices</h2>
           <div className="product-row">
             {bestPrices.map((p) => (
@@ -633,7 +718,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
       )}
 
       {almostGone.length > 0 && (
-        <section className="section">
+        <section className="section" id="sec-gone">
           <h2 className="section-title">Almost Gone</h2>
           <div className="product-row">
             {almostGone.map((p) => (
@@ -688,10 +773,13 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
 }
 
 function CategoryView({ category, products, sort, onSortChange, onBack }) {
-  const list = sortProducts(
-    products.filter((p) => p.category === category.id),
-    sort
-  );
+  // A story bubble can open a synthetic collection ("Under ₹49", "Combos") that
+  // carries its own predicate instead of a category id — honour that here so
+  // one screen serves both real categories and curated collections.
+  const match = typeof category._filter === "function"
+    ? category._filter
+    : (p) => p.category === category.id;
+  const list = sortProducts(products.filter(match), sort);
   return (
     <section className="section">
       <div className="category-header">
