@@ -47,19 +47,24 @@ export default function BulkPackSheet({ product, onClose }) {
   const selTotal = selUnit * sel;
   const selSave = refTotal(sel) - selTotal;
 
-  // What the PACK is worth, measured against buying the same number one at a
-  // time at this shopper's own price. Deliberately not measured against MRP:
-  // an MRP saving applies to a single too, so calling it the pack's benefit
-  // would be claiming credit for something the pack didn't do.
+  // TWO different questions, and the badge needs both.
+  //
+  // WHICH pack to flag: the one that genuinely beats buying singles at this
+  // shopper's own price, by at least a rupee. Measured this way because it is
+  // the only test of whether the PACK is doing anything — an MRP saving applies
+  // to a single too. No badge unless a pack passes it.
   const singleUnit = tierUnitPrice(product, 1, user, settings.rewards);
-  const packSave = (q) => singleUnit * q - tierUnitPrice(product, q, user, settings.rewards) * q;
-
-  // The pack that genuinely costs least per unit — and only if it beats a single
-  // by at least a rupee. No badge otherwise: on a ₹10 biscuit with no room for a
-  // discount, a "BEST VALUE" ribbon over the same price would be a lie the
-  // customer can check in two seconds.
+  const beatsSingles = (q) => singleUnit * q - tierUnitPrice(product, q, user, settings.rewards) * q;
   const best = packs.reduce(
-    (b, q) => (packSave(q) >= 1 && (b === null || packSave(q) > packSave(b)) ? q : b), null);
+    (b, q) => (beatsSingles(q) >= 1 && (b === null || beatsSingles(q) > beatsSingles(b)) ? q : b), null);
+
+  // WHAT NUMBER to show: the saving off MRP, for the whole pack — the same basis
+  // as everything else on the screen. Rajdhani Besan is ₹159 MRP and the pack of
+  // four sells at ₹109 each, so the row prints ₹436 against ₹636 struck through
+  // and the badge now says SAVE ₹200, which is exactly 636 − 436. It used to say
+  // ₹24, measured against our own selling price — a true number on a basis
+  // nothing else used, so it reconciled with nothing the customer could see.
+  const packSave = (q) => refTotal(q) - tierUnitPrice(product, q, user, settings.rewards) * q;
 
   // The ribbon says what it is, then what it's worth. Two states, because one
   // number alone reads as decoration and one label alone says nothing.
