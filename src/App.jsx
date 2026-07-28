@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from "react";
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { useBackGuard } from "./lib/useBackGuard.js";
 import Header from "./components/Header.jsx";
 import ProductCard from "./components/ProductCard.jsx";
@@ -651,6 +651,59 @@ function MomentChips({ categories, onCategoryClick }) {
   );
 }
 
+// Sticky category chips (Blinkit/Zepto). Pinned under the search bar, they let
+// the shopper jump straight to any aisle. The active chip tracks what's on
+// screen (scroll-spy) and slides itself into view, so you always see where you
+// are. Tapping smooth-scrolls to that aisle's rail.
+function CategoryChips({ categories }) {
+  const [active, setActive] = useState("all");
+  const barRef = useRef(null);
+
+  // Scroll-spy: highlight the aisle currently under the top of the viewport.
+  useEffect(() => {
+    const sections = categories
+      .map((c) => document.getElementById(`cat-${c.id}`))
+      .filter(Boolean);
+    if (!sections.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const vis = entries.filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (vis) setActive(vis.target.id.replace("cat-", ""));
+      },
+      { rootMargin: "-120px 0px -65% 0px", threshold: 0 }
+    );
+    sections.forEach((s) => io.observe(s));
+    return () => io.disconnect();
+  }, [categories]);
+
+  // Keep the active chip visible in the strip.
+  useEffect(() => {
+    const el = barRef.current?.querySelector(`[data-chip="${active}"]`);
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [active]);
+
+  const go = (id) => {
+    setActive(id);
+    if (id === "all") { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    document.getElementById(`cat-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <div className="cat-chips" ref={barRef}>
+      <button className={`cat-chip ${active === "all" ? "on" : ""}`} data-chip="all" onClick={() => go("all")}>
+        All
+      </button>
+      {categories.map((c) => (
+        <button key={c.id} data-chip={c.id}
+          className={`cat-chip ${active === c.id ? "on" : ""}`} onClick={() => go(c.id)}>
+          {c.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo, theme }) {
   if (products.length === 0) return <HomeSkeleton />;
   // Categories the shop keeps off its front page — cigarettes today. Everything
@@ -684,6 +737,8 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
   return (
     <>
       <FestiveMasthead theme={theme} />
+
+      <CategoryChips categories={homeCategories.filter((c) => byCategory(c.id).length > 0)} />
 
       <HomeGreeting />
 
@@ -751,7 +806,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
       {homeCategories
         .filter((c) => byCategory(c.id).length > 0)
         .map((c) => (
-          <section className="section" key={c.id}>
+          <section className="section" key={c.id} id={`cat-${c.id}`}>
             <div className="section-head">
               <h2 className="section-title">{c.name}</h2>
               <button className="see-all" onClick={() => onCategoryClick(c)}>
