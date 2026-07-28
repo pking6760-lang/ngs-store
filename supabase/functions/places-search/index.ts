@@ -1,30 +1,26 @@
 // Supabase Edge Function: places-search
 //
 // Address autocomplete that finds LOCAL LANDMARKS — the village chaupal 90 m
-// away, the specific gali — the way Google Maps does, which the free
-// OpenStreetMap data the app used before simply does not contain.
+// away, the named gali — the way a maps app does, which the free OpenStreetMap
+// data the app falls back to simply does not contain (proven: 0 results for
+// "sultanpur choupal" on both Nominatim and Photon).
 //
-// WHY THIS RUNS ON THE SERVER, NOT IN THE APP.
-// A Google Maps API key billed to the owner must never ship inside the customer
-// APK: anyone can unzip an APK, read the key, and run up his bill. So the key
-// lives here as a secret the phone can't see, and the phone only ever talks to
-// this function. Google is also told (in the Cloud console) to accept this key
-// only from Supabase's servers, so a leaked copy is useless anyway.
+// TWO PROVIDERS, ONE FUNCTION. It uses whichever key is configured:
+//   * OLA_MAPS_KEY    -> Ola Maps (Indian, single key, no card to sign up)
+//   * GOOGLE_MAPS_KEY -> Google Places (needs Google Cloud billing)
+// Ola is tried first when both are set. This lets the shop switch providers by
+// changing a secret — never by shipping a new app.
 //
-// COST SHAPE. One Google "Text Search (New)" call per search, debounced on the
-// client to fire only when the customer pauses typing. Text Search returns the
-// place name AND its coordinates together, so there is no second "details" call
-// per suggestion — one request in, up to six places out. At a single shop's
-// volume this sits inside Google's monthly free tier.
+// THE KEY NEVER SHIPS IN THE APP. A maps key billed to the owner, sitting inside
+// a customer APK, is a bill anyone with an unzip tool can run up. The key lives
+// here as a server secret; the phone only ever talks to this function.
 //
-// GRACEFUL WHEN UNCONFIGURED. With no GOOGLE_MAPS_KEY set, or if Google errors,
-// this returns { items: null }. The app reads null as "server had nothing" and
-// falls back to its OpenStreetMap search, so address entry keeps working before
-// the key is ever added — it just won't find the local landmarks until it is.
-//
-// Secret: GOOGLE_MAPS_KEY (a Google Cloud key with the Places API (New) enabled).
+// GRACEFUL WHEN UNCONFIGURED. With no key set, or on any upstream error, this
+// returns { items: null }. The app reads null as "use the free source" and falls
+// back to OpenStreetMap, so address entry keeps working before a key is added.
 
-const KEY = Deno.env.get("GOOGLE_MAPS_KEY") ?? "";
+const OLA_KEY = Deno.env.get("OLA_MAPS_KEY") ?? "";
+const GOOGLE_KEY = Deno.env.get("GOOGLE_MAPS_KEY") ?? "";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -41,17 +37,73 @@ async function fetchT(url: string, opts: RequestInit = {}, ms = 7000) {
   finally { clearTimeout(t); }
 }
 
+type Item = { label: string; lat: number; lng: number };
+
 // A short, human label: the place's own name first ("Chaupal"), then just enough
-// of the address to place it ("Sultanpur, New Delhi") — never the full postal
-// tail Google returns, which would push the useful part off a phone screen.
-function label(name: string, addr: string): string {
+// of the address to place it — never the full postal tail, which would push the
+// useful part off a phone screen.
+function joinLabel(name: string, addr: string): string {
   const n = (name || "").trim();
   const a = (addr || "").trim();
   if (!n) return a;
   if (!a) return n;
-  // Google's formattedAddress usually starts with the same name — don't repeat it.
   if (a.toLowerCase().startsWith(n.toLowerCase())) return a;
   return `${n}, ${a}`;
+}
+
+// ── Ola Maps ─────────────────────────────────────────────────────────────────
+// Autocomplete returns predictions with the place name AND its coordinates in
+// one call, so there is no second "details" request per suggestion.
+async function ola(q: string, lat: number, lng: number): Promise<Item[] | null> {
+  let url = `https://api.olamaps.io/places/v1/autocomplete?input=${encodeURIComponent(q)}&api_key=${OLA_KEY}`;
+  if (Number.isFinite(lat) && Number.isFinite(lng)) url += `&location=${lat},${lng}`;
+  const res = await fetchT(url, {}, 7000);
+  if (!res.ok) {
+    console.error("ola autocomplete", res.status, (await res.text().catch(() => "")).slice(0, 300));
+    return null;
+  }
+  const data = await res.json().catch(() => ({}));
+  const preds = Array.isArray(data.predictions) ? data.predictions : [];
+  return preds
+    .map((p: Record<string, unknown>) => {
+      const g = ((p.geometry || {}) as { location?: { lat?: number; lng?: number } }).location || {};
+      const sf = (p.structured_formatting || {}) as { main_text?: string; secondary_text?: string };
+      const label = joinLabel(sf.main_text || "", sf.secondary_text || "") || String(p.description || "");
+      return { label, lat: Number(g.lat), lng: Number(g.lng) };
+    })
+    .filter((s: Item) => s.label && Number.isFinite(s.lat) && Number.isFinite(s.lng))
+    .slice(0, 6);
+}
+
+// ── Google Places (New) ──────────────────────────────────────────────────────
+async function google(q: string, lat: number, lng: number): Promise<Item[] | null> {
+  const payload: Record<string, unknown> = { textQuery: q, regionCode: "IN", maxResultCount: 6, languageCode: "en" };
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    payload.locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: 30000.0 } };
+  }
+  const res = await fetchT("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": GOOGLE_KEY,
+      // Only the three fields we use — the field mask is what Google bills on.
+      "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
+    },
+    body: JSON.stringify(payload),
+  }, 7000);
+  if (!res.ok) {
+    console.error("google searchText", res.status, (await res.text().catch(() => "")).slice(0, 300));
+    return null;
+  }
+  const data = await res.json().catch(() => ({}));
+  const places = Array.isArray(data.places) ? data.places : [];
+  return places
+    .map((p: Record<string, unknown>) => {
+      const loc = (p.location || {}) as { latitude?: number; longitude?: number };
+      const name = ((p.displayName || {}) as { text?: string }).text || "";
+      return { label: joinLabel(name, (p.formattedAddress as string) || ""), lat: Number(loc.latitude), lng: Number(loc.longitude) };
+    })
+    .filter((s: Item) => s.label && Number.isFinite(s.lat) && Number.isFinite(s.lng));
 }
 
 Deno.serve(async (req) => {
@@ -60,67 +112,23 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const q = String(body.q || "").trim();
     if (q.length < 3) return json({ items: [] });
-    // No key configured → tell the app to use its own fallback.
-    if (!KEY) return json({ items: null });
 
     const lat = Number(body.lat);
     const lng = Number(body.lng);
-    const hasBias = Number.isFinite(lat) && Number.isFinite(lng);
 
-    const payload: Record<string, unknown> = {
-      textQuery: q,
-      regionCode: "IN",
-      maxResultCount: 6,
-      languageCode: "en",
-    };
-    if (hasBias) {
-      // Prefer places near the shop. 30 km is generous — the real delivery gate
-      // (3 km) is enforced later by the app against the returned coordinates, so
-      // a wide bias here just makes sure a nearby landmark isn't missed.
-      payload.locationBias = {
-        circle: { center: { latitude: lat, longitude: lng }, radius: 30000.0 },
-      };
+    // Ola first (Indian, no-card key); Google if that's the one configured.
+    if (OLA_KEY) {
+      const items = await ola(q, lat, lng);
+      if (items) return json({ items });
     }
-
-    const res = await fetchT(
-      "https://places.googleapis.com/v1/places:searchText",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": KEY,
-          // Only ask for the three fields we use — the field mask is what Google
-          // bills against, so requesting less keeps this on the cheapest tier.
-          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
-        },
-        body: JSON.stringify(payload),
-      },
-      7000,
-    );
-
-    if (!res.ok) {
-      // Bad key, quota, API not enabled — let the app fall back rather than fail
-      // the whole address step. The real reason is in the function logs.
-      const detail = await res.text().catch(() => "");
-      console.error("places:searchText", res.status, detail.slice(0, 300));
-      return json({ items: null });
+    if (GOOGLE_KEY) {
+      const items = await google(q, lat, lng);
+      if (items) return json({ items });
     }
-
-    const data = await res.json().catch(() => ({}));
-    const items = (Array.isArray(data.places) ? data.places : [])
-      .map((p: Record<string, unknown>) => {
-        const loc = (p.location || {}) as { latitude?: number; longitude?: number };
-        const name = ((p.displayName || {}) as { text?: string }).text || "";
-        const addr = (p.formattedAddress as string) || "";
-        return { label: label(name, addr), lat: Number(loc.latitude), lng: Number(loc.longitude) };
-      })
-      .filter((s: { label: string; lat: number; lng: number }) =>
-        s.label && Number.isFinite(s.lat) && Number.isFinite(s.lng));
-
-    return json({ items });
+    // Nothing configured, or the configured provider errored → fall back to OSM.
+    return json({ items: null });
   } catch (e) {
     console.error("places-search", (e as Error).message);
-    // Any unexpected failure → fall back, never break address entry.
     return json({ items: null });
   }
 });
