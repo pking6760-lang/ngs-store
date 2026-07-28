@@ -99,6 +99,7 @@ export default function App() {
   const [sort, setSort] = useState("relevance");
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [catsOpen, setCatsOpen] = useState(false); // "Categories" tab screen
   const [cartOpen, setCartOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountTab, setAccountTab] = useState(null);
@@ -114,6 +115,7 @@ export default function App() {
   useBackGuard(cartOpen, () => setCartOpen(false));
   useBackGuard(accountOpen, () => setAccountOpen(false));
   useBackGuard(!!activeCategory, () => setActiveCategory(null));
+  useBackGuard(catsOpen, () => setCatsOpen(false));
 
   // If a one-time code is still pending (e.g. the mobile browser reloaded the
   // tab while the customer was in their email app), re-open the login modal so
@@ -322,6 +324,7 @@ export default function App() {
 
   function goHome() {
     setActiveCategory(null);
+    setCatsOpen(false);
     setQuery("");
   }
 
@@ -414,7 +417,12 @@ export default function App() {
             products={products}
             sort={sort}
             onSortChange={setSort}
-            onBack={() => setActiveCategory(null)}
+            onBack={() => { setActiveCategory(null); }}
+          />
+        ) : catsOpen ? (
+          <AllCategories
+            categories={categories.filter((c) => !c.hiddenFromHome)}
+            onPick={(c) => { setCatsOpen(false); setActiveCategory(c); }}
           />
         ) : (
           <HomeView
@@ -492,6 +500,16 @@ export default function App() {
         <p className="footer-note">{shop.address}</p>
         <p className="footer-note">Groceries &amp; daily essentials, delivered fast.</p>
       </footer>
+
+      <BottomNav
+        active={catsOpen || activeCategory ? "cats" : "home"}
+        cartCount={totalCount}
+        onHome={() => { setCatsOpen(false); goHome(); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+        onCats={() => { goHome(); setCatsOpen(true); window.scrollTo({ top: 0 }); }}
+        onCart={() => setCartOpen(true)}
+        onOrders={() => { setAccountTab("orders"); setAccountOpen(true); }}
+        onProfile={handleAccountClick}
+      />
 
       <InstallPrompt />
     </div>
@@ -823,6 +841,65 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
           </section>
         ))}
     </>
+  );
+}
+
+// Full "Categories" screen for the bottom-nav tab — every aisle as a tile.
+function AllCategories({ categories, onPick }) {
+  return (
+    <section className="section cats-screen">
+      <h2 className="section-title">All categories</h2>
+      <div className="cat-grid">
+        {categories.map((c, i) => (
+          <button
+            key={c.id}
+            className={`cat-tile ${c.image ? "has-photo" : ""}`}
+            style={c.image ? undefined : { "--tint": CAT_TINTS[i % CAT_TINTS.length] }}
+            onClick={() => onPick(c)}
+          >
+            <span className="cat-thumb">
+              {c.image
+                ? <img className="cat-img" src={c.image} alt="" loading="lazy" />
+                : <CategoryIcon id={c.id} name={c.name} size={40} />}
+            </span>
+            <span className="cat-name">{c.name}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Bottom tab bar (Blinkit/Zepto). Five destinations, the cart raised in the
+// middle with a live count. Full-screen drawers (cart, account) sit above it,
+// so it only ever shows on the browsing screens — no conflicting chrome.
+function BottomNav({ active, cartCount, onHome, onCats, onCart, onOrders, onProfile }) {
+  const Ic = ({ d }) => (
+    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      {d.split("|").map((p, i) => <path key={i} d={p} />)}
+    </svg>
+  );
+  const item = (id, label, d, onClick) => (
+    <button className={`bnav-item ${active === id ? "on" : ""}`} onClick={onClick}>
+      <Ic d={d} />
+      <span className="bnav-lbl">{label}</span>
+    </button>
+  );
+  return (
+    <nav className="bottom-nav">
+      {item("home", "Home", "M3 11.5 12 4l9 7.5|M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9", onHome)}
+      {item("cats", "Categories", "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z", onCats)}
+      <button className="bnav-cart" onClick={onCart} aria-label="Cart">
+        <span className="bnav-cart-disc">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.5 3h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7H6" /></svg>
+          {cartCount > 0 && <span className="bnav-badge">{cartCount}</span>}
+        </span>
+        <span className="bnav-lbl">Cart</span>
+      </button>
+      {item("orders", "Orders", "M6 2h9l4 4v16a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0zM14 2v5h5|M9 13h7M9 17h5", onOrders)}
+      {item("profile", "Profile", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6", onProfile)}
+    </nav>
   );
 }
 

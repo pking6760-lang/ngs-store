@@ -5704,3 +5704,62 @@ body { background: var(--bg-soft); }
   .see-all { transition: transform .1s ease; }
   .see-all:active { transform: scale(.95); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOTTOM NAVIGATION — Home · Categories · Cart (raised) · Orders · Profile
+   Fixed tab bar; full-screen drawers cover it, so it only shows on browsing
+   screens. The cart bar and live-order pill are lifted to sit above it.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root { --nav-h: 62px; }
+
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex; align-items: stretch; justify-content: space-around;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: saturate(180%) blur(10px);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 20px -12px rgba(20,32,25,.25);
+}
+.bnav-item {
+  flex: 1; border: none; background: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--muted); padding: 6px 0;
+  transition: color .15s ease, transform .1s ease;
+}
+.bnav-item:active { transform: scale(.92); }
+.bnav-item.on { color: var(--green-dark); }
+.bnav-lbl { font-size: 10.5px; font-weight: 750; letter-spacing: -0.01em; }
+
+/* Raised centre cart */
+.bnav-cart {
+  flex: 1; border: none; background: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: #fff; padding: 0; position: relative; top: -14px;
+}
+.bnav-cart .bnav-lbl { color: var(--green-dark); }
+.bnav-cart-disc {
+  position: relative; width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  box-shadow: 0 10px 22px -8px rgba(12,80,44,.6);
+  border: 3px solid var(--bg-soft);
+  transition: transform .12s ease;
+}
+.bnav-cart:active .bnav-cart-disc { transform: scale(.92); }
+.bnav-badge {
+  position: absolute; top: -3px; right: -3px; min-width: 19px; height: 19px;
+  padding: 0 5px; border-radius: 999px; background: var(--gold); color: #3a2600;
+  font-size: 11px; font-weight: 900; display: grid; place-items: center;
+  border: 2px solid var(--bg-soft);
+}
+
+/* Clear the fixed bar so nothing hides behind it */
+main.main { padding-bottom: calc(var(--nav-h) + 18px); }
+.footer { margin-bottom: var(--nav-h); }
+
+/* Lift the cart bar and live-order pill above the nav */
+.cart-bar { bottom: calc(var(--nav-h) + 12px) !important; }
+.live-pill { bottom: calc(var(--nav-h) + 12px) !important; }
+.live-pill.raised { bottom: calc(var(--nav-h) + 78px) !important; }
