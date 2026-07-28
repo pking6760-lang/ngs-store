@@ -5370,7 +5370,7 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
   --muted:      #6E7A70;
   --line:       #ECE6DA;         /* warm hairline, not cold grey */
   --bg:         #ffffff;
-  --bg-soft:    #FBF7EF;         /* the signature: warm ivory canvas */
+  --bg-soft:    #F9F7F1;         /* the signature: warm ivory canvas (lighter, more premium) */
   --radius:     16px;
   --shadow:     0 1px 2px rgba(24, 32, 25, .04), 0 3px 10px rgba(24, 32, 25, .05);
   --shadow-md:  0 8px 24px -12px rgba(24, 40, 28, .22);
@@ -5622,3 +5622,38 @@ body { background: var(--bg-soft); }
 .cat-tile.has-photo .cat-img {
   width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   POLISH PASS — softer cards, pill badge, richer type, more breathing room
+   From the design review: rounder cards (24dp), a pill discount badge with a
+   real shadow, softer overall shadows, a slightly bolder product name, and more
+   left padding on section headers. Small moves, premium feel.
+   ══════════════════════════════════════════════════════════════════════════ */
+/* #3 rounder cards, #18 softer shadow */
+.pcard { border-radius: 24px !important; box-shadow: 0 6px 18px rgba(24,40,28,.055) !important; }
+.pcard-media, .pcard-media .thumb-img, .pcard-media .thumb-ph { border-radius: 18px !important; }
+.pcard-oos { border-radius: 18px !important; }
+
+/* #4 discount badge → floating pill with a stronger shadow (Blinkit-style) */
+.pcard-flag {
+  top: 9px !important; left: 9px !important;
+  border-radius: 999px !important;
+  padding: 4px 10px 5px !important;
+  font-size: 10px !important; letter-spacing: .01em;
+  box-shadow: 0 6px 14px -3px rgba(10,122,67,.5) !important;
+}
+.pcard-flag.alt { box-shadow: 0 6px 14px -3px rgba(169,118,10,.5) !important; }
+
+/* #20 product name a touch bolder (semibold → bold) */
+.pcard-name { font-weight: 750 !important; color: #16231b; }
+
+/* #6 section headers: more breathing room on the left */
+.section-title, .section-head .section-title { padding-left: 18px !important; }
+.section { padding-top: 18px; }
+
+/* #2 category tiles ~12% bigger presence — larger glyph + label */
+.cat-thumb svg { width: 58% !important; height: 58% !important; }
+.cat-name { font-size: 12.5px; }
+
+/* softer category-tile shadow to match the calmer card shadow */
+.cat-tile.has-photo .cat-thumb { box-shadow: inset 0 0 0 1px rgba(20,32,25,.06), 0 6px 14px -10px rgba(20,32,25,.24) !important; }

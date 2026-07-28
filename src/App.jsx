@@ -760,7 +760,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
             </div>
             <div className="product-row">
               {byCategory(c.id)
-                .slice(0, 6)
+                .slice(0, 4)
                 .map((p) => (
                   <ProductCard key={p.id} product={p} />
                 ))}
