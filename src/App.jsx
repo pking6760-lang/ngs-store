@@ -531,6 +531,45 @@ function HomeSkeleton() {
   );
 }
 
+// Soft per-tile backgrounds for the category grid — warm, food-friendly hues
+// that cycle so the wall of tiles reads as colourful rather than one flat green.
+const CAT_TINTS = [
+  "#FDEBD2", "#E4F1E1", "#E6EEF9", "#FBE6E6", "#F1E9F7",
+  "#E3F1F1", "#FCEEDD", "#EAF3E4", "#FDE8EF", "#E8EFF7", "#F3EDE2",
+];
+
+// The greeting hero — the first thing the eye lands on. Personal (name +
+// time of day), reassuring (delivery promise), and premium (deep-green
+// gradient with a soft glow), it replaces the old flat "Welcome" strip that
+// took the same space to say nothing.
+function HomeHero({ offer }) {
+  const { user, isLoggedIn } = useAuth();
+  const h = new Date().getHours();
+  const part = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  const name = isLoggedIn && user?.name ? user.name.split(" ")[0] : null;
+  return (
+    <section className="home-hero">
+      <div className="home-hero-glow" aria-hidden="true" />
+      <div className="home-hero-row">
+        <div className="home-hero-greet">
+          <span className="home-hero-hi">{part}{name ? `, ${name}` : ""} 👋</span>
+          <span className="home-hero-line">What are we getting today?</span>
+        </div>
+        <span className="home-hero-eta">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+          12 min
+        </span>
+      </div>
+      {offer && offer.trim() && (
+        <div className="home-hero-offer">
+          <span className="home-hero-tag">OFFER</span>
+          {offer}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryClick, onPromo, theme }) {
   if (products.length === 0) return <HomeSkeleton />;
   // Categories the shop keeps off its front page — cigarettes today. Everything
@@ -564,9 +603,7 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
     <>
       <FestiveMasthead theme={theme} />
 
-      {offer && offer.trim() && (
-        <div className="offer-strip">{offer}</div>
-      )}
+      <HomeHero offer={offer} />
 
       <PromoCarousel slides={banners} onSelect={onPromo} />
 
@@ -605,19 +642,20 @@ function HomeView({ products, categories, offer, buyAgainIds = [], onCategoryCli
 
       <section className="section">
         <h2 className="section-title">Shop by category</h2>
-        <div className="category-grid">
-          {homeCategories.map((c) => (
+        <div className="cat-grid">
+          {homeCategories.map((c, i) => (
             <button
               key={c.id}
-              className="category-tile"
+              className="cat-tile"
+              style={{ "--tint": CAT_TINTS[i % CAT_TINTS.length] }}
               onClick={() => onCategoryClick(c)}
             >
-              <span className="category-thumb">
+              <span className="cat-thumb">
                 {c.image
-                  ? <img className="category-img" src={c.image} alt="" loading="lazy" />
-                  : <CategoryIcon id={c.id} name={c.name} size={46} />}
+                  ? <img className="cat-img" src={c.image} alt="" loading="lazy" />
+                  : <CategoryIcon id={c.id} name={c.name} size={40} />}
               </span>
-              <span className="category-name">{c.name}</span>
+              <span className="cat-name">{c.name}</span>
             </button>
           ))}
         </div>

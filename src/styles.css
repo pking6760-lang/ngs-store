@@ -5347,3 +5347,140 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
    obvious blob. The tear line alone still reads; the circles stand down. */
 :root[data-festival] .bill-tear::before,
 :root[data-festival] .bill-tear::after { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME REDESIGN — "Warm Premium"  (appended last, so this palette wins)
+   ═══════════════════════════════════════════════════════════════════════════
+   The old home was a cold grey-blue canvas with one flat green on everything
+   and a beige "Welcome" box that earned its space by saying nothing. Food wants
+   warmth. This moves the whole app onto a soft ivory ground so products and
+   white cards lift off it, layers the green into a real gradient, and adds a
+   gold accent for anything about saving money. Then: a personal greeting hero,
+   colourful category tiles, and section headers with a consistent spine.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --green:      #158048;
+  --green-dark: #0C5733;
+  --green-deep: #093F26;
+  --green-tint: #E7F4EB;
+  --gold:       #E7A52C;
+  --gold-deep:  #B26E12;
+  --gold-tint:  #FCF0D8;
+  --ink:        #182019;
+  --muted:      #6E7A70;
+  --line:       #ECE6DA;         /* warm hairline, not cold grey */
+  --bg:         #ffffff;
+  --bg-soft:    #FBF7EF;         /* the signature: warm ivory canvas */
+  --radius:     16px;
+  --shadow:     0 1px 2px rgba(24, 32, 25, .04), 0 3px 10px rgba(24, 32, 25, .05);
+  --shadow-md:  0 8px 24px -12px rgba(24, 40, 28, .22);
+  --shadow-lg:  0 22px 48px -20px rgba(12, 50, 30, .30);
+}
+body { background: var(--bg-soft); }
+/* The main scroll area also carries the warm ground (some builds paint it). */
+.cart-drawer, .account-drawer, .order-detail, main.main { background: var(--bg-soft); }
+
+/* ── Header: warm, lifted, with a hairline that matches the new palette ── */
+.header { background: var(--bg); border-bottom: 1px solid var(--line); }
+.searchbar { background: var(--bg-soft); }
+.search-wrap {
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.search-wrap:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-tint); }
+
+/* ── Greeting hero ─────────────────────────────────────────────────────── */
+.home-hero {
+  position: relative; overflow: hidden;
+  margin: 12px 14px 4px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 55%, var(--green-deep) 100%);
+  box-shadow: var(--shadow-md);
+}
+.home-hero-glow {
+  position: absolute; top: -60px; right: -40px; width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.18), rgba(255,255,255,0) 70%);
+  pointer-events: none;
+}
+.home-hero-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; }
+.home-hero-greet { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.home-hero-hi { font-size: 18px; font-weight: 850; letter-spacing: -0.02em; }
+.home-hero-line { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.82); }
+.home-hero-eta {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 800; letter-spacing: .01em;
+  background: rgba(255,255,255,.16); color: #fff;
+  padding: 6px 11px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+}
+.home-hero-offer {
+  position: relative; margin-top: 13px;
+  display: flex; align-items: center; gap: 9px;
+  font-size: 12.5px; font-weight: 700; line-height: 1.35;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 12px; padding: 9px 11px;
+}
+.home-hero-tag {
+  flex: 0 0 auto; font-size: 9.5px; font-weight: 900; letter-spacing: .08em;
+  background: var(--gold); color: #3a2600;
+  padding: 3px 7px; border-radius: 5px;
+}
+
+/* ── Section headers: one consistent spine + type scale ────────────────── */
+.section { padding: 16px 0 4px; }
+.section-title, .section-head .section-title {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 17px; font-weight: 850; letter-spacing: -0.02em; color: var(--ink);
+  padding: 0 14px; margin-bottom: 11px;
+}
+.section-title::before {
+  content: ""; width: 4px; height: 17px; border-radius: 3px;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+}
+.section-head { display: flex; align-items: center; justify-content: space-between; padding-right: 14px; }
+.section-head .section-title { margin-bottom: 11px; }
+.see-all {
+  font-size: 12.5px; font-weight: 800; color: var(--green-dark);
+  background: var(--green-tint); border: none; border-radius: 999px;
+  padding: 6px 12px;
+}
+/* Best Prices earns a warm gold spine — it's the money-saving rail. */
+.best-prices .section-title::before { background: linear-gradient(180deg, var(--gold), var(--gold-deep)); }
+
+/* ── Colourful category tiles ──────────────────────────────────────────── */
+.cat-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 10px;
+  padding: 2px 14px 6px;
+}
+.cat-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  background: none; border: none; padding: 0; cursor: pointer;
+}
+.cat-thumb {
+  width: 100%; aspect-ratio: 1; border-radius: 18px;
+  background: var(--tint, var(--green-tint));
+  display: grid; place-items: center; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(24,32,25,.04);
+  transition: transform .12s ease;
+}
+.cat-tile:active .cat-thumb { transform: scale(.94); }
+.cat-img { width: 78%; height: 78%; object-fit: contain; }
+.cat-name {
+  font-size: 11.5px; font-weight: 700; color: var(--ink); text-align: center;
+  line-height: 1.2; letter-spacing: -0.01em;
+}
+
+/* ── Cards & rails: warmer shadow, cleaner edges on the ivory ground ────── */
+.product-card, .pcard {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.product-row { padding: 0 14px 4px; }
