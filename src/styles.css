@@ -148,6 +148,20 @@ button {
   background: var(--green-tint, var(--green-tint)); color: var(--green-dark, var(--green-dark));
   display: flex; align-items: center; justify-content: center;
 }
+/* The delivery bolt gives a slow, gentle "charge" pulse so the speed promise
+   feels alive — never flashy. Off entirely for reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .hl-bolt { animation: boltPulse 2.6s ease-in-out infinite; }
+  .hl-bolt svg { animation: boltFlicker 2.6s ease-in-out infinite; }
+}
+@keyframes boltPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 30%, transparent); }
+  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 0%, transparent); }
+}
+@keyframes boltFlicker {
+  0%, 100% { transform: scale(1); opacity: .92; }
+  50%      { transform: scale(1.12); opacity: 1; }
+}
 .hl-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hl-eta { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.01em; line-height: 1; }
 .hl-addr { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -3017,7 +3031,8 @@ input:focus-visible {
 .cart-bar {
   background: linear-gradient(120deg, var(--green), var(--green-dark));
   border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(9, 70, 40, 0.34);
+  /* Dialled back ~20% — present but no longer shouting for attention. */
+  box-shadow: 0 10px 24px rgba(9, 70, 40, 0.27);
   overflow: hidden;
   position: fixed;
   transition: transform 0.16s ease;
@@ -5718,8 +5733,11 @@ body { background: var(--bg-soft); }
    real shadow, softer overall shadows, a slightly bolder product name, and more
    left padding on section headers. Small moves, premium feel.
    ══════════════════════════════════════════════════════════════════════════ */
-/* #3 rounder cards, #18 softer shadow */
-.pcard { border-radius: 24px !important; box-shadow: 0 6px 18px rgba(24,40,28,.055) !important; }
+/* #3 rounder cards, #18 softer shadow — a touch rounder still (24 → 28) reads
+   more modern; the media corner follows so the frame stays concentric. */
+.pcard { border-radius: 28px !important; box-shadow: 0 6px 18px rgba(24,40,28,.055) !important; }
+.pcard-media { border-radius: 19px; }
+.pcard-media .thumb-img, .pcard-media .thumb-ph { border-radius: 19px; }
 .pcard-media, .pcard-media .thumb-img, .pcard-media .thumb-ph { border-radius: 18px !important; }
 .pcard-oos { border-radius: 18px !important; }
 
@@ -6008,3 +6026,33 @@ main.main { padding-bottom: calc(var(--nav-h) + 18px); }
 
 /* Recently-viewed / trending spark chips read fine; flash rail keeps its red.
    The wallet chip (green gradient + gold coin) already pops on dark. */
+
+/* ── Polish pass: chips, banner shimmer, dark skeleton ─────────────────────── */
+/* Inactive category chips need a lighter edge on dark, or they melt into the
+   background. The selected (green) chip is unchanged. */
+:root[data-theme="dark"] .cat-chip { border-color: rgba(255,255,255,.16); background: var(--surface); }
+:root[data-theme="dark"] .cat-chip.on { border-color: transparent; }
+
+/* A one-shot shimmer sweeps the promo banner as the home paints in, so the
+   banner reads as "loading in" rather than snapping into place. Plays once per
+   mount (each time the home opens); clipped by the carousel's overflow. */
+@media (prefers-reduced-motion: no-preference) {
+  .promo-carousel::before {
+    content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    background: linear-gradient(100deg, transparent 32%, rgba(255,255,255,.28) 50%, transparent 68%);
+    background-size: 220% 100%;
+    animation: promoShimmer 1.05s ease-out 1 both;
+  }
+}
+@keyframes promoShimmer {
+  0%   { background-position: 180% 0; opacity: 1; }
+  85%  { opacity: 1; }
+  100% { background-position: -180% 0; opacity: 0; }
+}
+
+/* The first-open skeleton shimmer was tuned for light; give it dark greys so it
+   doesn't flash bright on a dark phone. */
+:root[data-theme="dark"] .skel-block {
+  background: linear-gradient(100deg, #1B211C 30%, #262E27 50%, #1B211C 70%);
+  background-size: 200% 100%;
+}
