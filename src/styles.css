@@ -2371,58 +2371,153 @@ button {
 }
 
 /* Rewards panel */
+.rewards-panel { display: flex; flex-direction: column; gap: 14px; }
 .rewards-hero {
-  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(140deg, #12b458 0%, var(--green) 46%, var(--green-dark) 100%);
   color: #fff;
-  border-radius: 14px;
-  padding: 22px;
-  text-align: center;
+  border-radius: 22px;
+  padding: 22px 20px 20px;
+  box-shadow: 0 16px 34px rgba(9, 70, 40, 0.30);
 }
-.rewards-hero-ic {
-  width: 44px; height: 44px; margin: 0 auto 10px; border-radius: 13px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.16); color: #fff;
+.rewards-hero-watermark {
+  position: absolute; right: -34px; top: -30px;
+  color: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  transform: rotate(8deg);
 }
-.rewards-hero-val {
-  font-size: 40px;
-  font-weight: 800;
-  line-height: 1;
-}
-.rewards-hero-lbl {
-  font-size: 13px;
-  opacity: 0.9;
-  margin-top: 4px;
-}
-.rewards-hero-worth {
-  margin-top: 10px;
+.rewards-hero-top { position: relative; }
+.rewards-hero-chip {
+  display: inline-flex; align-items: center; gap: 5px;
   background: rgba(255, 255, 255, 0.18);
   border-radius: 999px;
-  padding: 6px 12px;
-  display: inline-block;
-  font-size: 13px;
-  font-weight: 700;
+  padding: 4px 11px 4px 9px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.2px;
+  text-transform: uppercase;
 }
-.rewards-how {
+.rewards-hero-val {
+  position: relative;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rewards-hero-worth {
+  position: relative;
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  opacity: 0.94;
+}
+.rewards-progress { position: relative; margin-top: 16px; }
+.rewards-progress-track {
+  height: 8px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+.rewards-progress-fill {
+  height: 100%; border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rewards-progress-cap {
+  margin-top: 8px;
+  font-size: 12.5px;
+  opacity: 0.95;
+}
+.rewards-progress-cap strong { font-weight: 800; }
+
+.rewards-tiers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.rewards-tier {
   background: var(--surface);
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 6px;
+  text-align: center;
+  opacity: 0.62;
+}
+.rewards-tier.next { opacity: 1; border-color: var(--green); box-shadow: 0 4px 12px rgba(9, 70, 40, 0.10); }
+.rewards-tier.done { opacity: 1; }
+.rewards-tier-ic {
+  width: 28px; height: 28px; margin: 0 auto 5px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(18, 132, 74, 0.10); color: var(--green);
+}
+.rewards-tier.done .rewards-tier-ic { background: var(--green); color: #fff; }
+.rewards-tier-pts { font-size: 12.5px; font-weight: 800; color: var(--ink, #16231b); }
+.rewards-tier-worth { font-size: 11px; color: var(--muted, #667); margin-top: 1px; }
+
+.rewards-cta {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 13px;
+  font-size: 14.5px; font-weight: 700;
+  box-shadow: 0 8px 18px rgba(9, 70, 40, 0.20);
+  cursor: pointer;
+}
+.rewards-cta:active { transform: translateY(1px); }
+
+.rewards-earn, .rewards-how, .rewards-history {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
   padding: 16px;
-  margin-top: 14px;
 }
-.rewards-how h4 {
+.rewards-earn h4, .rewards-how h4, .rewards-history h4 {
   font-size: 14px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  color: var(--ink, #16231b);
 }
-.rewards-how ul {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.rewards-earn-rows { display: flex; flex-direction: column; gap: 8px; }
+.rewards-earn-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13.5px; color: var(--ink, #16231b);
 }
-.rewards-how li {
-  font-size: 13px;
-  color: #444;
-  line-height: 1.4;
+.rewards-earn-row > span:first-child { min-width: 78px; }
+.rewards-earn-arrow { color: var(--muted, #99a); }
+.rewards-earn-row strong { margin-left: auto; color: var(--green); font-weight: 800; }
+
+.rewards-how ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.rewards-how li { font-size: 13px; color: var(--muted, #444); line-height: 1.45; }
+.rewards-how li strong { color: var(--ink, #16231b); }
+
+.rewards-hist-list { display: flex; flex-direction: column; }
+.rewards-hist-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
 }
+.rewards-hist-row:first-child { border-top: none; }
+.rewards-hist-ic {
+  width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+}
+.rewards-hist-ic.earn { background: rgba(18, 132, 74, 0.12); color: var(--green); }
+.rewards-hist-ic.bonus { background: rgba(233, 168, 12, 0.14); color: #c98a06; }
+.rewards-hist-ic.redeem { background: rgba(120, 120, 140, 0.14); color: #6b6b7a; }
+.rewards-hist-mid { flex: 1 1 auto; min-width: 0; }
+.rewards-hist-label { font-size: 13.5px; font-weight: 600; color: var(--ink, #16231b); }
+.rewards-hist-date { font-size: 11.5px; color: var(--muted, #99a); margin-top: 1px; }
+.rewards-hist-delta { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rewards-hist-delta.pos { color: var(--green); }
+.rewards-hist-delta.neg { color: #6b6b7a; }
+.rewards-hist-empty {
+  text-align: center; color: var(--muted, #99a);
+  padding: 18px 8px; font-size: 13px;
+}
+.rewards-hist-empty svg { opacity: 0.4; margin-bottom: 8px; }
+.rewards-hist-empty p { margin: 0; }
 
 /* Membership panel */
 .member-card {

@@ -822,6 +822,21 @@ export async function deleteNotification(id) {
   pingLocal("notifications");
 }
 
+/* ─── Rewards / points history ──────────────────────────────────────────── */
+
+// Recent points-ledger movements for the Rewards screen. RLS ("points read
+// own") scopes the read to the signed-in user, so no explicit filter is
+// needed. Positive delta = earned/scratch, negative = redeemed at checkout.
+export async function fetchPointsHistory(limit = 40) {
+  const { data, error } = await must()
+    .from("points_ledger").select("*")
+    .order("created_at", { ascending: false }).limit(limit);
+  if (error) throw error;
+  return (data || []).map((r) => ({
+    id: r.id, delta: r.delta, reason: r.reason, orderId: r.order_id, at: r.created_at,
+  }));
+}
+
 /* ─── NGS Partner onboarding (KYC) ──────────────────────────────────────── */
 
 // Resolve an IFSC code → bank name + branch using the free, public IFSC

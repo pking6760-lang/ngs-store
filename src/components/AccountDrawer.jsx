@@ -8,7 +8,7 @@ import { toast } from "../lib/toast.js";
 import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../lib/store.js";
 import * as api from "../lib/api.js";
 import { googleMapsLink } from "../lib/location.js";
-import { MEMBERSHIP, redeemableRupees } from "../lib/rewards.js";
+import { MEMBERSHIP, redeemableRupees, pointsForSpend } from "../lib/rewards.js";
 import { cleanUpiQrFromImage, decodeUpiFromQr, loadRazorpay } from "../lib/payments.js";
 import UpiPayScreen from "./UpiPayScreen.jsx";
 import { useBackGuard } from "../lib/useBackGuard.js";
@@ -164,7 +164,7 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
                 onOpenOrder={(code) => { setOpenOrderCode(code); setTab("orders"); }}
               />
             )}
-            {tab === "rewards" && <Rewards user={user} />}
+            {tab === "rewards" && <Rewards user={user} onShop={() => { onClose(); }} />}
             {tab === "refer" && <Referral user={user} />}
             {tab === "membership" && <Membership />}
             {tab === "profile" && <Profile />}
@@ -1401,32 +1401,160 @@ function Inbox({ notes, userId, error, onRetry, onOpenOrder }) {
   );
 }
 
-function Rewards({ user }) {
+// Value milestones — each is simply points/10 rupees, so the numbers we show
+// are exactly what the customer can redeem (no invented perks like "free
+// delivery" that the linear points system can't actually honour).
+const REWARD_TIERS = [250, 500, 1000, 2500];
+
+// One row in the points history. Classifies a ledger movement by its sign and
+// reason so we can show the right icon and a clean label.
+function ledgerFace(row) {
+  const reason = String(row.reason || "").toLowerCase();
+  if (row.delta < 0) return { cls: "redeem", ic: PIC.tag, label: tr("Redeemed at checkout") };
+  if (reason.includes("scratch")) return { cls: "bonus", ic: PIC.gift, label: tr("Scratch card reward") };
+  return { cls: "earn", ic: PIC.star, label: tr("Earned on your order") };
+}
+
+function ledgerDate(iso) {
+  try { return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
+  catch { return ""; }
+}
+
+function Rewards({ user, onShop }) {
   const settings = useSettings();
   const cfg = settings.rewards || {};
   const redeemPer = cfg.redeemPer || 10;
   const maxRedeemPct = cfg.maxRedeemPct || 20;
   const points = user?.points || 0;
   const worth = redeemableRupees(points, cfg);
+
+  // Count the hero number up from 0 so it feels earned, not just printed.
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (points <= 0) { setShown(0); return; }
+    const dur = 700, t0 = performance.now();
+    let raf = 0;
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      setShown(Math.round(points * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [points]);
+
+  // Progress toward the next value milestone (falls back to the top tier once
+  // every milestone is cleared, so the bar always reads full at the top).
+  const nextTier = REWARD_TIERS.find((t) => t > points) || REWARD_TIERS[REWARD_TIERS.length - 1];
+  const prevTier = [...REWARD_TIERS].reverse().find((t) => t <= points) || 0;
+  const span = Math.max(1, nextTier - prevTier);
+  const pct = Math.max(0, Math.min(100, Math.round(((points - prevTier) / span) * 100)));
+  const toNext = Math.max(0, nextTier - points);
+  const allCleared = points >= REWARD_TIERS[REWARD_TIERS.length - 1];
+
+  // Real ledger history (RLS-scoped to this user).
+  const [history, setHistory] = useState(null);
+  useEffect(() => {
+    let live = true;
+    api.fetchPointsHistory(40).then((h) => { if (live) setHistory(h); }).catch(() => { if (live) setHistory([]); });
+    return () => { live = false; };
+  }, [user?.id, points]);
+
+  // Accurate earn examples straight from the live config — never a rounded
+  // promise. ₹399 → 50 pts, so ₹300 → 37, not "30".
+  const examples = [300, 500, 1000].map((amt) => ({ amt, pts: pointsForSpend(amt, cfg) }));
+
   return (
     <div className="rewards-panel">
       <div className="rewards-hero">
-        <div className="rewards-hero-ic"><MIcon d={PIC.star} size={20} /></div>
-        <div className="rewards-hero-val">{points}</div>
-        <div className="rewards-hero-lbl">{tr("reward points")}</div>
-        <div className="rewards-hero-worth">worth ₹{worth} off your next order</div>
+        <div className="rewards-hero-watermark"><MIcon d={PIC.star} size={150} /></div>
+        <div className="rewards-hero-top">
+          <span className="rewards-hero-chip"><MIcon d={PIC.star} size={13} /> {tr("Reward points")}</span>
+        </div>
+        <div className="rewards-hero-val">{shown}</div>
+        <div className="rewards-hero-worth">{tr("worth")} ₹{worth} {tr("off your next order")}</div>
+
+        <div className="rewards-progress">
+          <div className="rewards-progress-track">
+            <div className="rewards-progress-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="rewards-progress-cap">
+            {allCleared
+              ? tr("You've unlocked every reward tier")
+              : <><strong>{toNext}</strong> {tr("more points to reach")} ₹{redeemableRupees(nextTier, cfg)} {tr("off")}</>}
+          </div>
+        </div>
+      </div>
+
+      <div className="rewards-tiers">
+        {REWARD_TIERS.map((t) => {
+          const reached = points >= t;
+          const isNext = !reached && t === nextTier;
+          return (
+            <div key={t} className={`rewards-tier ${reached ? "done" : ""} ${isNext ? "next" : ""}`}>
+              <div className="rewards-tier-ic"><MIcon d={reached ? PIC.check : PIC.star} size={15} /></div>
+              <div className="rewards-tier-pts">{t} {tr("pts")}</div>
+              <div className="rewards-tier-worth">₹{redeemableRupees(t, cfg)} {tr("off")}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button className="rewards-cta" onClick={onShop}>
+        <MIcon d={PIC.bolt} size={16} /> {tr("Shop & earn more points")}
+      </button>
+
+      <div className="rewards-earn">
+        <h4>{tr("How you earn")}</h4>
+        <div className="rewards-earn-rows">
+          {examples.map((e) => (
+            <div key={e.amt} className="rewards-earn-row">
+              <span>{tr("Spend")} ₹{e.amt}</span>
+              <span className="rewards-earn-arrow">→</span>
+              <strong>+{e.pts} {tr("pts")}</strong>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="rewards-how">
         <h4>{tr("How it works")}</h4>
         <ul>
           <li>{tr("Earn reward points on eligible items in every order you place.")}</li>
-          <li>
-            <strong>{redeemPer} points = ₹1</strong> off — redeem at checkout.
-          </li>
-          <li>Pay up to <strong>{maxRedeemPct}%</strong> of an order with points.</li>
+          <li><strong>{redeemPer} {tr("points")} = ₹1</strong> {tr("off — redeem at checkout.")}</li>
+          <li>{tr("Pay up to")} <strong>{maxRedeemPct}%</strong> {tr("of an order with points.")}</li>
           <li>{tr("Points are added once your order is confirmed.")}</li>
         </ul>
+      </div>
+
+      <div className="rewards-history">
+        <h4>{tr("Points history")}</h4>
+        {history === null ? (
+          <div className="rewards-hist-empty">{tr("Loading…")}</div>
+        ) : history.length === 0 ? (
+          <div className="rewards-hist-empty">
+            <MIcon d={PIC.star} size={26} />
+            <p>{tr("No points activity yet. Place an order to start earning.")}</p>
+          </div>
+        ) : (
+          <div className="rewards-hist-list">
+            {history.map((row) => {
+              const face = ledgerFace(row);
+              return (
+                <div key={row.id} className="rewards-hist-row">
+                  <div className={`rewards-hist-ic ${face.cls}`}><MIcon d={face.ic} size={16} /></div>
+                  <div className="rewards-hist-mid">
+                    <div className="rewards-hist-label">{face.label}</div>
+                    <div className="rewards-hist-date">{ledgerDate(row.at)}</div>
+                  </div>
+                  <div className={`rewards-hist-delta ${row.delta < 0 ? "neg" : "pos"}`}>
+                    {row.delta < 0 ? "" : "+"}{row.delta}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

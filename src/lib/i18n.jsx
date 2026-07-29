@@ -341,8 +341,28 @@ const HI = {
 
   // ── Rewards ────────────────────────────────────────────────────────────────
   "reward points": "इनाम पॉइंट्स",
+  "Reward points": "इनाम पॉइंट्स",
   "Earn reward points on eligible items in every order you place.": "हर ऑर्डर में योग्य वस्तुओं पर इनाम पॉइंट्स कमाएं।",
   "Redeem at checkout.": "चेकआउट पर भुनाएं।",
+  "worth": "मूल्य",
+  "off your next order": "आपके अगले ऑर्डर पर छूट",
+  "more points to reach": "और पॉइंट्स चाहिए",
+  "off": "छूट",
+  "You've unlocked every reward tier": "आपने हर इनाम स्तर अनलॉक कर लिया है",
+  "pts": "पॉइंट्स",
+  "Shop & earn more points": "खरीदें और अधिक पॉइंट्स कमाएं",
+  "How you earn": "आप कैसे कमाते हैं",
+  "Spend": "खर्च करें",
+  "points": "पॉइंट्स",
+  "off — redeem at checkout.": "छूट — चेकआउट पर भुनाएं।",
+  "Pay up to": "इतना तक भुगतान करें",
+  "of an order with points.": "एक ऑर्डर का पॉइंट्स से।",
+  "Points are added once your order is confirmed.": "आपका ऑर्डर पक्का होते ही पॉइंट्स जुड़ जाते हैं।",
+  "Points history": "पॉइंट्स इतिहास",
+  "Earned on your order": "आपके ऑर्डर पर कमाया",
+  "Redeemed at checkout": "चेकआउट पर भुनाया",
+  "Scratch card reward": "स्क्रैच कार्ड इनाम",
+  "No points activity yet. Place an order to start earning.": "अभी तक कोई पॉइंट्स गतिविधि नहीं। कमाना शुरू करने के लिए ऑर्डर करें।",
 
   // ── Refer & earn ───────────────────────────────────────────────────────────
   "Your code": "आपका कोड",
