@@ -3722,7 +3722,26 @@ input:focus-visible {
 }
 .sub-pay-btn.on { border-color: var(--green); background: var(--green-tint); color: var(--green); }
 .sub-pay-btn.low, .sub-pay-btn:disabled { opacity: .5; }
-.sub-pay-hint { font-size: 12px; color: #c0700c; margin: 8px 2px 0; line-height: 1.4; }
+.sub-pay-hint { font-size: 12px; color: var(--muted); margin: 8px 2px 0; line-height: 1.4; }
+.sub-pay-hint.warn { color: #C0700C; font-weight: 600; }
+
+/* How-to-pay options: stacked cards with a title + one-line explainer. */
+.sub-paymodes { display: flex; flex-direction: column; gap: 9px; }
+.sub-paymode {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  border: 1.5px solid var(--line); background: var(--surface); border-radius: 13px;
+  padding: 12px 14px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.sub-paymode.on { border-color: var(--green); background: var(--green-tint); }
+.sub-paymode-top { display: flex; align-items: center; gap: 8px; }
+.sub-paymode-top b { font-size: 14px; font-weight: 800; color: var(--ink); }
+.sub-paymode.on .sub-paymode-top b { color: var(--green-dark); }
+.sub-paymode-tag {
+  font-size: 9.5px; font-weight: 850; letter-spacing: .3px; text-transform: uppercase;
+  color: #fff; background: linear-gradient(135deg, var(--green), var(--green-dark));
+  padding: 2px 7px; border-radius: 999px;
+}
+.sub-paymode-sub { font-size: 12px; color: var(--muted); line-height: 1.35; }
 .sub-note { font-size: 12px; color: #7a8a7f; line-height: 1.5; margin: 12px 0 4px; }
 .sub-days-stepper { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 8px; }
 .sub-days-stepper .step-btn {

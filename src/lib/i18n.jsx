@@ -52,6 +52,12 @@ const HI = {
   "Skip next delivery": "अगली डिलीवरी छोड़ें",
   "Pause": "रोकें",
   "Plan": "योजना",
+  "How to pay": "भुगतान कैसे करें",
+  "Auto-pay daily": "रोज़ ऑटो-पे",
+  "Recommended": "अनुशंसित",
+  "Prepay the plan": "पूरी योजना प्रीपे करें",
+  "Prepay online": "ऑनलाइन प्रीपे करें",
+  "Auto-pay from NGS Wallet": "NGS वॉलेट से ऑटो-पे",
   "Categories": "श्रेणियाँ",
   "All products": "सभी उत्पाद",
   "Welcome to Nisha General Store — daily essentials, delivered fast.":

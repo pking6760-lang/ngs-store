@@ -17,7 +17,9 @@ const HOURS = [6, 7, 8, 9, 10, 11, 12, 17, 18, 19, 20];
 export default function SubscribeSheet({ open, onClose, items, summaryProducts, dailyTotal, deliveryFee = 10, address, location, user, onCreated }) {
   const [days, setDays] = useState(7);
   const [hour, setHour] = useState(8);
-  const [pay, setPay] = useState("wallet");
+  // Default to auto-pay: pay one day at a time from the wallet, not the whole
+  // plan up front.
+  const [pay, setPay] = useState("wallet_daily");
   const [busy, setBusy] = useState(false);
   const [walletBal, setWalletBal] = useState(null); // null = still loading
   // Online-pay (custom QR) state
@@ -33,8 +35,12 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
   const fee = Math.round(deliveryFee || 0);
   const perDay = perItems + fee;
   const total = perDay * days;
+  const autopay = pay === "wallet_daily";
+  // Auto-pay only needs one day's cost in the wallet to start; prepay needs the
+  // whole plan.
+  const needAmount = autopay ? perDay : total;
   const walletKnown = walletBal != null;
-  const walletEnough = !walletKnown || walletBal >= total;
+  const walletEnough = !walletKnown || walletBal >= needAmount;
 
   const summary = useMemo(() => {
     const byId = Object.fromEntries((summaryProducts || []).map((p) => [p.id, p]));
@@ -103,8 +109,10 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
     setBusy(true);
     try {
       const o = await createSubscriptionOrder({ items, days, hour, address, location, pay });
-      if (pay === "wallet") {
-        toast("Plan started 🥛 First delivery tomorrow!");
+      if (pay === "wallet" || pay === "wallet_daily") {
+        toast(pay === "wallet_daily"
+          ? "Auto-pay started 🥛 We'll draw ₹" + perDay + "/day from your wallet."
+          : "Plan started 🥛 First delivery tomorrow!");
         onCreated && onCreated();
         onClose();
       } else {
@@ -162,7 +170,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
     <div className="sheet-overlay" onClick={handleClose}>
       <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sub-head">
-          <h3>{mode === "pay" ? "Pay for your plan" : "Subscribe & prepay 🔁"}</h3>
+          <h3>{mode === "pay" ? "Pay for your plan" : "Subscribe 🔁"}</h3>
           <button className="drawer-close" onClick={handleClose} aria-label="Close">✕</button>
         </div>
 
@@ -208,43 +216,75 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                 {HOURS.map((h) => <option key={h} value={h}>{hourText(h)}</option>)}
               </select>
 
-              <div className="sub-field-lbl">{tr("Pay in advance by")}</div>
-              <div className="sub-pay">
+              <div className="sub-field-lbl">{tr("How to pay")}</div>
+              <div className="sub-paymodes">
                 <button
-                  className={`sub-pay-btn ${pay === "wallet" ? "on" : ""} ${walletKnown && !walletEnough ? "low" : ""}`}
-                  disabled={walletKnown && !walletEnough}
+                  type="button"
+                  className={`sub-paymode ${autopay ? "on" : ""}`}
+                  onClick={() => setPay("wallet_daily")}
+                >
+                  <span className="sub-paymode-top">
+                    <b>{tr("Auto-pay daily")}</b>
+                    <span className="sub-paymode-tag">{tr("Recommended")}</span>
+                  </span>
+                  <span className="sub-paymode-sub">₹{perDay}/day from your wallet — pay only for what's delivered.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`sub-paymode ${pay === "wallet" ? "on" : ""}`}
                   onClick={() => setPay("wallet")}
                 >
-                  NGS Wallet{walletKnown ? ` · ₹${Math.round(walletBal)}` : ""}
+                  <span className="sub-paymode-top"><b>{tr("Prepay the plan")}</b></span>
+                  <span className="sub-paymode-sub">₹{total} now from wallet for all {days} days.</span>
                 </button>
                 {RAZORPAY_ENABLED && (
-                  <button className={`sub-pay-btn ${pay === "razorpay" ? "on" : ""}`} onClick={() => setPay("razorpay")}>{tr("Pay online")}</button>
+                  <button
+                    type="button"
+                    className={`sub-paymode ${pay === "razorpay" ? "on" : ""}`}
+                    onClick={() => setPay("razorpay")}
+                  >
+                    <span className="sub-paymode-top"><b>{tr("Prepay online")}</b></span>
+                    <span className="sub-paymode-sub">₹{total} now via UPI for all {days} days.</span>
+                  </button>
                 )}
               </div>
-              {walletKnown && !walletEnough && (
-                <p className="sub-pay-hint">
-                  Wallet has ₹{Math.round(walletBal)} — not enough for this plan.{" "}
-                  {RAZORPAY_ENABLED ? "Paying online instead." : "Add money to your wallet to start."}
+              {walletKnown && (
+                <p className={`sub-pay-hint ${!walletEnough ? "warn" : ""}`}>
+                  {tr("NGS Wallet")}: ₹{Math.round(walletBal)}
+                  {!walletEnough && (autopay
+                    ? ` — add at least ₹${perDay} to start auto-pay.`
+                    : ` — not enough to prepay ₹${total}.`)}
                 </p>
               )}
 
               <div className="sub-total">
                 <div className="sub-total-line"><span>Items</span><span>₹{perItems}/day</span></div>
                 <div className="sub-total-line"><span>{tr("Convenience fee")}</span><span>₹{fee}/day</span></div>
-                <div className="sub-total-row"><span>₹{perDay}/day × {days} days</span><strong>₹{total}</strong></div>
-                <div className="sub-total-note">First delivery tomorrow. Add items to any day's delivery from the cart.</div>
+                <div className="sub-total-row">
+                  <span>₹{perDay}/day × {days} days</span>
+                  <strong>{autopay ? `₹${perDay}/day` : `₹${total}`}</strong>
+                </div>
+                <div className="sub-total-note">
+                  {autopay
+                    ? `Nothing charged up front — we draw ₹${perDay} the day before each delivery. First delivery tomorrow.`
+                    : "First delivery tomorrow. Add items to any day's delivery from the cart."}
+                </div>
               </div>
             </div>
 
             <div className="sub-foot">
               <button
                 className="sub-start"
-                disabled={busy || (walletKnown && !walletEnough && !RAZORPAY_ENABLED)}
+                disabled={busy || ((autopay || pay === "wallet") && walletKnown && !walletEnough)}
                 onClick={start}
               >
-                {busy ? "Starting…" : `Pay ₹${total} & start`}
+                {busy ? "Starting…" : autopay ? `Start auto-pay` : pay === "wallet" ? `Pay ₹${total} & start` : `Continue · ₹${total}`}
               </button>
-              <p className="sub-cancel-hint">Cancel anytime from Account → Subscriptions; unused days are refunded to your wallet.</p>
+              <p className="sub-cancel-hint">
+                {autopay
+                  ? "Cancel anytime from Account → Subscriptions. You only ever pay for days delivered."
+                  : "Cancel anytime from Account → Subscriptions; unused days are refunded to your wallet."}
+              </p>
             </div>
           </>
         )}
