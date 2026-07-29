@@ -63,6 +63,8 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
   const { user, isLoggedIn, logout } = useAuth();
   // null = the account menu (list of sections); a tab id = that section's page.
   const [tab, setTab] = useState(null);
+  // An order code an inbox notification asked to open (e.g. "NGS6985").
+  const [openOrderCode, setOpenOrderCode] = useState(null);
   const { notes, error: notesError, reload: reloadNotes } = useUserNotifications(user?.id);
   const unread = notes.filter((n) => !n.read).length;
 
@@ -146,6 +148,8 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
             {tab === "orders" && (
               <MyOrders
                 user={user}
+                openCode={openOrderCode}
+                onOpenedCode={() => setOpenOrderCode(null)}
                 onReorder={() => {
                   onClose();
                   onOpenCart && onOpenCart();
@@ -154,7 +158,12 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
             )}
             {tab === "wallet" && <WalletTab userId={user?.id} />}
             {tab === "subscriptions" && <Subscriptions onShop={() => { onClose(); }} />}
-            {tab === "inbox" && <Inbox notes={notes} userId={user?.id} error={notesError} onRetry={reloadNotes} />}
+            {tab === "inbox" && (
+              <Inbox
+                notes={notes} userId={user?.id} error={notesError} onRetry={reloadNotes}
+                onOpenOrder={(code) => { setOpenOrderCode(code); setTab("orders"); }}
+              />
+            )}
             {tab === "rewards" && <Rewards user={user} />}
             {tab === "refer" && <Referral user={user} />}
             {tab === "membership" && <Membership />}
@@ -544,7 +553,7 @@ function OrderStatusBadge({ status }) {
   );
 }
 
-function MyOrders({ user, onReorder }) {
+function MyOrders({ user, onReorder, openCode, onOpenedCode }) {
   // RLS-scoped fetch of only this user's own orders (not the admin all-orders path).
   const { orders: myOrders, loading, error, reload } = useMyOrders(user?.id);
   // The catalogue carries the product photos; order lines only store name + qty,
@@ -560,6 +569,13 @@ function MyOrders({ user, onReorder }) {
   const openOrder = myOrders.find((o) => o.id === openId) || null;
   // Back button closes the order detail before the section page.
   useBackGuard(!!openId, () => setOpenId(null));
+  // An inbox notification asked to open a specific order — jump straight to it.
+  useEffect(() => {
+    if (openCode && myOrders.some((o) => o.id === openCode)) {
+      setOpenId(openCode);
+      onOpenedCode && onOpenedCode();
+    }
+  }, [openCode, myOrders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const FILTERS = [
     { id: "all", label: tr("All") },
@@ -1255,38 +1271,126 @@ function Row({ k, v, good, bold }) {
   );
 }
 
-function Inbox({ notes, userId, error, onRetry }) {
-  // Mark everything read once the inbox is opened.
-  useEffect(() => {
-    if (api.isBackendConfigured) api.markNotificationsRead().catch(() => {});
-    else markUserNotificationsRead(userId);
-  }, [userId]);
+// Six notification kinds, each with its own coloured glyph so the type reads at
+// a glance. The kind is inferred from the text (there's no type column), which
+// works for both old and new messages.
+const NOTIF_KIND = {
+  order:        { cls: "order",  d: "M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10" },
+  subscription: { cls: "sub",    d: "M6.5 3h11l-1 3.5H7.5L6.5 3zM7.5 6.5h9V20a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V6.5zM7.5 10.5h9" },
+  wallet:       { cls: "wallet", d: "M3 7h15a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11M16.5 12.5h.01", extra: "coin" },
+  reward:       { cls: "reward", d: "M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.3l6.5-.9L12 2.5z" },
+  cart:         { cls: "cart",   d: "M2.5 3.5h2l2.2 12.4a1.6 1.6 0 0 0 1.6 1.3h9.1a1.6 1.6 0 0 0 1.6-1.3L21.5 7.5H6M9 21a1 1 0 1 0 .01 0M18 21a1 1 0 1 0 .01 0" },
+  offer:        { cls: "offer",  d: "M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01" },
+};
+function classifyNote(n) {
+  const t = ((n.title || "") + " " + (n.body || "")).toLowerCase();
+  if (/wallet|refund|cashback|money added|added to your|credited/.test(t)) return "wallet";
+  if (/reward|scratch|coupon|congrat|you won|prize|jeeta|inaam/.test(t)) return "reward";
+  if (/cart|reh gaye|reh gaya|left in|wait kar/.test(t)) return "cart";
+  if (/subscription|daily delivery|kal ki delivery|milk|doodh|dahi/.test(t)) return "subscription";
+  if (/order|packed|on the way|out for delivery|delivered|dispatch|ngs\d+/.test(t)) return "order";
+  return "offer";
+}
+const orderCodeOf = (n) => (((n.title || "") + " " + (n.body || "")).match(/\bNGS\d+\b/) || [])[0] || null;
 
+// One inbox row: coloured type icon, title/body/time, unread dot. Swipe left to
+// delete, swipe right to mark read; tap an order message to open that order.
+function NotifRow({ n, onOpenOrder, onRead, onDelete }) {
+  const kind = NOTIF_KIND[classifyNote(n)] || NOTIF_KIND.offer;
+  const code = orderCodeOf(n);
+  const tappable = !!code && ["order", "subscription"].includes(classifyNote(n));
+  const [dx, setDx] = useState(0);
+  const start = useRef(null);
+  const moved = useRef(false);
+
+  function onStart(e) { start.current = e.touches[0].clientX; moved.current = false; }
+  function onMove(e) {
+    if (start.current == null) return;
+    const d = e.touches[0].clientX - start.current;
+    if (Math.abs(d) > 6) moved.current = true;
+    setDx(Math.max(-120, Math.min(120, d)));
+  }
+  function onEnd() {
+    if (dx <= -70) { onDelete(n); return; }
+    if (dx >= 70) { onRead(n); setDx(0); return; }
+    setDx(0);
+    start.current = null;
+  }
+  function onTap() {
+    if (moved.current) return;
+    if (tappable) { onRead(n); onOpenOrder(code); }
+  }
+
+  return (
+    <div className="inbox-row">
+      <div className="inbox-row-bg">
+        <span className="inbox-bg-read">✓ {tr("Read")}</span>
+        <span className="inbox-bg-del">{tr("Delete")} 🗑</span>
+      </div>
+      <div
+        className={`inbox-item ${n.read ? "" : "unread"} ${tappable ? "tappable" : ""}`}
+        style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: dx ? "none" : "transform .2s" }}
+        onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd}
+        onClick={onTap} role={tappable ? "button" : undefined}
+      >
+        <span className={`inbox-ic ${kind.cls}`} aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={kind.d} /></svg>
+        </span>
+        <div className="inbox-main">
+          <div className="inbox-item-title">
+            {n.title}
+            {!n.read && <span className="inbox-dot" aria-label="unread" />}
+          </div>
+          {n.body && <div className="inbox-item-body">{n.body}</div>}
+          <div className="inbox-item-time">
+            {formatTime(n.createdAt)}
+            {tappable && <span className="inbox-open"> · {tr("Tap to view")} ›</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Inbox({ notes, userId, error, onRetry, onOpenOrder }) {
   const list = useShowMore(notes, 12);
+  const unread = (notes || []).filter((n) => !n.read).length;
+
+  const markRead = (n) => {
+    if (n.read) return;
+    if (api.isBackendConfigured) api.markNotificationRead(n.id);
+    else markUserNotificationsRead(userId);
+  };
+  const del = (n) => { if (api.isBackendConfigured) api.deleteNotification(n.id); };
+  const markAll = () => {
+    if (api.isBackendConfigured) api.markNotificationsRead();
+    else markUserNotificationsRead(userId);
+  };
 
   if (error) return <RetryState error="Couldn't load your inbox." onRetry={onRetry} label="your inbox" />;
 
   if (!notes || notes.length === 0) {
     return (
-      <div className="account-empty">
-        <div className="empty-ic"><MIcon d={PIC.bell} size={30} /></div>
-        <p>{tr("No messages yet")}</p>
-        <span>{tr("Offers and updates from the store will appear here.")}</span>
+      <div className="inbox-empty">
+        <div className="inbox-empty-ic" aria-hidden="true">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13h4l2 3h6l2-3h4M5 13V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M3 13v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" /></svg>
+        </div>
+        <p className="inbox-empty-title">{tr("You're all caught up!")}</p>
+        <span className="inbox-empty-sub">{tr("We'll notify you about orders, offers and deliveries.")}</span>
       </div>
     );
   }
 
   return (
     <div className="inbox-list">
-      {list.shown.map((n) => (
-        <div className={`inbox-item ${n.read ? "" : "unread"}`} key={n.id}>
-          <div className="inbox-item-title">
-            <span className="inbox-item-ic"><MIcon d={PIC.bell} size={15} /></span>
-            {n.title}
-          </div>
-          {n.body && <div className="inbox-item-body">{n.body}</div>}
-          <div className="inbox-item-time">{formatTime(n.createdAt)}</div>
+      {unread > 0 && (
+        <div className="inbox-topbar">
+          <span>{unread} {unread === 1 ? tr("unread") : tr("unread")}</span>
+          <button type="button" className="inbox-markall" onClick={markAll}>{tr("Mark all read")}</button>
         </div>
+      )}
+      {list.shown.map((n) => (
+        <NotifRow key={n.id} n={n} onOpenOrder={onOpenOrder} onRead={markRead} onDelete={del} />
       ))}
       {list.more && (
         <button type="button" className="show-more-btn" onClick={list.toggle}>

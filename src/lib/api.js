@@ -811,6 +811,16 @@ export async function markNotificationsRead() {
     .eq("user_id", u.user.id).eq("read", false);
   pingLocal("notifications");
 }
+// Mark one notification read (swipe-right / tap). RLS scopes it to the owner.
+export async function markNotificationRead(id) {
+  try { await must().from("notifications").update({ read: true }).eq("id", id); } catch { /* ignore */ }
+  pingLocal("notifications");
+}
+// Delete one notification (swipe-left). RLS scopes it to the owner.
+export async function deleteNotification(id) {
+  try { await must().from("notifications").delete().eq("id", id); } catch { /* ignore */ }
+  pingLocal("notifications");
+}
 
 /* ─── NGS Partner onboarding (KYC) ──────────────────────────────────────── */
 

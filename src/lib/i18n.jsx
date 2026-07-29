@@ -61,6 +61,13 @@ const HI = {
   "UPI Autopay": "UPI ऑटोपे",
   "Wallet Auto-pay": "वॉलेट ऑटो-पे",
   "UPI Autopay · bank auto-debit": "UPI ऑटोपे · बैंक से ऑटो-डेबिट",
+  "Read": "पढ़ा",
+  "Delete": "हटाएँ",
+  "Tap to view": "देखने के लिए टैप करें",
+  "Mark all read": "सभी पढ़ा चिह्नित करें",
+  "unread": "अपठित",
+  "You're all caught up!": "आप पूरी तरह अपडेट हैं!",
+  "We'll notify you about orders, offers and deliveries.": "हम आपको ऑर्डर, ऑफ़र और डिलीवरी के बारे में सूचित करेंगे।",
   "Categories": "श्रेणियाँ",
   "All products": "सभी उत्पाद",
   "Welcome to Nisha General Store — daily essentials, delivered fast.":
