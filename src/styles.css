@@ -3792,18 +3792,60 @@ input:focus-visible {
   background: var(--surface);
 }
 .sub-card.paused { opacity: .72; }
-.sub-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.sub-card-sched { font-size: 14px; font-weight: 800; color: #223; }
-.sub-status { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 999px; }
-.sub-status.on { background: var(--green-tint); color: var(--green); }
-.sub-status.off { background: #f2f2f2; color: #888; }
-.sub-card-meta { font-size: 12px; color: #7a8a7f; margin-bottom: 12px; }
-.sub-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.sub-card-actions button {
-  border: 1.5px solid var(--line, #e2e6e3); background: var(--surface); border-radius: 10px;
-  padding: 8px 14px; font-size: 13px; font-weight: 700; color: #333;
+.sub-status { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 999px; flex: none; }
+.sub-status.on { background: var(--green-tint); color: var(--green-dark); }
+.sub-status.off { background: var(--bg-soft); color: var(--muted); }
+
+/* Header: product photo + lead item + plan price, with the status pill. */
+.sub-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
+.sub-head-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.sub-head-name { font-size: 15px; font-weight: 800; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sub-head-plan { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+
+/* Progress bar under the plan — an instant sense of how far along it is. */
+.sub-progress { margin-bottom: 12px; }
+.sub-progress-track {
+  height: 7px; border-radius: 999px; background: var(--bg-soft);
+  overflow: hidden; margin-bottom: 6px; border: 1px solid var(--line);
 }
-.sub-card-actions button.danger { color: #c0392b; border-color: #f0cfca; }
+.sub-progress-track span {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--green), var(--green-dark));
+  transition: width .5s cubic-bezier(.3,.7,.3,1);
+}
+.sub-progress-lbl { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+.sub-info-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 9px; }
+.sub-sched { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 650; color: var(--ink-soft, var(--ink)); }
+.sub-sched svg { color: var(--green-dark); flex: none; }
+.sub-next-pill {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  background: var(--green-tint); color: var(--green-dark);
+  font-size: 12px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+}
+.sub-next-pill b { font-weight: 850; }
+
+.sub-pay { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 13px; }
+.sub-pay svg { color: var(--muted); flex: none; }
+
+/* Actions: Skip (light, full-width), then Pause (green, primary) + Cancel (red). */
+.sub-card-actions { display: flex; flex-direction: column; gap: 8px; }
+.sub-skip {
+  width: 100%; border: 1.5px solid var(--line); background: var(--surface);
+  border-radius: 11px; padding: 9px 14px; font-size: 13px; font-weight: 750; color: var(--ink);
+}
+.sub-skip:disabled { opacity: .6; }
+.sub-actions-main { display: flex; gap: 9px; }
+.sub-actions-main button { flex: 1; border-radius: 11px; padding: 11px 14px; font-size: 14px; font-weight: 800; }
+.sub-pause {
+  border: none; color: #fff;
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  box-shadow: 0 6px 14px -6px rgba(12,80,44,.5);
+}
+.sub-pause:active { transform: translateY(1px); }
+.sub-cancel { border: 1.5px solid #E7B4AE; background: var(--surface); color: #C0392B; }
+:root[data-theme="dark"] .sub-cancel { border-color: #6A322C; color: #F0958C; }
 .account-loading { text-align: center; color: #8a978d; padding: 24px; font-size: 14px; }
 
 /* ════════════════════════════════════════════════════════════

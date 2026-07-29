@@ -200,6 +200,14 @@ const dateText = (d) => {
 // Next undelivered day = start + daysDone (the daily orders already created cover
 // start … start+daysDone-1).
 const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+// A subscription's daily 2-hour delivery window, from its start hour, as
+// "8:00–10:00 AM". The am/pm is shared when both ends fall in the same half.
+function deliveryWindow(hour) {
+  const h = Number.isFinite(hour) ? hour : 8;
+  const fmt = (x) => { const m = ((x % 24) + 24) % 24; return { hh: ((m + 11) % 12) + 1, ap: m < 12 ? "AM" : "PM" }; };
+  const a = fmt(h), b = fmt(h + 2);
+  return a.ap === b.ap ? `${a.hh}:00–${b.hh}:00 ${a.ap}` : `${a.hh}:00 ${a.ap} – ${b.hh}:00 ${b.ap}`;
+}
 function subNextDelivery(s) {
   // Next delivery = the daysDone-th date from start that isn't a skipped day
   // (orders are created a day ahead, so the latest-created one is the next drop).
@@ -381,7 +389,9 @@ function Subscriptions({ onShop }) {
   const [subs, setSubs] = useState(null);
   const [skipFor, setSkipFor] = useState(null);
   const [cancelFor, setCancelFor] = useState(null);
-  const nameOf = (id) => products.find((p) => p.id === id)?.name || tr("Item");
+  const [skippingId, setSkippingId] = useState(null);
+  const prodOf = (id) => products.find((p) => p.id === id) || null;
+  const nameOf = (id) => prodOf(id)?.name || tr("Item");
 
   async function load() {
     // Hide never-paid "pending" plans — only real (paid) plans belong here.
@@ -400,6 +410,18 @@ function Subscriptions({ onShop }) {
     await load();
     toast("Plan cancelled — refund added to your wallet.");
   }
+  // One-tap skip of just the next day (moves it to the end, plan length kept).
+  async function skipNextOne(s) {
+    if (skippingId) return;
+    setSkippingId(s.id);
+    try {
+      await api.skipNextDelivery(s.id);
+      await load();
+      toast("Next delivery skipped — it moves to the end of your plan.");
+    } catch (e) {
+      toast(e.message || "Couldn't skip that day.");
+    } finally { setSkippingId(null); }
+  }
 
   if (subs === null) return <p className="account-loading">Loading…</p>;
   if (subs.length === 0) {
@@ -416,28 +438,73 @@ function Subscriptions({ onShop }) {
       {subs.map((s) => {
         const st = SUB_STATUS[s.status] || SUB_STATUS.pending;
         const next = subNextDelivery(s);
+        const done = Math.min(s.daysDone, s.daysTotal);
+        const pct = s.daysTotal > 0 ? Math.min(100, Math.round((done / s.daysTotal) * 100)) : 0;
+        const lead = s.items[0];
+        const leadP = lead ? prodOf(lead.id) : null;
+        const active = s.status === "active";
         return (
-          <div className={`sub-card ${s.status === "active" ? "" : "paused"}`} key={s.id}>
-            <div className="sub-card-top">
-              <span className="sub-card-sched">{s.daysTotal}-day plan · ₹{Math.round(s.amount)}</span>
+          <div className={`sub-card ${active ? "" : "paused"}`} key={s.id}>
+            <div className="sub-card-head">
+              {lead && (
+                <ProductThumb
+                  image={leadP?.image}
+                  name={nameOf(lead.id)}
+                  category={leadP?.category}
+                  size={46}
+                  radius={12}
+                />
+              )}
+              <div className="sub-head-text">
+                <span className="sub-head-name">
+                  {lead ? `${nameOf(lead.id)}${s.items.length > 1 ? ` +${s.items.length - 1} more` : ` × ${lead.qty}`}` : tr("Plan")}
+                </span>
+                <span className="sub-head-plan">{s.daysTotal}-{tr("day plan")} · ₹{Math.round(s.amount)}</span>
+              </div>
               <span className={`sub-status ${st.cls}`}>{tr(st.label)}</span>
             </div>
-            <div className="sub-items">
-              {s.items.map((it, i) => (
-                <span key={i} className="sub-item-chip">{nameOf(it.id)} × {it.qty}</span>
-              ))}
+
+            {s.items.length > 1 && (
+              <div className="sub-items">
+                {s.items.map((it, i) => (
+                  <span key={i} className="sub-item-chip">{nameOf(it.id)} × {it.qty}</span>
+                ))}
+              </div>
+            )}
+
+            <div className="sub-progress">
+              <div className="sub-progress-track"><span style={{ width: `${pct}%` }} /></div>
+              <span className="sub-progress-lbl">{tr("Day")} {done} {tr("of")} {s.daysTotal}</span>
             </div>
-            <div className="sub-card-meta">
-              Day {Math.min(s.daysDone, s.daysTotal)} of {s.daysTotal}
-              {next ? ` · next delivery ${next}` : ""}
-              {" · "}{s.payMethod === "wallet" ? "Wallet" : "Prepaid"}
+
+            <div className="sub-info-row">
+              <span className="sub-sched">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8v4l2.5 2" /></svg>
+                {tr("Every day")} · {deliveryWindow(s.hour)}
+              </span>
+              {active && next && (
+                <span className="sub-next-pill">
+                  <b>{tr("Next delivery")}</b> {next}
+                </span>
+              )}
             </div>
-            {(s.status === "active" || s.status === "pending") && (
+
+            <div className="sub-pay">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h15a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11" /><circle cx="16.5" cy="12.5" r="1.3" fill="currentColor" stroke="none" /></svg>
+              {s.payMethod === "wallet" ? tr("Auto-paid via NGS Wallet") : tr("Prepaid")}
+            </div>
+
+            {active && (
               <div className="sub-card-actions">
-                {s.status === "active" && (
-                  <button onClick={() => setSkipFor(s)}>{tr("Going away? Pause")}</button>
+                {next && (
+                  <button className="sub-skip" disabled={skippingId === s.id} onClick={() => skipNextOne(s)}>
+                    {skippingId === s.id ? "…" : tr("Skip next delivery")}
+                  </button>
                 )}
-                <button className="danger" onClick={() => setCancelFor(s)}>{tr("Cancel plan")}</button>
+                <div className="sub-actions-main">
+                  <button className="sub-pause" onClick={() => setSkipFor(s)}>{tr("Pause")}</button>
+                  <button className="sub-cancel" onClick={() => setCancelFor(s)}>{tr("Cancel plan")}</button>
+                </div>
               </div>
             )}
           </div>
