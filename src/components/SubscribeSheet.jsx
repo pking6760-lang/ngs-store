@@ -173,8 +173,19 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
         recurring: 1,
         name: "NGS Nisha General Store",
         description: `Daily milk · UPI Autopay`,
-        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
+        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "", method: "upi" },
         theme: { color: "#0a9155" },
+        // Land straight on "pick your UPI app" (GPay / PhonePe / Paytm), not a
+        // generic payment page — the app chooser is the first and only thing.
+        config: {
+          display: {
+            blocks: {
+              upi: { name: "Approve in your UPI app", instruments: [{ method: "upi", flows: ["intent"] }] },
+            },
+            sequence: ["block.upi"],
+            preferences: { show_default_blocks: false },
+          },
+        },
         modal: { ondismiss: () => { setBusy(false); setWaitMandate(false); } },
         handler: () => { /* approved — the webhook confirms; the poll closes the sheet */ },
       });
