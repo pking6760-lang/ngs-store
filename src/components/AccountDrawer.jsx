@@ -162,22 +162,27 @@ export default function AccountDrawer({ open, onClose, initialTab, onOpenCart })
           </div>
         )}
 
-        <div className="account-foot">
-          <ThemeToggle />
-          <nav className="legal-links">
-            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">{tr("Privacy")}</a>
-            <a href="/terms.html" target="_blank" rel="noopener noreferrer">{tr("Terms")}</a>
-            <a href="/refunds.html" target="_blank" rel="noopener noreferrer">{tr("Refunds")}</a>
-            <a href="/shipping.html" target="_blank" rel="noopener noreferrer">{tr("Shipping")}</a>
-            <a href="/contact.html" target="_blank" rel="noopener noreferrer">{tr("Contact")}</a>
-          </nav>
-          <ApkDownloadRow app="customer" />
-          {isLoggedIn && (
-            <button className="logout-btn" onClick={handleLogout}>
-              {tr("Log out")}
-            </button>
-          )}
-        </div>
+        {/* Appearance, legal links and Log out belong to the account home — not
+            to a section page like Orders, where they read as clutter under the
+            list. Only show them on the menu. */}
+        {!active && (
+          <div className="account-foot">
+            <ThemeToggle />
+            <nav className="legal-links">
+              <a href="/privacy.html" target="_blank" rel="noopener noreferrer">{tr("Privacy")}</a>
+              <a href="/terms.html" target="_blank" rel="noopener noreferrer">{tr("Terms")}</a>
+              <a href="/refunds.html" target="_blank" rel="noopener noreferrer">{tr("Refunds")}</a>
+              <a href="/shipping.html" target="_blank" rel="noopener noreferrer">{tr("Shipping")}</a>
+              <a href="/contact.html" target="_blank" rel="noopener noreferrer">{tr("Contact")}</a>
+            </nav>
+            <ApkDownloadRow app="customer" />
+            {isLoggedIn && (
+              <button className="logout-btn" onClick={handleLogout}>
+                {tr("Log out")}
+              </button>
+            )}
+          </div>
+        )}
       </aside>
     </>
   );
@@ -444,14 +449,62 @@ function Subscriptions({ onShop }) {
   );
 }
 
+// A status pill with a small glyph so the state is recognised at a glance —
+// a check for delivered, a clock for scheduled, and so on.
+function OrderStatusBadge({ status }) {
+  const s = slug(status);
+  const ICON = {
+    delivered: "M20 6 9 17l-5-5",
+    scheduled: "M12 8v4l2.5 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z",
+    cancelled: "M18 6 6 18M6 6l12 12",
+    returned: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+    "out-for-delivery": "M3 7h11v8H3zM14 10h4l3 3v2h-7zM7 18a2 2 0 1 0 0 .1zM18 18a2 2 0 1 0 0 .1z",
+    packing: "M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10",
+  }[s];
+  return (
+    <span className={`status-badge status-${s}`}>
+      {ICON && (
+        <svg className="status-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d={ICON} /></svg>
+      )}
+      {status}
+    </span>
+  );
+}
+
 function MyOrders({ user, onReorder }) {
   // RLS-scoped fetch of only this user's own orders (not the admin all-orders path).
   const { orders: myOrders, loading, error, reload } = useMyOrders(user?.id);
+  // The catalogue carries the product photos; order lines only store name + qty,
+  // so we resolve each line's image by its product id for a real thumbnail.
+  const products = useProducts();
+  const prodMap = useMemo(() => {
+    const m = new Map();
+    for (const p of products || []) m.set(p.id, p);
+    return m;
+  }, [products]);
   const [openId, setOpenId] = useState(null);
+  const [filter, setFilter] = useState("all");
   const openOrder = myOrders.find((o) => o.id === openId) || null;
-  const list = useShowMore(myOrders, 8);
   // Back button closes the order detail before the section page.
   useBackGuard(!!openId, () => setOpenId(null));
+
+  const FILTERS = [
+    { id: "all", label: tr("All") },
+    { id: "active", label: tr("Active") },
+    { id: "delivered", label: tr("Delivered") },
+    { id: "cancelled", label: tr("Cancelled") },
+  ];
+  const matchFilter = (o) => {
+    const s = slug(o.status);
+    if (filter === "delivered") return s === "delivered";
+    if (filter === "cancelled") return s === "cancelled";
+    if (filter === "active") return !["delivered", "cancelled", "returned"].includes(s);
+    return true;
+  };
+  const filtered = myOrders.filter(matchFilter);
+  const list = useShowMore(filtered, 8);
+  // Filter chips only earn their space once there's a real list to sift.
+  const showFilters = myOrders.length > 5;
 
   if (error) return <RetryState error="Couldn't load your orders." onRetry={reload} label="your orders" />;
 
@@ -467,47 +520,71 @@ function MyOrders({ user, onReorder }) {
 
   return (
     <div className="my-orders">
-      {list.shown.map((o) => (
-        <button
-          className="my-order-card tappable"
-          key={o.id}
-          onClick={() => setOpenId(o.id)}
-        >
-          <div className="my-order-head">
-            <div>
-              <span className="order-id">#{o.id}</span>
-              <span className="order-time">{formatTime(o.createdAt)}</span>
+      {showFilters && (
+        <div className="order-filters">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              className={`order-filter ${filter === f.id ? "on" : ""}`}
+              onClick={() => setFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {list.shown.map((o) => {
+        const lead = o.items[0];
+        const p = lead ? prodMap.get(lead.id) : null;
+        const count = o.items.length;
+        return (
+          <button
+            className="my-order-card tappable"
+            key={o.id}
+            onClick={() => setOpenId(o.id)}
+          >
+            <div className="my-order-head">
+              <div>
+                <span className="order-id">#{o.id}</span>
+                <span className="order-time">{formatTime(o.createdAt)}</span>
+              </div>
+              <OrderStatusBadge status={o.status} />
             </div>
-            <span className={`status-badge status-${slug(o.status)}`}>
-              {o.status}
-            </span>
-          </div>
 
-          <div className="my-order-items">
-            {o.items.map((it) => (
-              <span className="my-order-chip" key={it.id}>
+            {lead && (
+              <div className="my-order-items">
                 <ProductThumb
-                  image={it.image}
-                  name={it.name}
-                  category={it.category}
-                  size={20}
-                  radius={5}
+                  image={p?.image || lead.image}
+                  name={lead.name}
+                  category={p?.category || lead.category}
+                  size={40}
+                  radius={11}
                 />
-                {it.name} × {it.qty}
-              </span>
-            ))}
-          </div>
+                <div className="mo-item-text">
+                  <span className="mo-item-name">
+                    {lead.name}{count === 1 ? ` × ${lead.qty}` : ` + ${count - 1} more`}
+                  </span>
+                  <span className="mo-item-count">{count} {count === 1 ? tr("item") : tr("items")}</span>
+                </div>
+              </div>
+            )}
 
-          <div className="my-order-foot">
-            <span className="my-order-pay">
-              {o.rating ? "★".repeat(o.rating) : o.payment === "upi" ? "UPI" : "Cash on delivery"}
-            </span>
-            <span className="my-order-total">
-              ₹{o.total} <span className="my-order-arrow">›</span>
-            </span>
-          </div>
-        </button>
-      ))}
+            <div className="my-order-foot">
+              <span className="my-order-pay">
+                {o.rating ? "★".repeat(o.rating) : o.payment === "upi" ? "UPI" : "Cash on delivery"}
+              </span>
+              <span className="my-order-total">
+                ₹{o.total} <span className="my-order-arrow">›</span>
+              </span>
+            </div>
+          </button>
+        );
+      })}
+      {filtered.length === 0 && (
+        <p className="account-empty" style={{ padding: "24px 0" }}>{tr("No orders in this filter.")}</p>
+      )}
       {list.more && (
         <button type="button" className="show-more-btn" onClick={list.toggle}>
           {list.label}
@@ -519,13 +596,14 @@ function MyOrders({ user, onReorder }) {
           order={openOrder}
           onClose={() => setOpenId(null)}
           onReorder={onReorder}
+          prodMap={prodMap}
         />
       )}
     </div>
   );
 }
 
-function OrderDetail({ order, onClose, onReorder }) {
+function OrderDetail({ order, onClose, onReorder, prodMap }) {
   const { add } = useCart();
   const cancelled = order.status === "Cancelled";
   const returned = order.status === "Returned" || order.status === "Return requested";
@@ -584,14 +662,17 @@ function OrderDetail({ order, onClose, onReorder }) {
           )}
 
           <div className="order-detail-items">
-            {order.items.map((it) => (
+            {order.items.map((it) => {
+              const p = prodMap?.get(it.id);
+              return (
               <div className="order-detail-item" key={it.id}>
-                <ProductThumb image={it.image} name={it.name} category={it.category} size={38} radius={9} />
+                <ProductThumb image={p?.image || it.image} name={it.name} category={p?.category || it.category} size={38} radius={9} />
                 <span className="odi-name">{it.name}</span>
                 <span className="odi-qty">× {it.qty}</span>
                 <span className="odi-price">₹{it.price * it.qty}</span>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="order-detail-bill">

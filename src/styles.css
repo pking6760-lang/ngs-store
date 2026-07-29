@@ -1962,30 +1962,53 @@ button {
   margin-left: 8px;
 }
 .status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px;
   font-weight: 800;
-  padding: 4px 10px;
+  padding: 4px 10px 4px 8px;
   border-radius: 999px;
   background: var(--bg-soft);
   color: var(--muted);
 }
+.status-ic { flex: none; margin-top: -0.5px; }
 .status-placed { background: #eef3ff; color: #2b57c0; }
-.status-packed { background: #fff4e0; color: #b26a00; }
+.status-packing, .status-packed { background: #fff4e0; color: #b26a00; }
 .status-out-for-delivery { background: #e7f0ff; color: #1a56db; }
+.status-scheduled { background: var(--gold-tint); color: var(--gold-deep); }
 .status-delivered { background: var(--green-tint); color: var(--green-dark); }
 .status-cancelled { background: #fdeaea; color: #b3261e; }
 .status-returned, .status-return-requested { background: #fef3c7; color: #b45309; }
+/* Order line: a real product thumbnail, the lead item, and how many items. */
 .my-order-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 11px;
+  margin-bottom: 12px;
 }
+.mo-item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mo-item-name {
+  font-size: 14px; font-weight: 750; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mo-item-count { font-size: 12px; color: var(--muted); font-weight: 600; }
 .my-order-chip {
   font-size: 12px;
   background: var(--bg-soft);
   border-radius: 8px;
   padding: 4px 8px;
+}
+/* Filter chips at the top when the list is long */
+.order-filters {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 2px;
+  scrollbar-width: none;
+}
+.order-filters::-webkit-scrollbar { display: none; }
+.order-filter {
+  flex: 0 0 auto; border: 1.5px solid var(--line); background: var(--surface);
+  color: var(--muted); font-size: 12.5px; font-weight: 750;
+  padding: 6px 13px; border-radius: 999px; white-space: nowrap;
+  transition: background .16s, color .16s, border-color .16s;
+}
+.order-filter.on {
+  background: var(--green); color: #fff; border-color: transparent;
 }
 .my-order-foot {
   display: flex;
@@ -6056,3 +6079,14 @@ main.main { padding-bottom: calc(var(--nav-h) + 18px); }
   background: linear-gradient(100deg, #1B211C 30%, #262E27 50%, #1B211C 70%);
   background-size: 200% 100%;
 }
+
+/* Status badges use light pastel fills; give them dark, low-glare versions on
+   dark so they don't glow on the card. Delivered/Scheduled already ride on the
+   theme tokens and adapt on their own. */
+:root[data-theme="dark"] .status-placed { background: #16233F; color: #9DBBF5; }
+:root[data-theme="dark"] .status-packing,
+:root[data-theme="dark"] .status-packed { background: #2E2410; color: #E6B45C; }
+:root[data-theme="dark"] .status-out-for-delivery { background: #16233F; color: #9DBBF5; }
+:root[data-theme="dark"] .status-cancelled { background: #3A1A18; color: #F0958C; }
+:root[data-theme="dark"] .status-returned,
+:root[data-theme="dark"] .status-return-requested { background: #33280F; color: #E6C36A; }

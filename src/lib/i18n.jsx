@@ -34,6 +34,13 @@ const HI = {
   "Yesterday": "कल",
   "No wallet activity yet": "अभी तक कोई वॉलेट गतिविधि नहीं",
   "Refunds and cashback will appear here.": "रिफंड और कैशबैक यहाँ दिखेंगे।",
+  "All": "सभी",
+  "Active": "चालू",
+  "Delivered": "पहुँचा दिया",
+  "Cancelled": "रद्द",
+  "item": "वस्तु",
+  "items": "वस्तुएँ",
+  "No orders in this filter.": "इस फ़िल्टर में कोई ऑर्डर नहीं।",
   "Categories": "श्रेणियाँ",
   "All products": "सभी उत्पाद",
   "Welcome to Nisha General Store — daily essentials, delivered fast.":

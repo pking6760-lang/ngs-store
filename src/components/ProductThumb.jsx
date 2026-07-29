@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { getCategories } from "../lib/store.js";
 
 // Shows a product's photo. When there's no photo yet, shows a clean placeholder
@@ -23,11 +24,12 @@ export default function ProductThumb({
   radius = 10,
   fill = false,
 }) {
+  const [failed, setFailed] = useState(false);
   const boxStyle = fill
     ? { width: "100%", height: "100%", borderRadius: radius }
     : { width: size, height: size, borderRadius: radius };
 
-  if (image) {
+  if (image && !failed) {
     return (
       <img
         className="thumb-img"
@@ -37,6 +39,9 @@ export default function ProductThumb({
         // the browser defers loading + decoding until they're near the viewport.
         loading="lazy"
         decoding="async"
+        // A dead URL (deleted photo, offline) falls back to the lettered
+        // placeholder instead of a blank/broken box.
+        onError={() => setFailed(true)}
         // `contain` on white shows the whole product (no cropping) and blends
         // seamlessly with white-background catalog photos.
         style={{ ...boxStyle, objectFit: "contain", background: "#fff" }}
