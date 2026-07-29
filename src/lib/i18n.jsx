@@ -58,6 +58,9 @@ const HI = {
   "Prepay the plan": "पूरी योजना प्रीपे करें",
   "Prepay online": "ऑनलाइन प्रीपे करें",
   "Auto-pay from NGS Wallet": "NGS वॉलेट से ऑटो-पे",
+  "UPI Autopay": "UPI ऑटोपे",
+  "Wallet Auto-pay": "वॉलेट ऑटो-पे",
+  "UPI Autopay · bank auto-debit": "UPI ऑटोपे · बैंक से ऑटो-डेबिट",
   "Categories": "श्रेणियाँ",
   "All products": "सभी उत्पाद",
   "Welcome to Nisha General Store — daily essentials, delivered fast.":

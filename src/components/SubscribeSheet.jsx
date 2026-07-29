@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createSubscriptionOrder, createRazorpayOrder, verifyRazorpayPayment, walletBalance,
-  createOrderQr, fetchOrderState, discardPendingSubscription,
+  createOrderQr, fetchOrderState, discardPendingSubscription, createUpiMandate,
 } from "../lib/api.js";
 import { loadRazorpay, RAZORPAY_ENABLED, cleanUpiQrFromImage, decodeUpiFromQr } from "../lib/payments.js";
 import UpiPayScreen from "./UpiPayScreen.jsx";
+import { useSettings } from "../lib/hooks.js";
 import { toast } from "../lib/toast.js";
 import { tr } from "../lib/i18n.jsx";
 
@@ -29,18 +30,25 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
   const [upiIntent, setUpiIntent] = useState("");
   const [payErr, setPayErr] = useState("");
   const [paying, setPaying] = useState(false);
+  const [waitMandate, setWaitMandate] = useState(false); // approving a UPI mandate
   const rzpRef = useRef(null);
+  const settings = useSettings();
+  // Real UPI Autopay shows only when both Razorpay is on AND the server flag is
+  // set — kept off until the daily charge engine (Phase 3) is live, so no
+  // customer can approve a mandate that wouldn't yet deliver.
+  const upiAutopayOn = RAZORPAY_ENABLED && settings?.upiAutopayEnabled === true;
 
   const perItems = Math.round(dailyTotal || 0);
   const fee = Math.round(deliveryFee || 0);
   const perDay = perItems + fee;
   const total = perDay * days;
-  const autopay = pay === "wallet_daily";
-  // Auto-pay only needs one day's cost in the wallet to start; prepay needs the
-  // whole plan.
+  const autopay = pay === "wallet_daily";       // wallet pay-as-you-go
+  const upiAutopay = pay === "upi_autopay";     // real bank e-mandate
+  // Wallet auto-pay needs one day's cost; prepay needs the whole plan; UPI
+  // Autopay needs no wallet at all (the bank funds it).
   const needAmount = autopay ? perDay : total;
   const walletKnown = walletBal != null;
-  const walletEnough = !walletKnown || walletBal >= needAmount;
+  const walletEnough = upiAutopay || !walletKnown || walletBal >= needAmount;
 
   const summary = useMemo(() => {
     const byId = Object.fromEntries((summaryProducts || []).map((p) => [p.id, p]));
@@ -100,12 +108,33 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
     return () => { alive = false; clearInterval(iv); };
   }, [mode, order]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // UPI Autopay: once the customer approves the mandate, the webhook flips the
+  // umbrella order to paid. Poll for it, then close with success.
+  useEffect(() => {
+    if (!waitMandate || !order) return;
+    let alive = true;
+    const iv = setInterval(async () => {
+      try {
+        const st = await fetchOrderState(order.dbId);
+        if (alive && st?.payment_status === "paid") {
+          clearInterval(iv);
+          setWaitMandate(false);
+          toast("UPI Autopay set up 🥛 First delivery tomorrow!");
+          onCreated && onCreated();
+          onClose();
+        }
+      } catch { /* keep polling */ }
+    }, 3000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [waitMandate, order]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!open) return null;
 
   async function start() {
     if (busy) return;
     if (!items || items.length === 0) { toast(tr("Your cart is empty.")); return; }
     if (days < 1) { toast(tr("Choose how many days.")); return; }
+    if (upiAutopay) { startUpiAutopay(); return; }
     setBusy(true);
     try {
       const o = await createSubscriptionOrder({ items, days, hour, address, location, pay });
@@ -123,6 +152,38 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
       toast(e.message || tr("Couldn't start the plan."));
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Real UPI Autopay: create the mandate, then open Razorpay's approval screen so
+  // the customer authorises the daily bank auto-debit once in their UPI app. The
+  // webhook confirms it server-side; the poll effect below closes the sheet.
+  async function startUpiAutopay() {
+    if (busy) return;
+    setBusy(true); setPayErr("");
+    try {
+      const o = await createSubscriptionOrder({ items, days, hour, address, location, pay: "upi_autopay" });
+      const m = await createUpiMandate(o.dbId);
+      setOrder(o);
+      const Razorpay = await loadRazorpay();
+      const rzp = new Razorpay({
+        key: m.keyId,
+        order_id: m.orderId,
+        customer_id: m.customerId,
+        recurring: 1,
+        name: "NGS Nisha General Store",
+        description: `Daily milk · UPI Autopay`,
+        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
+        theme: { color: "#0a9155" },
+        modal: { ondismiss: () => { setBusy(false); setWaitMandate(false); } },
+        handler: () => { /* approved — the webhook confirms; the poll closes the sheet */ },
+      });
+      rzp.on("payment.failed", (r) => { setBusy(false); setWaitMandate(false); toast(r?.error?.description || "Autopay not approved."); });
+      setWaitMandate(true);
+      rzp.open();
+    } catch (e) {
+      setBusy(false); setWaitMandate(false);
+      toast(e.message || "Couldn't start UPI Autopay.");
     }
   }
 
@@ -218,16 +279,28 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
 
               <div className="sub-field-lbl">{tr("How to pay")}</div>
               <div className="sub-paymodes">
+                {upiAutopayOn && (
+                  <button
+                    type="button"
+                    className={`sub-paymode ${upiAutopay ? "on" : ""}`}
+                    onClick={() => setPay("upi_autopay")}
+                  >
+                    <span className="sub-paymode-top">
+                      <b>{tr("UPI Autopay")}</b>
+                      <span className="sub-paymode-tag">{tr("Recommended")}</span>
+                    </span>
+                    <span className="sub-paymode-sub">Approve once in your UPI app — your bank auto-pays ₹{perDay}/day. No wallet needed.</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className={`sub-paymode ${autopay ? "on" : ""}`}
                   onClick={() => setPay("wallet_daily")}
                 >
                   <span className="sub-paymode-top">
-                    <b>{tr("Auto-pay daily")}</b>
-                    <span className="sub-paymode-tag">{tr("Recommended")}</span>
+                    <b>{tr("Wallet Auto-pay")}</b>
                   </span>
-                  <span className="sub-paymode-sub">₹{perDay}/day from your wallet — pay only for what's delivered.</span>
+                  <span className="sub-paymode-sub">₹{perDay}/day from your NGS Wallet — pay only for what's delivered.</span>
                 </button>
                 <button
                   type="button"
@@ -248,7 +321,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                   </button>
                 )}
               </div>
-              {walletKnown && (
+              {walletKnown && !upiAutopay && (
                 <p className={`sub-pay-hint ${!walletEnough ? "warn" : ""}`}>
                   {tr("NGS Wallet")}: ₹{Math.round(walletBal)}
                   {!walletEnough && (autopay
@@ -262,10 +335,12 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                 <div className="sub-total-line"><span>{tr("Convenience fee")}</span><span>₹{fee}/day</span></div>
                 <div className="sub-total-row">
                   <span>₹{perDay}/day × {days} days</span>
-                  <strong>{autopay ? `₹${perDay}/day` : `₹${total}`}</strong>
+                  <strong>{(autopay || upiAutopay) ? `₹${perDay}/day` : `₹${total}`}</strong>
                 </div>
                 <div className="sub-total-note">
-                  {autopay
+                  {upiAutopay
+                    ? `Nothing charged now — approve once, then your bank auto-pays ₹${perDay} the day before each delivery. First delivery tomorrow.`
+                    : autopay
                     ? `Nothing charged up front — we draw ₹${perDay} the day before each delivery. First delivery tomorrow.`
                     : "First delivery tomorrow. Add items to any day's delivery from the cart."}
                 </div>
@@ -278,10 +353,15 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                 disabled={busy || ((autopay || pay === "wallet") && walletKnown && !walletEnough)}
                 onClick={start}
               >
-                {busy ? "Starting…" : autopay ? `Start auto-pay` : pay === "wallet" ? `Pay ₹${total} & start` : `Continue · ₹${total}`}
+                {busy ? (upiAutopay ? "Opening…" : "Starting…")
+                  : upiAutopay ? "Set up UPI Autopay"
+                  : autopay ? "Start auto-pay"
+                  : pay === "wallet" ? `Pay ₹${total} & start` : `Continue · ₹${total}`}
               </button>
               <p className="sub-cancel-hint">
-                {autopay
+                {upiAutopay
+                  ? "Cancel anytime from Account → Subscriptions — the mandate is revoked and nothing more is debited."
+                  : autopay
                   ? "Cancel anytime from Account → Subscriptions. You only ever pay for days delivered."
                   : "Cancel anytime from Account → Subscriptions; unused days are refunded to your wallet."}
               </p>

@@ -128,7 +128,9 @@ function mapSettings(r) {
     // Store contact number the customer can call about an order (live tracker).
     supportPhone: (r.support_phone || "").replace(/\D/g, ""),
     cancelFee: r.cancel_fee != null ? num(r.cancel_fee) : 20,
-    subDeliveryFee: r.sub_delivery_fee != null ? num(r.sub_delivery_fee) : 10 };
+    subDeliveryFee: r.sub_delivery_fee != null ? num(r.sub_delivery_fee) : 10,
+    // Real UPI Autopay (bank e-mandate) — off until the charge engine is live.
+    upiAutopayEnabled: r.upi_autopay_enabled === true };
 }
 function settingsToDb(p) {
   const map = { storeOpen: "store_open", deliveryMode: "delivery_mode",
@@ -549,6 +551,14 @@ export async function adminCreateReturn(orderDbId, items = null) {
 // The server reads the real total from the DB — the phone never sends an amount.
 export async function createRazorpayOrder(orderDbId) {
   return invokeFn("razorpay-create-order", { orderId: orderDbId });
+}
+
+// UPI Autopay: turn a pending 'upi_autopay' subscription order into a Razorpay
+// e-mandate the customer approves once in their UPI app. Returns the checkout
+// params ({ keyId, orderId, customerId, recurring, amount }). Charges nobody —
+// the mandate is confirmed by webhook when the customer approves.
+export async function createUpiMandate(orderDbId) {
+  return invokeFn("rzp-mandate-create", { orderId: orderDbId });
 }
 
 // Admin/delivery: create a Razorpay UPI QR for a not-yet-paid order. Any UPI app

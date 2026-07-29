@@ -97,6 +97,19 @@ Deno.serve(async (req) => {
     }
     if (!order) return new Response("no matching order", { status: 200 });
 
+    // UPI Autopay mandate approval → store the e-mandate token and activate the
+    // plan. This is a mandate setup, NOT a normal order payment, so it skips
+    // mark_order_paid and never fires the shop's "new order" alarm.
+    if (order.payment_method === "upi_autopay" && order.is_subscription) {
+      const tokenId = event?.payload?.payment?.entity?.token_id ?? null;
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirm_upi_mandate`, {
+        method: "POST",
+        headers: { ...sbHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_order_dbid: order.id, p_payment_id: paymentId, p_token: tokenId }),
+      });
+      return new Response("mandate confirmed", { status: 200 });
+    }
+
     const wasPaid = order.payment_status === "paid";
 
     await fetch(`${SUPABASE_URL}/rest/v1/rpc/mark_order_paid`, {
