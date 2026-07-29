@@ -491,7 +491,7 @@ function Subscriptions({ onShop }) {
 
             <div className="sub-pay">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h15a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11" /><circle cx="16.5" cy="12.5" r="1.3" fill="currentColor" stroke="none" /></svg>
-              {s.payMethod === "wallet" ? tr("Auto-paid via NGS Wallet") : tr("Prepaid")}
+              {s.payMethod === "wallet" ? tr("Prepaid via NGS Wallet") : tr("Prepaid via UPI")}
             </div>
 
             {active && (
