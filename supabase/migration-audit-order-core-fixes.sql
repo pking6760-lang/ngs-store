@@ -1,18 +1,16 @@
--- AUDIT FIXES for _place_order_core (Critical #1 + High #2).
+-- AUDIT FIXES for _place_order_core + coupon controls.
 --
--- #1 Points double-spend (online): online orders defer the points deduction to
---    mark_order_paid and nothing reserved them at checkout, so the same points
---    could discount several unpaid orders. Now the redeem step takes the per-user
---    advisory lock and subtracts points already committed to the user's unpaid
---    orders. Verified: two online orders redeeming 2000 pts split the real 2000.
---
--- #2 Client-trusted delivery distance: the server used the browser's
---    location.distanceKm for the fee band, free-delivery, the Prime perk and the
---    delivery-radius gate — so a faked small value underpaid and bypassed the
---    radius. Now distance is computed SERVER-SIDE (haversine) from the GPS pin vs
---    settings.shop_locations; the client value is ignored, and the order stores
---    the server distance. Verified: an 8km order faking distanceKm=1 is rejected;
---    a real 2km order stores 2km, not the faked 1.
+-- #1 Points double-spend (online): reserve redeemed points at checkout (per-user
+--    advisory lock + subtract points committed to the user's unpaid orders).
+-- #2 Client-trusted distance: compute delivery distance SERVER-SIDE (haversine)
+--    from the GPS pin vs settings.shop_locations; ignore the client's distanceKm.
+-- #4 Coupon controls: coupons can now carry an expiry (expires_at) and a global
+--    redemption cap (max_redemptions). Both _place_order_core and coupon_quote
+--    stop applying an expired or used-up coupon (treated like inactive). Verified:
+--    expired/capped coupons give no discount; a valid one still applies.
+
+alter table public.coupons add column if not exists expires_at    timestamptz;
+alter table public.coupons add column if not exists max_redemptions int;
 
 CREATE OR REPLACE FUNCTION public._place_order_core(p_uid uuid, p_items jsonb, p_coupon text DEFAULT NULL::text, p_location jsonb DEFAULT NULL::jsonb, p_payment text DEFAULT 'upi'::text, p_address text DEFAULT NULL::text, p_wallet numeric DEFAULT 0, p_redeem_points integer DEFAULT 0, p_membership boolean DEFAULT false, p_enforce_store_open boolean DEFAULT true, p_device text DEFAULT NULL::text)
  RETURNS orders
@@ -224,7 +222,16 @@ begin
   -- its excluded categories/products cover (that value earns no discount and
   -- doesn't count toward the coupon's minimum).
   if p_coupon is not null and length(trim(p_coupon)) > 0 then
-    select * into v_coupon from public.coupons where code = upper(trim(p_coupon)) and active;
+    -- Active, not expired.
+    select * into v_coupon from public.coupons
+      where code = upper(trim(p_coupon)) and active
+        and (expires_at is null or expires_at > now());
+    -- Global redemption cap: once used max_redemptions times across ALL customers,
+    -- it stops applying (treated like an expired/inactive code — no discount).
+    if v_coupon.code is not null and v_coupon.max_redemptions is not null
+       and (select count(*) from public.coupon_redemptions r where r.code = v_coupon.code) >= v_coupon.max_redemptions then
+      v_coupon.code := null;
+    end if;
   end if;
 
   for v_line in select * from jsonb_array_elements(v_items) loop
@@ -666,6 +673,120 @@ begin
 end;
 
 
+$function$
+
+;
+
+-- coupon_quote: same expiry + cap enforcement so the customer sees it before checkout.
+CREATE OR REPLACE FUNCTION public.coupon_quote(p_items jsonb, p_code text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid          uuid := auth.uid();
+  v_profile      record;
+  v_coupon       record;
+  v_line         jsonb;
+  v_prod         record;
+  v_qty          int;
+  v_unit         numeric;
+  v_bulk         numeric;
+  v_cost         numeric;
+  v_pct          numeric := 0;
+  v_default_marg numeric;
+  v_item_total   numeric := 0;
+  v_item_margin  numeric := 0;
+  v_cat_totals   jsonb := '{}'::jsonb;
+  v_excl         numeric := 0;
+  v_eligible     numeric;
+  v_face         numeric;
+  v_discount     numeric := 0;
+  v_n            int := 0;
+begin
+  if p_items is null or jsonb_typeof(p_items) <> 'array' then
+    return jsonb_build_object('ok', false, 'error', 'Bad cart.');
+  end if;
+  -- Bound the work: a cart is small, and this is callable by any signed-in user.
+  if jsonb_array_length(p_items) > 100 then
+    return jsonb_build_object('ok', false, 'error', 'Cart too large.');
+  end if;
+
+  select * into v_coupon from public.coupons
+   where code = upper(trim(coalesce(p_code, ''))) and active
+     and (expires_at is null or expires_at > now());
+  -- Global redemption cap: hide the discount once the coupon is used up.
+  if v_coupon.code is not null and v_coupon.max_redemptions is not null
+     and (select count(*) from public.coupon_redemptions r where r.code = v_coupon.code) >= v_coupon.max_redemptions then
+    v_coupon.code := null;
+  end if;
+  if v_coupon.code is null then
+    return jsonb_build_object('ok', false, 'error', 'This coupon isn''t valid.');
+  end if;
+
+  select coalesce(default_margin_pct, 0.15) into v_default_marg from public.ops_config where id = 1;
+  select * into v_profile from public.profiles where id = v_uid;
+  -- Same lifecycle rule the order engine uses. Reading a different config key
+  -- here meant the quote priced the cart differently from checkout, so the
+  -- margin cap it applied was computed against the wrong margin.
+  v_pct := public.lifecycle_price_pct(v_uid);
+
+  for v_line in select * from jsonb_array_elements(p_items) loop
+    v_n := v_n + 1;
+    v_qty := coalesce((v_line->>'qty')::int, 0);
+    continue when v_qty <= 0 or v_qty > 1000;
+    select * into v_prod from public.products where id = (v_line->>'id') and active;
+    continue when v_prod.id is null;
+
+    v_bulk := public.bulk_unit_price(v_prod.price, v_prod.bulk_tiers, v_qty);
+    v_unit := public.member_tier_unit(v_prod.price, v_prod.bulk_tiers, v_qty,
+                                      v_prod.member_price_floor, v_prod.mrp, v_pct);
+
+    v_item_total := v_item_total + v_unit * v_qty;
+    select cost into v_cost from public.product_costs where product_id = v_prod.id;
+    if v_cost is not null then v_item_margin := v_item_margin + (v_unit - v_cost) * v_qty;
+    else v_item_margin := v_item_margin + v_unit * v_qty * v_default_marg; end if;
+
+    v_cat_totals := jsonb_set(v_cat_totals, array[coalesce(v_prod.category, '_')],
+      to_jsonb(coalesce((v_cat_totals->>coalesce(v_prod.category, '_'))::numeric, 0) + v_unit * v_qty));
+
+    if (v_coupon.category is null or v_coupon.category = ''
+        or coalesce(v_prod.category, '') = v_coupon.category)
+       and (coalesce(v_prod.category, '') = any(coalesce(v_coupon.excluded_categories, '{}'))
+            or v_prod.id = any(coalesce(v_coupon.excluded_products, '{}'))) then
+      v_excl := v_excl + v_unit * v_qty;
+    end if;
+  end loop;
+
+  if v_coupon.category is not null and v_coupon.category <> '' then
+    v_eligible := coalesce((v_cat_totals->>v_coupon.category)::numeric, 0);
+  else
+    v_eligible := v_item_total;
+  end if;
+  v_eligible := greatest(v_eligible - v_excl, 0);
+
+  if v_eligible < v_coupon.min_order or v_eligible <= 0 then
+    return jsonb_build_object('ok', false, 'error', 'This cart does not qualify for that coupon.');
+  end if;
+
+  if v_coupon.type = 'percent' then v_face := floor(v_eligible * v_coupon.value / 100);
+  else v_face := v_coupon.value; end if;
+  v_discount := least(v_face, v_eligible, v_item_total);
+  -- Mirrors _place_order_core: only a non-guaranteed coupon is capped.
+  if not coalesce(v_coupon.guaranteed, false) then
+    v_discount := least(v_discount, greatest(0, floor(v_item_margin)));
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'code', v_coupon.code,
+    'discount', v_discount,          -- what this cart actually gets
+    'faceValue', v_face,             -- the "up to" figure
+    'guaranteed', coalesce(v_coupon.guaranteed, false),
+    'capped', v_discount < v_face    -- true when the cart's margin limited it
+  );
+end;
 $function$
 
 ;
