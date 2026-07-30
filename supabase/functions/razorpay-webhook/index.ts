@@ -116,7 +116,9 @@ Deno.serve(async (req) => {
       );
       const rows = await oRes.json();
       order = Array.isArray(rows) ? rows[0] : null;
-    } else if ((type === "payment.captured" || type === "order.paid") && rzpOrderId) {
+    } else if ((type === "payment.captured" || type === "order.paid" || type === "invoice.paid") && rzpOrderId) {
+      // 'invoice.paid' covers the UPI Autopay mandate registration (auth link),
+      // which is an invoice; its ₹1 auth payment carries the order id + token id.
       const oRes = await fetch(
         `${SUPABASE_URL}/rest/v1/orders?razorpay_order_id=eq.${rzpOrderId}&select=*`,
         { headers: sbHeaders },
