@@ -173,10 +173,15 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
         key: m.keyId,
         order_id: m.orderId,
         customer_id: m.customerId,
-        recurring: 1,
+        // Razorpay's documented recurring checkout: order_id + customer_id +
+        // recurring "1". The mandate order already fixes method=upi, so DON'T also
+        // force prefill.method — forcing it makes checkout try a direct-UPI render
+        // that can't assemble a method for a recurring order ("No appropriate
+        // payment method found"). Just prefill the identity fields.
+        recurring: "1",
         name: "NGS Nisha General Store",
         description: `Daily milk · UPI Autopay`,
-        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "", method: "upi" },
+        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
         theme: { color: "#0a9155" },
         modal: { ondismiss: () => { setBusy(false); setWaitMandate(false); } },
         handler: () => { /* approved — the webhook confirms; the poll closes the sheet */ },
