@@ -17,10 +17,9 @@ import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import CategoryIcon from "./components/CategoryIcon.jsx";
 import InstallPrompt from "./components/InstallPrompt.jsx";
-import PullToRefresh from "./components/PullToRefresh.jsx";
 import OfflineBanner from "./components/OfflineBanner.jsx";
 import ApkPrompt from "./components/ApkPrompt.jsx";
-import { fetchBuyAgain, fetchTrending, saveCart, applyReferral } from "./lib/api.js";
+import { fetchBuyAgain, fetchTrending, saveCart, applyReferral, onAppResume } from "./lib/api.js";
 import { getRecentIds } from "./lib/recentViews.js";
 import { flashActive, fmtCountdown, useFlashCountdown } from "./lib/flash.js";
 import SearchSuggest from "./components/SearchSuggest.jsx";
@@ -108,7 +107,7 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [addressOpen, setAddressOpen] = useState(false);
   const { totalCount, items, deleteItem } = useCart();
-  const { user, isLoggedIn, awaitingOtp, refreshProfile } = useAuth();
+  const { user, isLoggedIn, awaitingOtp } = useAuth();
   const [trackOpen, setTrackOpen] = useState(false);
   const [trackId, setTrackId] = useState(null);
 
@@ -303,19 +302,29 @@ export default function App() {
     else setAuthOpen(true);
   }
 
-  // Pull-to-refresh: nudge every live hook to re-fetch (they all reload on window
-  // focus) and refresh the customer's own orders, then resolve so the spinner can
-  // settle. The catalog cache updates in place, so prices/stock come back fresh.
-  async function handleRefresh() {
-    try {
-      window.dispatchEvent(new Event("focus")); // nudges the live hooks (wallet, notifications, catalog)
-      await Promise.all([
-        reloadOrders?.(),
-        refreshProfile?.(), // points / wallet balance / membership on the profile
-      ]);
-    } catch { /* ignore */ }
-    await new Promise((r) => setTimeout(r, 300));
-  }
+  // Come-back-from-background sync. On Android the WebView's focus/visibility
+  // events fire unreliably after a long pause, so the live hooks could sit on
+  // stale data (and the realtime socket the OS killed stays dead) until the slow
+  // poll ticks — the app feeling "stuck" on return. We listen to Capacitor's
+  // reliable `resume` event (plus visibility as a web fallback): reconnect
+  // realtime and fire one `focus` event, which every live hook already treats as
+  // "refetch now", so the screen goes live in one quick REST round-trip.
+  useEffect(() => {
+    let sub;
+    const wake = () => onAppResume();
+    const onVis = () => { if (document.visibilityState === "visible") wake(); };
+    document.addEventListener("visibilitychange", onVis);
+    (async () => {
+      try {
+        const { App } = await import("@capacitor/app");
+        sub = await App.addListener("resume", wake);
+      } catch { /* not native — visibility fallback covers the web */ }
+    })();
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      sub?.remove?.();
+    };
+  }, []);
 
   const searching = query.trim().length > 0;
   // Products the customer has bought before — search puts those first, because
@@ -361,10 +370,6 @@ export default function App() {
       <OfflineBanner />
       <ApkPrompt />
       <CallAlertsPrompt show={isLoggedIn} />
-      <PullToRefresh
-        onRefresh={handleRefresh}
-        disabled={cartOpen || accountOpen || authOpen || addressOpen || trackOpen}
-      />
       <Header
         query={query}
         onQueryChange={(v) => { setQuery(v); setSuggestOpen(true); }}

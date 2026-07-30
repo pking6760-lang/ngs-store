@@ -2150,6 +2150,18 @@ let channelSeq = 0;
 // anything per-customer: the server then only sends that customer their own
 // rows. Without it every phone in the city wakes up each time anyone anywhere
 // places an order — one write costing as many pushes as there are users online.
+// Called when the app returns to the foreground. The realtime socket the OS
+// tore down while backgrounded won't always revive on its own, so nudge it back
+// up, then let the caller fire a `focus` event so every live hook refetches over
+// REST immediately (data goes live without waiting for the socket or the poll).
+export function onAppResume() {
+  if (!supabase) return;
+  try { supabase.realtime.connect(); } catch { /* already connected / not ready */ }
+  if (typeof window !== "undefined") {
+    try { window.dispatchEvent(new Event("focus")); } catch { /* ignore */ }
+  }
+}
+
 export function subscribeTable(table, cb, filter) {
   if (!supabase) return () => {};
   // Local (same-device) updates.
