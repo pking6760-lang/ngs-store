@@ -623,6 +623,15 @@
   border-radius: 14px; outline: none;
 }
 .pd-cash-in:focus { border-color: var(--p-red-bright, #E5122E); }
+/* Delivery-code entry: one big centred numeric field, roomy digit spacing. */
+.pd-code-in {
+  width: 100%; padding: 16px 14px; font-size: 34px; font-weight: 800; text-align: center;
+  letter-spacing: .5em; text-indent: .5em; font-variant-numeric: tabular-nums;
+  color: var(--p-text, #fff); background: #0e0e11; border: 1.5px solid rgba(255,255,255,.16);
+  border-radius: 14px; outline: none;
+}
+.pd-code-in:focus { border-color: var(--p-red-bright, #E5122E); }
+.pd-code-in::placeholder { color: rgba(255,255,255,.28); }
 .pd-cash-quick { display: flex; gap: 8px; margin-top: 12px; }
 .pd-cash-quick button {
   flex: 1; padding: 11px 0; font-size: 14px; font-weight: 800; color: var(--p-text, #fff);

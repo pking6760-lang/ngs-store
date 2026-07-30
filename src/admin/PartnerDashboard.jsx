@@ -608,6 +608,10 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
   const due = Math.round(Number(task.codAmount) || 0);
   const [qr, setQr] = useState(null); // null | "loading" | "error" | { url }
   const [cashOpen, setCashOpen] = useState(false);
+  // Delivery-code gate: open the code sheet, remembering any cash tendered so it
+  // rides along to the mark-delivered call.
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [codeTendered, setCodeTendered] = useState(null);
   // Payment (QR / Take cash) belongs at the customer's door — only after the
   // rider has gone Out for delivery. The server enforces the same order.
   const codOpen = !task.paid && task.isCod && out;
@@ -682,13 +686,19 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
           <p className="pd-collect-hint">Collect payment above — QR or <b>Take cash</b> — to finish this delivery.</p>
         ) : (
           <SlideAction label="Slide when handed over — Delivered" busy={busy} tone="green"
-            onConfirm={() => onAction(() => api.partnerMarkDelivered(task.orderId))} />
+            onConfirm={() => { setCodeTendered(null); setCodeOpen(true); }} />
         )}
       </div>
 
       {cashOpen && (
         <CashModal due={due} cap={Math.round(Number(cfg?.riderCashCap) || 1000)} busy={busy} onClose={() => setCashOpen(false)}
-          onConfirm={(tendered) => onAction(() => api.partnerMarkDelivered(task.orderId, tendered))} />
+          onConfirm={(tendered) => { setCodeTendered(tendered); setCashOpen(false); setCodeOpen(true); }} />
+      )}
+
+      {codeOpen && (
+        <DeliveryCodeModal onClose={() => setCodeOpen(false)}
+          onSubmit={(code) => api.partnerMarkDelivered(task.orderId, codeTendered, code)
+            .then((r) => { onAction(() => Promise.resolve()); return r; })} />
       )}
     </>
   );
@@ -759,6 +769,51 @@ function CashModal({ due, cap = 1000, busy, onClose, onConfirm }) {
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* Delivery-code gate: the rider enters the 4-digit code the customer reads off
+   their order screen; the backend rejects a wrong code (for non-admins) so we
+   surface that error inline and keep the sheet open for a retry. onSubmit(code)
+   runs the actual delivery and returns a Promise — resolve ⇒ close, reject ⇒
+   show the message and stay put. */
+function DeliveryCodeModal({ onClose, onSubmit }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const ok = code.length === 4;
+
+  async function submit() {
+    if (!ok || busy) return;
+    setBusy(true); setErr("");
+    try {
+      await onSubmit(code);
+      onClose?.(); // success — parent also reloads the run
+    } catch (e) {
+      setErr(e?.message || "Couldn't verify the code. Ask the customer and try again.");
+      setCode("");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="pd-cash-ov" onClick={busy ? undefined : onClose}>
+      <div className="pd-cash-sheet" onClick={(e) => e.stopPropagation()}>
+        <h3 className="pd-cash-h">Enter delivery code</h3>
+        <p className="pd-cash-bill">Ask the customer for the 4-digit code on their order screen.</p>
+        <input className="pd-code-in" inputMode="numeric" pattern="[0-9]*" maxLength={4} autoFocus
+          value={code} placeholder="0000"
+          onChange={(e) => { setErr(""); setCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 4)); }}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+        {err && <p className="pd-cash-warn">{err}</p>}
+        <div className="pd-cash-actions">
+          <button className="pd-cash-cancel" disabled={busy} onClick={onClose}>Cancel</button>
+          <button className="pd-cash-proceed" disabled={!ok || busy} onClick={submit}>
+            {busy ? <span className="ngs-spin" /> : "Confirm delivery"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -886,6 +941,7 @@ function MilkRound({ isDelivery, cfg, onEarned }) {
   const storePhone = cfg?.storePhone || "";
   const [stops, setStops] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [codeStop, setCodeStop] = useState(null); // stop awaiting its delivery code
   const load = useCallback(() => api.getMyRound().then(setStops).catch(() => setStops([])), []);
   useEffect(() => {
     if (!isDelivery) return;
@@ -899,14 +955,17 @@ function MilkRound({ isDelivery, cfg, onEarned }) {
   // No per-stop or round total shown — the pay for a stop appears once it's
   // delivered (see EarnedCard), never before.
 
-  async function deliver(stop) {
+  // Runs the delivery for one stop with the customer's 4-digit code. Re-throws
+  // on failure so the code sheet can surface a wrong-code error and let the
+  // rider retry (rather than the old blocking alert).
+  async function deliver(stop, code) {
     setBusyId(stop.orderId);
     try {
-      await withMinTime(() => api.partnerMarkDelivered(stop.orderId), 500, 1000); okBeep(); await load();
+      await withMinTime(() => api.partnerMarkDelivered(stop.orderId, null, code), 500, 1000); okBeep(); await load();
       const amt = await api.getOrderEarning(stop.orderId).catch(() => 0);
       if (amt > 0 && onEarned) onEarned({ amount: amt, role: "delivery" });
     }
-    catch (e) { errorBeep(); alert(e.message || "Couldn't mark delivered."); }
+    catch (e) { errorBeep(); throw e; }
     finally { setBusyId(null); }
   }
 
@@ -940,10 +999,15 @@ function MilkRound({ isDelivery, cfg, onEarned }) {
                 </a>
               )}
             </div>
-            <SlideAction label="Slide when delivered" busy={busyId === s.orderId} tone="green" onConfirm={() => deliver(s)} />
+            <SlideAction label="Slide when delivered" busy={busyId === s.orderId} tone="green" onConfirm={() => setCodeStop(s)} />
           </div>
         ))}
       </div>
+
+      {codeStop && (
+        <DeliveryCodeModal onClose={() => setCodeStop(null)}
+          onSubmit={(code) => deliver(codeStop, code)} />
+      )}
     </div>
   );
 }
