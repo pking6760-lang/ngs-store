@@ -749,6 +749,17 @@ export async function myReferralStats() {
   return data;
 }
 
+// Referral: per-friend history (first name only) with each friend's status —
+// 'linked' (joined, reward pending) or 'rewarded' (first order done, credited).
+export async function fetchReferralHistory(limit = 30) {
+  const { data, error } = await must().rpc("my_referral_history", { p_limit: limit });
+  if (error) throw new Error(error.message || "Couldn't load referral history.");
+  return (Array.isArray(data) ? data : []).map((r) => ({
+    name: r.name, status: r.status, amount: Number(r.amount || 0),
+    joinedAt: r.joined_at, rewardedAt: r.rewarded_at,
+  }));
+}
+
 // Customer joins / renews NGS Prime, paying the fee from their wallet.
 export async function joinMembership() {
   const { data, error } = await must().rpc("join_membership");

@@ -1568,19 +1568,53 @@ const ShareGlyph = () => (
   </svg>
 );
 
+// A small clock glyph for the "reward pending" state (no PIC entry for it).
+const ClockGlyph = ({ size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+  </svg>
+);
+
+function refDate(iso) {
+  try { return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" }); }
+  catch { return ""; }
+}
+
 function Referral({ user }) {
   const [stats, setStats] = useState(null);
+  const [history, setHistory] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [celebrate, setCelebrate] = useState(0); // rupees to celebrate, 0 = hidden
 
   async function load() {
     try { setStats(await api.myReferralStats()); } catch { /* keep prior */ }
+    try { setHistory(await api.fetchReferralHistory(30)); } catch { setHistory([]); }
   }
   useEffect(() => { load(); }, [user?.id]);
 
   const amount = stats?.amount ?? 25;
+  const joined = stats?.joined ?? 0;
+  const earned = Math.round(stats?.earned || 0);
   const link = stats?.code ? `${REFER_BASE}/?ref=${stats.code}` : "";
   const shareText = link &&
     `Get groceries from Nisha General Store, delivered fast. Join with my link — we both get ₹${amount} after your first delivery: ${link}`;
+
+  // Celebrate a *newly* completed referral. We store the last-seen rewarded
+  // count per user; the first load just sets a baseline (no false party for
+  // people who already had rewards before this screen existed).
+  useEffect(() => {
+    if (history === null || !user?.id) return;
+    const rewarded = history.filter((r) => r.status === "rewarded");
+    const key = `ngs_ref_rewarded_seen_${user.id}`;
+    let prev = null;
+    try { const raw = localStorage.getItem(key); prev = raw == null ? null : Number(raw); } catch { /* ignore */ }
+    if (prev != null && rewarded.length > prev) {
+      const gained = rewarded.slice(0, rewarded.length - prev).reduce((s, r) => s + (r.amount || amount), 0);
+      setCelebrate(gained || amount);
+      setTimeout(() => setCelebrate(0), 4200);
+    }
+    try { localStorage.setItem(key, String(rewarded.length)); } catch { /* ignore */ }
+  }, [history, user?.id, amount]);
 
   const flash = () => { setCopied(true); setTimeout(() => setCopied(false), 1800); };
   async function share() {
@@ -1595,34 +1629,124 @@ function Referral({ user }) {
     try { await navigator.clipboard.writeText(link); flash(); } catch { /* no clipboard */ }
   }
 
+  // Progress toward the next 5-friend milestone. Each friend who completes their
+  // first order earns you ₹amount, so the "up to" figure is an honest ceiling.
+  const tierBase = Math.floor(joined / 5) * 5;
+  const target = tierBase + 5;
+  const remaining = target - joined;
+  const pct = Math.max(0, Math.min(100, ((joined - tierBase) / 5) * 100));
+
   return (
     <div className="refer-panel">
-      <div className="refer-hero">
-        <div className="refer-hero-ic"><MIcon d={PIC.gift} size={26} /></div>
+      {celebrate > 0 && (
+        <div className="refer-celebrate" role="status">
+          <div className="refer-celebrate-burst">
+            {Array.from({ length: 10 }).map((_, i) => <span key={i} className={`rc-bit rc-b${i % 5}`} />)}
+          </div>
+          <MIcon d={PIC.gift} size={22} />
+          <div className="refer-celebrate-txt">
+            <strong>₹{celebrate} {tr("added to your wallet!")}</strong>
+            <span>{tr("Your friend completed their first order")}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Exciting hero — green→purple gradient, confetti, floating coins */}
+      <div className="refer-hero refer-hero-rich">
+        <div className="refer-hero-confetti" aria-hidden="true">
+          {Array.from({ length: 14 }).map((_, i) => <span key={i} className={`rh-dot rh-d${i % 6}`} />)}
+        </div>
+        <span className="refer-coin refer-coin-a">₹{amount}</span>
+        <span className="refer-coin refer-coin-b">₹{amount}</span>
+        <div className="refer-hero-illus" aria-hidden="true">
+          <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+            <circle cx="36" cy="36" r="34" fill="rgba(255,255,255,0.12)" />
+            <g stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none">
+              <circle cx="27" cy="29" r="6.5" /><path d="M16 47c0-6.5 5-10.5 11-10.5S38 40.5 38 47" />
+              <circle cx="47" cy="27" r="5.5" fill="rgba(255,255,255,0.18)" /><path d="M38 43c0-5.5 4.2-9 9-9s9 3.5 9 9" />
+            </g>
+            <g transform="translate(44 40)">
+              <rect x="0" y="6" width="20" height="14" rx="2.5" fill="#fff" />
+              <path d="M0 11h20M10 6v14" stroke="#12b458" strokeWidth="2" />
+              <path d="M10 6S8 0 5 1.5 6 8 10 6zM10 6s2-6 5-4.5S14 8 10 6z" fill="#fff" stroke="#12b458" strokeWidth="1.6" strokeLinejoin="round" />
+            </g>
+          </svg>
+        </div>
         <h3>{tr("Refer a friend — you both get")} ₹{amount}</h3>
         <p>{tr("Share your invite link. Your friend gets")} ₹{amount} {tr("instantly, and you get")} ₹{amount} {tr("after their first delivery — no code needed.")}</p>
       </div>
 
+      {/* Big green primary CTA */}
+      <button className="refer-cta" onClick={share}>
+        <ShareGlyph /> {tr("Share & Earn")} ₹{amount}
+      </button>
+
       <div className="refer-link-box">
         <span className="refer-code-label">{tr("Your invite link")}</span>
         <button className="refer-link" onClick={copyLink} title={tr("Tap to copy")}>{link || "…"}</button>
-        <div className="refer-link-actions">
-          <button className="primary-btn refer-share" onClick={share}><ShareGlyph /> {tr("Share link")}</button>
-          <button className="ghost-btn refer-copy" onClick={copyLink}>{copied ? tr("Copied") : tr("Copy link")}</button>
+        <button className="ghost-btn refer-copy full" onClick={copyLink}>{copied ? tr("Copied") : tr("Copy link")}</button>
+      </div>
+
+      {/* Referral progress — gamified milestone bar */}
+      <div className="refer-progress-card">
+        <div className="refer-progress-head">
+          <div><strong>{joined}</strong><span>{tr("friends joined")}</span></div>
+          <div><strong>₹{earned}</strong><span>{tr("earned so far")}</span></div>
+        </div>
+        <div className="refer-progress-track">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <span key={i} className={`refer-pip ${i < (joined - tierBase) ? "on" : ""}`} />
+          ))}
+        </div>
+        <div className="refer-progress-cap">
+          {tr("Invite")} <strong>{remaining}</strong> {remaining === 1 ? tr("more friend") : tr("more friends")} {tr("to earn up to")} <strong>₹{remaining * amount}</strong>
         </div>
       </div>
 
-      {stats && (
-        <div className="refer-stats">
-          <div><strong>{stats.joined}</strong><span>{tr("friends joined")}</span></div>
-          <div><strong>₹{Math.round(stats.earned || 0)}</strong><span>{tr("earned so far")}</span></div>
-        </div>
-      )}
+      {/* Referral history — real per-friend status */}
+      <div className="refer-history">
+        <h4>{tr("Your referrals")}</h4>
+        {history === null ? (
+          <div className="refer-hist-empty">{tr("Loading…")}</div>
+        ) : history.length === 0 ? (
+          <div className="refer-hist-empty">
+            <MIcon d={PIC.gift} size={26} />
+            <p>{tr("No referrals yet. Share your link to start earning.")}</p>
+          </div>
+        ) : (
+          <div className="refer-hist-list">
+            {history.map((r, i) => {
+              const done = r.status === "rewarded";
+              return (
+                <div key={i} className="refer-hist-row">
+                  <div className="refer-hist-av">{(r.name || "?").charAt(0).toUpperCase()}</div>
+                  <div className="refer-hist-mid">
+                    <div className="refer-hist-name">{r.name}</div>
+                    <div className="refer-hist-sub">
+                      {done ? tr("Completed first order") : tr("Joined")} · {refDate(done ? r.rewardedAt : r.joinedAt)}
+                    </div>
+                  </div>
+                  {done ? (
+                    <div className="refer-hist-badge done"><MIcon d={PIC.check} size={13} /> ₹{Math.round(r.amount || amount)} {tr("credited")}</div>
+                  ) : (
+                    <div className="refer-hist-badge pending"><ClockGlyph size={13} /> {tr("Reward pending")}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="refer-steps">
         <div className="refer-step"><span className="refer-step-n">1</span>{tr("Share your link with friends")}</div>
         <div className="refer-step"><span className="refer-step-n">2</span>{tr("They sign up and get")} ₹{amount} {tr("instantly")}</div>
         <div className="refer-step"><span className="refer-step-n">3</span>{tr("You get")} ₹{amount} {tr("after their first delivery")}</div>
+      </div>
+
+      <div className="refer-note">
+        <ClockGlyph size={14} />
+        <span>{tr("Rewards are credited to your NGS Wallet within 24 hours after your friend's first successful delivery.")}</span>
       </div>
     </div>
   );
