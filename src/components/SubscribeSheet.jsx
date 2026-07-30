@@ -33,10 +33,13 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
   const [waitMandate, setWaitMandate] = useState(false); // approving a UPI mandate
   const rzpRef = useRef(null);
   const settings = useSettings();
-  // Real UPI Autopay shows only when both Razorpay is on AND the server flag is
-  // set — kept off until the daily charge engine (Phase 3) is live, so no
-  // customer can approve a mandate that wouldn't yet deliver.
-  const upiAutopayOn = RAZORPAY_ENABLED && settings?.upiAutopayEnabled === true;
+  // Real UPI Autopay shows only when Razorpay is on AND either the master flag is
+  // set (launched) OR the signed-in phone is the owner's test phone (so the live
+  // rupee test can run before launch, without exposing it to real customers).
+  const last10 = (s) => String(s || "").replace(/\D/g, "").slice(-10);
+  const isUpiTester =
+    !!settings?.upiAutopayTestPhone && last10(user?.phone) === last10(settings.upiAutopayTestPhone);
+  const upiAutopayOn = RAZORPAY_ENABLED && (settings?.upiAutopayEnabled === true || isUpiTester);
 
   const perItems = Math.round(dailyTotal || 0);
   const fee = Math.round(deliveryFee || 0);

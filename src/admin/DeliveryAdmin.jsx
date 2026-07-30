@@ -26,6 +26,8 @@ export default function DeliveryAdmin() {
     supportPhone: settings.supportPhone ?? "",
     deliveryDisplayName: settings.deliveryDisplayName ?? "",
     cancelFee: settings.cancelFee ?? 20,
+    upiAutopayEnabled: settings.upiAutopayEnabled === true,
+    upiAutopayTestPhone: settings.upiAutopayTestPhone ?? "",
   });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -59,6 +61,8 @@ export default function DeliveryAdmin() {
         cancelFee: Math.max(0, Number(form.cancelFee) || 0),
         supportPhone: (form.supportPhone || "").replace(/\D/g, "").slice(0, 10) || null,
         deliveryDisplayName: (form.deliveryDisplayName || "").trim().slice(0, 40) || null,
+        upiAutopayEnabled: !!form.upiAutopayEnabled,
+        upiAutopayTestPhone: (form.upiAutopayTestPhone || "").replace(/\D/g, "").slice(0, 10) || null,
         rewards: {
           ...(settings.rewards || {}),
           minOrderValue: Math.max(0, Number(form.minOrderValue) || 0),
@@ -209,6 +213,47 @@ export default function DeliveryAdmin() {
           Customers beyond <strong>{form.maxDistanceKm || 0} km</strong> of your
           nearest shop see a “coming to your area soon” message. Set radius to 0 to
           deliver everywhere.
+        </p>
+        <div className="delivery-save">
+          <button className="primary-btn" onClick={save}>Save</button>
+          {saved && <span className="notify-sent">Saved</span>}
+          {error && <span className="auth-error">{error}</span>}
+        </div>
+      </section>
+
+      <section className="panel offer-card">
+        <h3>UPI Autopay (bank auto-debit)</h3>
+        <p className="sub">
+          Lets subscription customers approve a UPI mandate once, then their bank
+          auto-debits one day's amount the evening before each delivery — no wallet
+          top-ups. Real money, so launch it carefully.
+        </p>
+        <div className="delivery-fields">
+          <label className="dfield">
+            <span>Test phone (owner-only preview)</span>
+            <input type="tel" inputMode="numeric" maxLength={10} placeholder="your 10-digit number"
+              value={form.upiAutopayTestPhone}
+              onChange={(e) => set("upiAutopayTestPhone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
+          </label>
+          <label className="dfield dfield-check">
+            <input type="checkbox" checked={form.upiAutopayEnabled}
+              onChange={(e) => set("upiAutopayEnabled", e.target.checked)} />
+            <span>Turn on for all customers</span>
+          </label>
+        </div>
+        <p className="delivery-hint">
+          <strong>Step 1 — test with ₹1 first.</strong> Put <em>your own</em> number in
+          the test phone box and Save. Only that phone then sees the "UPI Autopay"
+          option in Subscribe — real customers still don't. Subscribe to a 1-day plan
+          of one cheap item (~₹1–2), approve the mandate in your UPI app, and check
+          tomorrow morning that the auto-debit went through and the delivery order
+          appeared.
+        </p>
+        <p className="delivery-hint">
+          <strong>Step 2 — launch.</strong> Once the test debit works, tick
+          <strong> Turn on for all customers</strong> and Save. Until you do, the
+          whole engine stays asleep and charges nobody. A failed debit never delivers —
+          that one day is skipped and the customer is told to keep their UPI balance topped up.
         </p>
         <div className="delivery-save">
           <button className="primary-btn" onClick={save}>Save</button>

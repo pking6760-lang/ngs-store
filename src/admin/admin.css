@@ -2195,6 +2195,11 @@ body {
   width: 100%; min-width: 0;
 }
 .dfield input:focus { outline: none; border-color: var(--green); }
+/* A checkbox row that lives among the .dfield inputs (e.g. the UPI Autopay
+   master switch) — align the box + label on one line instead of stacked. */
+.dfield-check { flex-direction: row; align-items: center; gap: 10px; }
+.dfield-check input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--green); }
+.dfield-check span { font-size: 13.5px; color: var(--text, var(--ink)); }
 .delivery-hint { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
 .delivery-save { display: flex; align-items: center; gap: 12px; }
 .shop-loc-set {

@@ -134,7 +134,11 @@ function mapSettings(r) {
     cancelFee: r.cancel_fee != null ? num(r.cancel_fee) : 20,
     subDeliveryFee: r.sub_delivery_fee != null ? num(r.sub_delivery_fee) : 10,
     // Real UPI Autopay (bank e-mandate) — off until the charge engine is live.
-    upiAutopayEnabled: r.upi_autopay_enabled === true };
+    upiAutopayEnabled: r.upi_autopay_enabled === true,
+    // Owner-only preview: this one phone sees the UPI Autopay option even while
+    // the master flag is off, so the mandatory live rupee test can run without
+    // exposing an untested money flow to real customers.
+    upiAutopayTestPhone: r.upi_autopay_test_phone || "" };
 }
 function settingsToDb(p) {
   const map = { storeOpen: "store_open", deliveryMode: "delivery_mode",
@@ -143,7 +147,8 @@ function settingsToDb(p) {
     surgeFee: "surge_fee", maxDistanceKm: "max_distance_km",
     shopLocations: "shop_locations", lowStockThreshold: "low_stock_threshold",
     automation: "automation", supportPhone: "support_phone", cancelFee: "cancel_fee",
-    deliveryDisplayName: "delivery_display_name" };
+    deliveryDisplayName: "delivery_display_name",
+    upiAutopayEnabled: "upi_autopay_enabled", upiAutopayTestPhone: "upi_autopay_test_phone" };
   const out = {};
   for (const k in p) if (map[k]) out[map[k]] = p[k];
   return out;
