@@ -440,10 +440,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const deliverySaved = itemTotal > 0 && deliveryFee === 0 ? DELIVERY_FEE : 0;
   const totalSaved = savings + deliverySaved + discount + couponDiscount;
   const savedParts = [
-    savings > 0 ? `₹${savings} off MRP` : null,
-    deliverySaved > 0 ? `₹${deliverySaved} delivery waived` : null,
-    discount > 0 ? `₹${discount} points` : null,
-    couponDiscount > 0 ? `₹${couponDiscount} coupon` : null,
+    savings > 0 ? `₹${savings} ${tr("in discounts")}` : null,
+    deliverySaved > 0 ? `₹${deliverySaved} ${tr("free delivery")}` : null,
+    discount > 0 ? `₹${discount} ${tr("reward points")}` : null,
+    couponDiscount > 0 ? `₹${couponDiscount} ${tr("coupon")}` : null,
   ].filter(Boolean);
   const billItemCount = lines.reduce((n, l) => n + l.qty, 0);
 
@@ -1500,7 +1500,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <div className="cart-line-right">
                     <div className="qty-stepper small">
                       <button onClick={() => remove(product.id)}>−</button>
-                      <span>{qty}</span>
+                      <span key={qty} className="qty-num-bump">{qty}</span>
                       <button
                         onClick={() => add(product.id, product.stock)}
                         disabled={typeof product.stock === "number" && qty >= product.stock}
@@ -1510,7 +1510,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                       <div className="cart-line-max">Only {product.stock} in stock</div>
                     )}
                     <div className="cart-line-price">
-                      ₹{money(unit * qty)}
+                      <span key={unit * qty} className="cart-line-amt-bump">₹{money(unit * qty)}</span>
                       {lineMrp > unit && <span className="cart-line-was">₹{money(lineMrp * qty)}</span>}
                     </div>
                     <button
@@ -1530,18 +1530,27 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </div>
 
             {canRedeem && isLoggedIn && availablePoints > 0 && maxRedeemRupees > 0 && (
-              <label className="use-points">
-                <input
-                  type="checkbox"
-                  checked={usePoints}
-                  onChange={(e) => setUsePoints(e.target.checked)}
-                />
-                <span>
-                  Redeem {maxRedeemRupees * redeemPer} points for{" "}
-                  <strong>₹{maxRedeemRupees} off</strong>
-                  <small>{availablePoints} points available</small>
+              <div className={`use-points-card ${usePoints ? "on" : ""}`}>
+                <span className="upc-ic">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.3 6.2 21l1.1-6.5L2.6 9.8l6.5-.9L12 3z" />
+                  </svg>
                 </span>
-              </label>
+                <span className="upc-body">
+                  <span className="upc-title">{tr("Use Rewards")}</span>
+                  <span className="upc-sub">
+                    {availablePoints} {tr("pts")} · <strong>₹{maxRedeemRupees} {tr("off")}</strong>
+                  </span>
+                </span>
+                <button
+                  type="button" role="switch" aria-checked={usePoints}
+                  className={`ui-switch ${usePoints ? "on" : ""}`}
+                  onClick={() => setUsePoints((v) => !v)}
+                  aria-label={tr("Use Rewards")}
+                >
+                  <span className="ui-switch-knob" />
+                </button>
+              </div>
             )}
 
             {/* Coupon */}
@@ -1740,14 +1749,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
 
               {totalSaved > 0 && (
-                <div className="bill-saved">
+                <div className="bill-saved celebrate">
+                  <span className="bill-saved-spark" aria-hidden="true">
+                    {Array.from({ length: 6 }).map((_, i) => <i key={i} className={`bss bss${i}`} />)}
+                  </span>
                   <span className="bill-saved-ic" aria-hidden="true">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
                     </svg>
                   </span>
                   <span className="bill-saved-txt">
-                    <b>You saved ₹{totalSaved} on this order</b>
+                    <b>{tr("You saved")} ₹{totalSaved} {tr("today")}</b>
                     {savedParts.length > 1 && <small>{savedParts.join("  ·  ")}</small>}
                   </span>
                 </div>
@@ -1891,7 +1903,7 @@ function AttachSuggestion({ lines, distanceKm, onAdd, user, rewardsCfg }) {
             <ProductThumb image={p.image} name={p.name} size={56} radius={10} />
             <div className="addon-name">{p.name}</div>
             <div className="addon-price">₹{Math.round(p.price)}</div>
-            <button className="addon-add" onClick={() => onAdd(p.id)}>{tr("ADD")}</button>
+            <button className="addon-add" onClick={() => onAdd(p.id)}><span className="addon-plus">+</span> {tr("Add")}</button>
           </div>
         ))}
       </div>
@@ -1921,7 +1933,7 @@ function AddonSuggestions({ lines, onAdd, user, rewardsCfg }) {
               <ProductThumb image={p.image} name={p.name} category={p.category} size={56} radius={10} />
               <div className="addon-name">{p.name}</div>
               <div className="addon-price">₹{price}{p.mrp > price ? <s>₹{p.mrp}</s> : null}</div>
-              <button className="addon-add" onClick={() => onAdd(p.id)}>{tr("ADD")}</button>
+              <button className="addon-add" onClick={() => onAdd(p.id)}><span className="addon-plus">+</span> {tr("Add")}</button>
             </div>
           );
         })}
