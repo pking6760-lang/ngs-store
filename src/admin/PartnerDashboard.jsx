@@ -686,13 +686,18 @@ function DeliveryBody({ task, cfg, busy, onAction }) {
           <p className="pd-collect-hint">Collect payment above — QR or <b>Take cash</b> — to finish this delivery.</p>
         ) : (
           <SlideAction label="Slide when handed over — Delivered" busy={busy} tone="green"
-            onConfirm={() => { setCodeTendered(null); setCodeOpen(true); }} />
+            onConfirm={() => {
+              // Delivery code is only for regular prepaid single orders. COD is
+              // proven by the cash/QR payment itself, so hand over directly.
+              if (task.isCod) { onAction(() => api.partnerMarkDelivered(task.orderId)); }
+              else { setCodeTendered(null); setCodeOpen(true); }
+            }} />
         )}
       </div>
 
       {cashOpen && (
         <CashModal due={due} cap={Math.round(Number(cfg?.riderCashCap) || 1000)} busy={busy} onClose={() => setCashOpen(false)}
-          onConfirm={(tendered) => { setCodeTendered(tendered); setCashOpen(false); setCodeOpen(true); }} />
+          onConfirm={(tendered) => { setCashOpen(false); onAction(() => api.partnerMarkDelivered(task.orderId, tendered)); }} />
       )}
 
       {codeOpen && (
@@ -941,7 +946,6 @@ function MilkRound({ isDelivery, cfg, onEarned }) {
   const storePhone = cfg?.storePhone || "";
   const [stops, setStops] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  const [codeStop, setCodeStop] = useState(null); // stop awaiting its delivery code
   const load = useCallback(() => api.getMyRound().then(setStops).catch(() => setStops([])), []);
   useEffect(() => {
     if (!isDelivery) return;
@@ -955,13 +959,14 @@ function MilkRound({ isDelivery, cfg, onEarned }) {
   // No per-stop or round total shown — the pay for a stop appears once it's
   // delivered (see EarnedCard), never before.
 
-  // Runs the delivery for one stop with the customer's 4-digit code. Re-throws
-  // on failure so the code sheet can surface a wrong-code error and let the
-  // rider retry (rather than the old blocking alert).
-  async function deliver(stop, code) {
+  // Runs the delivery for one stop. Subscription/milk rounds are prepaid and
+  // auto-delivered (the customer isn't at an early-morning drop), so no delivery
+  // code is required. Re-throws on failure so the caller can react; the error
+  // beep already fires here.
+  async function deliver(stop) {
     setBusyId(stop.orderId);
     try {
-      await withMinTime(() => api.partnerMarkDelivered(stop.orderId, null, code), 500, 1000); okBeep(); await load();
+      await withMinTime(() => api.partnerMarkDelivered(stop.orderId), 500, 1000); okBeep(); await load();
       const amt = await api.getOrderEarning(stop.orderId).catch(() => 0);
       if (amt > 0 && onEarned) onEarned({ amount: amt, role: "delivery" });
     }
@@ -999,15 +1004,11 @@ function MilkRound({ isDelivery, cfg, onEarned }) {
                 </a>
               )}
             </div>
-            <SlideAction label="Slide when delivered" busy={busyId === s.orderId} tone="green" onConfirm={() => setCodeStop(s)} />
+            <SlideAction label="Slide when delivered" busy={busyId === s.orderId} tone="green"
+              onConfirm={() => deliver(s).catch(() => {})} />
           </div>
         ))}
       </div>
-
-      {codeStop && (
-        <DeliveryCodeModal onClose={() => setCodeStop(null)}
-          onSubmit={(code) => deliver(codeStop, code)} />
-      )}
     </div>
   );
 }
