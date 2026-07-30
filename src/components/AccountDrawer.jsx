@@ -7,7 +7,7 @@ import { useMyOrders, useSettings, useUserNotifications, useWallet, useProducts 
 import { toast } from "../lib/toast.js";
 import { markUserNotificationsRead, setOrderRating, ORDER_STATUSES } from "../lib/store.js";
 import * as api from "../lib/api.js";
-import { googleMapsLink } from "../lib/location.js";
+import { googleMapsLink, getCurrentLocation, reverseGeocode } from "../lib/location.js";
 import { MEMBERSHIP, redeemableRupees, pointsForSpend } from "../lib/rewards.js";
 import { cleanUpiQrFromImage, decodeUpiFromQr, loadRazorpay } from "../lib/payments.js";
 import UpiPayScreen from "./UpiPayScreen.jsx";
@@ -1986,6 +1986,9 @@ const PIC = {
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>,
   gift: <><path d="M20 12v8H4v-8M2 8h20v4H2zM12 8v12M12 8S11 3 8 3a2 2 0 0 0 0 4h4zM12 8s1-5 4-5a2 2 0 0 1 0 4h-4z" /></>,
   star: <path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.3 6.2 21l1.1-6.5L2.6 9.8l6.5-.9L12 3z" />,
+  phone: <path d="M5 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L17 14l5 2v3a2 2 0 0 1-2.2 2A17 17 0 0 1 3 5.2 2 2 0 0 1 5 3z" />,
+  mail: <><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M4 7l8 5.5L20 7" /></>,
+  pin: <><path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11z" /><circle cx="12" cy="10" r="2.6" /></>,
 };
 function MIcon({ d, size = 20 }) {
   return (
@@ -2107,33 +2110,92 @@ function MembershipQrPay({ price, onPaid, onCancel }) {
   );
 }
 
+// Mask a phone for the header — keep +91 and the first 5 digits, hide the rest.
+function maskPhone(p) {
+  const d = String(p || "").replace(/\D/g, "");
+  if (d.length < 6) return p || "";
+  const last10 = d.slice(-10);
+  return `+91 ${last10.slice(0, 5)}${"x".repeat(Math.max(0, last10.length - 5))}`;
+}
+// Mask an email — first letter + stars + domain.
+function maskEmail(e) {
+  const s = String(e || "");
+  const at = s.indexOf("@");
+  if (at <= 0) return s;
+  return `${s[0]}${"*".repeat(Math.max(1, at - 1))}${s.slice(at)}`;
+}
+// A 6-digit PIN is the one part of an Indian address that parses cleanly, so we
+// split it out of the stored single-line address for a dedicated, validated
+// field — the rest of the app keeps one address string + a map pin.
+function splitPin(addr) {
+  const s = String(addr || "");
+  const m = s.match(/(\d{6})(?!.*\d)/); // last 6-digit run
+  if (!m) return { base: s.trim(), pin: "" };
+  const base = (s.slice(0, m.index) + s.slice(m.index + 6))
+    .replace(/[,\s]+$/, "").replace(/^[,\s]+/, "").replace(/\s{2,}/g, " ").trim();
+  return { base, pin: m[1] };
+}
+function composeAddress(base, pin) {
+  const b = String(base || "").replace(/,\s*$/, "").trim();
+  if (!pin) return b;
+  return b ? `${b}, ${pin}` : pin;
+}
+
 function Profile() {
   const { user, updateProfile } = useAuth();
+  const init = splitPin(user?.address || "");
   const [form, setForm] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    address: user?.address || "",
+    base: init.base,
+    pin: init.pin,
   });
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
-    setSaved(false);
     setError("");
+  }
+
+  const pinValid = !form.pin || /^\d{6}$/.test(form.pin);
+  const composed = composeAddress(form.base, form.pin);
+  // Only enable Save once something actually changed (and any PIN is valid).
+  const dirty =
+    form.name.trim() !== (user?.name || "") ||
+    form.email.trim() !== (user?.email || "") ||
+    composed !== (user?.address || "");
+  const canSave = dirty && pinValid && !busy;
+
+  async function useCurrentLocation() {
+    if (locating) return;
+    setLocating(true); setError("");
+    try {
+      const pos = await getCurrentLocation();
+      const text = await reverseGeocode(pos.lat, pos.lng);
+      if (text) {
+        const parts = splitPin(text);
+        setForm((f) => ({ ...f, base: parts.base, pin: parts.pin || f.pin }));
+        toast(tr("Location added"));
+      } else {
+        setError(tr("Couldn't get your location."));
+      }
+    } catch {
+      setError(tr("Couldn't get your location."));
+    } finally {
+      setLocating(false);
+    }
   }
 
   async function save(e) {
     e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError("");
+    if (!canSave) return;
+    setBusy(true); setError("");
     try {
-      // Only show "Saved" once the server actually confirms.
-      const res = await updateProfile(form);
+      const res = await updateProfile({ name: form.name.trim(), email: form.email.trim(), address: composed });
       if (res && res.ok === false) setError(res.error || tr("Couldn't save. Please try again."));
-      else setSaved(true);
+      else toast(tr("Profile updated successfully"));
     } catch (err) {
       setError(err?.message || tr("Couldn't save. Please try again."));
     } finally {
@@ -2141,48 +2203,71 @@ function Profile() {
     }
   }
 
+  const displayName = user?.name || tr("Your Name");
+
   return (
-    <form className="profile-form" onSubmit={save}>
-      <label className="field">
-        <span>{tr("Full name")}</span>
-        <input
-          type="text"
-          value={form.name}
-          onChange={(e) => set("name", e.target.value)}
-        />
-      </label>
+    <div className="profile-panel">
+      {/* Identity header — avatar + name + verified contact */}
+      <div className="profile-header">
+        <div className="profile-ava">{(displayName || "?").trim().charAt(0).toUpperCase()}</div>
+        <div className="profile-id">
+          <div className="profile-id-name">{displayName}</div>
+          {user?.phone && (
+            <div className="profile-id-row">
+              <MIcon d={PIC.phone} size={13} /> {maskPhone(user.phone)}
+              <span className="profile-verified"><MIcon d={PIC.check} size={11} /> {tr("Verified")}</span>
+            </div>
+          )}
+          {user?.email && (
+            <div className="profile-id-row"><MIcon d={PIC.mail} size={13} /> {maskEmail(user.email)}</div>
+          )}
+        </div>
+      </div>
 
-      <label className="field">
-        <span>{tr("Phone number")}</span>
-        <input type="tel" value={user?.phone || ""} disabled />
-      </label>
+      <form className="profile-form" onSubmit={save}>
+        <label className="field">
+          <span>{tr("Full name")}</span>
+          <input type="text" value={form.name} onChange={(e) => set("name", e.target.value)} />
+        </label>
 
-      <label className="field">
-        <span>{tr("Email")}</span>
-        <input
-          type="email"
-          value={form.email}
-          onChange={(e) => set("email", e.target.value)}
-          placeholder="you@example.com"
-        />
-      </label>
+        <label className="field">
+          <span>{tr("Email")}</span>
+          <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="you@example.com" />
+        </label>
 
-      <label className="field">
-        <span>{tr("Delivery address")}</span>
-        <textarea
-          rows={3}
-          value={form.address}
-          onChange={(e) => set("address", e.target.value)}
-          placeholder="House / flat no, street, area, city, PIN"
-        />
-      </label>
+        <div className="field">
+          <div className="field-head">
+            <span>{tr("Delivery address")}</span>
+            <button type="button" className="use-location" onClick={useCurrentLocation} disabled={locating}>
+              <MIcon d={PIC.pin} size={13} /> {locating ? tr("Locating…") : tr("Use current location")}
+            </button>
+          </div>
+          <textarea
+            rows={3}
+            value={form.base}
+            onChange={(e) => set("base", e.target.value)}
+            placeholder={tr("House / flat no, street, area, landmark")}
+          />
+        </div>
 
-      <button className="checkout-btn" type="submit" disabled={busy}>
-        {busy ? "Saving…" : "Save changes"}
-      </button>
-      {error && <div className="auth-error">{error}</div>}
-      {saved && <div className="profile-saved"><MIcon d={PIC.check} size={15} /> {tr("Saved")}</div>}
-    </form>
+        <label className="field">
+          <span>{tr("PIN code")}</span>
+          <input
+            type="tel" inputMode="numeric" maxLength={6}
+            value={form.pin}
+            onChange={(e) => set("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="110030"
+            className={!pinValid ? "invalid" : ""}
+          />
+          {!pinValid && <small className="field-err">{tr("Enter a valid 6-digit PIN.")}</small>}
+        </label>
+
+        <button className="checkout-btn" type="submit" disabled={!canSave}>
+          {busy ? tr("Saving…") : tr("Save changes")}
+        </button>
+        {error && <div className="auth-error">{error}</div>}
+      </form>
+    </div>
   );
 }
 

@@ -1731,20 +1731,63 @@ button {
   box-shadow: var(--shadow);
 }
 .auth-form,
+.profile-panel { display: flex; flex-direction: column; gap: 16px; }
+/* Identity header — avatar + name + verified contact */
+.profile-header {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 16px;
+}
+.profile-ava {
+  width: 58px; height: 58px; flex: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #fff;
+  background: linear-gradient(140deg, var(--green), var(--green-dark));
+  box-shadow: 0 6px 16px rgba(11, 138, 76, 0.30);
+}
+.profile-id { min-width: 0; }
+.profile-id-name { font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; }
+.profile-id-row {
+  display: flex; align-items: center; gap: 6px; margin-top: 3px;
+  font-size: 13px; color: var(--muted); font-weight: 600;
+}
+.profile-id-row svg { color: var(--muted); flex: none; }
+.profile-verified {
+  display: inline-flex; align-items: center; gap: 3px; margin-left: 4px;
+  font-size: 11px; font-weight: 800; color: var(--green-dark);
+  background: var(--green-tint); border-radius: 999px; padding: 2px 7px 2px 5px;
+}
+.profile-verified svg { color: var(--green-dark); }
+
 .profile-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 .field {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
+.field-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.use-location {
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+  font-size: 12px; font-weight: 800; color: var(--green-dark);
+  background: var(--green-tint); border: none; border-radius: 999px; padding: 5px 10px;
+}
+.use-location:disabled { opacity: 0.6; }
+.use-location svg { color: var(--green-dark); }
+.field input.invalid { border-color: #e03131; }
+.field-err { font-size: 11.5px; color: #e03131; font-weight: 700; }
 .field span {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+/* Save stays visibly inactive until the user actually edits something */
+.profile-form .checkout-btn:disabled {
+  opacity: 0.45; box-shadow: none; filter: grayscale(0.35); cursor: not-allowed;
 }
 .field input,
 .field textarea,
