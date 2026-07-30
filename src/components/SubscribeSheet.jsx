@@ -245,13 +245,13 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
               autopay there, then come back here — this will confirm automatically.
             </p>
             <div className="mandate-steps">
-              <span>1. Approve the mandate (₹{perDay}/day cap) in your UPI app</span>
+              <span>1. Approve the autopay mandate in your UPI app</span>
               <span>2. Return to NGS — no need to do anything else</span>
             </div>
             <button className="ghost-btn full" onClick={() => { setWaitMandate(false); }} style={{ marginTop: 14 }}>
               {tr("Cancel")}
             </button>
-            <p className="mandate-note">Nothing is charged now. Your bank debits one day's amount the evening before each delivery.</p>
+            <p className="mandate-note">A ₹1 bank verification is charged and credited straight back to your NGS wallet. Your bank then auto-pays one day's amount the evening before each delivery — nothing more.</p>
           </div>
         ) : mode === "pay" ? (
           <div className="sub-body">

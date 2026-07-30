@@ -67,9 +67,11 @@ Deno.serve(async (req) => {
     const subs = await sbGet(`subscriptions?id=eq.${order.subscription_id}&select=id,mandate_max_amount,daily_total`);
     const sub = Array.isArray(subs) ? subs[0] : null;
     if (!sub) return json({ error: "Plan not found." }, 404);
-    const capPaise = Math.round(Number(sub.mandate_max_amount || sub.daily_total || 0) * 100);
-    const authPaise = Math.round(Number(order.total) * 100);
-    if (!(authPaise > 0) || !(capPaise >= authPaise)) return json({ error: "Invalid mandate amount." }, 400);
+    // ₹1 registration debit (Razorpay's minimum for a UPI Autopay mandate). It is
+    // credited straight back to the customer's NGS wallet on confirmation, so the
+    // customer pays nothing net for setup. The per-debit cap is the plan's cap.
+    const REG_PAISE = 100;
+    const capPaise = Math.max(REG_PAISE, Math.round(Number(sub.mandate_max_amount || sub.daily_total || 0) * 100));
 
     // Reuse (or create) the Razorpay customer for this user.
     const profRows = await sbGet(`profiles?id=eq.${uid}&select=name,phone,email,rzp_customer_id`);
@@ -92,45 +94,44 @@ Deno.serve(async (req) => {
       await sbPatch(`profiles?id=eq.${uid}`, { rzp_customer_id: customerId });
     }
 
-    // The UPI Autopay mandate order. 'as_presented' lets us debit each day's exact
-    // amount (up to the cap); expires in a year so short plans never re-ask.
+    // Razorpay's web Checkout can't complete UPI inside an Android WebView, and
+    // Supabase can't host a working checkout page (it force-serves text/plain +
+    // a sandbox CSP). So we use Razorpay's OWN hosted mandate page: a "registration
+    // auth link". The customer opens its short_url in their normal browser (which
+    // can launch their UPI app), approves the mandate, and Razorpay fires the same
+    // payment.captured we already handle → confirm_upi_mandate stores the token.
+    // 'as_presented' lets our engine later debit each day's exact amount up to the cap.
     const expireAt = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
-    const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
+    // Razorpay auth links require an email; synthesise a stable one if absent (no
+    // email is sent — email_notify is off).
+    const phone10 = String(prof?.phone || "").replace(/\D/g, "").slice(-10);
+    const email = prof?.email || (phone10 ? `${phone10}@ngsstore.in` : "customer@ngsstore.in");
+    const authRes = await fetch("https://api.razorpay.com/v1/subscription_registration/auth_links", {
       method: "POST",
       headers: { Authorization: rzpAuth, "Content-Type": "application/json" },
       body: JSON.stringify({
-        amount: authPaise,
+        customer: { name: prof?.name || "NGS Customer", email, contact: prof?.phone ? String(prof.phone) : undefined },
+        type: "link",
+        amount: REG_PAISE,
         currency: "INR",
+        description: "NGS daily subscription — UPI Autopay setup (₹1 verification, credited to your wallet)",
+        subscription_registration: { method: "upi", max_amount: capPaise, expire_at: expireAt, frequency: "as_presented" },
         receipt: order.human_code ?? order.id,
-        customer_id: customerId,
-        method: "upi",
-        token: { max_amount: capPaise, expire_at: expireAt, frequency: "as_presented" },
+        email_notify: 0,
+        sms_notify: 0,
+        expire_by: expireAt,
         notes: { order_id: order.id, subscription_id: order.subscription_id, kind: "mandate" },
       }),
     });
-    const rzp = await rzpRes.json();
-    if (!rzpRes.ok || !rzp?.id) return json({ error: rzp?.error?.description || "Couldn't start the mandate." }, 502);
+    const auth = await authRes.json();
+    if (!authRes.ok || !auth?.short_url || !auth?.order_id) {
+      return json({ error: auth?.error?.description || "Couldn't start the mandate." }, 502);
+    }
 
-    await sbPatch(`orders?id=eq.${order.id}`, { razorpay_order_id: rzp.id });
+    // Match the approval back to THIS order via the auth transaction's order id.
+    await sbPatch(`orders?id=eq.${order.id}`, { razorpay_order_id: auth.order_id });
 
-    // The approval must run in the SYSTEM browser (Razorpay web Checkout can't do
-    // UPI inside an Android WebView), so hand back a ready-to-open page URL. All
-    // params are non-secret Razorpay ids / the public key.
-    const mandateUrl = `${SUPABASE_URL}/functions/v1/rzp-mandate-page` +
-      `?key=${encodeURIComponent(KEY_ID)}` +
-      `&order_id=${encodeURIComponent(rzp.id)}` +
-      `&customer_id=${encodeURIComponent(customerId)}`;
-
-    return json({
-      keyId: KEY_ID,
-      orderId: rzp.id,
-      customerId,
-      amount: rzp.amount,
-      currency: rzp.currency,
-      recurring: 1,
-      humanCode: order.human_code,
-      mandateUrl,
-    });
+    return json({ mandateUrl: auth.short_url, humanCode: order.human_code });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
