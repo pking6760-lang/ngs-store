@@ -11,6 +11,9 @@
 // and the function still works off Open Food Facts).
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -18,6 +21,22 @@ const CORS = {
 };
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+
+// This calls the paid Gemini API, so require a signed-in user (the app sends the
+// session JWT). Blocks anyone from hammering it with just the public anon key.
+async function verifiedUid(authHeader: string | null): Promise<string | null> {
+  if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token || token === ANON) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: SERVICE_ROLE },
+    });
+    if (!res.ok) return null;
+    const u = await res.json();
+    return u?.id ?? null;
+  } catch { return null; }
+}
 
 const OFF_DBS = [
   "https://world.openfoodfacts.org",
@@ -141,6 +160,9 @@ async function classifyCategory(productName: string, brand: string, cats: string
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
+    const uid = await verifiedUid(req.headers.get("Authorization"));
+    if (!uid) return json({ found: false, reason: "Please sign in." }, 401);
+
     const body = await req.json().catch(() => ({}));
     const code = String(body.barcode || "").replace(/\D/g, "");
     const typed = String(body.name || "").trim();

@@ -21,6 +21,8 @@
 
 const OLA_KEY = Deno.env.get("OLA_MAPS_KEY") ?? "";
 const GOOGLE_KEY = Deno.env.get("GOOGLE_MAPS_KEY") ?? "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +31,23 @@ const CORS = {
 };
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+
+// This function is callable with only the public anon key (the app calls it that
+// way), and it spends the owner's Maps quota. Rate-limit per client IP so nobody
+// can loop it to run up the bill — over the limit, callers just get the free
+// OpenStreetMap fallback (address:null / items:null).
+async function rateOk(bucket: string, max: number, windowSecs: number): Promise<boolean> {
+  if (!SUPABASE_URL || !SERVICE_ROLE) return true;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/edge_rate_ok`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: bucket, p_max: max, p_window_secs: windowSecs }),
+    });
+    if (!r.ok) return true;               // fail OPEN — never block real users on a limiter hiccup
+    return (await r.json()) === true;
+  } catch { return true; }
+}
 
 async function fetchT(url: string, opts: RequestInit = {}, ms = 7000) {
   const ctrl = new AbortController();
@@ -165,6 +184,13 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const lat = Number(body.lat);
     const lng = Number(body.lng);
+
+    // Per-IP throttle: a real person types an address a handful of times; a script
+    // looping the paid API does not. Over the limit → free-fallback signal.
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+    if (!(await rateOk("places:ip:" + ip, 30, 60))) {
+      return json(body.reverse ? { address: null } : { items: null });
+    }
 
     // Reverse geocode: coordinates in, one address string out. The app sends
     // this for "Use my current location" and the map pin. { address: null }
