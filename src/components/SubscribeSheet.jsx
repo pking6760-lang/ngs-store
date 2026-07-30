@@ -31,6 +31,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
   const [payErr, setPayErr] = useState("");
   const [paying, setPaying] = useState(false);
   const [waitMandate, setWaitMandate] = useState(false); // approving a UPI mandate
+  const [mandateLinks, setMandateLinks] = useState(null); // { intentUrl, mandateUrl }
   const rzpRef = useRef(null);
   const settings = useSettings();
   // Real UPI Autopay shows only when Razorpay is on AND either the master flag is
@@ -168,15 +169,15 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
       const o = await createSubscriptionOrder({ items, days, hour, address, location, pay: "upi_autopay" });
       const m = await createUpiMandate(o.dbId);
       setOrder(o);
-      // Razorpay's web Checkout can't complete UPI inside an Android WebView (it
-      // can't launch the UPI app → "No appropriate payment method found"), so we
-      // open the mandate approval in the SYSTEM browser, which can. The webhook
-      // confirms the mandate server-side; the poll effect below flips the sheet to
-      // success once the order turns paid. Same pattern the app uses for APKs.
+      // Best path: a direct upi://mandate link opens the customer's UPI app (GPay/
+      // PhonePe/Paytm) straight from here — no Razorpay page. If we couldn't get it,
+      // fall back to Razorpay's hosted approval page in the system browser. Either
+      // way the webhook confirms the mandate and the poll below flips to success.
+      setMandateLinks({ intentUrl: m?.intentUrl || "", mandateUrl: m?.mandateUrl || "" });
       setWaitMandate(true);
       setBusy(false);
-      if (m?.mandateUrl) window.open(m.mandateUrl, "_system");
-      else toast("Couldn't open the autopay screen. Please try again.");
+      if (!m?.intentUrl && m?.mandateUrl) window.open(m.mandateUrl, "_system");
+      else if (!m?.intentUrl && !m?.mandateUrl) toast("Couldn't open the autopay screen. Please try again.");
     } catch (e) {
       setBusy(false); setWaitMandate(false);
       toast(e.message || "Couldn't start UPI Autopay.");
@@ -239,16 +240,24 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
         {waitMandate ? (
           <div className="sub-body sub-mandate-wait">
             <div className="mandate-spin" aria-hidden="true" />
-            <h4>Approve UPI Autopay in your UPI app</h4>
-            <p>
-              We opened the secure approval page in your browser. Approve the
-              autopay there, then come back here — this will confirm automatically.
-            </p>
-            <div className="mandate-steps">
-              <span>1. Approve the autopay mandate in your UPI app</span>
-              <span>2. Return to NGS — no need to do anything else</span>
-            </div>
-            <button className="ghost-btn full" onClick={() => { setWaitMandate(false); }} style={{ marginTop: 14 }}>
+            <h4>Approve UPI Autopay</h4>
+            {mandateLinks?.intentUrl ? (
+              <>
+                <p>Tap below to open your UPI app and approve the one-time autopay mandate. Then come back — it confirms here automatically.</p>
+                <a className="mandate-open-btn" href={mandateLinks.intentUrl} rel="noopener">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" /><path d="M12 18h.01" /></svg>
+                  Open UPI app to approve
+                </a>
+                {mandateLinks.mandateUrl && (
+                  <button className="mandate-alt" onClick={() => window.open(mandateLinks.mandateUrl, "_system")}>
+                    Having trouble? Approve on our secure page
+                  </button>
+                )}
+              </>
+            ) : (
+              <p>We opened the secure approval page in your browser. Approve the autopay there, then come back — this confirms automatically.</p>
+            )}
+            <button className="ghost-btn full" onClick={() => { setWaitMandate(false); setMandateLinks(null); }} style={{ marginTop: 14 }}>
               {tr("Cancel")}
             </button>
             <p className="mandate-note">A ₹1 bank verification is charged and credited straight back to your NGS wallet. Your bank then auto-pays one day's amount the evening before each delivery — nothing more.</p>

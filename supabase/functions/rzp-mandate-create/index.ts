@@ -131,7 +131,39 @@ Deno.serve(async (req) => {
     // Match the approval back to THIS order via the auth transaction's order id.
     await sbPatch(`orders?id=eq.${order.id}`, { razorpay_order_id: auth.order_id });
 
-    return json({ mandateUrl: auth.short_url, humanCode: order.human_code });
+    // Best-effort: also fetch the direct `upi://mandate?…` intent for THIS order,
+    // so the app can open the customer's UPI app straight away instead of routing
+    // them through Razorpay's page. This is the exact call Razorpay's own hosted
+    // page makes — public key, browser-style, needs no S2S/PCI. If it ever fails
+    // (endpoint change, fraud check), the app silently falls back to short_url, so
+    // the money flow can never break.
+    let intentUrl: string | null = null;
+    try {
+      const form = new URLSearchParams();
+      form.set("key_id", KEY_ID);
+      form.set("amount", String(REG_PAISE));
+      form.set("currency", "INR");
+      form.set("order_id", auth.order_id);
+      form.set("customer_id", customerId);
+      if (prof?.phone) form.set("contact", String(prof.phone));
+      form.set("email", email);
+      form.set("method", "upi");
+      form.set("recurring", "1");
+      form.set("_[flow]", "intent");
+      form.set("upi[flow]", "intent");
+      form.set("_[source]", "checkoutjs");
+      form.set("_[platform]", "browser");
+      const aj = await fetch("https://api.razorpay.com/v1/payments/create/ajax", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form.toString(),
+      });
+      const ajJson = await aj.json();
+      const link = ajJson?.data?.intent_url;
+      if (aj.ok && typeof link === "string" && link.startsWith("upi://")) intentUrl = link;
+    } catch { /* fall back to the hosted page */ }
+
+    return json({ mandateUrl: auth.short_url, intentUrl, humanCode: order.human_code });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
