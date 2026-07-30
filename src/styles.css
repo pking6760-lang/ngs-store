@@ -3900,6 +3900,9 @@ input:focus-visible {
   padding: 16px 18px 8px;
 }
 .sub-head h3 { font-size: 17px; font-weight: 800; }
+.sub-head-title { display: inline-flex; align-items: center; gap: 8px; }
+.sub-head-ic { display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px; background: var(--green-tint); color: var(--green-dark); flex: none; }
 .sub-body { padding: 6px 18px 4px; overflow-y: auto; }
 .sub-items, .sub-card-items {
   display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
