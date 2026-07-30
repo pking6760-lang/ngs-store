@@ -1693,11 +1693,23 @@ export async function partnerMarkOutForDelivery(orderId) {
 // tendered = cash the customer handed over. Pass it ONLY when it's more than the
 // bill and the rider couldn't give change — the difference is credited to the
 // customer's wallet. Omit for exact cash / prepaid / QR-paid deliveries.
-export async function partnerMarkDelivered(orderId, tendered = null) {
+export async function partnerMarkDelivered(orderId, tendered = null, code = null) {
   const params = { p_order: orderId };
   if (tendered != null && Number(tendered) > 0) params.p_tendered = Number(tendered);
+  if (code != null && String(code).trim()) params.p_code = String(code).trim();
   const { error } = await must().rpc("partner_mark_delivered", params);
   if (error) throw new Error(error.message || "Couldn't mark delivered."); return { ok: true };
+}
+
+// The customer's 4-digit delivery code for one of their own orders (RLS lets a
+// customer read only their own). Shown on the live-order screen so the customer
+// can read it to the rider, who enters it to complete the delivery.
+export async function fetchDeliveryCode(orderDbId) {
+  if (!orderDbId) return null;
+  const { data, error } = await must()
+    .from("order_delivery_codes").select("code").eq("order_id", orderDbId).maybeSingle();
+  if (error) return null;
+  return data?.code || null;
 }
 export async function partnerMarkReturned(orderId) {
   const { error } = await must().rpc("partner_mark_returned", { p_order: orderId });

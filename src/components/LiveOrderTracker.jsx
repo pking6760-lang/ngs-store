@@ -167,6 +167,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   const rafRef = useRef(null);
   const liveLineRef = useRef(null);
   const [rider, setRider] = useState(null);
+  const [deliveryCode, setDeliveryCode] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareErr, setShareErr] = useState("");
@@ -223,10 +224,12 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     }
   }, [order?.dbId, onRefresh]);
 
-  // Pull the assigned rider (name + phone) for the driver card.
+  // Pull the assigned rider (name + phone) for the driver card, and this order's
+  // delivery code (the customer reads it to the rider at the door).
   const loadRider = useCallback(() => {
-    if (!order?.dbId) { setRider(null); return; }
+    if (!order?.dbId) { setRider(null); setDeliveryCode(null); return; }
     api.fetchOrderRider(order.dbId).then(setRider).catch(() => setRider(null));
+    api.fetchDeliveryCode(order.dbId).then(setDeliveryCode).catch(() => setDeliveryCode(null));
   }, [order?.dbId]);
 
   useEffect(() => {
@@ -400,6 +403,22 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
             </div>
           </div>
         </div>
+
+        {/* Delivery code — the customer reads this to the rider, who enters it to
+            complete the delivery (proof the order actually reached the door). */}
+        {!delivered && deliveryCode && (
+          <div className="lt-code">
+            <div className="lt-code-label">{t("Delivery code")}</div>
+            <div className="lt-code-digits">
+              {String(deliveryCode).split("").map((d, i) => (
+                <span key={i} className="lt-code-box">{d}</span>
+              ))}
+            </div>
+            <div className="lt-code-hint">
+              {t("Give this code to the rider at your door — they need it to complete the delivery. Don't share it before they arrive.")}
+            </div>
+          </div>
+        )}
 
         {/* One-line reassurance while in flight */}
         {!delivered && !order.deliverySlot && (

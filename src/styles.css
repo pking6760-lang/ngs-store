@@ -1124,6 +1124,16 @@ button {
 .lt-reassure { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted);
   background: var(--green-tint); border-radius: 12px; padding: 10px 13px; }
 .lt-reassure svg { color: var(--green-dark); flex: none; }
+/* Delivery code card — the customer reads these digits to the rider at the door. */
+.lt-code { text-align: center; border: 1.5px dashed var(--green); border-radius: 14px;
+  padding: 14px 12px; margin: 4px 0 2px; background: var(--green-tint); }
+.lt-code-label { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--green-dark); margin-bottom: 8px; }
+.lt-code-digits { display: flex; gap: 8px; justify-content: center; }
+.lt-code-box { width: 42px; height: 52px; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; font-variant-numeric: tabular-nums; }
+.lt-code-hint { font-size: 11.5px; color: var(--muted); line-height: 1.45; margin-top: 9px; }
 
 /* Rider rating chip on the driver card */
 .lt-driver-rating { display: inline-flex; align-items: center; gap: 3px; margin-left: 7px;
