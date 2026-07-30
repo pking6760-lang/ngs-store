@@ -70,6 +70,22 @@ Deno.serve(async (req) => {
       event?.payload?.payment?.entity?.notes?.order_id ??
       null;
 
+    // Customer revoked the UPI Autopay mandate from their own UPI app → Razorpay
+    // fires token.cancelled / token.paused. Stop our plan so we never try a dead
+    // mandate. (Requires the token.* events to be enabled on the webhook; the
+    // 3-strikes fallback in _sub_upi_fail catches it anyway if they aren't.)
+    if (type === "token.cancelled" || type === "token.paused") {
+      const tokenId = event?.payload?.token?.entity?.id ?? null;
+      if (tokenId) {
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_sub_by_token`, {
+          method: "POST",
+          headers: { ...sbHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({ p_token: tokenId }),
+        });
+      }
+      return new Response("token event handled", { status: 200 });
+    }
+
     // UPI Autopay daily debit (Phase 3): these settle against subscription_charges,
     // NOT the orders table — the delivery order doesn't exist until the debit is
     // confirmed here. Matched by the recurring order id we stored when charging.
