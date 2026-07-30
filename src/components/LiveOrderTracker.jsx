@@ -399,13 +399,6 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                 : `${t("Expected by")} ${fmtClock(new Date(Date.now() + (eta + 2) * 60000))} · ${text}`}
             </div>
           </div>
-          {outForDelivery && (
-            <div className="lt-hero-actions">
-              <button className="lt-hero-call" onClick={callDelivery} aria-label="Call the delivery partner">
-                <Svg d={Icon.phone} size={14} sw={2.2} /> {t("Call")}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* One-line reassurance while in flight */}
@@ -499,11 +492,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
         {!delivered && (
           <div className="lt-card lt-contact">
             <div className="lt-card-title">{t("Need help with this order?")}</div>
-            {outForDelivery ? (
-              <button className="lt-contact-btn primary" onClick={callDelivery}>
-                <Svg d={Icon.phone} size={16} sw={2.2} /> {t("Call delivery partner")}
-              </button>
-            ) : (
+            {!outForDelivery && (
               <div className="lt-contact-note">
                 <Svg d={Icon.box} size={16} sw={2.1} />
                 <span>{t("Your order is being prepared. You'll be able to call your delivery partner once it's on the way.")}</span>
