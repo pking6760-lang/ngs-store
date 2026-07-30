@@ -325,6 +325,17 @@ export async function fetchAddonSuggestions(excludeIds = [], limit = 8) {
   return (data || []).map(mapProduct);
 }
 
+// "Frequently bought together" — real basket co-occurrence for the cart's items
+// (products that appeared in the same past orders, ≥2 distinct orders). Returns
+// [] when there's no genuine signal, so the caller hides the row rather than
+// inventing a recommendation.
+export async function fetchFrequentlyBoughtTogether(cartIds = [], limit = 6) {
+  if (!cartIds.length) return [];
+  const { data, error } = await must().rpc("frequently_bought_together", { p_cart_ids: cartIds, p_limit: limit });
+  if (error) return [];
+  return (data || []).map(mapProduct);
+}
+
 // "Trending now" — product ids ranked by units sold in a recent window. The RPC
 // returns ids only (nothing private), so the caller resolves them against the
 // products already in memory; that also means a trending id that's since gone

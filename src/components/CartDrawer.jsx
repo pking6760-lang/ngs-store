@@ -1642,6 +1642,8 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
             </div>
 
+            <FrequentlyBought lines={lines} onAdd={add} user={user} rewardsCfg={settings.rewards} />
+
             <AttachSuggestion lines={lines} distanceKm={feeDistKm} onAdd={add}
               user={user} rewardsCfg={settings.rewards} />
 
@@ -1870,6 +1872,40 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 // It also says how hard to push. Suggesting costs nothing; free delivery costs
 // ₹20, so that line only appears when taking two of these genuinely leaves the
 // shop better off than charging the fee. Silence when there's nothing to say.
+// Real "Frequently bought together" — driven by basket co-occurrence in past
+// orders (see the frequently_bought_together RPC). Self-hides when there isn't
+// genuine co-purchase signal, so the label is never an empty promise.
+function FrequentlyBought({ lines, onAdd, user, rewardsCfg }) {
+  const [items, setItems] = useState([]);
+  const ids = lines.map((l) => l.product.id).sort().join(",");
+  useEffect(() => {
+    let alive = true;
+    const cartIds = ids ? ids.split(",") : [];
+    if (!cartIds.length) { setItems([]); return; }
+    api.fetchFrequentlyBoughtTogether(cartIds, 8).then((s) => { if (alive) setItems(s); }).catch(() => {});
+    return () => { alive = false; };
+  }, [ids]);
+  if (!items.length) return null;
+  return (
+    <div className="addons">
+      <div className="addons-head">{tr("Frequently bought together")}</div>
+      <div className="addons-row">
+        {items.map((p) => {
+          const price = tierUnitPrice(p, 1, user, rewardsCfg);
+          return (
+            <div className="addon-card" key={p.id}>
+              <ProductThumb image={p.image} name={p.name} category={p.category} size={56} radius={10} />
+              <div className="addon-name">{p.name}</div>
+              <div className="addon-price">₹{price}{p.mrp > price ? <s>₹{p.mrp}</s> : null}</div>
+              <button className="addon-add" onClick={() => onAdd(p.id)}><span className="addon-plus">+</span> {tr("Add")}</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AttachSuggestion({ lines, distanceKm, onAdd, user, rewardsCfg }) {
   const [sug, setSug] = useState(null);
   const key = JSON.stringify([lines.map((l) => [l.product.id, l.qty]).sort(), Number(distanceKm) || 0]);

@@ -104,6 +104,7 @@ const HI = {
   "coupon": "कूपन",
   "Use Rewards": "रिवॉर्ड्स उपयोग करें",
   "Add": "जोड़ें",
+  "Frequently bought together": "अक्सर साथ खरीदे जाते हैं",
   "Place Order": "ऑर्डर करें",
   "Placing order…": "ऑर्डर हो रहा है…",
   "Proceed to checkout": "चेकआउट करें",
