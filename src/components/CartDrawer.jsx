@@ -132,6 +132,21 @@ function upiAppHref(upiIntent, app) {
   return `${app.scheme}?${q}`;
 }
 
+// The exact payee address this QR pays to — read straight from the QR's own UPI
+// intent (the pa= param), so what we display is what a scan actually credits.
+function upiVpaFrom(upiIntent) {
+  if (!upiIntent || upiIntent.indexOf("?") < 0) return "";
+  try {
+    const pa = new URLSearchParams(upiIntent.slice(upiIntent.indexOf("?") + 1)).get("pa");
+    return pa || "";
+  } catch { return ""; }
+}
+
+function fmtCountdown(secs) {
+  const s = Math.max(0, secs | 0);
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
 // Tap-to-add delivery instructions shown on the checkout page.
 const DELIVERY_NOTES = [
   { d: "M8.7 3A6 6 0 0 1 18 8c0 2.6.4 4.5 1 5.9M4.8 4.8C4.3 5.7 4 6.8 4 8c0 7-3 9-3 9h15.5M10.3 21a2 2 0 0 0 3.4 0M2 2l20 20", label: "Don't ring the bell" },
@@ -245,6 +260,10 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [searching, setSearching] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [payLink, setPayLink] = useState(null); // { url, order, count } for online QR pay
+  const [qrNow, setQrNow] = useState(() => Date.now()); // ticks every second on the QR screen
+  const [payPhase, setPayPhase] = useState("waiting");  // waiting → received (then success)
+  const [qrCopied, setQrCopied] = useState(false);
+  const [orderOpen, setOrderOpen] = useState(false);    // collapsible order summary
   const searchTimer = useRef();
   const submitLock = useRef(false); // prevents double order submission
 
@@ -523,6 +542,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     catch { /* ignore */ }
   }, [address, phone, location]);
 
+  // Tick once a second while the QR is up, so the expiry countdown is live.
+  useEffect(() => {
+    if (step !== "payqr") return;
+    setQrNow(Date.now());
+    const iv = setInterval(() => setQrNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, [step]);
+
+  // Reset the payment phase whenever a fresh QR screen opens.
+  useEffect(() => { if (step === "payqr") setPayPhase("waiting"); }, [step]);
+
   // While the online-payment QR is showing, poll the order until the webhook
   // marks it paid, then jump to the success screen.
   useEffect(() => {
@@ -533,17 +563,23 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         const st = await api.fetchOrderState(payLink.order.dbId);
         if (alive && st?.payment_status === "paid") {
           clearInterval(iv);
+          // Real two-step reassurance: we've *observed* the payment, now we
+          // finalise the order view. (No fabricated "confirming with bank".)
+          setPayPhase("received");
           setPlaced({
             total: payLink.order.total, count: payLink.count, eta: 12,
             payment: "razorpay", pointsEarned: payLink.order.pointsEarned, code: payLink.order.id,
           });
-          clear();
-          setUsePoints(false);
-          setUseWalletCredit(false);
-          setAddMembership(false);
-          setAppliedCode(null);
-          setPayLink(null);
-          setStep("done");
+          setTimeout(() => {
+            if (!alive) return;
+            clear();
+            setUsePoints(false);
+            setUseWalletCredit(false);
+            setAddMembership(false);
+            setAppliedCode(null);
+            setPayLink(null);
+            setStep("done");
+          }, 1100);
         }
       } catch { /* keep polling */ }
     }, 3000);
@@ -736,13 +772,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       // Verified native UPI QR shown ON our page (scan with any app → pays
       // directly → auto-confirms via webhook). No redirect to any gateway page.
       // Redraw it as a plain, clean QR (no branded card).
-      const { imageUrl, imageDataUrl } = await api.createOrderQr(order.dbId);
+      const { imageUrl, imageDataUrl, closeBy } = await api.createOrderQr(order.dbId);
       const cleanQr = await cleanUpiQrFromImage(imageDataUrl);
       // Pull the UPI intent string out of the QR so tapping "Pay" can open the
       // customer's UPI app directly (no gateway screen), like a big q-commerce app.
       const upiIntent = await decodeUpiFromQr(imageDataUrl);
       setPayLink({
-        imageUrl, imageDataUrl, cleanQr, upiIntent,
+        imageUrl, imageDataUrl, cleanQr, upiIntent, closeBy,
         order, count: lines.reduce((a, l) => a + l.qty, 0),
       });
       setStep("payqr");
@@ -750,6 +786,24 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       setPlaceError(e.message || tr("Couldn't start the payment. Please try again."));
     } finally {
       setPlacing(false);
+    }
+  }
+
+  // Regenerate a fresh QR for the SAME held order when the current one lapses —
+  // no need to go back and rebuild the whole order.
+  const [regenQr, setRegenQr] = useState(false);
+  async function regenerateQr() {
+    if (!payLink?.order || regenQr) return;
+    setRegenQr(true); setPlaceError("");
+    try {
+      const { imageUrl, imageDataUrl, closeBy } = await api.createOrderQr(payLink.order.dbId);
+      const cleanQr = await cleanUpiQrFromImage(imageDataUrl);
+      const upiIntent = await decodeUpiFromQr(imageDataUrl);
+      setPayLink((p) => ({ ...p, imageUrl, imageDataUrl, cleanQr, upiIntent, closeBy }));
+    } catch (e) {
+      setPlaceError(e.message || tr("Couldn't refresh the QR. Please try again."));
+    } finally {
+      setRegenQr(false);
     }
   }
 
@@ -994,6 +1048,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             </button>
           </div>
         ) : step === "payqr" && payLink ? (
+          (() => {
+            const secsLeft = payLink.closeBy ? payLink.closeBy - Math.floor(qrNow / 1000) : null;
+            const expired = secsLeft != null && secsLeft <= 0;
+            const vpa = upiVpaFrom(payLink.upiIntent);
+            const received = payPhase === "received";
+            const buzz = () => { try { navigator.vibrate && navigator.vibrate(15); } catch { /* no haptics */ } };
+            async function copyVpa() {
+              if (!vpa) return;
+              try { await navigator.clipboard.writeText(vpa); setQrCopied(true); setTimeout(() => setQrCopied(false), 1600); } catch { /* no clipboard */ }
+            }
+            return (
           <div className="pay-step pay-pro">
             <div className="pay-merchant">
               <span className="pay-merchant-av">N</span>
@@ -1008,19 +1073,91 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z" /></svg>
                 Secured by Razorpay
               </span>
+              <span className="pay-order-ref">{tr("Order")} #{payLink.order.id}</span>
             </div>
 
             <div className="pay-big">₹{Number(payLink.order.total).toFixed(2)}</div>
             <div className="pay-words">{rupeesInWords(payLink.order.total)}</div>
 
-            <div className="upi-qr-wrap">
+            {/* Collapsible order summary — verify what you're paying for. */}
+            <button className="pay-order-toggle" onClick={() => setOrderOpen((v) => !v)} aria-expanded={orderOpen}>
+              {orderOpen ? tr("Hide order summary") : tr("View order summary")}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: orderOpen ? "rotate(180deg)" : "none" }}><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            {orderOpen && (
+              <div className="pay-order-card">
+                <div className="pay-order-code">{tr("Order")} #{payLink.order.id}</div>
+                {lines.map(({ product, qty, unit }) => (
+                  <div className="pay-order-line" key={product.id}>
+                    <span>{product.name} ×{qty}</span>
+                    <span>₹{money(unit * qty)}</span>
+                  </div>
+                ))}
+                <div className="pay-order-sep" />
+                <div className="pay-order-line"><span>{tr("Item total")}</span><span>₹{money(itemTotal)}</span></div>
+                {deliveryFee > 0 && <div className="pay-order-line"><span>{tr("Delivery fee")}</span><span>₹{money(deliveryFee)}</span></div>}
+                {handling > 0 && <div className="pay-order-line"><span>{tr("Handling charge")}</span><span>₹{money(handling)}</span></div>}
+                {surgeFee > 0 && <div className="pay-order-line"><span>{tr("Surge charge")}</span><span>₹{money(surgeFee)}</span></div>}
+                {smallCartFee > 0 && <div className="pay-order-line"><span>{tr("Small-cart fee")}</span><span>₹{money(smallCartFee)}</span></div>}
+                {discount > 0 && <div className="pay-order-line"><span>{tr("Points discount")}</span><span className="free">−₹{discount}</span></div>}
+                {couponDiscount > 0 && <div className="pay-order-line"><span>Coupon</span><span className="free">−₹{couponDiscount}</span></div>}
+                {walletApplied > 0 && <div className="pay-order-line"><span>NGS Wallet</span><span className="free">−₹{walletApplied.toFixed(2)}</span></div>}
+                <div className="pay-order-sep" />
+                <div className="pay-order-line total"><span>{tr("To pay")}</span><span>₹{Number(payLink.order.total).toFixed(2)}</span></div>
+              </div>
+            )}
+
+            {/* Live payment status — honest: waiting until the webhook confirms. */}
+            <div className={`pay-status ${received ? "received" : ""}`}>
+              {received ? (
+                <>
+                  <span className="pay-status-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span>
+                  {tr("Payment received — confirming your order…")}
+                </>
+              ) : (
+                <>
+                  <span className="pay-status-dots"><i /><i /><i /></span>
+                  {tr("Waiting for your payment…")}
+                </>
+              )}
+            </div>
+
+            <div className={`upi-qr-wrap ${expired ? "expired" : ""}`}>
               <img
                 className={`upi-qr ${payLink.cleanQr ? "clean" : ""}`}
                 src={payLink.cleanQr || payLink.imageDataUrl || payLink.imageUrl}
                 alt="UPI payment QR code"
               />
+              {expired && (
+                <div className="upi-qr-expired">
+                  <span>{tr("QR expired")}</span>
+                  <button className="qr-regen" onClick={regenerateQr} disabled={regenQr}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v4h-4" /></svg>
+                    {regenQr ? tr("Refreshing…") : tr("Generate new QR")}
+                  </button>
+                </div>
+              )}
               <p className="upi-hint">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM) — pays directly</p>
             </div>
+
+            {secsLeft != null && !expired && (
+              <div className="upi-countdown">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                {tr("QR expires in")} <strong>{fmtCountdown(secsLeft)}</strong>
+              </div>
+            )}
+
+            {vpa && (
+              <div className="upi-id-row">
+                <div className="upi-id-txt">
+                  <span className="upi-id-label">{tr("UPI ID")}</span>
+                  <code>{vpa}</code>
+                </div>
+                <button className="upi-id-copy" onClick={copyVpa}>
+                  {qrCopied ? tr("Copied") : tr("Copy")}
+                </button>
+              </div>
+            )}
 
             {/* Tap your UPI app to pay — opens that app directly with the amount
                 pre-filled (targeting a specific app avoids the generic upi:// link
@@ -1031,7 +1168,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <div className="upi-apps-label">{tr("Pay by UPI app")}</div>
                 <div className="upi-apps">
                   {UPI_APPS.map((app) => (
-                    <a className="upi-app" key={app.id} href={upiAppHref(payLink.upiIntent, app)}>
+                    <a className="upi-app" key={app.id} href={upiAppHref(payLink.upiIntent, app)} onClick={buzz}>
                       <span className="upi-app-ic">
                         <img src={app.logo} alt={app.name} />
                       </span>
@@ -1053,8 +1190,15 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               After you pay, this screen confirms automatically — you don't need
               to do anything else.
             </p>
+            {settings.supportPhone && (
+              <a className="pay-help-link" href={`tel:+91${settings.supportPhone}`}>
+                {tr("Need help with payment?")}
+              </a>
+            )}
             {placeError && <div className="auth-error">{placeError}</div>}
           </div>
+            );
+          })()
         ) : step === "pay" ? (
           <div className="pay-step pay-pro">
             <div className="pay-merchant">

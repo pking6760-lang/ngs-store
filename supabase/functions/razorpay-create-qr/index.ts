@@ -72,6 +72,10 @@ Deno.serve(async (req) => {
     const amountPaise = Math.round(Number(order.total) * 100);
     if (!(amountPaise > 0)) return json({ error: "Invalid amount." }, 400);
 
+    // Give the QR a real, short life so the app can show a truthful countdown
+    // and offer a fresh QR when it lapses. 15 minutes is comfortably longer than
+    // a scan-and-pay takes, and Razorpay requires close_by to be >= now + 2 min.
+    const closeBy = Math.floor(Date.now() / 1000) + 15 * 60;
     const auth = "Basic " + btoa(`${KEY_ID}:${KEY_SECRET}`);
     const rzpRes = await fetch("https://api.razorpay.com/v1/payments/qr_codes", {
       method: "POST",
@@ -82,6 +86,7 @@ Deno.serve(async (req) => {
         fixed_amount: true,
         payment_amount: amountPaise,
         description: `NGS order ${order.human_code}`,
+        close_by: closeBy,
         notes: { order_id: order.id, human_code: order.human_code },
       }),
     });
@@ -104,7 +109,8 @@ Deno.serve(async (req) => {
       }
     } catch { /* client will fall back to image_url */ }
 
-    return json({ imageUrl: qr.image_url, imageDataUrl, qrId: qr.id, amount: amountPaise });
+    // Prefer Razorpay's own close_by echo; fall back to what we requested.
+    return json({ imageUrl: qr.image_url, imageDataUrl, qrId: qr.id, amount: amountPaise, closeBy: qr.close_by || closeBy });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
