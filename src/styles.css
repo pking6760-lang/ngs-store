@@ -4451,7 +4451,7 @@ body {
   border: 1px solid rgba(154,107,22,0.22); border-radius: 999px; padding: 6px 12px; margin-bottom: 12px;
 }
 .prime-status {
-  margin-top: 14px; background: var(--card, #fff); border: 1px solid var(--line);
+  margin-top: 14px; background: var(--surface); border: 1px solid var(--line);
   border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm);
 }
 .prime-status-stats { display: flex; gap: 12px; }
@@ -4467,9 +4467,73 @@ body {
 }
 .prime-stat-val { font-size: 22px; font-weight: 900; line-height: 1; color: #6f4e0e; font-variant-numeric: tabular-nums; }
 .prime-stat-lbl { font-size: 11.5px; font-weight: 700; color: #9a7b3e; }
-.prime-meter { height: 7px; border-radius: 999px; background: var(--line, #e6ebf0); margin-top: 14px; overflow: hidden; }
-.prime-meter > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f4dd98, #d9b45a); }
+.prime-meter { height: 8px; border-radius: 999px; background: var(--line, #e6ebf0); margin-top: 10px; overflow: hidden; }
+.prime-meter > span { display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #f4dd98, #d9b45a);
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
 .prime-status-note { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 9px; text-align: center; }
+
+/* ── Prime active — lifetime value, countdown, renewal ─────────────────────── */
+.membership-panel { gap: 14px; }
+/* Card watermark + sparkle for the premium membership-card feel */
+.pc-watermark {
+  position: absolute; right: 8px; bottom: -14px; pointer-events: none;
+  font-size: 92px; font-weight: 900; letter-spacing: -0.04em;
+  color: rgba(255,255,255,0.10); line-height: 1;
+}
+.prime-card.on .pc-watermark { color: rgba(90,54,16,0.10); }
+.pc-brand { position: relative; }
+.pc-sparkle { position: absolute; top: -3px; right: -12px; width: 8px; height: 8px; }
+.pc-sparkle::before, .pc-sparkle::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  background: #fff8e1; border-radius: 1px;
+}
+.pc-sparkle::before { width: 8px; height: 2px; box-shadow: 0 0 6px 1px rgba(255,240,190,0.9); }
+.pc-sparkle::after  { width: 2px; height: 8px; box-shadow: 0 0 6px 1px rgba(255,240,190,0.9); }
+.prime-card.on .pc-sparkle { animation: pcSparkle 2.6s ease-in-out infinite; }
+@keyframes pcSparkle { 0%,100% { transform: scale(0.6) rotate(0); opacity: 0.5; } 50% { transform: scale(1.15) rotate(45deg); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pc-sparkle { animation: none; } }
+.pc-id { position: relative; display: flex; flex-direction: column; gap: 1px; margin: 2px 0 2px; }
+.pc-idval { font-size: 13px; font-weight: 800; letter-spacing: 0.10em; font-variant-numeric: tabular-nums; }
+.pc-since { font-size: 9px; letter-spacing: 0.04em; opacity: 0.6; font-weight: 700; text-transform: uppercase; margin-top: 1px; }
+
+.prime-value { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow-sm); }
+.prime-value-row { display: flex; gap: 12px; }
+.prime-value-cell {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  padding: 13px 14px; border-radius: 14px;
+  background: linear-gradient(150deg, #fdf6e6, #fbeecb);
+  border: 1px solid rgba(154,107,22,0.14);
+}
+.prime-value-cell.hero { background: linear-gradient(150deg, #fdeec3, #f7dd9e); border-color: rgba(154,107,22,0.24); }
+.prime-value-ic { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  background: rgba(154,107,22,0.14); color: #9a6b16; margin-bottom: 2px; }
+.prime-value-num { font-size: 26px; font-weight: 900; line-height: 1; color: #6f4e0e; font-variant-numeric: tabular-nums; }
+.prime-value-cell.hero .prime-value-num { font-size: 30px; }
+.prime-value-lbl { font-size: 11.5px; font-weight: 700; color: #9a7b3e; }
+
+.prime-timeline { margin-top: 15px; }
+.prime-timeline-head { display: flex; align-items: baseline; justify-content: space-between; }
+.prime-timeline-head span { font-size: 13px; font-weight: 700; color: var(--ink); }
+.prime-timeline-head strong { font-size: 14px; font-weight: 800; color: #8a6410; }
+.prime-timeline-head strong.soon { color: #d9480f; }
+.prime-timeline-foot { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 8px; }
+
+.prime-renew {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-top: 15px; cursor: pointer; border: none;
+  background: linear-gradient(135deg, #d9b45a, #b8933f);
+  color: #2b1f04; border-radius: 13px; padding: 13px;
+  font-size: 14.5px; font-weight: 800;
+  box-shadow: 0 10px 22px -10px rgba(160,120,40,0.75);
+}
+.prime-renew:active { transform: translateY(1px); }
+.prime-renew.soon { background: linear-gradient(135deg, #ff922b, #e8590c); color: #fff; }
+
+/* Benefits with real savings */
+.pb-body { display: flex; flex-direction: column; gap: 2px; }
+.pb-save { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--green-dark, #178a3a); }
+.pb-save svg { color: var(--green-dark, #178a3a); }
 
 /* Refer & earn */
 .refer-panel { display: flex; flex-direction: column; gap: 16px; }
@@ -4645,8 +4709,8 @@ body {
 .rc-b0 { --rc-x: -1.4; } .rc-b1 { --rc-x: -0.4; } .rc-b2 { --rc-x: 0.6; } .rc-b3 { --rc-x: 1.6; } .rc-b4 { --rc-x: 2.6; }
 
 .prime-benefits {
-  background: var(--card, #fff); border: 1px solid var(--line); border-radius: 16px;
-  padding: 6px 16px; margin-top: 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 6px 16px;
 }
 .prime-benefit { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
 .prime-benefit + .prime-benefit { border-top: 1px solid var(--line); }

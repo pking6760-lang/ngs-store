@@ -1756,14 +1756,6 @@ function Membership() {
   const { user, joinMembership, applyRewards } = useAuth();
   const settings = useSettings();
   const { balance } = useWallet(user?.id);
-  const { orders: myOrders } = useMyOrders(user?.id);
-  const now = new Date();
-  const savedThisMonth = (myOrders || [])
-    .filter((o) => {
-      const d = new Date(o.createdAt);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    })
-    .reduce((s, o) => s + (o.memberSavings || 0), 0);
   const plan = settings.rewards?.membership || {};
   const price = plan.price ?? MEMBERSHIP.price;
   const mrp = plan.mrp ?? 199;
@@ -1794,35 +1786,13 @@ function Membership() {
   }
 
   if (isMember) {
-    const until = user.memberUntil ? new Date(user.memberUntil) : null;
-    const daysLeft = until ? Math.max(0, Math.ceil((until.getTime() - Date.now()) / 86400000)) : 0;
-    const pct = Math.max(6, Math.min(100, Math.round((daysLeft / (days || 30)) * 100)));
     return (
-      <div className="membership-panel">
-        <div className="prime-active-tag">
-          <MIcon d={PIC.crown} size={14} /> Prime is active
-        </div>
-        <PrimeCard name={user.name} until={user.memberUntil} active />
-
-        <div className="prime-status">
-          <div className="prime-status-stats">
-            <div className="prime-stat">
-              <span className="prime-stat-ico"><MIcon d={PIC.tag} size={16} /></span>
-              <span className="prime-stat-val">₹{Math.round(savedThisMonth)}</span>
-              <span className="prime-stat-lbl">saved this month</span>
-            </div>
-            <div className="prime-stat">
-              <span className="prime-stat-ico"><MIcon d={PIC.crown} size={16} /></span>
-              <span className="prime-stat-val">{daysLeft}</span>
-              <span className="prime-stat-lbl">day{daysLeft === 1 ? "" : "s"} left</span>
-            </div>
-          </div>
-          <div className="prime-meter"><span style={{ width: `${pct}%` }} /></div>
-          <div className="prime-status-note">Renew here anytime — your benefits never pause.</div>
-        </div>
-
-        <PrimeBenefits benefits={MEMBERSHIP.benefits} />
-      </div>
+      <PrimeActive
+        user={user}
+        days={days}
+        price={price}
+        onRenew={() => setPayQr(true)}
+      />
     );
   }
 
@@ -1861,26 +1831,134 @@ function Membership() {
   );
 }
 
+// The active-member dashboard: premium card + lifetime value + meaningful
+// countdown + renewal. All figures come from the server aggregate so nothing
+// on screen is estimated beyond what the RPC honestly labels.
+function primeDate(iso, opts) {
+  try { return new Date(iso).toLocaleDateString("en-IN", opts || { day: "numeric", month: "short", year: "numeric" }); }
+  catch { return ""; }
+}
+function PrimeActive({ user, days, price, onRenew }) {
+  const [stats, setStats] = useState(null);
+  const [barPct, setBarPct] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    api.fetchPrimeStats().then((s) => { if (live) setStats(s); }).catch(() => {});
+    return () => { live = false; };
+  }, [user?.id]);
+
+  const until = user.memberUntil ? new Date(user.memberUntil) : null;
+  const daysLeft = until ? Math.max(0, Math.ceil((until.getTime() - Date.now()) / 86400000)) : 0;
+  const targetPct = Math.max(4, Math.min(100, Math.round((daysLeft / (days || 30)) * 100)));
+  const expiringSoon = daysLeft > 0 && daysLeft <= 7;
+
+  // Animate the bar from 0 → remaining on mount (smooth progress animation).
+  useEffect(() => {
+    const t = setTimeout(() => setBarPct(targetPct), 120);
+    return () => clearTimeout(t);
+  }, [targetPct]);
+
+  const lifetime = stats?.lifetimeSavings ?? 0;
+  const orders = stats?.memberOrders ?? 0;
+  const deliverySaved = stats?.deliverySaved ?? 0;
+  const productSaved = stats?.productSaved ?? 0;
+  const memberSince = stats?.memberSince || user.memberSince;
+  const code = stats?.code || user.customerCode;
+
+  // Benefits with real, measurable savings attached where we actually have them.
+  const benefitRows = [
+    { ic: PIC.truck, txt: tr("Free delivery on normal days"),
+      save: deliverySaved > 0 ? `${tr("Saved")} ₹${deliverySaved} ${tr("in delivery fees")}` : null },
+    { ic: PIC.bolt, txt: tr("First priority on every order"), save: null },
+    { ic: PIC.tag, txt: tr("Member-only prices & offers"),
+      save: productSaved > 0 ? `${tr("Saved")} ₹${productSaved} ${tr("on member prices")}` : null },
+  ];
+
+  return (
+    <div className="membership-panel">
+      <div className="prime-active-tag">
+        <MIcon d={PIC.crown} size={14} /> {tr("Prime is active")}
+      </div>
+      <PrimeCard name={user.name} until={user.memberUntil} active
+        code={code} since={memberSince} />
+
+      {/* Lifetime value — highest-impact stats */}
+      <div className="prime-value">
+        <div className="prime-value-row">
+          <div className="prime-value-cell hero">
+            <span className="prime-value-ic"><MIcon d={PIC.tag} size={15} /></span>
+            <span className="prime-value-num">₹{lifetime}</span>
+            <span className="prime-value-lbl">{tr("Lifetime savings")}</span>
+          </div>
+          <div className="prime-value-cell">
+            <span className="prime-value-ic"><MIcon d={PIC.crown} size={15} /></span>
+            <span className="prime-value-num">{orders}</span>
+            <span className="prime-value-lbl">{tr("Orders with Prime")}</span>
+          </div>
+        </div>
+
+        {/* Meaningful countdown */}
+        <div className="prime-timeline">
+          <div className="prime-timeline-head">
+            <span>{tr("Membership")}</span>
+            <strong className={expiringSoon ? "soon" : ""}>{daysLeft} {daysLeft === 1 ? tr("day left") : tr("days left")}</strong>
+          </div>
+          <div className="prime-meter"><span style={{ width: `${barPct}%` }} /></div>
+          {until && <div className="prime-timeline-foot">{tr("Expires on")} {primeDate(until, { day: "numeric", month: "short", year: "numeric" })}</div>}
+        </div>
+
+        {/* Renewal CTA — surfaced now, not at the last minute */}
+        <button className={`prime-renew ${expiringSoon ? "soon" : ""}`} onClick={onRenew}>
+          <MIcon d={PIC.crown} size={16} />
+          {expiringSoon ? tr("Renew now — expiring soon") : `${tr("Renew Prime")} · ₹${price}/${days} ${tr("days")}`}
+        </button>
+      </div>
+
+      {/* Benefits with actual savings */}
+      <div className="prime-benefits">
+        {benefitRows.map((b) => (
+          <div className="prime-benefit" key={b.txt}>
+            <span className="pb-ic"><MIcon d={b.ic} size={17} /></span>
+            <span className="pb-body">
+              <span className="pb-txt">{b.txt}</span>
+              {b.save && <span className="pb-save"><MIcon d={PIC.check} size={12} /> {b.save}</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // A premium metal-card face — the membership rendered like a real credit card.
 function cardThru(until) {
   if (!until) return "••/••";
   const d = new Date(until);
   return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`;
 }
-function PrimeCard({ name, until, active }) {
+function PrimeCard({ name, until, active, code, since }) {
   return (
     <div className={`prime-card ${active ? "on" : ""}`}>
       <div className="pc-brush" />
       <div className="pc-shine" />
+      <div className="pc-watermark" aria-hidden="true">NGS</div>
       <div className="pc-row pc-head">
-        <span className="pc-brand">NGS<b>PRIME</b></span>
+        <span className="pc-brand">NGS<b>PRIME</b>{active && <em className="pc-sparkle" />}</span>
         <span className="pc-wave"><MIcon d={PIC.wave} size={22} /></span>
       </div>
       <div className="pc-chip"><i /><i /><i /></div>
+      {code && (
+        <div className="pc-id">
+          <span className="pc-lbl">{tr("Membership ID")}</span>
+          <span className="pc-idval">{code}</span>
+        </div>
+      )}
       <div className="pc-row pc-foot">
         <div className="pc-holder">
           <span className="pc-lbl">{tr("Member")}</span>
           <span className="pc-name">{(name || tr("Your Name")).toUpperCase()}</span>
+          {since && <span className="pc-since">{tr("Since")} {primeDate(since, { month: "short", year: "numeric" })}</span>}
         </div>
         <div className="pc-thru">
           <span className="pc-lbl">{tr("Valid thru")}</span>

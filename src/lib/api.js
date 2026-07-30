@@ -760,6 +760,24 @@ export async function fetchReferralHistory(limit = 30) {
   }));
 }
 
+// Lifetime NGS Prime value — exact server-side aggregates over ALL member
+// orders (the client only holds the last 100). Returns lifetime/product/
+// delivery savings, member-order count, join + expiry dates, membership id.
+export async function fetchPrimeStats() {
+  const { data, error } = await must().rpc("my_prime_stats");
+  if (error) throw new Error(error.message || "Couldn't load membership stats.");
+  const d = data || {};
+  return {
+    memberOrders: Number(d.memberOrders || 0),
+    productSaved: Number(d.productSaved || 0),
+    deliverySaved: Number(d.deliverySaved || 0),
+    lifetimeSavings: Number(d.lifetimeSavings || 0),
+    memberSince: d.memberSince || null,
+    memberUntil: d.memberUntil || null,
+    code: d.code || null,
+  };
+}
+
 // Customer joins / renews NGS Prime, paying the fee from their wallet.
 export async function joinMembership() {
   const { data, error } = await must().rpc("join_membership");
