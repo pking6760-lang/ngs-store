@@ -210,6 +210,21 @@ begin
 end; $$;
 revoke all on function public.sub_upi_fail_charge(uuid, text) from public, anon, authenticated;
 
+-- ── Reconciliation backstop: charges left 'processing' (a webhook was missed
+-- while the debit actually resolved) so the edge fn can ask Razorpay directly and
+-- settle them. Self-healing — the money path never depends on a webhook arriving.
+create or replace function public.sub_upi_stale_charges()
+returns table(charge_id uuid, rzp_order_id text)
+language sql security definer set search_path to 'public'
+as $$
+  select id, rzp_order_id from public.subscription_charges
+  where status = 'processing' and rzp_order_id is not null
+    and created_at < now() - interval '20 minutes'
+  order by created_at
+  limit 100;
+$$;
+revoke all on function public.sub_upi_stale_charges() from public, anon, authenticated;
+
 -- ── Cron entry: poke the charge edge function once a day, but ONLY when the
 -- master flag is on. While upi_autopay_enabled is false this is a pure no-op, so
 -- the daily job can be scheduled now and stays silent until launch. ────────────
@@ -227,6 +242,27 @@ begin
     url := 'https://wvlkhvqohkkxlatwotvy.supabase.co/functions/v1/sub-charge-upi',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', v_secret),
     body := '{}'::jsonb
+  );
+exception when others then null;
+end; $$;
+
+-- ── Reconcile-only cron entry: runs often (every couple of hours) to sweep up any
+-- 'processing' charges whose webhook was missed, WITHOUT raising new debits.
+-- Also flag-gated, so it's a no-op until launch. ───────────────────────────────
+create or replace function public.run_upi_autopay_reconcile()
+returns void
+language plpgsql security definer set search_path to 'public'
+as $$
+declare v_secret text; v_enabled boolean;
+begin
+  select coalesce(upi_autopay_enabled, false) into v_enabled from public.settings where id = 1;
+  if not coalesce(v_enabled, false) then return; end if;
+
+  select value into v_secret from private.app_secret where key = 'webhook_secret';
+  perform net.http_post(
+    url := 'https://wvlkhvqohkkxlatwotvy.supabase.co/functions/v1/sub-charge-upi',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', v_secret),
+    body := jsonb_build_object('reconcileOnly', true)
   );
 exception when others then null;
 end; $$;

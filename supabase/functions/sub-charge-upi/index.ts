@@ -46,10 +46,38 @@ Deno.serve(async (req) => {
   }
   if (!KEY_ID || !KEY_SECRET) return Response.json({ ok: false, error: "payments not configured" });
 
+  const body = await req.json().catch(() => ({}));
+  const reconcileOnly = body?.reconcileOnly === true;
+
   const deliver = tomorrowIST();
-  const summary = { deliver, due: 0, charged: 0, skipped: 0, failed: 0 };
+  const summary = { deliver, reconcileOnly, reconciled_ok: 0, reconciled_fail: 0, due: 0, charged: 0, skipped: 0, failed: 0 };
 
   try {
+    // ── Reconcile first (every run): any charge stuck 'processing' means its
+    // webhook was missed. Ask Razorpay what actually happened and settle it, so a
+    // captured-but-unconfirmed debit still delivers and a failed one still skips.
+    const { val: stale } = await rpc("sub_upi_stale_charges", {});
+    for (const row of (Array.isArray(stale) ? stale : [])) {
+      try {
+        const pRes = await fetch(`https://api.razorpay.com/v1/orders/${row.rzp_order_id}/payments`, {
+          headers: { Authorization: rzpAuth },
+        });
+        const pj = await pRes.json();
+        const items: Array<{ id: string; status: string }> = Array.isArray(pj?.items) ? pj.items : [];
+        const captured = items.find((p) => p.status === "captured");
+        if (captured) {
+          await rpc("sub_upi_settle_success", { p_rzp_order: row.rzp_order_id, p_payment: captured.id });
+          summary.reconciled_ok++;
+        } else if (items.length > 0 && items.every((p) => p.status === "failed")) {
+          await rpc("sub_upi_settle_fail", { p_rzp_order: row.rzp_order_id, p_reason: "reconcile: all attempts failed" });
+          summary.reconciled_fail++;
+        }
+        // else still pending at the bank → leave it for the next sweep.
+      } catch { /* transient — retry next sweep */ }
+    }
+
+    if (reconcileOnly) return Response.json({ ok: true, ...summary });
+
     const { val: due } = await rpc("sub_upi_due_list", { p_deliver: deliver });
     const plans: Array<{ id: string }> = Array.isArray(due) ? due : [];
     summary.due = plans.length;
