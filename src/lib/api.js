@@ -99,7 +99,8 @@ function mapCoupon(r) {
     minOrder: num(r.min_order), category: r.category || "", active: r.active,
     singleUse: !!r.single_use, guaranteed: !!r.guaranteed,
     excludedCategories: r.excluded_categories || [],
-    excludedProducts: r.excluded_products || [] };
+    excludedProducts: r.excluded_products || [],
+    expiresAt: r.expires_at || null, maxRedemptions: r.max_redemptions ?? null };
 }
 function couponToDb(c) {
   return { code: (c.code || "").trim().toUpperCase(), type: c.type === "flat" ? "flat" : "percent",
@@ -107,7 +108,15 @@ function couponToDb(c) {
     category: (c.category || "").trim(), active: c.active !== false,
     single_use: !!c.singleUse, guaranteed: !!c.guaranteed,
     excluded_categories: c.excludedCategories || [],
-    excluded_products: c.excludedProducts || [] };
+    excluded_products: c.excludedProducts || [],
+    // Optional auto-expiry (a plain yyyy-mm-dd from the form → end of that day)
+    // and an optional global redemption cap. Null = no limit.
+    expires_at: c.expiresAt
+      ? (String(c.expiresAt).length === 10
+          ? new Date(c.expiresAt + "T23:59:59").toISOString()
+          : new Date(c.expiresAt).toISOString())
+      : null,
+    max_redemptions: c.maxRedemptions ? Math.max(1, Math.floor(Number(c.maxRedemptions))) : null };
 }
 function mapSettings(r) {
   if (!r) return null;

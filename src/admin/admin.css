@@ -2009,6 +2009,8 @@ body {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px;
 }
 .coupon-form .full { grid-column: 1 / -1; }
+.coupon-field { display: flex; flex-direction: column; gap: 4px; }
+.coupon-field > span { font-size: 12px; font-weight: 700; color: var(--muted); }
 .coupon-form input, .coupon-form select, .coupon-form .adm-dd {
   width: 100%; border: 1px solid var(--line); border-radius: 10px;
   padding: 10px 12px; font-size: 14px; font-family: inherit; background: #fff;

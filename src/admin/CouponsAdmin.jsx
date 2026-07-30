@@ -410,6 +410,8 @@ function CouponManager({ coupons, categories }) {
     category: "",
     singleUse: false,
     guaranteed: false,
+    expiresAt: "",
+    maxRedemptions: "",
     excludedCategories: [],
     excludedProducts: [],
   };
@@ -514,6 +516,18 @@ function CouponManager({ coupons, categories }) {
           value={form.minOrder}
           onChange={(e) => set("minOrder", e.target.value)}
           placeholder="Min order ₹ (optional)"
+        />
+        <label className="coupon-field full">
+          <span>Expires on (optional) — the code stops working after this day</span>
+          <input type="date" value={form.expiresAt}
+            onChange={(e) => set("expiresAt", e.target.value)} />
+        </label>
+        <input
+          type="number"
+          min="1"
+          value={form.maxRedemptions}
+          onChange={(e) => set("maxRedemptions", e.target.value)}
+          placeholder="Total uses limit (optional) — e.g. 100 across all customers"
         />
         <Dropdown
           title="Applies to"
