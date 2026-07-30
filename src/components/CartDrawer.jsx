@@ -134,10 +134,10 @@ function upiAppHref(upiIntent, app) {
 
 // Tap-to-add delivery instructions shown on the checkout page.
 const DELIVERY_NOTES = [
-  { icon: "🔕", label: "Don't ring the bell" },
-  { icon: "🚪", label: "Leave at the door" },
-  { icon: "📵", label: "Avoid calling" },
-  { icon: "🤝", label: "Hand it to me" },
+  { d: "M8.7 3A6 6 0 0 1 18 8c0 2.6.4 4.5 1 5.9M4.8 4.8C4.3 5.7 4 6.8 4 8c0 7-3 9-3 9h15.5M10.3 21a2 2 0 0 0 3.4 0M2 2l20 20", label: "Don't ring the bell" },
+  { d: "M4 21h16M7 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17M13.5 12h.5", label: "Leave at the door" },
+  { d: "M9.9 4.9A2 2 0 0 0 8 3.5H5.5A2 2 0 0 0 3.5 6 16 16 0 0 0 9.4 17.3M13 19.3a16 16 0 0 0 5 1.2 2 2 0 0 0 2-2V16a2 2 0 0 0-1.5-1.9l-3-.8M2 2l20 20", label: "Avoid calling" },
+  { d: "M18 11V6.5a1.8 1.8 0 0 0-3.6 0M14.4 10V4.5a1.8 1.8 0 0 0-3.6 0v5.5M10.8 10.5V7.5a1.8 1.8 0 0 0-3.6 0v9a5 5 0 0 0 5 5h1.6a5.4 5.4 0 0 0 5.4-5.4v-4.1a1.8 1.8 0 0 0-3.6 0", label: "Hand it to me" },
 ];
 function loadDraft() {
   try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); }
@@ -187,6 +187,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const [address, setAddress] = useState(() => loadDraft().address || "");
   const [phone, setPhone] = useState(() => loadDraft().phone || "");
   const [location, setLocation] = useState(() => loadDraft().location || null);
+  // Label of the saved address we prefilled ("Home"/"Work"). Cleared the moment
+  // the customer edits or re-captures, so we never mislabel a changed address.
+  const [addrLabel, setAddrLabel] = useState("");
+  // Keep checkout compact when there are many items — collapse to a few.
+  const [showAllItems, setShowAllItems] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
   // Optional delivery instructions the customer taps — passed to the rider on
@@ -505,7 +510,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
         const def = addrs.find((a) => a.isDefault) || addrs[0];
         if (!alive || !def) return;
         if (def.location && def.location.lat != null) setLocation(def.location);
-        if (def.address && !address) setAddress(def.address);
+        if (def.address && !address) { setAddress(def.address); setAddrLabel(def.label || ""); }
       } catch { /* fall back to typed address */ }
     })();
     return () => { alive = false; };
@@ -557,6 +562,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // As the customer types their address, look up matching places (debounced).
   function onAddressChange(value) {
     setAddress(value);
+    setAddrLabel(""); // a hand-edited address is no longer the saved "Home"
     clearTimeout(searchTimer.current);
     if (value.trim().length < 3) { setSuggestions([]); return; }
     searchTimer.current = setTimeout(async () => {
@@ -573,6 +579,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // Customer picks a place → fill the address and capture its coordinates.
   function pickSuggestion(s) {
     setAddress(s.label);
+    setAddrLabel("");
     setLocation({ lat: s.lat, lng: s.lng, accuracy: null });
     setSuggestions([]);
     setLocError("");
@@ -587,7 +594,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
       // Auto-fill the address box with the customer's current street address.
       try {
         const addr = await reverseGeocode(loc.lat, loc.lng);
-        if (addr) setAddress(addr);
+        if (addr) { setAddress(addr); setAddrLabel(""); }
       } catch { /* keep the captured coords even if the lookup fails */ }
     } catch (err) {
       setLocError(err.message);
@@ -1093,15 +1100,33 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               <span className="co-eta-ic">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
               </span>
-              <div className="co-eta-txt">
-                <strong>Delivery in ~12 minutes</strong>
-                <small>{lines.reduce((a, l) => a + l.qty, 0)} item{lines.reduce((a, l) => a + l.qty, 0) === 1 ? "" : "s"} in your order</small>
-              </div>
+              {(() => {
+                const count = lines.reduce((a, l) => a + l.qty, 0);
+                const items = `${count} item${count === 1 ? "" : "s"}`;
+                let title, sub;
+                if (isScheduled) {
+                  title = `${tr("Arriving")} ${selectedSlot.label}`;
+                  sub = `${selectedSlot.sub} · ${items}`;
+                } else {
+                  const fmt = (d) => d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+                  const now = Date.now();
+                  const start = fmt(new Date(now + 10 * 60000));
+                  const end = fmt(new Date(now + 16 * 60000));
+                  title = `${tr("Arriving")} ${start}–${end}`;
+                  sub = `${tr("Express")} · ~12 ${tr("min")} · ${items}`;
+                }
+                return (
+                  <div className="co-eta-txt">
+                    <strong>{title}</strong>
+                    <small>{sub}</small>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="checkout-section co-items-sec">
               <h4>{tr("Your order")}</h4>
-              {lines.map(({ product, qty, unit }) => (
+              {(showAllItems || lines.length <= 3 ? lines : lines.slice(0, 2)).map(({ product, qty, unit }) => (
                 <div className="co-item" key={product.id}>
                   <ProductThumb image={product.image} name={product.name} category={product.category} size={42} radius={9} />
                   <div className="co-item-main">
@@ -1110,12 +1135,18 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   </div>
                   <div className="co-item-qty">
                     <button type="button" onClick={() => remove(product.id)} aria-label="Remove one">−</button>
-                    <span>{qty}</span>
+                    <span key={qty} className="qty-num-bump">{qty}</span>
                     <button type="button" onClick={() => add(product.id, product.stock)} aria-label="Add one">+</button>
                   </div>
                   <span className="co-item-price">₹{money(unit * qty)}</span>
                 </div>
               ))}
+              {lines.length > 3 && (
+                <button type="button" className="co-viewall" onClick={() => setShowAllItems((v) => !v)}>
+                  {showAllItems ? tr("Show less") : `${tr("View all")} ${lines.length} ${tr("items")}`}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAllItems ? "rotate(180deg)" : "none" }}><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+              )}
             </div>
 
             {/* Subscribe: prominent, right under the order — not buried at the end */}
@@ -1141,12 +1172,20 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             )}
 
             <div className="checkout-section">
-              <h4>{tr("Delivery address")}</h4>
+              <h4>
+                {tr("Delivery address")}
+                {addrLabel && (
+                  <span className="addr-label-chip">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10" /></svg>
+                    {addrLabel}
+                  </span>
+                )}
+              </h4>
 
               {/* Hero action: one tap captures the customer's exact GPS spot —
                   the fastest and most accurate way for a home delivery. */}
               <button className="gps-hero" onClick={useMyLocation} disabled={locating}>
-                <span className="gps-hero-ic">
+                <span className={`gps-hero-ic ${locating ? "locating" : ""}`}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>
                 </span>
                 <span className="gps-hero-txt">
@@ -1287,6 +1326,23 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 </label>
               )}
 
+              <div className="pay-trust">
+                <span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+                  {tr("100% secure")}
+                </span>
+                <span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5" /></svg>
+                  {tr("Instant refunds to Wallet")}
+                </span>
+                {RAZORPAY_ENABLED && (
+                  <span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    {tr("Powered by Razorpay")}
+                  </span>
+                )}
+              </div>
+
               {walletBal > 0 && (
                 <>
                   <div className="pay-group-label">{tr("Wallet")}</div>
@@ -1341,25 +1397,63 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
             <div className="checkout-section">
               <h4>{tr("Delivery instructions")} <span className="co-optional">optional</span></h4>
               <div className="co-notes">
-                {DELIVERY_NOTES.map((n) => (
-                  <button
-                    type="button"
-                    key={n.label}
-                    className={`co-note ${deliveryNotes.includes(n.label) ? "on" : ""}`}
-                    onClick={() => toggleNote(n.label)}
-                  >
-                    <span className="co-note-ic" aria-hidden="true">{n.icon}</span>
-                    {n.label}
-                  </button>
-                ))}
+                {DELIVERY_NOTES.map((n) => {
+                  const on = deliveryNotes.includes(n.label);
+                  return (
+                    <button
+                      type="button"
+                      key={n.label}
+                      className={`co-note ${on ? "on" : ""}`}
+                      onClick={() => toggleNote(n.label)}
+                      aria-pressed={on}
+                    >
+                      <span className="co-note-ic" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={n.d} /></svg>
+                      </span>
+                      <span className="co-note-lbl">{n.label}</span>
+                      {on && (
+                        <span className="co-note-check" aria-hidden="true">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Fees (delivery / handling / surge) were already itemised on the
-                cart's Bill details — don't repeat them here. Only show the
-                adjustments the customer makes on this screen (points, coupon,
-                Prime, wallet) and the final amount to pay. */}
-            <div className="bill compact">
+            {/* Full bill summary — the customer can see exactly how the total
+                is built, right here at the point of payment. */}
+            <div className="bill compact co-bill">
+              <div className="co-bill-head">{tr("Bill summary")}</div>
+              <div className="bill-row">
+                <span>{tr("Item total")}</span>
+                <span>₹{money(itemTotal)}</span>
+              </div>
+              <div className="bill-row">
+                <span>{tr("Delivery fee")}</span>
+                {deliveryFee > 0
+                  ? <span>₹{money(deliveryFee)}</span>
+                  : <span className="free">{tr("FREE")}</span>}
+              </div>
+              {handling > 0 && (
+                <div className="bill-row">
+                  <span>{tr("Handling charge")}</span>
+                  <span>₹{money(handling)}</span>
+                </div>
+              )}
+              {surgeFee > 0 && (
+                <div className="bill-row">
+                  <span>{tr("Surge charge")}</span>
+                  <span>₹{money(surgeFee)}</span>
+                </div>
+              )}
+              {smallCartFee > 0 && (
+                <div className="bill-row">
+                  <span>{tr("Small-cart fee")}</span>
+                  <span>₹{money(smallCartFee)}</span>
+                </div>
+              )}
               {discount > 0 && (
                 <div className="bill-row">
                   <span>{tr("Points discount")}</span>
@@ -1400,13 +1494,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
             {placeError && <div className="auth-error">{placeError}</div>}
             <button
-              className="checkout-btn place"
+              className={`checkout-btn place ${placing ? "loading" : ""}`}
               onClick={proceedFromCheckout}
               disabled={outOfArea || placing}
             >
-              {placing
-                ? "Placing…"
-                : outOfArea
+              {placing ? (
+                <span className="btn-loading"><span className="btn-spinner" aria-hidden="true" />{tr("Processing…")}</span>
+              ) : outOfArea
                 ? "Outside delivery area"
                 : payable === 0
                 ? "Place order • ₹0 (Wallet)"

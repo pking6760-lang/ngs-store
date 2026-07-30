@@ -700,7 +700,7 @@ button {
 .loc-or::before, .loc-or::after {
   content: ""; flex: 1; height: 1px; background: var(--line);
 }
-.location-btn.wide { width: 100%; justify-content: center; margin-top: 10px; }
+.location-btn.wide { width: 100%; justify-content: center; margin-top: 10px; padding: 14px; font-size: 14px; font-weight: 700; }
 .pd-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; }
 .pd-hero-img {
   position: relative; width: 96px; height: 96px; flex: 0 0 auto;
@@ -5139,7 +5139,7 @@ body {
 .checkout-step { display: flex; flex-direction: column; gap: 12px; }
 .co-eta {
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(135deg, var(--green-tint), #fff);
+  background: linear-gradient(135deg, var(--green-tint), color-mix(in srgb, var(--green-tint) 40%, var(--surface)));
   border: 1px solid var(--line); border-radius: 16px; padding: 13px 15px;
 }
 .co-eta-ic {
@@ -5167,10 +5167,16 @@ body {
 .co-optional { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase;
   letter-spacing: 0.04em; margin-left: auto; }
 .co-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.co-note { display: flex; align-items: center; gap: 7px; padding: 10px 11px; cursor: pointer;
-  border: 1px solid var(--line); border-radius: 11px; background: var(--surface); font-size: 12.5px; font-weight: 700; color: var(--ink); text-align: left; }
-.co-note-ic { font-size: 15px; line-height: 1; }
-.co-note.on { border-color: var(--green); background: var(--green-tint); color: var(--green-dark); }
+.co-note { position: relative; display: flex; align-items: center; gap: 8px; padding: 11px 12px; cursor: pointer;
+  border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 12.5px; font-weight: 700; color: var(--ink); text-align: left;
+  transition: border-color .15s ease, background .15s ease; }
+.co-note-ic { flex: none; display: flex; color: var(--muted); }
+.co-note-lbl { flex: 1; min-width: 0; }
+.co-note.on { border-color: var(--green); background: var(--green-tint); color: var(--green-dark); box-shadow: 0 2px 10px -4px rgba(11,138,76,0.35); }
+.co-note.on .co-note-ic { color: var(--green-dark); }
+.co-note-check { position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(11,138,76,0.4); }
 
 .co-policy { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
 .co-policy strong { display: block; font-size: 13px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
@@ -5189,7 +5195,8 @@ body {
   background: var(--surface); transition: border-color .15s ease, background .15s ease;
 }
 .pay-row input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
-.pay-row.sel { border-color: var(--green); background: var(--green-tint); }
+.pay-row { border-width: 1.5px; }
+.pay-row.sel { border-color: var(--green); background: var(--green-tint); box-shadow: 0 3px 14px -5px rgba(11,138,76,0.4); }
 .pay-row.disabled { opacity: 0.5; cursor: not-allowed; }
 .pay-row-ic {
   width: 40px; height: 40px; flex: none; border-radius: 11px;
@@ -5208,10 +5215,12 @@ body {
 }
 .pay-row.sel .pay-chips span { border-color: color-mix(in srgb, var(--green) 30%, var(--line)); }
 /* Custom selection indicators */
-.pay-radio { width: 20px; height: 20px; flex: none; border-radius: 50%; border: 2px solid var(--line); position: relative; }
-.pay-row.sel .pay-radio { border-color: var(--green); }
+.pay-radio { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--line); position: relative; transition: background .15s, border-color .15s; }
+.pay-row.sel .pay-radio { border-color: var(--green); background: var(--green); }
+/* Selected = a white checkmark badge, not just a dot */
 .pay-row.sel .pay-radio::after {
-  content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--green);
+  content: ""; position: absolute; left: 7px; top: 3.5px; width: 5px; height: 10px;
+  border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
 }
 .pay-check { width: 20px; height: 20px; flex: none; border-radius: 6px; border: 2px solid var(--line); position: relative; }
 .pay-row.sel .pay-check { border-color: var(--green); background: var(--green); }
@@ -5219,6 +5228,39 @@ body {
   content: ""; position: absolute; left: 5px; top: 1.5px; width: 5px; height: 10px;
   border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
 }
+
+/* Trust badges under the online-payment option */
+.pay-trust { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 2px 2px; }
+.pay-trust span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--muted); }
+.pay-trust svg { color: var(--green); flex: none; }
+
+/* Bill summary header at checkout */
+.co-bill { display: flex; flex-direction: column; gap: 9px; }
+.co-bill-head { font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em;
+  padding-bottom: 8px; margin-bottom: 1px; border-bottom: 1px dashed var(--line); }
+
+/* Address label chip (Home / Work) */
+.addr-label-chip { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; vertical-align: middle;
+  font-size: 11px; font-weight: 800; color: var(--green-dark); background: var(--green-tint);
+  border-radius: 999px; padding: 3px 9px 3px 7px; }
+.addr-label-chip svg { color: var(--green-dark); }
+
+/* View all items toggle */
+.co-viewall { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;
+  background: none; border: none; cursor: pointer; font-size: 12.5px; font-weight: 800; color: var(--green-dark); padding: 4px 0; }
+.co-viewall svg { transition: transform .2s; }
+
+/* GPS icon animation while capturing location */
+.gps-hero-ic.locating svg { animation: gpsPulse 1s ease-in-out infinite; }
+@keyframes gpsPulse { 0%,100% { transform: scale(0.85); opacity: 0.6; } 50% { transform: scale(1.12); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .gps-hero-ic.locating svg { animation: none; } }
+
+/* Pay button loading spinner */
+.btn-loading { display: inline-flex; align-items: center; gap: 9px; }
+.btn-spinner { width: 17px; height: 17px; flex: none; border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.4); border-top-color: #fff; animation: btnSpin 0.7s linear infinite; }
+@keyframes btnSpin { to { transform: rotate(360deg); } }
+.checkout-btn.place.loading { opacity: 0.92; }
 
 /* ── Premium UPI payment screen (reference-style confirmation) ── */
 .pay-pro { align-items: center; text-align: center; gap: 0; }
