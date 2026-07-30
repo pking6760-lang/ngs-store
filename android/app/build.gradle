@@ -15,8 +15,8 @@ android {
         applicationId "com.ngsstore.admin"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 36
-        versionName "4.5"
+        versionCode 37
+        versionName "4.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Ship only the processor types real phones use. The default build also
         // packs x86 and x86_64 builds of every native library — those exist for

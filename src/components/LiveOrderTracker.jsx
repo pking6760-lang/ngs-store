@@ -408,23 +408,6 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           )}
         </div>
 
-        {/* Labeled step tracker — Placed → Packed → Out for delivery → Delivered */}
-        <div className="lt-steps">
-          {ORDER_STATUSES.map((s, i) => {
-            const done = i < currentStep || (delivered && i <= currentStep);
-            const current = !delivered && i === currentStep;
-            return (
-              <div key={s} className={`lt-step ${done ? "done" : ""} ${current ? "current" : ""}`}>
-                {i > 0 && <span className={`lt-step-bar ${i <= currentStep ? "on" : ""}`} />}
-                <span className="lt-step-dot">
-                  {done ? <Svg d={Icon.check} size={12} sw={2.8} /> : <span className="lt-step-inner" />}
-                </span>
-                <span className="lt-step-lbl">{t(s)}</span>
-              </div>
-            );
-          })}
-        </div>
-
         {/* One-line reassurance while in flight */}
         {!delivered && !order.deliverySlot && (
           <div className="lt-reassure">

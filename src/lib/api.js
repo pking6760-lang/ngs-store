@@ -127,6 +127,10 @@ function mapSettings(r) {
     automation: r.automation || null,
     // Store contact number the customer can call about an order (live tracker).
     supportPhone: (r.support_phone || "").replace(/\D/g, ""),
+    // Name shown to customers as the delivery partner when the store delivers
+    // an order itself (owner/staff, no assigned partner). Keeps self-deliveries
+    // looking like any normal driver.
+    deliveryDisplayName: r.delivery_display_name || "",
     cancelFee: r.cancel_fee != null ? num(r.cancel_fee) : 20,
     subDeliveryFee: r.sub_delivery_fee != null ? num(r.sub_delivery_fee) : 10,
     // Real UPI Autopay (bank e-mandate) — off until the charge engine is live.
@@ -138,7 +142,8 @@ function settingsToDb(p) {
     freeDeliveryAbove: "free_delivery_above", handlingFee: "handling_fee",
     surgeFee: "surge_fee", maxDistanceKm: "max_distance_km",
     shopLocations: "shop_locations", lowStockThreshold: "low_stock_threshold",
-    automation: "automation", supportPhone: "support_phone", cancelFee: "cancel_fee" };
+    automation: "automation", supportPhone: "support_phone", cancelFee: "cancel_fee",
+    deliveryDisplayName: "delivery_display_name" };
   const out = {};
   for (const k in p) if (map[k]) out[map[k]] = p[k];
   return out;

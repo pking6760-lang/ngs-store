@@ -24,6 +24,7 @@ export default function DeliveryAdmin() {
     minOrderValue: settings.rewards?.minOrderValue ?? 0,
     walletMinOrder: settings.rewards?.walletMinOrder ?? 199,
     supportPhone: settings.supportPhone ?? "",
+    deliveryDisplayName: settings.deliveryDisplayName ?? "",
     cancelFee: settings.cancelFee ?? 20,
   });
   const [saved, setSaved] = useState(false);
@@ -57,6 +58,7 @@ export default function DeliveryAdmin() {
         maxDistanceKm: Math.max(0, Number(form.maxDistanceKm) || 0),
         cancelFee: Math.max(0, Number(form.cancelFee) || 0),
         supportPhone: (form.supportPhone || "").replace(/\D/g, "").slice(0, 10) || null,
+        deliveryDisplayName: (form.deliveryDisplayName || "").trim().slice(0, 40) || null,
         rewards: {
           ...(settings.rewards || {}),
           minOrderValue: Math.max(0, Number(form.minOrderValue) || 0),
@@ -156,10 +158,21 @@ export default function DeliveryAdmin() {
               value={form.supportPhone}
               onChange={(e) => set("supportPhone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
           </label>
+          <label className="dfield">
+            <span>Delivery name shown to customers</span>
+            <input type="text" maxLength={40} placeholder="e.g. Nitesh"
+              value={form.deliveryDisplayName}
+              onChange={(e) => set("deliveryDisplayName", e.target.value)} />
+          </label>
         </div>
         <p className="delivery-hint">
           The <strong>store contact number</strong> shows as a "Call store" button
           on the customer's live order screen, so they can reach you about an order.
+        </p>
+        <p className="delivery-hint">
+          The <strong>delivery name</strong> is shown as the delivery partner when
+          you (or staff) deliver an order yourself — so the customer just sees a
+          normal driver name, not "owner" or "admin". Leave blank to show "NGS Delivery".
         </p>
         <p className="delivery-hint">
           The <strong>small cart charge</strong> applies below the amount beside
