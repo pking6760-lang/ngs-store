@@ -168,27 +168,15 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
       const o = await createSubscriptionOrder({ items, days, hour, address, location, pay: "upi_autopay" });
       const m = await createUpiMandate(o.dbId);
       setOrder(o);
-      const Razorpay = await loadRazorpay();
-      const rzp = new Razorpay({
-        key: m.keyId,
-        order_id: m.orderId,
-        customer_id: m.customerId,
-        // Razorpay's documented recurring checkout: order_id + customer_id +
-        // recurring "1". The mandate order already fixes method=upi, so DON'T also
-        // force prefill.method — forcing it makes checkout try a direct-UPI render
-        // that can't assemble a method for a recurring order ("No appropriate
-        // payment method found"). Just prefill the identity fields.
-        recurring: "1",
-        name: "NGS Nisha General Store",
-        description: `Daily milk · UPI Autopay`,
-        prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "" },
-        theme: { color: "#0a9155" },
-        modal: { ondismiss: () => { setBusy(false); setWaitMandate(false); } },
-        handler: () => { /* approved — the webhook confirms; the poll closes the sheet */ },
-      });
-      rzp.on("payment.failed", (r) => { setBusy(false); setWaitMandate(false); toast(r?.error?.description || "Autopay not approved."); });
+      // Razorpay's web Checkout can't complete UPI inside an Android WebView (it
+      // can't launch the UPI app → "No appropriate payment method found"), so we
+      // open the mandate approval in the SYSTEM browser, which can. The webhook
+      // confirms the mandate server-side; the poll effect below flips the sheet to
+      // success once the order turns paid. Same pattern the app uses for APKs.
       setWaitMandate(true);
-      rzp.open();
+      setBusy(false);
+      if (m?.mandateUrl) window.open(m.mandateUrl, "_system");
+      else toast("Couldn't open the autopay screen. Please try again.");
     } catch (e) {
       setBusy(false); setWaitMandate(false);
       toast(e.message || "Couldn't start UPI Autopay.");
@@ -248,7 +236,24 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
           <button className="drawer-close" onClick={handleClose} aria-label="Close">✕</button>
         </div>
 
-        {mode === "pay" ? (
+        {waitMandate ? (
+          <div className="sub-body sub-mandate-wait">
+            <div className="mandate-spin" aria-hidden="true" />
+            <h4>Approve UPI Autopay in your UPI app</h4>
+            <p>
+              We opened the secure approval page in your browser. Approve the
+              autopay there, then come back here — this will confirm automatically.
+            </p>
+            <div className="mandate-steps">
+              <span>1. Approve the mandate (₹{perDay}/day cap) in your UPI app</span>
+              <span>2. Return to NGS — no need to do anything else</span>
+            </div>
+            <button className="ghost-btn full" onClick={() => { setWaitMandate(false); }} style={{ marginTop: 14 }}>
+              {tr("Cancel")}
+            </button>
+            <p className="mandate-note">Nothing is charged now. Your bank debits one day's amount the evening before each delivery.</p>
+          </div>
+        ) : mode === "pay" ? (
           <div className="sub-body">
             <UpiPayScreen
               amount={total}

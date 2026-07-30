@@ -113,6 +113,14 @@ Deno.serve(async (req) => {
 
     await sbPatch(`orders?id=eq.${order.id}`, { razorpay_order_id: rzp.id });
 
+    // The approval must run in the SYSTEM browser (Razorpay web Checkout can't do
+    // UPI inside an Android WebView), so hand back a ready-to-open page URL. All
+    // params are non-secret Razorpay ids / the public key.
+    const mandateUrl = `${SUPABASE_URL}/functions/v1/rzp-mandate-page` +
+      `?key=${encodeURIComponent(KEY_ID)}` +
+      `&order_id=${encodeURIComponent(rzp.id)}` +
+      `&customer_id=${encodeURIComponent(customerId)}`;
+
     return json({
       keyId: KEY_ID,
       orderId: rzp.id,
@@ -121,6 +129,7 @@ Deno.serve(async (req) => {
       currency: rzp.currency,
       recurring: 1,
       humanCode: order.human_code,
+      mandateUrl,
     });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
