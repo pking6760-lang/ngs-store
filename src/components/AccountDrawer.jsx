@@ -730,7 +730,13 @@ function OrderDetail({ order, onClose, onReorder, prodMap }) {
         <div className="order-detail-body">
           <div className="order-detail-time">{formatTime(order.createdAt)}</div>
           {order.deliverySlot && !cancelled && (
-            <div className="order-detail-slot">🕑 Delivery: {order.deliverySlot}</div>
+            <div className="order-detail-slot">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-2px", marginRight: 5 }}>
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              Delivery: {order.deliverySlot}
+            </div>
           )}
 
           {cancelled ? (
@@ -1338,7 +1344,12 @@ function NotifRow({ n, onOpenOrder, onRead, onDelete }) {
     <div className="inbox-row">
       <div className="inbox-row-bg">
         <span className="inbox-bg-read">✓ {tr("Read")}</span>
-        <span className="inbox-bg-del">{tr("Delete")} 🗑</span>
+        <span className="inbox-bg-del">
+          {tr("Delete")}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: "-2px", marginLeft: 5 }}>
+            <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />
+          </svg>
+        </span>
       </div>
       <div
         className={`inbox-item ${n.read ? "" : "unread"} ${tappable ? "tappable" : ""}`}

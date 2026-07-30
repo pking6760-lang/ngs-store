@@ -103,7 +103,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
         const st = await fetchOrderState(order.dbId);
         if (alive && st?.payment_status === "paid") {
           clearInterval(iv);
-          toast("Plan started 🥛 First delivery tomorrow!");
+          toast("Plan started. First delivery tomorrow!");
           onCreated && onCreated();
           onClose();
         }
@@ -123,7 +123,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
         if (alive && st?.payment_status === "paid") {
           clearInterval(iv);
           setWaitMandate(false);
-          toast("UPI Autopay set up 🥛 First delivery tomorrow!");
+          toast("UPI Autopay set up. First delivery tomorrow!");
           onCreated && onCreated();
           onClose();
         }
@@ -144,8 +144,8 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
       const o = await createSubscriptionOrder({ items, days, hour, address, location, pay });
       if (pay === "wallet" || pay === "wallet_daily") {
         toast(pay === "wallet_daily"
-          ? "Auto-pay started 🥛 We'll draw ₹" + perDay + "/day from your wallet."
-          : "Plan started 🥛 First delivery tomorrow!");
+          ? "Auto-pay started. We'll draw ₹" + perDay + "/day from your wallet."
+          : "Plan started. First delivery tomorrow!");
         onCreated && onCreated();
         onClose();
       } else {

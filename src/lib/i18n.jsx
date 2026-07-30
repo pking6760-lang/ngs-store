@@ -368,7 +368,7 @@ const HI = {
   "Couldn't skip those days.": "वे दिन नहीं छोड़े जा सके।",
   "Couldn't start the plan.": "प्लान शुरू नहीं हो सका।",
   "Plan cancelled — refund added to your wallet.": "प्लान रद्द — रिफंड आपके वॉलेट में जोड़ दिया गया।",
-  "Plan started 🥛 First delivery tomorrow!": "प्लान शुरू 🥛 पहली डिलीवरी कल!",
+  "Plan started. First delivery tomorrow!": "प्लान शुरू। पहली डिलीवरी कल!",
   "Skipped — your milk resumes the next day.": "छोड़ा गया — आपका दूध अगले दिन फिर शुरू होगा।",
   "Press back again to exit": "बाहर निकलने के लिए फिर से बैक दबाएं",
   "Message added.": "संदेश जोड़ा गया।",

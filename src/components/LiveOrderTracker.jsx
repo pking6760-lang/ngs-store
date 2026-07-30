@@ -429,7 +429,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
             <Svg d={Icon.home} size={26} />
             <p>Share your location so the rider reaches you and the live map turns on.</p>
             <button className="lt-nomap-share" onClick={shareLocation} disabled={sharing}>
-              {sharing ? "Getting your location…" : "📍 Share my location"}
+              {sharing ? "Getting your location…" : "Share my location"}
             </button>
             {shareErr && <span className="lt-nomap-err">{shareErr}</span>}
           </div>

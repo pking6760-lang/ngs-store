@@ -13,6 +13,7 @@ import { useCart } from "./context/CartContext.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useProducts, useSettings, useCategories, useMyOrders, useActiveTheme } from "./lib/hooks.js";
 import { tierUnitPrice } from "./lib/bulk.js";
+import { money } from "./lib/money.js";
 import { getShopLocations } from "./lib/store.js";
 import { LiveOrderPill, LiveTrackingSheet, isLiveOrder } from "./components/LiveOrderTracker.jsx";
 import CategoryIcon from "./components/CategoryIcon.jsx";
@@ -162,7 +163,9 @@ export default function App() {
     try { ref = localStorage.getItem("ngs_ref"); } catch { /* ignore */ }
     if (!ref) return;
     applyReferral(ref)
-      .then((r) => toast(`🎉 ₹${r?.reward || 30} added to your wallet! Use it on your first order.`))
+      .then((r) => toast(r?.reward
+        ? `₹${r.reward} added to your wallet! Use it on your first order.`
+        : "Referral reward added to your wallet! Use it on your first order."))
       .catch(() => { /* already ordered / already referred — ignore */ })
       .finally(() => { try { localStorage.removeItem("ngs_ref"); } catch { /* ignore */ } });
   }, [isLoggedIn, user?.id]);
@@ -491,7 +494,7 @@ export default function App() {
             {totalCount} item{totalCount > 1 ? "s" : ""}
           </span>
           <span className="cart-bar-right">
-            ₹{cartValue} <span className="cart-bar-arrow">View cart →</span>
+            ₹{money(cartValue)} <span className="cart-bar-arrow">View cart →</span>
           </span>
         </button>
       )}

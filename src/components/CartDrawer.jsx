@@ -723,7 +723,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
     // Scheduled orders are Pay-on-Delivery — above the COD cap they can't be
     // placed as scheduled, so point the customer to express (online) instead.
     if (isScheduled && payable > 0 && codBlocked) {
-      setLocError(`Scheduled orders are pay-on-delivery. For an order over ₹${COD_LIMIT}, choose "⚡ Now" to pay online.`);
+      setLocError(`Scheduled orders are pay-on-delivery. For an order over ₹${COD_LIMIT}, choose "Now" to pay online.`);
       return;
     }
     setLocError("");
@@ -1210,7 +1210,16 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <path d="M7 12.3l3.2 3.2L17 8.7" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
-              <span className="pay-merchant-vpa">🇮🇳 {SHOP_UPI_ID}</span>
+              <span className="pay-merchant-vpa">
+                <svg className="cc-flag" width="18" height="13" viewBox="0 0 20 14" aria-hidden="true">
+                  <rect width="20" height="14" rx="2" fill="#fff" />
+                  <path d="M0 2a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2.67H0z" fill="#FF9933" />
+                  <rect y="9.33" width="20" height="2.67" fill="#138808" />
+                  <path d="M18 12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2h16z" fill="#138808" />
+                  <circle cx="10" cy="7" r="1.7" fill="none" stroke="#0a3d91" strokeWidth="0.5" />
+                </svg>
+                {SHOP_UPI_ID}
+              </span>
             </div>
 
             <div className="pay-big">₹{payable.toFixed(2)}</div>
@@ -1407,7 +1416,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               )}
               {outOfArea && (
                 <div className="area-blocked">
-                  <strong>We're coming to your area soon 💚</strong>
+                  <strong>We're coming to your area soon</strong>
                   <br />
                   We don't deliver to this location just yet.
                 </div>
@@ -1429,7 +1438,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     onClick={() => setSlotKey(s.key)}
                     aria-pressed={slotKey === s.key}
                   >
-                    <b>{s.key === "now" ? "⚡ Now" : s.label}</b>
+                    <b>{s.key === "now" ? "Now" : s.label}</b>
                     <small>{s.sub}</small>
                   </button>
                 ))}
@@ -1691,7 +1700,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
             {upcoming && (
               <button className="next-delivery-card" type="button" onClick={() => setAddOpen(true)}>
-                <span className="ndc-ic">🥛</span>
+                <span className="ndc-ic" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 2h6M10 2v3.5L8 9v11a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V9l-2-3.5V2" />
+                    <path d="M8 12h8" />
+                  </svg>
+                </span>
                 <span className="ndc-text">
                   <strong>Delivery coming {deliveryDayLabel(upcoming.deliverOn)}</strong>
                   <span>Add these items to it — arrives together, no extra trip</span>
@@ -1726,7 +1740,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     <div className="cart-line-name">{product.name}</div>
                     <div className="cart-line-unit">
                       {product.unit}
-                      {onFlash && <span className="cart-line-flash"> · ⚡ flash price</span>}
+                      {onFlash && <span className="cart-line-flash"> · flash price</span>}
                       {bulkOn && <span className="cart-line-bulk"> · ₹{money(unit)}/ea bulk</span>}
                     </div>
                     {nextTier && (
@@ -1908,12 +1922,12 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
 
               <div className="bill-row">
                 <span>{tr("Item total")}</span>
-                <span className="bill-amt">₹{itemTotal}</span>
+                <span className="bill-amt">₹{money(itemTotal)}</span>
               </div>
               {discount > 0 && (
                 <div className="bill-row">
                   <span>{tr("Points discount")}</span>
-                  <span className="bill-amt free">−₹{discount}</span>
+                  <span className="bill-amt free">−₹{money(discount)}</span>
                 </div>
               )}
               {couponDiscount > 0 && (
@@ -1942,7 +1956,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               </div>
               <div className="bill-row">
                 <span>{tr("Handling charge")}</span>
-                <span className="bill-amt">₹{handling}</span>
+                <span className="bill-amt">₹{money(handling)}</span>
               </div>
               {isMember && !freePerk && itemTotal > 0 && (
                 <div className="bill-hint">
@@ -1953,7 +1967,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                 <>
                   <div className="bill-row">
                     <span>{tr("Small cart charge")}</span>
-                    <span className="bill-amt">₹{smallCartFee}</span>
+                    <span className="bill-amt">₹{money(smallCartFee)}</span>
                   </div>
                   {/* Tied to its own row rather than floated as a banner — it is
                       a footnote about that charge, not a second headline. */}
@@ -1965,13 +1979,13 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
               {surgeFee > 0 && (
                 <div className="bill-row">
                   <span>{tr("Surge charge")} <small>(bad weather / peak)</small></span>
-                  <span className="bill-amt">₹{surgeFee}</span>
+                  <span className="bill-amt">₹{money(surgeFee)}</span>
                 </div>
               )}
               {memberFee > 0 && (
                 <div className="bill-row">
                   <span>NGS Prime membership</span>
-                  <span className="bill-amt">₹{memberFee}</span>
+                  <span className="bill-amt">₹{money(memberFee)}</span>
                 </div>
               )}
 
@@ -1985,7 +1999,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                   <b>{tr("To pay")}</b>
                   <small>incl. all charges</small>
                 </span>
-                <span className="bill-pay-amt">₹{grandTotal}</span>
+                <span className="bill-pay-amt">₹{money(grandTotal)}</span>
               </div>
 
               {totalSaved > 0 && (
@@ -1999,7 +2013,7 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
                     </svg>
                   </span>
                   <span className="bill-saved-txt">
-                    <b>{tr("You saved")} ₹{totalSaved} {tr("today")}</b>
+                    <b>{tr("You saved")} ₹{money(totalSaved)} {tr("today")}</b>
                     {savedParts.length > 1 && <small>{savedParts.join("  ·  ")}</small>}
                   </span>
                 </div>
@@ -2180,37 +2194,6 @@ function AttachSuggestion({ lines, distanceKm, onAdd, user, rewardsCfg }) {
             <button className="addon-add" onClick={() => onAdd(p.id)}><span className="addon-plus">+</span> {tr("Add")}</button>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function AddonSuggestions({ lines, onAdd, user, rewardsCfg }) {
-  const [items, setItems] = useState([]);
-  const ids = lines.map((l) => l.product.id).sort().join(",");
-  useEffect(() => {
-    let alive = true;
-    const exclude = ids ? ids.split(",") : [];
-    // Ask for a few extra so we still show ~10 after any client-side gaps.
-    api.fetchAddonSuggestions(exclude, 12).then((s) => { if (alive) setItems(s); }).catch(() => {});
-    return () => { alive = false; };
-  }, [ids]);
-  if (!items.length) return null;
-  return (
-    <div className="addons">
-      <div className="addons-head">{tr("You might also want")}</div>
-      <div className="addons-row">
-        {items.map((p) => {
-          const price = tierUnitPrice(p, 1, user, rewardsCfg); // this shopper's price
-          return (
-            <div className="addon-card" key={p.id}>
-              <ProductThumb image={p.image} name={p.name} category={p.category} size={56} radius={10} />
-              <div className="addon-name">{p.name}</div>
-              <div className="addon-price">₹{price}{p.mrp > price ? <s>₹{p.mrp}</s> : null}</div>
-              <button className="addon-add" onClick={() => onAdd(p.id)}><span className="addon-plus">+</span> {tr("Add")}</button>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

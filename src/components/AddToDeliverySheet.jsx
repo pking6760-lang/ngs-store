@@ -79,7 +79,7 @@ export default function AddToDeliverySheet({
         const st = await fetchOrderState(order.dbId);
         if (alive && st?.payment_status === "paid") {
           clearInterval(iv);
-          toast(`Added to your ${dayLabel} delivery 🛵`);
+          toast(`Added to your ${dayLabel} delivery`);
           onAdded && onAdded();
         }
       } catch { /* keep polling */ }
@@ -96,7 +96,7 @@ export default function AddToDeliverySheet({
     try {
       const o = await addToDelivery(items, pay);
       if (pay === "wallet") {
-        toast(`Added to your ${dayLabel} delivery 🛵`);
+        toast(`Added to your ${dayLabel} delivery`);
         onAdded && onAdded();
       } else {
         setOrder(o);
@@ -143,7 +143,7 @@ export default function AddToDeliverySheet({
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sub-head">
-          <h3>{mode === "pay" ? "Pay for your add-on" : `Add to your ${dayLabel} delivery 🥛`}</h3>
+          <h3>{mode === "pay" ? "Pay for your add-on" : `Add to your ${dayLabel} delivery`}</h3>
           <button className="drawer-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 

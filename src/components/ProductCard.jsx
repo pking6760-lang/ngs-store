@@ -141,7 +141,7 @@ export default function ProductCard({ product, badge }) {
             {product.mrp > price && <span className="pcard-was">₹{product.mrp}</span>}
           </div>
           {savings > 0 && !outOfStock && (
-            <span className="pcard-save">SAVE ₹{savings}</span>
+            <span className="pcard-save">SAVE ₹{money(savings)}</span>
           )}
           {outOfStock && (
             <button

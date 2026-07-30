@@ -328,14 +328,6 @@ export async function deleteAddress(id) {
 
 /* ─── Catalog / settings (public read) ──────────────────────────────────── */
 
-// High-margin "add something extra" suggestions for the cart. Cost/margin is
-// computed server-side; only public product fields come back.
-export async function fetchAddonSuggestions(excludeIds = [], limit = 8) {
-  const { data, error } = await must().rpc("suggest_addons", { p_exclude: excludeIds, p_limit: limit });
-  if (error) return [];
-  return (data || []).map(mapProduct);
-}
-
 // "Frequently bought together" — real basket co-occurrence for the cart's items
 // (products that appeared in the same past orders, ≥2 distinct orders). Returns
 // [] when there's no genuine signal, so the caller hides the row rather than

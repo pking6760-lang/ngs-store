@@ -287,7 +287,13 @@ export function CallProvider({ app, children }) {
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
                   </button>
                 )}
-                <span className="callov-secure">🔒 Private · numbers hidden</span>
+                <span className="callov-secure">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="4" y="10" width="16" height="11" rx="2" />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                  </svg>
+                  Private · numbers hidden
+                </span>
               </div>
 
               <div className="callov-card">
@@ -308,12 +314,30 @@ export function CallProvider({ app, children }) {
                 {phase === "incoming" ? (
                   <div className="callov-actions">
                     <button className="callov-btn decline" onClick={declineIncoming} aria-label="Decline">✕</button>
-                    <button className="callov-btn accept" onClick={acceptIncoming} aria-label="Answer">📞</button>
+                    <button className="callov-btn accept" onClick={acceptIncoming} aria-label="Answer">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" />
+                      </svg>
+                    </button>
                   </div>
                 ) : phase === "connected" ? (
                   <div className="callov-actions">
                     <button className={`callov-btn util ${muted ? "on" : ""}`} onClick={toggleMute} aria-label="Mute">
-                      {muted ? "🔇" : "🎙"}
+                      {muted ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M2 2l20 20" />
+                          <path d="M15 9.3V5a3 3 0 0 0-5.7-1.3" />
+                          <path d="M9 9v3a3 3 0 0 0 4.6 2.5" />
+                          <path d="M5 10a7 7 0 0 0 10.8 5.9M19 10a7 7 0 0 1-.6 2.8" />
+                          <path d="M12 19v3" />
+                        </svg>
+                      ) : (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="9" y="2" width="6" height="12" rx="3" />
+                          <path d="M5 10a7 7 0 0 0 14 0" />
+                          <path d="M12 19v3" />
+                        </svg>
+                      )}
                     </button>
                     <button className="callov-btn end" onClick={endCall} aria-label="End call">✕</button>
                   </div>
