@@ -478,7 +478,11 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   // Wallet money (referral/welcome credit, change, refunds) is only redeemable on
   // a cart of walletMinOrder+ (default ₹199) — mirrors the server gate so the
   // customer sees the rule up front instead of hitting an error at checkout.
-  const walletMinOrder = Number(settings.rewards?.walletMinOrder) || 199;
+  // A configured 0 means "no minimum — usable on any order"; only an UNSET value
+  // falls back to 199 (using `|| 199` here would wrongly turn a real 0 into 199).
+  const walletMinRaw = settings.rewards?.walletMinOrder;
+  const walletMinOrder = walletMinRaw != null && walletMinRaw !== ""
+    ? Math.max(0, Number(walletMinRaw) || 0) : 199;
   const walletEligible = itemTotal >= walletMinOrder;
   const walletShortfall = walletBal > 0 && !walletEligible ? Math.ceil(walletMinOrder - itemTotal) : 0;
   const walletCap = Math.min(walletBal, grandTotal);
