@@ -70,6 +70,37 @@ Deno.serve(async (req) => {
       event?.payload?.payment?.entity?.notes?.order_id ??
       null;
 
+    // UPI Autopay daily debit (Phase 3): these settle against subscription_charges,
+    // NOT the orders table — the delivery order doesn't exist until the debit is
+    // confirmed here. Matched by the recurring order id we stored when charging.
+    // Must run before the orders lookup (payment.failed is otherwise ignored, and
+    // a recurring capture has no matching orders row yet).
+    if ((type === "payment.captured" || type === "payment.failed") && rzpOrderId) {
+      const cRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/subscription_charges?rzp_order_id=eq.${rzpOrderId}&select=id`,
+        { headers: sbHeaders },
+      );
+      const crows = await cRes.json();
+      const charge = Array.isArray(crows) ? crows[0] : null;
+      if (charge) {
+        if (type === "payment.captured") {
+          await fetch(`${SUPABASE_URL}/rest/v1/rpc/sub_upi_settle_success`, {
+            method: "POST",
+            headers: { ...sbHeaders, "Content-Type": "application/json" },
+            body: JSON.stringify({ p_rzp_order: rzpOrderId, p_payment: paymentId }),
+          });
+        } else {
+          const reason = event?.payload?.payment?.entity?.error_description ?? "failed";
+          await fetch(`${SUPABASE_URL}/rest/v1/rpc/sub_upi_settle_fail`, {
+            method: "POST",
+            headers: { ...sbHeaders, "Content-Type": "application/json" },
+            body: JSON.stringify({ p_rzp_order: rzpOrderId, p_reason: reason }),
+          });
+        }
+        return new Response("recurring settled", { status: 200 });
+      }
+    }
+
     let order: Record<string, unknown> | null = null;
     if (type === "qr_code.credited" && qrOrderId) {
       const oRes = await fetch(
