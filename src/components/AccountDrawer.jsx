@@ -354,11 +354,15 @@ function SkipSheet({ sub, onClose, onDone }) {
   );
 }
 
-// Cancel a plan: unused days refunded to wallet. Professional confirm sheet.
+// Cancel a plan. Only PREPAID plans (paid upfront) refund unused days. Pay-per-
+// delivery plans (wallet auto-pay, UPI Autopay) were never prepaid, so there is
+// nothing to refund — showing a refund there would promise money never paid.
 function CancelSheet({ sub, onClose, onDone }) {
   const [busy, setBusy] = useState(false);
+  const prepaid = sub.payMethod === "wallet" || sub.payMethod === "razorpay";
+  const isUpi = sub.payMethod === "upi_autopay";
   const left = Math.max(sub.daysTotal - sub.daysDone, 0);
-  const refund = Math.round(left * sub.dailyTotal);
+  const refund = prepaid ? Math.round(left * sub.dailyTotal) : 0;
 
   async function confirm() {
     setBusy(true);
@@ -375,11 +379,20 @@ function CancelSheet({ sub, onClose, onDone }) {
         </div>
         <div className="sub-body">
           <p className="skip-lead">We'll stop future deliveries right away. Deliveries already made aren't affected.</p>
-          <div className="sub-total">
-            <div className="sub-total-line"><span>{tr("Unused days")}</span><span>{left} day{left === 1 ? "" : "s"}</span></div>
-            <div className="sub-total-row"><span>{tr("Refund to your wallet")}</span><strong>₹{refund}</strong></div>
-            <div className="sub-total-note">Refunded instantly to your NGS Wallet — use it on any order.</div>
-          </div>
+          {prepaid ? (
+            <div className="sub-total">
+              <div className="sub-total-line"><span>{tr("Unused days")}</span><span>{left} day{left === 1 ? "" : "s"}</span></div>
+              <div className="sub-total-row"><span>{tr("Refund to your wallet")}</span><strong>₹{refund}</strong></div>
+              <div className="sub-total-note">Refunded instantly to your NGS Wallet — use it on any order.</div>
+            </div>
+          ) : (
+            <div className="sub-total">
+              <div className="sub-total-note">
+                You only pay for milk that's actually delivered, so there's nothing to refund.
+                {isUpi ? " Your UPI Autopay is stopped — no further amount will be auto-debited." : " No further amount will be charged."}
+              </div>
+            </div>
+          )}
         </div>
         <div className="sub-foot">
           <button className="sub-start danger" disabled={busy} onClick={confirm}>
