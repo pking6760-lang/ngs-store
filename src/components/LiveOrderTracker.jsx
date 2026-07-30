@@ -32,6 +32,7 @@ const Icon = {
   box: <><path d="M21 8 12 3 3 8l9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/></>,
   basket: <><path d="M5 11h14l-1.2 8.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8L5 11zM9.5 11 12 4l2.5 7"/></>,
   gift: <><path d="M20 12v8H4v-8M2 8h20v4H2zM12 8v12M12 8S11 3 8 3a2 2 0 0 0 0 4h4zM12 8s1-5 4-5a2 2 0 0 1 0 4h-4z"/></>,
+  chat: <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-4-1L3 20l1.1-3.3A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" />,
 };
 function Svg({ d, size = 18, sw = 2 }) {
   return (
@@ -42,6 +43,14 @@ function Svg({ d, size = 18, sw = 2 }) {
 
 // Statuses that mean an order is still on its way (worth tracking live).
 const LIVE_STATUSES = ["Placed", "Packed", "Out for delivery"];
+
+// Which order timestamp backs each status step, for the timeline times.
+const STATUS_STAMP = {
+  "Placed": "createdAt",
+  "Packed": "packedAt",
+  "Out for delivery": "pickedAt",
+  "Delivered": "deliveredAt",
+};
 
 // Show the tracker for a live order, and keep it lingering for ~15 minutes
 // after delivery (so the customer can scratch the reward + leave feedback)
@@ -80,6 +89,10 @@ function etaMinutes(order) {
   const placed = new Date(order.createdAt).getTime();
   const mins = Math.round((Date.now() - placed) / 60000);
   return Math.max(1, 12 - mins);
+}
+function fmtClock(d) {
+  try { return d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }); }
+  catch { return ""; }
 }
 
 /* ── Floating pill (sits just above the cart bar on the home page) ─────────── */
@@ -152,6 +165,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
   const mapRef = useRef(null);
   const bikeRef = useRef(null);
   const rafRef = useRef(null);
+  const liveLineRef = useRef(null);
   const [rider, setRider] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -285,7 +299,7 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
     } catch { /* leaflet failed — the sheet still shows everything else */ }
     }).catch(() => { /* leaflet chunk failed to load — sheet still works */ });
 
-    return () => { cancelled = true; cancelAnimationFrame(rafRef.current); try { map && map.remove(); } catch { /* ignore */ } mapRef.current = null; bikeRef.current = null; };
+    return () => { cancelled = true; cancelAnimationFrame(rafRef.current); try { map && map.remove(); } catch { /* ignore */ } mapRef.current = null; bikeRef.current = null; liveLineRef.current = null; };
   }, [open, canMap, hasRoute]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Real GPS wins: if the rider is streaming a fresh position, pin the bike
@@ -302,6 +316,13 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
       bike.setLatLng([rider.lat, rider.lng]);
       const map = mapRef.current;
       if (map && _L && home) {
+        // A live line from the rider to the customer's door (only when there's
+        // no static shop→home route already drawn, to avoid two overlapping lines).
+        if (!hasRoute) {
+          const seg = [[rider.lat, rider.lng], [home.lat, home.lng]];
+          if (liveLineRef.current) liveLineRef.current.setLatLngs(seg);
+          else liveLineRef.current = _L.polyline(seg, { color: "#0AA25F", weight: 4, opacity: 0.75, dashArray: "1 9", lineCap: "round" }).addTo(map);
+        }
         map.fitBounds(_L.latLngBounds([[rider.lat, rider.lng], [home.lat, home.lng]]).pad(0.4), { animate: true, maxZoom: 16 });
       }
       return; // real GPS — no fake animation
@@ -365,17 +386,17 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           <div className="lt-hero-txt">
             <div className="lt-hero-eta">
               {delivered
-                ? "Delivered"
+                ? t("Delivered")
                 : order.deliverySlot
                 ? order.deliverySlot.replace(/^(Today|Tomorrow)\s+/, "")
-                : `${eta} min`}
+                : `${t("Arriving in")} ${eta}–${eta + 2} ${t("min")}`}
             </div>
             <div className="lt-hero-sub">
               {delivered
-                ? "Order delivered — enjoy!"
+                ? t("Order delivered — enjoy!")
                 : order.deliverySlot
-                ? `Scheduled · arriving ${order.deliverySlot}`
-                : text}
+                ? `${t("Scheduled")} · ${order.deliverySlot}`
+                : `${t("Expected by")} ${fmtClock(new Date(Date.now() + (eta + 2) * 60000))} · ${text}`}
             </div>
           </div>
           {outForDelivery && (
@@ -387,12 +408,32 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           )}
         </div>
 
-        {/* Segmented progress */}
-        <div className="lt-progress">
-          {ORDER_STATUSES.map((s, i) => (
-            <span key={s} className={`lt-progress-seg ${i <= currentStep ? "on" : ""}`} />
-          ))}
+        {/* Labeled step tracker — Placed → Packed → Out for delivery → Delivered */}
+        <div className="lt-steps">
+          {ORDER_STATUSES.map((s, i) => {
+            const done = i < currentStep || (delivered && i <= currentStep);
+            const current = !delivered && i === currentStep;
+            return (
+              <div key={s} className={`lt-step ${done ? "done" : ""} ${current ? "current" : ""}`}>
+                {i > 0 && <span className={`lt-step-bar ${i <= currentStep ? "on" : ""}`} />}
+                <span className="lt-step-dot">
+                  {done ? <Svg d={Icon.check} size={12} sw={2.8} /> : <span className="lt-step-inner" />}
+                </span>
+                <span className="lt-step-lbl">{t(s)}</span>
+              </div>
+            );
+          })}
         </div>
+
+        {/* One-line reassurance while in flight */}
+        {!delivered && !order.deliverySlot && (
+          <div className="lt-reassure">
+            <Svg d={Icon.shield} size={14} sw={2} />
+            {outForDelivery
+              ? t("Your order is on the way. We'll notify you when it's nearby.")
+              : t("Your order is being prepared. We'll notify you when it's out for delivery.")}
+          </div>
+        )}
 
         {delivered && (order.scratchClaimed || order.scratchPoints > 0 || order.scratchWallet > 0) && (
           <ScratchCard orderId={order.dbId} existingReward={order.scratchClaimed ? order.scratchReward : null} />
@@ -430,7 +471,15 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
                 {rider.name}
                 <span className="lt-driver-verified"><Svg d={Icon.shield} size={13} sw={2.2} /></span>
               </div>
-              <div className="lt-driver-role">{t("Your delivery partner")}</div>
+              <div className="lt-driver-role">
+                {t("Your delivery partner")}
+                {rider.rating && rider.ratingCount >= 3 && (
+                  <span className="lt-driver-rating">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.3 6.2 21l1.1-6.5L2.6 9.8l6.5-.9L12 3z" /></svg>
+                    {rider.rating.toFixed(1)}
+                  </span>
+                )}
+              </div>
               <div className="lt-driver-msg">
                 {order.status === "Out for delivery"
                   ? `"Hi, I'm ${firstName}. I've picked up your order and I'm on my way!"`
@@ -443,37 +492,51 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
           </div>
         )}
 
-        {/* Timeline */}
+        {/* Timeline with real timestamps */}
         <div className="lt-card">
           <div className="lt-card-title">{t("Order status")}</div>
           <ol className="lt-timeline">
-            {ORDER_STATUSES.map((s, i) => (
-              <li key={s} className={`lt-tl ${i < currentStep ? "done" : ""} ${i === currentStep ? "current" : ""}`}>
-                <span className="lt-tl-mark">{i < currentStep || (delivered && i === currentStep) ? <Svg d={Icon.check} size={13} sw={2.6} /> : <span className="lt-tl-dot" />}</span>
-                <span className="lt-tl-label">{t(s)}</span>
-              </li>
-            ))}
+            {ORDER_STATUSES.map((s, i) => {
+              const stamp = STATUS_STAMP[s] ? order[STATUS_STAMP[s]] : null;
+              const reached = i < currentStep || (delivered && i <= currentStep) || i === currentStep;
+              return (
+                <li key={s} className={`lt-tl ${i < currentStep ? "done" : ""} ${i === currentStep ? "current" : ""}`}>
+                  <span className="lt-tl-mark">{i < currentStep || (delivered && i === currentStep) ? <Svg d={Icon.check} size={13} sw={2.6} /> : <span className="lt-tl-dot" />}</span>
+                  <span className="lt-tl-label">{t(s)}</span>
+                  {reached && stamp && <span className="lt-tl-time">{fmtClock(new Date(stamp))}</span>}
+                </li>
+              );
+            })}
           </ol>
         </div>
 
         {/* Contact — the masked in-app call reaches the delivery partner, so it
             only makes sense once someone is actually out delivering. While the
             order is still being packed we show a calm "being prepared" note. */}
-        {outForDelivery ? (
+        {!delivered && (
           <div className="lt-card lt-contact">
             <div className="lt-card-title">{t("Need help with this order?")}</div>
-            <div className="lt-contact-btns">
-              <button className="lt-contact-btn" onClick={callDelivery}>
+            {outForDelivery ? (
+              <button className="lt-contact-btn primary" onClick={callDelivery}>
                 <Svg d={Icon.phone} size={16} sw={2.2} /> {t("Call delivery partner")}
               </button>
-            </div>
-          </div>
-        ) : !delivered && (
-          <div className="lt-card lt-contact">
-            <div className="lt-card-title">{t("Need help with this order?")}</div>
-            <div className="lt-contact-note">
-              <Svg d={Icon.box} size={16} sw={2.1} />
-              <span>{t("Your order is being prepared. You'll be able to call your delivery partner once it's on the way.")}</span>
+            ) : (
+              <div className="lt-contact-note">
+                <Svg d={Icon.box} size={16} sw={2.1} />
+                <span>{t("Your order is being prepared. You'll be able to call your delivery partner once it's on the way.")}</span>
+              </div>
+            )}
+            <div className="lt-contact-row">
+              {settings.supportPhone && (
+                <a className="lt-contact-btn" href={`tel:+91${settings.supportPhone}`}>
+                  <Svg d={Icon.store} size={16} sw={2} /> {t("Call store")}
+                </a>
+              )}
+              {settings.supportPhone && (
+                <a className="lt-contact-btn" href={`https://wa.me/91${settings.supportPhone}?text=${encodeURIComponent(`Order #${order.id}: `)}`} target="_blank" rel="noopener noreferrer">
+                  <Svg d={Icon.chat} size={16} sw={2} /> {t("Chat on WhatsApp")}
+                </a>
+              )}
             </div>
           </div>
         )}
@@ -488,9 +551,9 @@ export function LiveTrackingSheet({ open, order, shopLoc, onClose, onRefresh }) 
 
         {/* Order summary + full bill */}
         <div className="lt-card">
-          <div className="lt-card-title">
-            {t("Order summary")}
-            <span className="lt-card-sub">#{order.id} · {itemCount} {t(itemCount > 1 ? "items" : "item")}</span>
+          <div className="lt-card-title lt-summary-head">
+            <span className="lt-summary-order">{t("Order")} #{order.id}</span>
+            <span className="lt-card-sub">{itemCount} {t(itemCount > 1 ? "items" : "item")} · {t(payLabel)}</span>
           </div>
           <div className="lt-items">
             {(order.items || []).map((it) => (

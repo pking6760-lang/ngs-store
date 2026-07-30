@@ -172,6 +172,7 @@ function mapOrder(r) {
     scratchPoints: r.scratch_points || 0, scratchWallet: num(r.scratch_wallet),
     deliveryState: r.delivery_state, pickerState: r.picker_state,
     riderId: r.rider_id, pickerId: r.picker_id, deliveredAt: r.delivered_at, packedAt: r.packed_at,
+    pickedAt: r.picked_at,
     // Subscriptions: the master prepaid plan order (isSubscription) vs the daily
     // milk orders it spawns (subscriptionId set, deliverOn/deliverHour = the drop).
     isSubscription: !!r.is_subscription, subscriptionId: r.subscription_id,
@@ -611,6 +612,9 @@ export async function fetchOrderRider(dbId) {
     lat: r.rider_lat != null ? Number(r.rider_lat) : null,
     lng: r.rider_lng != null ? Number(r.rider_lng) : null,
     locAt: r.rider_loc_at || null,
+    // Real aggregate rating; shown only when it rests on enough ratings.
+    rating: r.rider_avg != null ? Number(r.rider_avg) : null,
+    ratingCount: r.rider_rating_count || 0,
   };
 }
 

@@ -1105,10 +1105,38 @@ button {
 .lt-hero-eta { font-size: 24px; font-weight: 900; line-height: 1.1; }
 .lt-hero-sub { font-size: 13.5px; font-weight: 600; opacity: 0.92; margin-top: 3px; }
 
-/* Segmented progress */
-.lt-progress { display: flex; gap: 6px; }
-.lt-progress-seg { flex: 1; height: 5px; border-radius: 4px; background: var(--line); transition: background 0.4s; }
-.lt-progress-seg.on { background: var(--green); }
+/* Labeled step tracker */
+.lt-steps { display: flex; }
+.lt-step { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.lt-step-bar { position: absolute; top: 11px; right: 50%; width: 100%; height: 3px; border-radius: 2px; background: var(--line); }
+.lt-step-bar.on { background: var(--green); }
+.lt-step-dot { position: relative; z-index: 1; width: 24px; height: 24px; border-radius: 50%; background: var(--surface);
+  border: 2px solid var(--line); color: #fff; display: flex; align-items: center; justify-content: center; }
+.lt-step-inner { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.lt-step.done .lt-step-dot { background: var(--green); border-color: var(--green); }
+.lt-step.current .lt-step-dot { border-color: var(--green); box-shadow: 0 0 0 4px var(--green-tint); }
+.lt-step.current .lt-step-inner { background: var(--green); }
+.lt-step-lbl { font-size: 10.5px; font-weight: 700; color: var(--muted); margin-top: 6px; line-height: 1.2; max-width: 74px; }
+.lt-step.done .lt-step-lbl, .lt-step.current .lt-step-lbl { color: var(--ink); }
+.lt-step.current .lt-step-lbl { color: var(--green-dark); font-weight: 800; }
+
+/* One-line reassurance */
+.lt-reassure { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted);
+  background: var(--green-tint); border-radius: 12px; padding: 10px 13px; }
+.lt-reassure svg { color: var(--green-dark); flex: none; }
+
+/* Rider rating chip on the driver card */
+.lt-driver-rating { display: inline-flex; align-items: center; gap: 3px; margin-left: 7px;
+  font-size: 11.5px; font-weight: 800; color: #b8860b; }
+.lt-driver-rating svg { color: #eab308; }
+
+/* Timeline timestamps */
+.lt-tl-time { margin-left: auto; font-size: 11.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Order-summary header */
+.lt-summary-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.lt-summary-order { font-size: 15px; font-weight: 800; color: var(--ink); }
+.lt-summary-head .lt-card-sub { font-weight: 600; }
 
 .lt-map-wrap {
   position: relative;
@@ -5663,12 +5691,16 @@ button, a, .product-card, .cat-tile, .promo-slide, .add-btn, .qty-btn,
 .lt-contact-btns{ display:flex; flex-direction:column; gap:8px; margin-top:6px; }
 .lt-contact-btn{ display:flex; align-items:center; justify-content:center; gap:8px;
   padding:12px; border-radius:12px; border:1.5px solid var(--green); color:var(--green-dark);
-  background:#f3fdf7; font-weight:800; font-size:14px; text-decoration:none; }
-.lt-contact-btn:active{ background:var(--green-tint); }
+  background:var(--green-tint); font-weight:800; font-size:13.5px; text-decoration:none; cursor:pointer; }
+.lt-contact-btn:active{ background:var(--green-tint); transform: translateY(1px); }
+.lt-contact-btn.primary{ background:linear-gradient(140deg, var(--green), var(--green-dark)); color:#fff; border:none;
+  box-shadow:0 8px 18px -8px rgba(10,145,85,0.55); margin-top:6px; width:100%; }
+.lt-contact-row{ display:flex; gap:8px; margin-top:8px; }
+.lt-contact-row .lt-contact-btn{ flex:1; }
 .lt-contact-note{ display:flex; align-items:flex-start; gap:10px; margin-top:6px;
-  padding:12px; border-radius:12px; background:#f6f8fb; color:#5b6b82;
+  padding:12px; border-radius:12px; background:var(--bg-soft); color:var(--muted);
   font-size:13px; line-height:1.45; }
-.lt-contact-note svg{ flex:none; margin-top:1px; color:#8b97a8; }
+.lt-contact-note svg{ flex:none; margin-top:1px; color:var(--muted); }
 
 /* ── Connectivity banner (offline / back-online) ──────────────────────────── */
 .net-banner { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 8px);
