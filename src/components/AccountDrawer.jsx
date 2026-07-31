@@ -230,6 +230,22 @@ function subNextDelivery(s) {
   }
   return "";
 }
+// The plan's first and last delivery dates: start_date, and the daysTotal-th
+// non-skipped slot after it (skips push the end out, so this reflects the real
+// finish). Shown on the card so the customer sees exactly when the plan runs.
+function subDateRange(s) {
+  if (!s.startDate) return null;
+  const skips = new Set(s.skipDates || []);
+  const fmt = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const start = new Date(s.startDate + "T00:00:00");
+  const d = new Date(start);
+  let count = 0, last = null;
+  for (let i = 0; i < 500 && count < s.daysTotal; i++) {
+    if (!skips.has(isoLocal(d))) { count++; last = new Date(d); }
+    d.setDate(d.getDate() + 1);
+  }
+  return { start: fmt(start), end: last ? fmt(last) : fmt(start) };
+}
 // The next `count` upcoming delivery dates (non-skipped days at positions
 // daysDone, daysDone+1, …), capped by how many deliveries remain on the plan.
 function upcomingDeliveries(s, count) {
@@ -534,6 +550,18 @@ function Subscriptions({ onShop }) {
               <div className="sub-progress-track"><span style={{ width: `${pct}%` }} /></div>
               <span className="sub-progress-lbl">{tr("Day")} {done} {tr("of")} {s.daysTotal}</span>
             </div>
+
+            {(() => {
+              const range = subDateRange(s);
+              return range ? (
+                <div className="sub-daterange">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg>
+                  <span>{tr("Starts")} <b>{range.start}</b></span>
+                  <span className="sub-daterange-sep">→</span>
+                  <span>{tr("Ends")} <b>{range.end}</b></span>
+                </div>
+              ) : null;
+            })()}
 
             <div className="sub-info-row">
               <span className="sub-sched">
