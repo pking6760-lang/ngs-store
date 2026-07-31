@@ -157,6 +157,11 @@ function MembershipSettings({ settings }) {
     price: cfg.price ?? 99,
     mrp: cfg.mrp ?? 199,
     days: cfg.days ?? 30,
+    cashbackPct: cfg.cashbackPct ?? 5,
+    cashbackCap: cfg.cashbackCap ?? 150,
+    cashbackMinOrder: cfg.cashbackMinOrder ?? 99,
+    guaranteeFloor: cfg.guaranteeFloor ?? 99,
+    farFee: cfg.farFee ?? 25,
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
@@ -166,10 +171,16 @@ function MembershipSettings({ settings }) {
       rewards: {
         ...(settings.rewards || {}),
         membership: {
+          ...(settings.rewards?.membership || {}),   // keep any keys not shown here
           enabled: !!form.enabled,
           price: Math.max(0, Number(form.price) || 0),
           mrp: Math.max(0, Number(form.mrp) || 0),
           days: Math.max(1, Number(form.days) || 1),
+          cashbackPct: Math.max(0, Number(form.cashbackPct) || 0),
+          cashbackCap: Math.max(0, Number(form.cashbackCap) || 0),
+          cashbackMinOrder: Math.max(0, Number(form.cashbackMinOrder) || 0),
+          guaranteeFloor: Math.max(0, Number(form.guaranteeFloor) || 0),
+          farFee: Math.max(0, Number(form.farFee) || 0),
         },
       },
     });
@@ -179,7 +190,7 @@ function MembershipSettings({ settings }) {
   return (
     <section className="panel offer-card">
       <h3>NGS Prime membership</h3>
-      <p className="sub">Customers pay from their NGS Wallet to join. Members get free delivery on normal days. (We'll add more perks next.)</p>
+      <p className="sub">The ₹{form.price} is a value pool, not profit: members get free delivery on every order, {form.cashbackPct}% wallet cashback, member prices — and a ₹{form.guaranteeFloor} savings guarantee.</p>
       <label className="preg-ev" style={{ marginBottom: 6 }}>
         <input type="checkbox" checked={form.enabled} onChange={(e) => set("enabled", e.target.checked)} />
         <span>Offer membership to customers</span>
@@ -196,6 +207,31 @@ function MembershipSettings({ settings }) {
         <input type="number" min="0" value={form.mrp} onChange={(e) => set("mrp", e.target.value)} />
         <span>crossed out (₹{form.mrp} → ₹{form.price}).</span>
       </div>
+
+      <div className="rewards-subhead" style={{ marginTop: 14, fontWeight: 700, fontSize: 13 }}>Perks funded by the fee</div>
+      <div className="rewards-rule">
+        <span>Cashback to wallet</span>
+        <input type="number" min="0" max="100" value={form.cashbackPct} onChange={(e) => set("cashbackPct", e.target.value)} />
+        <span>% of each order, capped ₹</span>
+        <input type="number" min="0" value={form.cashbackCap} onChange={(e) => set("cashbackCap", e.target.value)} />
+        <span>/ month.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Cashback only on orders over ₹</span>
+        <input type="number" min="0" value={form.cashbackMinOrder} onChange={(e) => set("cashbackMinOrder", e.target.value)} />
+        <span>(stops tiny-order farming).</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Guarantee: save at least ₹</span>
+        <input type="number" min="0" value={form.guaranteeFloor} onChange={(e) => set("guaranteeFloor", e.target.value)} />
+        <span>or we top up the difference.</span>
+      </div>
+      <div className="rewards-rule">
+        <span>Far-zone member delivery ₹</span>
+        <input type="number" min="0" value={form.farFee} onChange={(e) => set("farFee", e.target.value)} />
+        <span>(near + mid stay free).</span>
+      </div>
+
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
         <button className="primary-btn" onClick={save}>Save membership</button>
         {saved && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>Saved</span>}

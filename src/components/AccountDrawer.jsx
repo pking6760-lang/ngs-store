@@ -1959,13 +1959,16 @@ function PrimeActive({ user, days, price, onRenew }) {
   const memberSince = stats?.memberSince || user.memberSince;
   const code = stats?.code || user.customerCode;
 
+  const cashbackEarned = stats?.cashbackEarned ?? 0;
   // Benefits with real, measurable savings attached where we actually have them.
   const benefitRows = [
-    { ic: PIC.truck, txt: tr("Free delivery on normal days"),
+    { ic: PIC.truck, txt: tr("Free delivery on every order"),
       save: deliverySaved > 0 ? `${tr("Saved")} ₹${deliverySaved} ${tr("in delivery fees")}` : null },
-    { ic: PIC.bolt, txt: tr("First priority on every order"), save: null },
-    { ic: PIC.tag, txt: tr("Member-only prices & offers"),
+    { ic: PIC.bolt, txt: tr("5% cashback to your NGS Wallet"),
+      save: cashbackEarned > 0 ? `₹${cashbackEarned} ${tr("back so far")}` : null },
+    { ic: PIC.tag, txt: tr("Member prices on everyday items"),
       save: productSaved > 0 ? `${tr("Saved")} ₹${productSaved} ${tr("on member prices")}` : null },
+    { ic: PIC.crown, txt: tr("Save ₹99 or we refund the difference"), save: null },
   ];
 
   return (

@@ -78,10 +78,11 @@ export function welcomeDiscountFor(itemTotal, net, orderCount, isMember, cfg, me
 
 export const MEMBERSHIP = {
   name: "NGS Prime",
-  price: 199, // one-time for the demo (a real setup would bill monthly)
+  price: 99,
   benefits: [
-    "Free delivery on normal days",
-    "First priority on every order",
-    "Member-only offers",
+    "Free delivery on every order",
+    "5% cashback to your NGS Wallet",
+    "Member prices on everyday items",
+    "Save ₹99 or we refund the difference",
   ],
 };

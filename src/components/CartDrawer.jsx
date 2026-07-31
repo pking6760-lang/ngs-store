@@ -393,21 +393,17 @@ export default function CartDrawer({ open, onClose, onRequireLogin }) {
   const addonDelivery = addonQualify >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_FEE;
   const addonTotal = subItemsTotal + addonDelivery;
   const SURGE_FEE = settings.surgeFee ?? 0;
-  // Prime's free delivery is funded by what the order actually earns, so it
-  // applies only when the cart can still fund the ride — and only inside the
-  // near zone, since a small order ridden to the edge costs more than it makes.
-  // Whether a cart earns free delivery depends on the margin it makes, which the
-  // client can't know and must never be told. So the server decides and the cart
-  // just displays the answer — the same arithmetic checkout will run, so the
-  // total can't change under the customer. `quote` is null until it lands (and
-  // if the network is down), in which case the value-only estimate below stands.
+  // Prime's free delivery now applies to EVERY order in the near + mid zone
+  // (the far zone keeps a reduced fee). The server still returns the authoritative
+  // fee via the quote, so the cart just displays the answer and the total can't
+  // change under the customer. `quote` is null until it lands (or if the network
+  // is down), in which case the value-only estimate below stands.
   const quote = useDeliveryQuote(lines, feeDistKm, isMember);
   // How much MORE the customer must spend to clear the value bar. Zero once
-  // they're past it — being past it doesn't guarantee free delivery, so this
-  // must never be shown as "add ₹0 more".
+  // they're past it.
   const shortForFree = Math.max(0, freeDeliveryThreshold - qualifyingTotal);
   const cartCanFund = quote ? quote.affordable : true;
-  const freePerk = isMember && !inFarZone && cartCanFund;
+  const freePerk = isMember && feeDistKm < FAR_ZONE_KM_2;
   let deliveryFee = itemTotal === 0 ? 0
     : quote ? Number(quote.deliveryFee) || 0
     : qualifyingTotal >= freeDeliveryThreshold ? 0 : DELIVERY_FEE;
