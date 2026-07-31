@@ -405,12 +405,41 @@ function CancelSheet({ sub, onClose, onDone }) {
   );
 }
 
+// Confirm before skipping a single delivery — a tap here drops a real delivery
+// (and, on autopay, refunds it), so it must never fire by accident.
+function SkipOneConfirm({ sub, dateLabel, busy, onCancel, onConfirm }) {
+  const upi = sub.payMethod === "upi_autopay";
+  return (
+    <div className="sheet-overlay" onClick={onCancel}>
+      <div className="sub-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sub-head">
+          <h3>{tr("Skip this delivery?")}</h3>
+          <button className="drawer-close" onClick={onCancel} aria-label="Close">✕</button>
+        </div>
+        <div className="sub-body">
+          <p className="skip-lead">
+            Skip your <b>{dateLabel}</b> delivery? It moves to the end of your plan, so you
+            still get all {sub.daysTotal} deliveries.{upi ? " Anything already paid for that day is refunded to your NGS Wallet." : ""}
+          </p>
+        </div>
+        <div className="sub-foot">
+          <button className="sub-start danger" disabled={busy} onClick={onConfirm}>
+            {busy ? "Skipping…" : tr("Yes, skip it")}
+          </button>
+          <button className="ghost-btn full" onClick={onCancel} style={{ marginTop: 10 }}>{tr("Keep delivery")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Manage prepaid plans: see progress + next delivery, cancel (unused days refund).
 function Subscriptions({ onShop }) {
   const products = useProducts();
   const [subs, setSubs] = useState(null);
   const [skipFor, setSkipFor] = useState(null);
   const [cancelFor, setCancelFor] = useState(null);
+  const [confirmSkip, setConfirmSkip] = useState(null); // { sub, dateLabel } awaiting a yes/no
   const [skippingId, setSkippingId] = useState(null);
   const prodOf = (id) => products.find((p) => p.id === id) || null;
   const nameOf = (id) => prodOf(id)?.name || tr("Item");
@@ -432,9 +461,12 @@ function Subscriptions({ onShop }) {
     await load();
     toast("Plan cancelled — refund added to your wallet.");
   }
-  // One-tap skip of just the next day (moves it to the end, plan length kept).
+  // Skip just the next day (moves it to the end, plan length kept). Confirmed
+  // first — a stray tap must never silently drop a delivery (and, for autopay,
+  // trigger a refund).
   async function skipNextOne(s) {
     if (skippingId) return;
+    setConfirmSkip(null);
     setSkippingId(s.id);
     try {
       await api.skipNextDelivery(s.id);
@@ -525,7 +557,7 @@ function Subscriptions({ onShop }) {
             {active && (
               <div className="sub-card-actions">
                 {next && (
-                  <button className="sub-skip" disabled={skippingId === s.id} onClick={() => skipNextOne(s)}>
+                  <button className="sub-skip" disabled={skippingId === s.id} onClick={() => setConfirmSkip({ sub: s, dateLabel: next })}>
                     {skippingId === s.id ? "…" : tr("Skip next delivery")}
                   </button>
                 )}
@@ -538,6 +570,15 @@ function Subscriptions({ onShop }) {
           </div>
         );
       })}
+      {confirmSkip && (
+        <SkipOneConfirm
+          sub={confirmSkip.sub}
+          dateLabel={confirmSkip.dateLabel}
+          busy={skippingId === confirmSkip.sub.id}
+          onCancel={() => setConfirmSkip(null)}
+          onConfirm={() => skipNextOne(confirmSkip.sub)}
+        />
+      )}
       {skipFor && <SkipSheet sub={skipFor} onClose={() => setSkipFor(null)} onDone={onSkipped} />}
       {cancelFor && <CancelSheet sub={cancelFor} onClose={() => setCancelFor(null)} onDone={onCancelled} />}
     </div>
