@@ -260,7 +260,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
             <button className="ghost-btn full" onClick={() => { setWaitMandate(false); setMandateLinks(null); }} style={{ marginTop: 14 }}>
               {tr("Cancel")}
             </button>
-            <p className="mandate-note">A ₹1 bank verification is charged and credited straight back to your NGS wallet. Your bank then auto-pays one day's amount the evening before each delivery — nothing more.</p>
+            <p className="mandate-note">You pay ₹{perDay} now for your first delivery. After that your bank auto-pays one day's amount, a day before each delivery — nothing more.</p>
           </div>
         ) : mode === "pay" ? (
           <div className="sub-body">
@@ -366,7 +366,7 @@ export default function SubscribeSheet({ open, onClose, items, summaryProducts, 
                 </div>
                 <div className="sub-total-note">
                   {upiAutopay
-                    ? `Nothing charged now — approve once, then your bank auto-pays ₹${perDay} the day before each delivery. First delivery tomorrow.`
+                    ? `You pay ₹${perDay} now for tomorrow's first delivery. After that your bank auto-pays ₹${perDay} a day before each delivery.`
                     : autopay
                     ? `Nothing charged up front — we draw ₹${perDay} the day before each delivery. First delivery tomorrow.`
                     : "First delivery tomorrow. Add items to any day's delivery from the cart."}

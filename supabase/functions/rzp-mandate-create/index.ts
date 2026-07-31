@@ -2,8 +2,10 @@
 // Called after create_subscription_order(pay='upi_autopay') has made a PENDING
 // plan + an 'Awaiting payment' umbrella order. This creates a Razorpay customer
 // (once per user) and a UPI Autopay MANDATE order, and returns the params the app
-// needs to open Razorpay's approval screen. It charges nobody — the customer
-// approves the mandate in their UPI app; the webhook confirms and stores it.
+// needs to open Razorpay's approval screen. The authorization debit charges the
+// customer's first-day basket (their live UPI-PIN approval) — that payment prepays
+// the first delivery; the webhook confirms the mandate and confirm_upi_mandate
+// schedules that first order.
 //
 // Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET.
 const KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") ?? "";
@@ -67,10 +69,12 @@ Deno.serve(async (req) => {
     const subs = await sbGet(`subscriptions?id=eq.${order.subscription_id}&select=id,mandate_max_amount,daily_total`);
     const sub = Array.isArray(subs) ? subs[0] : null;
     if (!sub) return json({ error: "Plan not found." }, 404);
-    // ₹1 registration debit (Razorpay's minimum for a UPI Autopay mandate). It is
-    // credited straight back to the customer's NGS wallet on confirmation, so the
-    // customer pays nothing net for setup. The per-debit cap is the plan's cap.
-    const REG_PAISE = 100;
+    // The mandate's authorization debit charges the customer's ACTUAL first-day
+    // basket (approved live with their UPI PIN). That payment prepays the first
+    // delivery — confirm_upi_mandate books it and schedules the order. The per-debit
+    // cap is the plan's cap (the exact daily basket).
+    const dailyPaise = Math.round(Number(sub.daily_total || 0) * 100);
+    const REG_PAISE = Math.max(100, dailyPaise); // never below Razorpay's ₹1 floor
     const capPaise = Math.max(REG_PAISE, Math.round(Number(sub.mandate_max_amount || sub.daily_total || 0) * 100));
 
     // Reuse (or create) the Razorpay customer for this user.
@@ -114,7 +118,7 @@ Deno.serve(async (req) => {
         type: "link",
         amount: REG_PAISE,
         currency: "INR",
-        description: "NGS daily subscription — UPI Autopay setup (₹1 verification, credited to your wallet)",
+        description: "NGS daily subscription — pay for your first delivery + set up UPI Autopay",
         subscription_registration: { method: "upi", max_amount: capPaise, expire_at: expireAt, frequency: "as_presented" },
         receipt: order.human_code ?? order.id,
         email_notify: 0,

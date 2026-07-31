@@ -224,9 +224,9 @@ export default function DeliveryAdmin() {
       <section className="panel offer-card">
         <h3>UPI Autopay (bank auto-debit)</h3>
         <p className="sub">
-          Lets subscription customers approve a UPI mandate once, then their bank
-          auto-debits one day's amount the evening before each delivery — no wallet
-          top-ups. Real money, so launch it carefully.
+          Lets subscription customers approve a UPI mandate once. They pay their
+          first delivery on the spot, then their bank auto-debits each day's amount
+          a day before delivery — no wallet top-ups. Real money, so launch it carefully.
         </p>
         <div className="delivery-fields">
           <label className="dfield">
@@ -242,12 +242,14 @@ export default function DeliveryAdmin() {
           </label>
         </div>
         <p className="delivery-hint">
-          <strong>Step 1 — test with ₹1 first.</strong> Put <em>your own</em> number in
-          the test phone box and Save. Only that phone then sees the "UPI Autopay"
-          option in Subscribe — real customers still don't. Subscribe to a 1-day plan
-          of one cheap item (~₹1–2), approve the mandate in your UPI app, and check
-          tomorrow morning that the auto-debit went through and the delivery order
-          appeared.
+          <strong>Step 1 — test on your own number first.</strong> Put <em>your own</em>
+          number in the test phone box and Save. Only that phone then sees the "UPI
+          Autopay" option in Subscribe — real customers still don't. Subscribe to a
+          multi-day plan of one cheap item, approve the mandate in your UPI app: you'll
+          pay that first day on the spot and its delivery is scheduled for tomorrow.
+          Then leave it a day and check that the bank auto-debit for the <em>next</em>
+          day goes through (it runs ~a day ahead, after the RBI-required pre-debit
+          notice) and its delivery order appears.
         </p>
         <p className="delivery-hint">
           <strong>Step 2 — launch.</strong> Once the test debit works, tick
