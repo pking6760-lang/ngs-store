@@ -5628,12 +5628,31 @@ body {
    ════════════════════════════════════════════════════════════ */
 
 /* 1 · A faint festival texture woven behind ALL content — every main page and
-      every drawer share one canvas. Subtle enough that cards/text stay clean. */
-:root[data-festival] body,
-:root[data-festival] .cart-drawer,
-:root[data-festival] .account-drawer {
+      every drawer share it. Now gently alive: a fixed layer that slowly drifts
+      and twinkles behind the content (GPU-only transform + opacity), so the
+      background feels festive without ever competing with cards or text. */
+:root[data-festival] body::before,
+:root[data-festival] .cart-drawer::before,
+:root[data-festival] .account-drawer::before {
+  content: ""; position: fixed; inset: -12%; z-index: -1; pointer-events: none;
   background-image: var(--fest-pattern);
   background-size: var(--fest-pattern-size, 46px 46px);
+  will-change: transform, opacity;
+  animation: festBgDrift 40s ease-in-out infinite, festBgTwinkle 7.5s ease-in-out infinite;
+}
+@keyframes festBgDrift {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(-16px, -20px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes festBgTwinkle {
+  0%, 100% { opacity: .5; }
+  50%      { opacity: .85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-festival] body::before,
+  :root[data-festival] .cart-drawer::before,
+  :root[data-festival] .account-drawer::before { animation: none; opacity: .75; }
 }
 
 /* 2 · Every page/drawer header (Subscriptions, Inbox, Account, Cart, Wallet…)
