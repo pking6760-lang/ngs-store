@@ -31,6 +31,7 @@ import { initWebPush } from "./lib/webPush.js";
 import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
 import PromoCarousel from "./components/PromoCarousel.jsx";
 import { FestiveMasthead } from "./components/FestiveDecor.jsx";
+import FestiveCover from "./components/FestiveCover.jsx";
 import { applyTheme } from "./lib/theme.js";
 import { loadStockAlerts, clearStockAlertsLocal } from "./lib/stockAlerts.js";
 import { shop } from "./data/shop.js";
@@ -370,6 +371,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <FestiveCover theme={activeTheme} />
       <OfflineBanner />
       <ApkPrompt />
       <CallAlertsPrompt show={isLoggedIn} />
