@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { collectQrCreate, collectQrStatus } from "../lib/api.js";
+import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { Ic } from "./AdminIcons.jsx";
 
 // POS "collect payment": type an amount → show a UPI QR the customer scans →
@@ -28,7 +29,10 @@ export default function CollectQR() {
     try {
       const q = await collectQrCreate(rupees);
       if (q?.error) throw new Error(q.error);
-      setQr(q); setStage("waiting"); setPayment(null);
+      // Redraw a clean, plain QR from the UPI code inside Razorpay's branded
+      // image — same as the order-collection flow, so no Razorpay artwork shows.
+      const cleanQr = await cleanUpiQrFromImage(q.imageDataUrl);
+      setQr({ ...q, cleanQr }); setStage("waiting"); setPayment(null);
       setLeft(Math.max(0, Math.round((q.closeBy * 1000 - Date.now()) / 1000)));
       startWaiting(q.qrId, q.closeBy);
     } catch (e) { setErr(e.message || "Couldn't create the QR."); }
@@ -94,7 +98,7 @@ export default function CollectQR() {
       {stage === "waiting" && qr && (
         <div className="cq-wait">
           <div className="cq-qwrap">
-            <img className="cq-qr" src={qr.imageDataUrl || qr.imageUrl} alt="Scan to pay" />
+            <img className="cq-qr" src={qr.cleanQr || qr.imageDataUrl || qr.imageUrl} alt="Scan to pay" />
           </div>
           <div className="cq-amt-big">{rupee(qr.amount)}</div>
           <div className="cq-status">
