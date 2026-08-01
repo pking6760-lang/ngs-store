@@ -3661,3 +3661,34 @@ html, body { touch-action: manipulation; }
 }
 .flash-start:disabled, .flash-stop:disabled { opacity: .6; }
 .flash-err { margin: 4px 0 0; color: #C0271E; font-size: 12.5px; font-weight: 600; }
+
+/* ── Collect payment (POS QR) ─────────────────────────────────────────────── */
+.cq-entry { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0 4px; }
+.cq-amount { display: flex; align-items: center; gap: 6px; border-bottom: 2px solid #e6e9ef; padding: 6px 4px; }
+.cq-amount .cq-cur { font-size: 30px; font-weight: 800; color: #8a929c; }
+.cq-amount input { border: none; outline: none; font-size: 44px; font-weight: 800; width: 6ch; text-align: center; color: #16202c; background: none; }
+.cq-amount input::-webkit-outer-spin-button, .cq-amount input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cq-quick { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.cq-chip { border: 1.5px solid #e0e4ea; background: #fff; color: #16202c; font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.cq-chip:active { transform: scale(.95); }
+.cq-go { width: 100%; max-width: 320px; padding: 13px; font-size: 15px; }
+
+.cq-wait { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cq-qwrap { background: #fff; border: 1px solid #e6e9ef; border-radius: 18px; padding: 14px; box-shadow: 0 10px 26px rgba(0,0,0,.08); }
+.cq-qr { display: block; width: 232px; height: 232px; image-rendering: pixelated; }
+.cq-amt-big { font-size: 30px; font-weight: 800; color: #16202c; margin-top: 4px; }
+.cq-status { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: #0b6b3a; }
+.cq-dot { width: 9px; height: 9px; border-radius: 50%; background: #0b6b3a; box-shadow: 0 0 0 0 rgba(11,107,58,.5); animation: cqPulse 1.6s infinite; }
+@keyframes cqPulse { 0% { box-shadow: 0 0 0 0 rgba(11,107,58,.45); } 70% { box-shadow: 0 0 0 8px rgba(11,107,58,0); } 100% { box-shadow: 0 0 0 0 rgba(11,107,58,0); } }
+.cq-hint { font-size: 12.5px; color: #6b7482; text-align: center; max-width: 26em; margin: 2px 0 8px; }
+
+.cq-done { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0; }
+.cq-tick { width: 68px; height: 68px; border-radius: 50%; background: #e7f6ee; color: #0b6b3a; display: grid; place-items: center; animation: cqPop .35s cubic-bezier(.2,.8,.2,1.2) both; }
+.cq-expired { width: 62px; height: 62px; border-radius: 50%; background: #f0f2f5; color: #8a929c; display: grid; place-items: center; }
+@keyframes cqPop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.cq-paid-amt { font-size: 24px; font-weight: 800; color: #0b6b3a; }
+.cq-receipt { width: 100%; max-width: 340px; background: #fff; border: 1px solid #e6e9ef; border-radius: 14px; overflow: hidden; }
+.cq-row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid #f0f2f5; }
+.cq-row:last-child { border-bottom: none; }
+.cq-row-k { font-size: 12.5px; color: #6b7482; font-weight: 600; }
+.cq-row-v { font-size: 13.5px; color: #16202c; font-weight: 700; word-break: break-all; text-align: right; }

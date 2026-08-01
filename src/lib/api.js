@@ -594,6 +594,15 @@ export async function createOrderQr(orderDbId) {
   return invokeFn("razorpay-create-qr", { orderId: orderDbId });
 }
 
+// POS "collect payment" — make a UPI QR for any amount (not tied to an order),
+// then poll it until the customer pays. Admin only (enforced server-side).
+export async function collectQrCreate(amount) {
+  return invokeFn("razorpay-collect-qr", { action: "create", amount });
+}
+export async function collectQrStatus(qrId) {
+  return invokeFn("razorpay-collect-qr", { action: "status", qrId });
+}
+
 // Product details lookup (name / brand / weight) for auto-filling a product.
 // Server-side: Open Food Facts, then Gemini web search for Indian brands.
 export async function lookupProductDetails(barcode, name, categories) {
