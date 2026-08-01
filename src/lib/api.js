@@ -991,7 +991,7 @@ export async function uploadProductImage(file) {
   const blob = await fileToResizedBlob(file);
   const name = `p${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { error } = await must().storage
-    .from("product-images").upload(name, blob, { contentType: "image/jpeg", upsert: true });
+    .from("product-images").upload(name, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "31536000" });
   if (error) throw error;
   const { data } = must().storage.from("product-images").getPublicUrl(name);
   return data.publicUrl;
@@ -1851,7 +1851,7 @@ export async function uploadCategoryImage(file) {
   const blob = await fileToResizedBlob(file, 400);   // categories are small tiles
   const name = `cat${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { error } = await must().storage
-    .from("product-images").upload(name, blob, { contentType: "image/jpeg", upsert: true });
+    .from("product-images").upload(name, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "31536000" });
   if (error) throw error;
   const { data } = must().storage.from("product-images").getPublicUrl(name);
   return data.publicUrl;
