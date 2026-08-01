@@ -16,7 +16,7 @@
 
 // id / keyword  →  lazy import of the component module (default export)
 const INTROS = {
-  // independence_day: () => import("./independence-day.jsx"),
+  independence: () => import("./independence-day.jsx"),
   // diwali:           () => import("./diwali.jsx"),
   // holi:             () => import("./holi.jsx"),
   // dhanteras:        () => import("./dhanteras.jsx"),
