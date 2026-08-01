@@ -3,65 +3,59 @@ import { useThemes, useSettings } from "../lib/hooks.js";
 import { importThemes, setThemeActive, updateThemeSchedule, deleteTheme, setThemeBanner } from "../lib/api.js";
 import { Ic } from "./AdminIcons.jsx";
 
-// The exact prompt the shopkeeper copies into ChatGPT/Gemini. A full design
-// brief (persona + schema + rules + a worked example) so the AI returns a
-// premium, cohesive theme that pastes straight in. Today's date is injected so
-// the AI schedules the NEXT occurrence correctly.
-const TODAY_ISO = new Date().toISOString().slice(0, 10);
+// Built-in fallback for the festival-theme prompt. The live version is editable
+// from the database (settings.prompts.theme) and takes precedence — this ships
+// only so the button still works before any DB override is set. Example-free by
+// design: the AI is given the schema and rules, and invents every colour and
+// word itself so no two festivals come out looking alike.
 const THEME_PROMPT_FALLBACK = `ROLE
-You are a senior brand designer creating a limited-time festival skin for the customer app of "NGS - Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Match the polish of a top app's festival campaign: cohesive, premium and culturally authentic — never gaudy or clip-arty. Every occasion must come out looking genuinely different from every other.
+You are a senior brand designer creating a limited-time festival skin for the customer app of "NGS — Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Match the polish of a top app's festival campaign: cohesive, premium and culturally authentic — never gaudy. Every occasion must look genuinely different from every other; nothing should feel like a recoloured template.
 
-FIRST, ask me one question: which festival or special day is this theme for? Then wait for my answer. Do not assume an occasion or return any JSON until I tell you which one. Once I answer, design the complete theme yourself — every colour and every word is your call — and return it as ONE JSON object.
+FIRST, ask me one question: which festival or special day is this theme for? Then wait for my answer. Do not assume an occasion or return any JSON until I tell you. Once I answer, design the whole theme yourself — every colour and every word is your call.
 
-WHAT THE APP DOES WITH YOUR THEME
-- Your "palette" (exactly 3 signature colours of the occasion) plus "primary"/"accent" re-skin the WHOLE app: the header and search bar turn these colours, along with the buttons, cart bar, price chips and section accents. White text sits on "primary", so it must be deep enough.
-- "greeting", "kicker", "title" and "subtitle" are the words shown to the customer.
-- "pattern" scatters a faint motif through the background of every page.
-- "decoration" and "motif" style the fallback poster — used only when a festival has no custom banner animation.
+WHAT THE THEME DOES
+Your colours re-skin the entire app for the occasion: the header and search bar, the buttons, the cart bar, the price chips and the section accents all take these colours, and the whole top of the home screen flows in them and fades into the page. Your words are shown to the customer as a short festive greeting. So the theme must be both legible — white text sits on the lead colour — and unmistakably this one occasion.
 
-RETURN ONLY THIS JSON OBJECT (no markdown, no code fence, no commentary):
+RETURN ONLY THIS JSON OBJECT — no markdown, no code fence, no commentary:
 {
   "name": "the occasion's name",
   "emoji": "one emoji that represents it",
-  "startsOn": "YYYY-MM-DD — switch the theme ON a few days before",
-  "endsOn": "YYYY-MM-DD — switch it OFF on or just after the day",
-  "greeting": "the big wish on the poster — a warm, sincere wish or blessing to the customer, in polished English; up to one emoji at the end",
+  "startsOn": "YYYY-MM-DD — a few days before the day",
+  "endsOn": "YYYY-MM-DD — on or just after the day",
+  "greeting": "the main wish shown to the customer — one warm, sincere sentence, specific to what THIS occasion means; polished English; at most one emoji at the very end",
   "banner": {
-    "kicker": "the occasion's own authentic greeting, kept as-is",
-    "title": "a short sign-off line from the NGS family; vary the wording every time",
-    "subtitle": "one graceful closing line of goodwill; no groceries, no prices"
+    "kicker": "the occasion's own authentic greeting phrase, in its own words",
+    "title": "a short, warm sign-off from the NGS family; word it freshly",
+    "subtitle": "one graceful closing line of goodwill; nothing about groceries, delivery or prices"
   },
-  "decoration": "garland style — choose ONE supported value that genuinely suits THIS occasion, or none: marigold | flowers | petals | leaves | tricolor | flags | lanterns | diyas | coins | snow | none. Do NOT default to any one style.",
-  "motif": "poster backdrop — choose ONE supported value that fits: mandala | rays | arch",
-  "pattern": "faint app-wide background motif — choose ONE supported value that fits: splash | flags | diyas | coins | petals | sparkles",
   "colors": {
-    "primary":     "#RRGGBB — deep and saturated; WHITE text must be clearly legible on it",
-    "primaryDark": "#RRGGBB — a darker shade of primary",
-    "accent":      "#RRGGBB — a bright festive highlight, a different colour from primary",
-    "accentDeep":  "#RRGGBB — a deeper shade of accent",
+    "primary":     "#RRGGBB — the occasion's lead colour; deep and saturated so WHITE text is clearly legible on it",
+    "primaryDark": "#RRGGBB — a darker shade of the primary",
+    "accent":      "#RRGGBB — a second signature colour that lifts the primary; clearly different from it",
+    "accentDeep":  "#RRGGBB — a darker shade of the accent",
     "tint":        "#RRGGBB — a very light wash for soft backgrounds",
-    "bg":          "#RRGGBB — a near-white page canvas with a faint festival hint",
-    "headerFrom":  "#RRGGBB — header gradient start (usually = primary)",
-    "headerTo":    "#RRGGBB — header gradient end (= primaryDark or a second colour)",
-    "palette":     ["#RRGGBB", "#RRGGBB", "#RRGGBB — EXACTLY 3 signature colours of THIS occasion, in order"]
+    "bg":          "#RRGGBB — a near-white page canvas carrying the faintest hint of the occasion",
+    "headerFrom":  "#RRGGBB — the top of the header gradient (usually the primary)",
+    "headerTo":    "#RRGGBB — the foot of the header gradient (the darker shade, or a second colour); the whole top of home flows in this colour",
+    "palette":     ["#RRGGBB", "#RRGGBB", "#RRGGBB — the three true signature colours of THIS occasion, in order"]
   }
 }
 
-THE COLOURS ARE YOUR CALL
-- I am giving you NO colours. Choose every hex yourself, authentically from the occasion — its flowers, flags, sweets, lamps, fabrics and mood. Two occasions must never look the same; never fall back to a generic red/gold.
-- One deep anchor plus companions — tasteful and premium; no neon, no muddy greys.
-- White text must read clearly on "primary", "primaryDark", "headerFrom" and "headerTo", so none of those may be pale.
-- Only "bg" and "tint" are pale.
+THE COLOURS ARE ENTIRELY YOURS
+- I give you no colours. Derive every hex from the occasion itself — its flowers, fabrics, lights, sweets, sky, symbols and mood.
+- Two occasions must never come out looking alike. Never fall back to a generic festive red-and-gold unless the occasion genuinely is red and gold.
+- One confident anchor colour, with colours that truly belong beside it — tasteful and premium; no neon, no muddy greys.
+- White text must read clearly on primary, primaryDark, headerFrom and headerTo, so none of those may be pale. Only bg and tint are pale.
 
-COPY — the poster is a GREETING CARD, not an ad
-- It WISHES the customer on the occasion, signed off from the NGS family. It does NOT sell or mention groceries, delivery or prices. Professional, elegant, warm; English-led.
-- Every line must be specific to THIS occasion's meaning — if a line could fit any festival, rewrite it. At most one exclamation mark.
-- BAN clichés: "Celebrate the spirit of…", "Experience the joy of…", "spread the joy/cheer", "Tis the season", "make this <occasion> special".
+THE WORDS ARE A GREETING CARD, NOT AN AD
+- Wish the customer on the occasion, warmly, signed off from the NGS family. Never sell, and never mention groceries, delivery, ordering or prices.
+- Make every line specific to this occasion's own meaning; if a line could be pasted onto any other festival, rewrite it. At most one exclamation mark in the whole theme.
+- Professional, elegant, warm — English-led. Avoid tired festival clichés.
 
-DATES (today is ${TODAY_ISO})
-Schedule the NEXT upcoming occurrence; use the correct date for the upcoming year and give your best estimate if unsure (I can fine-tune it in the app).
+DATES
+Schedule the next upcoming occurrence of the occasion. Use the correct date for the coming year; if you are unsure, give your best estimate — I can fine-tune it in the app.
 
-Begin now by asking me which festival or special day you're designing for. Once I answer, return only the JSON.
+Begin now by asking which festival or special day you're designing for. Once I answer, return only the JSON.
 `;
 
 // ── The banner-animation prompt ─────────────────────────────────────────────
@@ -71,29 +65,33 @@ Begin now by asking me which festival or special day you're designing for. Once 
 // goes live on every customer's home with NO app update (it renders inside a
 // sealed sandbox iframe, so the code is isolated from the app and the network).
 const BANNER_PROMPT_FALLBACK = `ROLE
-You are a motion designer + creative coder building a premium, animated festival banner for the home screen of "NGS - Nisha General Store", a neighbourhood grocery-delivery app in Sultanpur, New Delhi. Aim for the craft of a Blinkit / Zepto festival takeover: a real illustrated SCENE that moves, not a flat card with an emoji. Every festival must look genuinely different.
+You are a motion designer and creative coder building a premium, animated festival banner for the home screen of "NGS — Nisha General Store", a neighbourhood grocery-delivery app in Sultanpur, New Delhi. Aim for the craft of a top app's festival takeover: a real illustrated SCENE that moves, not a flat card. Every occasion must look genuinely different; nothing should feel like a recoloured template.
 
-FIRST, ask me one question: which festival or special day do you want the banner for? Then wait for my answer. Do not assume an occasion or produce any code until I tell you which one.
+FIRST, ask me one question: which festival or special day do you want the banner for? Then wait for my answer. Do not assume an occasion or produce any code until I tell you.
 
-OUTPUT — once I've named the occasion, return ONLY the HTML (no markdown, no code fence, no commentary). It MUST be a single file that runs on its own:
-- One <canvas> that fills the banner; do ALL the artwork on the canvas with hand-written JavaScript (gradients, shapes, particles). NO external images, fonts, scripts, stylesheets, network requests, <img>, fetch, or CDN links — nothing loads from outside the file. It runs in a sealed sandbox with no internet, so anything external will simply fail to appear.
-- Inline <style> and inline <script> only. Plain JavaScript (no imports, no frameworks).
-- The banner area is about 360-420px wide and EXACTLY 190px tall. Size the canvas to its container (read clientWidth/clientHeight, honour devicePixelRatio up to 2) and redraw on resize. Do not assume a fixed width.
+WHAT TO RETURN
+Once I've named the occasion, return ONLY the HTML — no markdown, no code fence, no commentary. It must be a single file that runs entirely on its own:
+- Inline <style> and inline <script> only. Plain JavaScript, no imports, no frameworks.
+- One <canvas> that fills the banner. Do ALL the artwork on the canvas by hand in JavaScript — gradients, shapes, particles. Nothing may load from outside the file: no external images, fonts, scripts, stylesheets, network requests, <img>, fetch or CDN links. It runs in a sealed sandbox with no internet, so anything external simply will not appear.
+- The banner is about 360–420px wide and EXACTLY 190px tall. Read the canvas container's clientWidth and clientHeight, honour devicePixelRatio up to 2, and redraw on resize. Never assume a fixed width.
 
-THE SCENE — it's yours to imagine
-- Build a real, animated scene that is unmistakably the occasion I name: its own imagery, its own signature colours, its own mood. Two different occasions must never come out looking alike. The creative direction is entirely yours — surprise me, and put real effort into the illustration.
-- Real motion: things drift, flicker, sway, unfurl, twinkle, fall or rise — a continuous, smooth requestAnimationFrame loop. Tasteful and calm, never a flashing strobe.
-- A short text overlay on one side (positioned with CSS over the canvas): a small spaced uppercase kicker (the occasion's name), a large serif greeting line, and one short line of goodwill. Let the words fade/slide in once over the first ~1 second. Keep the text clear of the busiest part of the scene.
-- Use the occasion's authentic signature colours, baked into the code as hex constants. White or light text with a soft shadow so it reads over the art.
+CODE THAT WILL NOT BREAK — this is where banners fail, so follow it exactly
+- Never use backtick template literals, and never use the dollar-brace placeholder syntax anywhere in the code. Build every string with single quotes and the + operator to join text and numbers together. Template literals get corrupted when this code is pasted and will silently leave the banner blank.
+- Put the whole script inside one immediately-invoked function wrapped in a try/catch, so a single error can never blank the banner, and nothing leaks to the global scope.
+- Before you finish, read your own code back: confirm every bracket and parenthesis is matched, there are no backticks or dollar-brace placeholders left anywhere, and nothing external is referenced. The banner must never render blank.
+
+THE SCENE — it is yours to imagine
+- Build a real, moving scene that is unmistakably the occasion I name: its own imagery, its own signature colours, its own mood. The creative direction is entirely yours — put genuine effort into the illustration and surprise me.
+- Real, continuous motion on a smooth requestAnimationFrame loop — things drift, flicker, sway, unfurl, twinkle, rise or fall. Calm and tasteful, never a flashing strobe.
+- Bake the occasion's authentic signature colours into the code as fixed hex constants.
+- Overlay a little text on one side, placed with CSS over the canvas: a small spaced uppercase label naming the occasion, a large serif greeting line, and one short line of goodwill. Let the words fade or slide in once over the first second, and keep them clear of the busiest part of the art. The words are a warm greeting to the customer — never salesy, and never about groceries, delivery or prices. Use white or light text with a soft shadow so it reads over the art.
 
 QUALITY BAR
-- Looks hand-crafted and premium; nothing clip-arty; NO emoji anywhere in the artwork.
-- Runs smoothly on a mid-range Android phone (keep particle counts sensible, a few dozen, not thousands).
-- Accessibility: if window.matchMedia('(prefers-reduced-motion: reduce)') matches, render ONE calm static frame (no looping animation).
-- Degrade safely: wrap the script so a stray error can't blank the banner.
-- Self-contained and idempotent: it may be injected more than once on a page, so don't rely on globals leaking; keep everything inside one IIFE.
+- Hand-crafted and premium; nothing clip-arty; no emoji anywhere in the artwork.
+- Runs smoothly on a mid-range Android phone — keep particle counts sensible, a few dozen at most.
+- If the device requests reduced motion (matchMedia for prefers-reduced-motion: reduce), draw one calm static frame instead of looping.
 
-Begin now by asking me which festival or special day you're designing for.
+Begin now by asking which festival or special day you're designing for.
 `;
 
 const DECOR_LABEL = {
