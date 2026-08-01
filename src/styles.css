@@ -5477,25 +5477,35 @@ body {
   margin: -6px -20px 12px;                       /* full-bleed, connected to header */
   background: var(--fest-ribbon, linear-gradient(130deg, var(--green), var(--green-dark)));
   color: #fff;
-  border-bottom-left-radius: 22px; border-bottom-right-radius: 22px;
-  box-shadow: 0 12px 30px rgba(0,0,0,.16);
+  border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.15);
+  animation: festMastIn .5s ease both;           /* reveals when the festival opens */
 }
+@keyframes festMastIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
 .fest-mast::before {                              /* contrast scrim over the whole poster */
   content: ""; position: absolute; inset: 0; z-index: 0;
   background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.40));
 }
 .fest-mast-garland {
-  position: relative; z-index: 2; height: 50px; margin-top: 6px;
-  background-repeat: repeat-x; background-position: center top; background-size: auto 50px;
+  position: relative; z-index: 2; height: 40px; margin-top: 5px;
+  background-repeat: repeat-x; background-position: center top; background-size: auto 40px;
   filter: drop-shadow(0 3px 3px rgba(0,0,0,.18));
+  transform-origin: center top;
+  animation: festGarland 4.6s ease-in-out infinite;   /* gentle sway */
 }
-.fest-poster { position: relative; z-index: 1; padding: 8px 20px 24px; text-align: center; }
+@keyframes festGarland { 0%, 100% { transform: rotate(-.7deg); } 50% { transform: rotate(.7deg); } }
+.fest-poster { position: relative; z-index: 1; padding: 6px 18px 16px; text-align: center; }
 .fest-poster-motif {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background-repeat: no-repeat; background-position: center 52%; background-size: 270px 270px;
+  background-repeat: no-repeat; background-position: center 52%; background-size: 208px 208px;
   opacity: .85;
+  animation: festMotifPulse 6.5s ease-in-out infinite;
 }
-.motif-arch .fest-poster-motif { background-position: center bottom; background-size: 300px 300px; }
+@keyframes festMotifPulse { 0%, 100% { opacity: .72; } 50% { opacity: .96; } }
+/* Mandalas and sunbursts read beautifully turning slowly; arches stay upright. */
+.motif-mandala .fest-poster-motif, .motif-rays .fest-poster-motif { animation: festMotifSpin 70s linear infinite, festMotifPulse 6.5s ease-in-out infinite; }
+@keyframes festMotifSpin { to { transform: rotate(360deg); } }
+.motif-arch .fest-poster-motif { background-position: center bottom; background-size: 288px 288px; animation: festMotifPulse 6.5s ease-in-out infinite; }
 .fest-poster-corner {
   position: absolute; z-index: 0; width: 66px; height: 66px; opacity: .14; pointer-events: none;
   background: repeating-conic-gradient(from 0deg, #fff 0 3.4deg, transparent 3.4deg 14deg);
@@ -5509,24 +5519,34 @@ body {
 .fest-poster-in { position: relative; z-index: 1; }
 .fest-poster-emblem {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 46px; height: 46px; border-radius: 50%; font-size: 24px; margin-bottom: 9px;
+  width: 40px; height: 40px; border-radius: 50%; font-size: 20px; margin-bottom: 7px;
   background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.42);
   box-shadow: 0 4px 14px rgba(0,0,0,.20);
+  animation: festRise .55s ease both .12s;
 }
 .fest-poster-kicker {
   display: block; font-size: 11px; font-weight: 800; letter-spacing: 3px;
   text-transform: uppercase; opacity: .92; text-shadow: 0 1px 3px rgba(0,0,0,.35);
+  animation: festRise .55s ease both .26s;
 }
 .fest-poster-title {
-  font-size: 25px; font-weight: 900; letter-spacing: .3px; line-height: 1.12;
-  margin: 5px 0 0; text-shadow: 0 2px 10px rgba(0,0,0,.42);
+  font-size: 21px; font-weight: 900; letter-spacing: .3px; line-height: 1.14;
+  margin: 4px 0 0; text-shadow: 0 2px 10px rgba(0,0,0,.42);
+  animation: festRise .7s cubic-bezier(.2,.7,.2,1) both .4s;
 }
-.fest-poster-div { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 9px auto; opacity: .9; }
-.fest-poster-div i { display: block; width: 32px; height: 1px; background: currentColor; opacity: .55; }
+.fest-poster-div { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 8px auto; opacity: .9;
+  animation: festRise .55s ease both .56s; }
+.fest-poster-div i { display: block; width: 30px; height: 1px; background: currentColor; opacity: .55; }
 .fest-poster-div b { font-size: 12px; line-height: 1; }
 .fest-poster-sub {
-  font-size: 12.5px; font-weight: 600; opacity: .96; max-width: 280px; margin: 0 auto;
+  font-size: 12.5px; font-weight: 600; opacity: .96; max-width: 260px; margin: 0 auto;
   text-shadow: 0 1px 4px rgba(0,0,0,.32); line-height: 1.4;
+  animation: festRise .55s ease both .68s;
+}
+@keyframes festRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fest-mast, .fest-mast-garland, .fest-poster-motif, .fest-poster-emblem,
+  .fest-poster-kicker, .fest-poster-title, .fest-poster-div, .fest-poster-sub { animation: none !important; }
 }
 
 /* A slim palette band under the header on EVERY screen — the seasonal signal. */
