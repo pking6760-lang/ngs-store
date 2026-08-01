@@ -5588,18 +5588,37 @@ body {
 :root[data-festival] .lang-toggle { color: #fff; border-color: rgba(255,255,255,.45); }
 :root[data-festival] .lang-toggle .on { color: #fff; }
 
-/* The flowing tricolour line the owner asked for — now the crisp animated seam
-   between the themed chrome and the banner, sitting at the bottom of the search. */
-:root[data-festival] .searchbar::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 4px;
-  background: var(--fest-stripe, var(--fest-accent, var(--yellow, #f6c445)));
-  background-size: 200% 100%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
-  pointer-events: none; z-index: 1;
-  animation: festStripeFlow 3.6s linear infinite;
+/* No divider line between the search and the banner — the themed chrome flows
+   straight into the banner. A soft shadow under the sticky search gives a clean
+   sense of depth (the chrome sitting just above the banner), nothing more. */
+:root[data-festival] .searchbar { box-shadow: 0 6px 14px rgba(0, 0, 0, .12); }
+
+/* Flow the festival colour OUT of the banner and down the page — no hard card
+   cut. The banner is a window set into the themed field: colour above it, and
+   below it a matching wash that fades to the page background by the greeting, so
+   the whole top of home reads as one continuous, unforced piece. */
+:root[data-festival] .fest-frame,
+:root[data-festival] .fest-mast {
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  box-shadow: none; margin-bottom: 0; position: relative;
 }
-@keyframes festStripeFlow { from { background-position: 0 0; } to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) { :root[data-festival] .searchbar::after { animation: none; } }
+:root[data-festival] .fest-frame::after {          /* dissolve the banner's foot into the wash */
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 40px; z-index: 2;
+  background: linear-gradient(180deg, rgba(0,0,0,0), var(--fest-header-to, var(--green-dark)));
+  pointer-events: none;
+}
+:root[data-festival] main.main {
+  background:
+    linear-gradient(180deg,
+      var(--fest-header-to, var(--green-dark)) 186px,
+      color-mix(in srgb, var(--fest-header-to, var(--green-dark)) 40%, var(--bg)) 250px,
+      var(--bg) 366px) no-repeat,
+    var(--bg);
+}
+:root[data-festival] .cat-chips {                  /* ride the wash — no frosted bar breaking the flow */
+  background: color-mix(in srgb, var(--fest-header-to, var(--green-dark)) 26%, var(--bg));
+  backdrop-filter: none; border-bottom: none;
+}
 
 /* ════════════════════════════════════════════════════════════
    Festival design system — applied through SHARED classes so every
