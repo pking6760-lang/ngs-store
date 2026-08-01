@@ -82,18 +82,18 @@ Design the complete theme now, choosing all colours yourself, for this festival 
 const BANNER_PROMPT = `ROLE
 You are a motion designer + creative coder building a premium, animated festival banner for the home screen of "NGS - Nisha General Store", a neighbourhood grocery-delivery app in Sultanpur, New Delhi. Aim for the craft of a Blinkit / Zepto festival takeover: a real illustrated SCENE that moves, not a flat card with an emoji. Every festival must look genuinely different.
 
-I will name a festival or occasion. Return ONE complete, self-contained HTML document that draws an animated scene for it.
+FIRST, ask me one question: which festival or special day do you want the banner for? Then wait for my answer. Do not assume an occasion or produce any code until I tell you which one.
 
-OUTPUT — return ONLY the HTML (no markdown, no code fence, no commentary). It MUST be a single file that runs on its own:
+OUTPUT — once I've named the occasion, return ONLY the HTML (no markdown, no code fence, no commentary). It MUST be a single file that runs on its own:
 - One <canvas> that fills the banner; do ALL the artwork on the canvas with hand-written JavaScript (gradients, shapes, particles). NO external images, fonts, scripts, stylesheets, network requests, <img>, fetch, or CDN links — nothing loads from outside the file. It runs in a sealed sandbox with no internet, so anything external will simply fail to appear.
 - Inline <style> and inline <script> only. Plain JavaScript (no imports, no frameworks).
 - The banner area is about 360-420px wide and EXACTLY 190px tall. Size the canvas to its container (read clientWidth/clientHeight, honour devicePixelRatio up to 2) and redraw on resize. Do not assume a fixed width.
 
-THE SCENE (design for the festival's real imagery, not a generic template)
-- Build an actual scene from the festival: e.g. Diwali → a row of diyas with live flickering flames and a warm glow, rangoli, drifting sparks; Holi → arcs of colour powder bursting; Eid → a crescent moon, a lantern swinging, a mosque silhouette, stars; Raksha Bandhan → a rakhi thread; Christmas → snow settling on a tree; Independence Day → the tricolour flag rippling on a pole with the turning Ashoka Chakra. Choose imagery that is unmistakably THIS festival.
+THE SCENE — it's yours to imagine
+- Build a real, animated scene that is unmistakably the occasion I name: its own imagery, its own signature colours, its own mood. Two different occasions must never come out looking alike. The creative direction is entirely yours — surprise me, and put real effort into the illustration.
 - Real motion: things drift, flicker, sway, unfurl, twinkle, fall or rise — a continuous, smooth requestAnimationFrame loop. Tasteful and calm, never a flashing strobe.
-- A short text overlay on one side (positioned with CSS over the canvas): a small spaced uppercase kicker (the festival name), a large serif greeting line, and one short line of goodwill. Let the words fade/slide in once over the first ~1 second. Keep the text clear of the busiest part of the scene.
-- Use the festival's authentic signature colours, baked into the code as hex constants. White or light text with a soft shadow so it reads over the art.
+- A short text overlay on one side (positioned with CSS over the canvas): a small spaced uppercase kicker (the occasion's name), a large serif greeting line, and one short line of goodwill. Let the words fade/slide in once over the first ~1 second. Keep the text clear of the busiest part of the scene.
+- Use the occasion's authentic signature colours, baked into the code as hex constants. White or light text with a soft shadow so it reads over the art.
 
 QUALITY BAR
 - Looks hand-crafted and premium; nothing clip-arty; NO emoji anywhere in the artwork.
@@ -102,10 +102,7 @@ QUALITY BAR
 - Degrade safely: wrap the script so a stray error can't blank the banner.
 - Self-contained and idempotent: it may be injected more than once on a page, so don't rely on globals leaking; keep everything inside one IIFE.
 
-WORKED REFERENCE (Independence Day — match this level of finish, but design a completely fresh scene for whatever festival I name):
-A dawn-sky gradient; a steel flagpole in the left third; a tricolour flag (saffron #E57A1F / white / green #0B6B3A) drawn as vertical strips each riding a travelling sine wave so the cloth ripples and unfurls, with light/shadow shading on the crests; a navy #0A2E6E Ashoka Chakra with 24 spokes slowly turning on the middle band; warm light motes drifting upward; the words "Independence Day" (kicker), "Jai Hind" (serif greeting) and "Wishing you a proud and happy Independence Day" sliding in on the right.
-
-Design and CODE the complete animated banner now, for this festival or occasion:
+Begin now by asking me which festival or special day you're designing for.
 `;
 
 const DECOR_LABEL = {
