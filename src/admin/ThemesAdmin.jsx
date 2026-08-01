@@ -11,7 +11,7 @@ const TODAY_ISO = new Date().toISOString().slice(0, 10);
 const THEME_PROMPT = `ROLE
 You are a senior brand designer creating a limited-time festival skin for the customer app of "NGS - Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Match the polish of a top app's festival campaign (Zomato / Swiggy / Blinkit at Diwali): cohesive, premium and culturally authentic - never gaudy or clip-arty.
 
-I will name a festival or occasion. Design the complete theme and return it as ONE JSON object.
+FIRST, ask me one question: which festival or special day is this theme for? Then wait for my answer. Do not assume an occasion or return any JSON until I tell you which one. Once I answer, design the complete theme yourself — every colour and every word is your call — and return it as ONE JSON object.
 
 WHAT THE APP DOES WITH YOUR THEME (design for the real thing, not a flat banner)
 - A festive masthead sits at the top of home: an ornamental backdrop (your "motif") behind an editorial poster - a small spaced uppercase kicker, the greeting, an ornament divider, then a subtitle - framed by a hanging garland (your "decoration").
@@ -62,15 +62,10 @@ This poster WISHES the customer on the festival (like a warm greeting card), sig
 - Every festival's wording MUST differ from every other; if a line could fit any festival, rewrite it. At most one exclamation mark.
 - BAN: anything salesy or grocery-related in the poster, and AI clichés like "Celebrate the spirit of…", "Experience the joy of…", "spread the joy/cheer", "Tis the season", "make this <festival> special".
 
-EXAMPLES OF THE TARGET VOICE (do NOT copy — write fresh for the festival you are given):
-- Diwali → kicker "Shubh Deepavali", greeting "May your home shine with light, love and prosperity 🪔", title "Warm Diwali wishes from the NGS family", subtitle "Here's to a bright and joyful festival of lights."
-- Eid → kicker "Eid Mubarak", greeting "May this Eid bring peace, joy and blessings 🌙", title "Eid Mubarak from the NGS family", subtitle "Warmth and happiness with your loved ones."
-- Independence Day → kicker "Jai Hind", greeting "Wishing you a proud and happy Independence Day 🇮🇳", title "Independence Day greetings from the NGS family", subtitle "Har Ghar Tiranga — freedom in every heart."
-
 DATES (today is ${TODAY_ISO})
-Schedule the NEXT upcoming occurrence. Fixed each year: Independence Day 15 Aug, Republic Day 26 Jan, Gandhi Jayanti 2 Oct, New Year 1 Jan. Variable (Diwali, Dhanteras, Dussehra, Holi, Raksha Bandhan, Navratri, Eid, Janmashtami...): use the correct date for the upcoming year; give your best estimate if unsure (the shopkeeper can fine-tune it in the app).
+Schedule the NEXT upcoming occurrence of the occasion I name; use the correct date for the upcoming year, and give your best estimate if unsure (I can fine-tune it in the app).
 
-Design the complete theme now, choosing all colours yourself, for this festival or occasion:
+Begin now by asking me which festival or special day you're designing for. Once I answer, return only the JSON.
 `;
 
 // ── The banner-animation prompt ─────────────────────────────────────────────
