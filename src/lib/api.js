@@ -134,6 +134,9 @@ function mapSettings(r) {
     codCustomerLimit: num(r.cod_customer_limit),
     shopLocations: r.shop_locations || [], lowStockThreshold: r.low_stock_threshold,
     automation: r.automation || null,
+    // Editable AI prompts (festival theme + banner), so their wording can be
+    // refined from the database with no app update. Null → use the built-in.
+    prompts: r.prompts || null,
     // Store contact number the customer can call about an order (live tracker).
     supportPhone: (r.support_phone || "").replace(/\D/g, ""),
     // Name shown to customers as the delivery partner when the store delivers

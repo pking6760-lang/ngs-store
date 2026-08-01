@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useThemes } from "../lib/hooks.js";
+import { useThemes, useSettings } from "../lib/hooks.js";
 import { importThemes, setThemeActive, updateThemeSchedule, deleteTheme, setThemeBanner } from "../lib/api.js";
 import { Ic } from "./AdminIcons.jsx";
 
@@ -8,62 +8,58 @@ import { Ic } from "./AdminIcons.jsx";
 // premium, cohesive theme that pastes straight in. Today's date is injected so
 // the AI schedules the NEXT occurrence correctly.
 const TODAY_ISO = new Date().toISOString().slice(0, 10);
-const THEME_PROMPT = `ROLE
-You are a senior brand designer creating a limited-time festival skin for the customer app of "NGS - Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Match the polish of a top app's festival campaign (Zomato / Swiggy / Blinkit at Diwali): cohesive, premium and culturally authentic - never gaudy or clip-arty.
+const THEME_PROMPT_FALLBACK = `ROLE
+You are a senior brand designer creating a limited-time festival skin for the customer app of "NGS - Nisha General Store", a neighbourhood grocery-delivery shop in Sultanpur, New Delhi. Match the polish of a top app's festival campaign: cohesive, premium and culturally authentic — never gaudy or clip-arty. Every occasion must come out looking genuinely different from every other.
 
 FIRST, ask me one question: which festival or special day is this theme for? Then wait for my answer. Do not assume an occasion or return any JSON until I tell you which one. Once I answer, design the complete theme yourself — every colour and every word is your call — and return it as ONE JSON object.
 
-WHAT THE APP DOES WITH YOUR THEME (design for the real thing, not a flat banner)
-- A festive masthead sits at the top of home: an ornamental backdrop (your "motif") behind an editorial poster - a small spaced uppercase kicker, the greeting, an ornament divider, then a subtitle - framed by a hanging garland (your "decoration").
-- Your "palette" re-skins the WHOLE app cohesively: a colour band under the header on every screen, the accent bar on every section title, and the masthead blend; it also draws the garland. Use EXACTLY 3 main colours — the festival's true signature colours (for flag days that means the flag's 3 colours, nothing extra).
-- Your "primary" colours the header, all buttons, the cart bar and price chips (white text sits on it). Your "accent" highlights savings and badges.
-- Your "pattern" scatters the festival's own little motif faintly through the BACKGROUND of every page, so the festival is felt everywhere - subtly, never busy.
+WHAT THE APP DOES WITH YOUR THEME
+- Your "palette" (exactly 3 signature colours of the occasion) plus "primary"/"accent" re-skin the WHOLE app: the header and search bar turn these colours, along with the buttons, cart bar, price chips and section accents. White text sits on "primary", so it must be deep enough.
+- "greeting", "kicker", "title" and "subtitle" are the words shown to the customer.
+- "pattern" scatters a faint motif through the background of every page.
+- "decoration" and "motif" style the fallback poster — used only when a festival has no custom banner animation.
 
 RETURN ONLY THIS JSON OBJECT (no markdown, no code fence, no commentary):
 {
-  "name": "the festival's name",
+  "name": "the occasion's name",
   "emoji": "one emoji that represents it",
-  "startsOn": "YYYY-MM-DD - switch the theme ON a few days before",
-  "endsOn": "YYYY-MM-DD - switch it OFF on or just after the day",
-  "greeting": "the BIG wish on the poster — a warm, sincere festival wish or blessing to the customer, in polished English; up to one emoji at the end",
+  "startsOn": "YYYY-MM-DD — switch the theme ON a few days before",
+  "endsOn": "YYYY-MM-DD — switch it OFF on or just after the day",
+  "greeting": "the big wish on the poster — a warm, sincere wish or blessing to the customer, in polished English; up to one emoji at the end",
   "banner": {
-    "kicker": "the festival's authentic greeting, kept as-is, e.g. Shubh Deepavali / Eid Mubarak / Jai Hind / Ganpati Bappa Morya / Merry Christmas",
-    "title": "a short sign-off line, e.g. '<Festival> wishes from the NGS family' or '<Festival> greetings from NGS' (vary the wording)",
-    "subtitle": "one graceful closing line of goodwill for this festival; no groceries, no prices"
+    "kicker": "the occasion's own authentic greeting, kept as-is",
+    "title": "a short sign-off line from the NGS family; vary the wording every time",
+    "subtitle": "one graceful closing line of goodwill; no groceries, no prices"
   },
-  "decoration": "garland style - 'tricolor' (flag bunting) for flag days ONLY (Independence / Republic Day); 'marigold' (flower garland) for every other festival",
-  "motif": "poster backdrop - 'mandala' (rangoli ring), 'rays' (sunburst) or 'arch' (temple archway); pick what fits the festival",
-  "pattern": "faint background motif shown app-wide - 'splash' (Holi), 'flags' (flag days), 'diyas' (Diwali / Dussehra), 'coins' (Dhanteras), 'petals' (flower festivals) or 'sparkles'",
+  "decoration": "garland style — choose ONE supported value that genuinely suits THIS occasion, or none: marigold | flowers | petals | leaves | tricolor | flags | lanterns | diyas | coins | snow | none. Do NOT default to any one style.",
+  "motif": "poster backdrop — choose ONE supported value that fits: mandala | rays | arch",
+  "pattern": "faint app-wide background motif — choose ONE supported value that fits: splash | flags | diyas | coins | petals | sparkles",
   "colors": {
-    "primary":     "#RRGGBB - deep and saturated; WHITE text must be clearly legible on it",
-    "primaryDark": "#RRGGBB - a darker shade of primary, for gradients / pressed states",
-    "accent":      "#RRGGBB - a bright festive highlight; a DIFFERENT colour from primary",
-    "accentDeep":  "#RRGGBB - a deeper shade of accent",
-    "tint":        "#RRGGBB - a very light wash for soft chip / section backgrounds",
-    "bg":          "#RRGGBB - a near-white page canvas with a faint festival hint",
-    "headerFrom":  "#RRGGBB - masthead gradient start, usually = primary",
-    "headerTo":    "#RRGGBB - masthead gradient end, = primaryDark or a warm second colour",
-    "palette":     ["#RRGGBB", "#RRGGBB", "#RRGGBB - EXACTLY 3 main signature colours of THIS festival, in order; for flag days use the flag's 3 colours only"]
+    "primary":     "#RRGGBB — deep and saturated; WHITE text must be clearly legible on it",
+    "primaryDark": "#RRGGBB — a darker shade of primary",
+    "accent":      "#RRGGBB — a bright festive highlight, a different colour from primary",
+    "accentDeep":  "#RRGGBB — a deeper shade of accent",
+    "tint":        "#RRGGBB — a very light wash for soft backgrounds",
+    "bg":          "#RRGGBB — a near-white page canvas with a faint festival hint",
+    "headerFrom":  "#RRGGBB — header gradient start (usually = primary)",
+    "headerTo":    "#RRGGBB — header gradient end (= primaryDark or a second colour)",
+    "palette":     ["#RRGGBB", "#RRGGBB", "#RRGGBB — EXACTLY 3 signature colours of THIS occasion, in order"]
   }
 }
 
 THE COLOURS ARE YOUR CALL
-- I am giving you NO colours. You choose every hex yourself, authentically from the festival - its flowers, flags, sweets, lamps, fabrics, deities and mood. Two festivals must never come out looking the same; do not default to red/gold unless the festival genuinely is red/gold.
-- Harmonious set: one deep anchor plus festive companions - tasteful and premium; no neon, no muddy greys.
-- Contrast: white text must read clearly on "primary", "primaryDark", "headerFrom" and "headerTo" - so none of those may be pale or pastel.
-- Only "bg" and "tint" are pale; every other colour is confident. "palette" is REQUIRED and must be EXACTLY 3 main colours — no more (e.g. Independence Day = saffron, white, green only; do not add a 4th like blue).
+- I am giving you NO colours. Choose every hex yourself, authentically from the occasion — its flowers, flags, sweets, lamps, fabrics and mood. Two occasions must never look the same; never fall back to a generic red/gold.
+- One deep anchor plus companions — tasteful and premium; no neon, no muddy greys.
+- White text must read clearly on "primary", "primaryDark", "headerFrom" and "headerTo", so none of those may be pale.
+- Only "bg" and "tint" are pale.
 
-COPY — the poster is a GREETING CARD to the customer, not an ad
-This poster WISHES the customer on the festival (like a warm greeting card), signed off from the NGS family. It does NOT sell or mention groceries, delivery, ordering or prices. Tone: professional, elegant, warm — English-led (a stray Hindi word is fine only if it belongs, e.g. "Har Ghar Tiranga"). Premium brand voice, never corporate-stiff, never salesy.
-- greeting: the main wish/blessing in clean English, specific to THIS festival's meaning (light & prosperity for Diwali; wealth & fortune for Dhanteras; good over evil for Dussehra; the sibling bond for Rakhi; freedom & pride for Independence Day; peace & blessings for Eid…). One sentence.
-- kicker: keep the festival's real greeting exactly (Shubh Deepavali, Eid Mubarak, Jai Hind, Ganpati Bappa Morya, Merry Christmas…).
-- title: a short sign-off, e.g. "Warm Diwali wishes from the NGS family" (vary "warm / heartfelt / season's" and "wishes / greetings").
-- subtitle: a graceful closing line of goodwill for this festival.
-- Every festival's wording MUST differ from every other; if a line could fit any festival, rewrite it. At most one exclamation mark.
-- BAN: anything salesy or grocery-related in the poster, and AI clichés like "Celebrate the spirit of…", "Experience the joy of…", "spread the joy/cheer", "Tis the season", "make this <festival> special".
+COPY — the poster is a GREETING CARD, not an ad
+- It WISHES the customer on the occasion, signed off from the NGS family. It does NOT sell or mention groceries, delivery or prices. Professional, elegant, warm; English-led.
+- Every line must be specific to THIS occasion's meaning — if a line could fit any festival, rewrite it. At most one exclamation mark.
+- BAN clichés: "Celebrate the spirit of…", "Experience the joy of…", "spread the joy/cheer", "Tis the season", "make this <occasion> special".
 
 DATES (today is ${TODAY_ISO})
-Schedule the NEXT upcoming occurrence of the occasion I name; use the correct date for the upcoming year, and give your best estimate if unsure (I can fine-tune it in the app).
+Schedule the NEXT upcoming occurrence; use the correct date for the upcoming year and give your best estimate if unsure (I can fine-tune it in the app).
 
 Begin now by asking me which festival or special day you're designing for. Once I answer, return only the JSON.
 `;
@@ -74,7 +70,7 @@ Begin now by asking me which festival or special day you're designing for. Once 
 // animated scene. Paste that into a theme's "Banner animation" box below and it
 // goes live on every customer's home with NO app update (it renders inside a
 // sealed sandbox iframe, so the code is isolated from the app and the network).
-const BANNER_PROMPT = `ROLE
+const BANNER_PROMPT_FALLBACK = `ROLE
 You are a motion designer + creative coder building a premium, animated festival banner for the home screen of "NGS - Nisha General Store", a neighbourhood grocery-delivery app in Sultanpur, New Delhi. Aim for the craft of a Blinkit / Zepto festival takeover: a real illustrated SCENE that moves, not a flat card with an emoji. Every festival must look genuinely different.
 
 FIRST, ask me one question: which festival or special day do you want the banner for? Then wait for my answer. Do not assume an occasion or produce any code until I tell you which one.
@@ -122,9 +118,16 @@ function isLiveNow(t) {
 
 export default function ThemesAdmin() {
   const themes = useThemes();
+  const settings = useSettings();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+
+  // The AI prompts are editable from the database (settings.prompts) so their
+  // wording can be refined without shipping a new app — the built-in versions
+  // below are only the fallback if none is stored.
+  const themePrompt = settings?.prompts?.theme || THEME_PROMPT_FALLBACK;
+  const bannerPrompt = settings?.prompts?.banner || BANNER_PROMPT_FALLBACK;
 
   // Live-parse the paste box so the admin sees the theme before importing.
   const preview = useMemo(() => {
@@ -145,11 +148,11 @@ export default function ThemesAdmin() {
   }, [themes]);
 
   function copyPrompt() {
-    try { navigator.clipboard.writeText(THEME_PROMPT); setMsg("Theme prompt copied — paste it into ChatGPT/Gemini, add the festival name, then paste the JSON back below."); }
+    try { navigator.clipboard.writeText(themePrompt); setMsg("Theme prompt copied — paste it into Gemini/ChatGPT. It will ask which festival, then return the JSON to paste back below."); }
     catch { setMsg("Couldn't copy — long-press to select the prompt."); }
   }
   function copyBannerPrompt() {
-    try { navigator.clipboard.writeText(BANNER_PROMPT); setMsg("Banner prompt copied — paste it into ChatGPT/Gemini, name the festival, then paste the HTML it returns into a theme's “Banner animation” box below. It goes live with no app update."); }
+    try { navigator.clipboard.writeText(bannerPrompt); setMsg("Banner prompt copied — paste it into Gemini/ChatGPT. It will ask which festival, then return the HTML to paste into a theme's “Banner animation” box below. It goes live with no app update."); }
     catch { setMsg("Couldn't copy — long-press to select the prompt."); }
   }
 
