@@ -76,8 +76,8 @@ Deno.serve(async (req) => {
       if (rupees > 200000) return json({ error: "Amount is too large." }, 400);
       const amountPaise = Math.round(rupees * 100);
 
-      // 15-minute life (Razorpay needs close_by >= now + 2 min).
-      const closeBy = Math.floor(Date.now() / 1000) + 15 * 60;
+      // No expiry: the QR stays payable until the customer pays (single-use, so
+      // it closes itself on payment) or the admin cancels it.
       const rzpRes = await fetch("https://api.razorpay.com/v1/payments/qr_codes", {
         method: "POST",
         headers: { Authorization: rzpAuth, "Content-Type": "application/json" },
@@ -87,7 +87,6 @@ Deno.serve(async (req) => {
           fixed_amount: true,
           payment_amount: amountPaise,
           description: "NGS counter collection",
-          close_by: closeBy,
           notes: { kind: "counter_collect" },
         }),
       });
@@ -109,7 +108,17 @@ Deno.serve(async (req) => {
         }
       } catch { /* client falls back to imageUrl */ }
 
-      return json({ qrId: qr.id, imageUrl: qr.image_url, imageDataUrl, amount: rupees, closeBy: qr.close_by || closeBy });
+      return json({ qrId: qr.id, imageUrl: qr.image_url, imageDataUrl, amount: rupees });
+    }
+
+    if (action === "close") {
+      const qrId = String(body?.qrId || "");
+      if (!qrId) return json({ error: "Missing QR." }, 400);
+      // Best-effort: stop a cancelled QR from being payable later.
+      await fetch(`https://api.razorpay.com/v1/payments/qr_codes/${qrId}/close`, {
+        method: "POST", headers: { Authorization: rzpAuth },
+      }).catch(() => {});
+      return json({ ok: true });
     }
 
     if (action === "status") {

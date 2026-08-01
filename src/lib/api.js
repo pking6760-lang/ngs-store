@@ -602,6 +602,9 @@ export async function collectQrCreate(amount) {
 export async function collectQrStatus(qrId) {
   return invokeFn("razorpay-collect-qr", { action: "status", qrId });
 }
+export async function collectQrClose(qrId) {
+  return invokeFn("razorpay-collect-qr", { action: "close", qrId });
+}
 
 // Product details lookup (name / brand / weight) for auto-filling a product.
 // Server-side: Open Food Facts, then Gemini web search for Indian brands.

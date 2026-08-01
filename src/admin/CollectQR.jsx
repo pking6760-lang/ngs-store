@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { collectQrCreate, collectQrStatus } from "../lib/api.js";
+import { collectQrCreate, collectQrStatus, collectQrClose } from "../lib/api.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { Ic } from "./AdminIcons.jsx";
 
@@ -7,20 +7,17 @@ import { Ic } from "./AdminIcons.jsx";
 // the moment they pay, the QR closes itself and the payer's details appear.
 export default function CollectQR() {
   const [amount, setAmount] = useState("");
-  const [stage, setStage] = useState("entry"); // entry · waiting · paid · expired
-  const [qr, setQr] = useState(null);           // { qrId, imageDataUrl, imageUrl, amount, closeBy }
+  const [stage, setStage] = useState("entry"); // entry · waiting · paid
+  const [qr, setQr] = useState(null);           // { qrId, imageDataUrl, imageUrl, cleanQr, amount }
   const [payment, setPayment] = useState(null);  // { amount, vpa, contact, method, createdAt }
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [left, setLeft] = useState(0);           // seconds until the QR lapses
   const poll = useRef(null);
-  const tick = useRef(null);
 
-  function stopTimers() {
+  function stopPoll() {
     if (poll.current) { clearInterval(poll.current); poll.current = null; }
-    if (tick.current) { clearInterval(tick.current); tick.current = null; }
   }
-  useEffect(() => stopTimers, []);
+  useEffect(() => stopPoll, []);
 
   async function createQr() {
     const rupees = Number(amount);
@@ -33,35 +30,34 @@ export default function CollectQR() {
       // image — same as the order-collection flow, so no Razorpay artwork shows.
       const cleanQr = await cleanUpiQrFromImage(q.imageDataUrl);
       setQr({ ...q, cleanQr }); setStage("waiting"); setPayment(null);
-      setLeft(Math.max(0, Math.round((q.closeBy * 1000 - Date.now()) / 1000)));
-      startWaiting(q.qrId, q.closeBy);
+      startWaiting(q.qrId);
     } catch (e) { setErr(e.message || "Couldn't create the QR."); }
     finally { setBusy(false); }
   }
 
-  function startWaiting(qrId, closeBy) {
-    stopTimers();
-    tick.current = setInterval(() => {
-      const s = Math.max(0, Math.round((closeBy * 1000 - Date.now()) / 1000));
-      setLeft(s);
-      if (s <= 0) { stopTimers(); setStage("expired"); }
-    }, 1000);
+  // No time limit: the QR stays live until the customer pays. We just keep
+  // checking for the payment.
+  function startWaiting(qrId) {
+    stopPoll();
     poll.current = setInterval(async () => {
       try {
         const r = await collectQrStatus(qrId);
-        if (r?.paid) { stopTimers(); setPayment(r.payment); setStage("paid"); }
-        else if (r?.closed) { stopTimers(); setStage("expired"); }
+        if (r?.paid) { stopPoll(); setPayment(r.payment); setStage("paid"); }
       } catch { /* keep polling */ }
     }, 3500);
   }
 
+  function cancel() {
+    stopPoll();
+    if (qr?.qrId) collectQrClose(qr.qrId).catch(() => {}); // stop it being payable later
+    reset();
+  }
   function reset() {
-    stopTimers();
+    stopPoll();
     setStage("entry"); setQr(null); setPayment(null); setErr(""); setAmount("");
   }
 
   const rupee = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const whenText = (ms) => ms ? new Date(ms).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }) : "";
 
   return (
@@ -102,10 +98,10 @@ export default function CollectQR() {
           </div>
           <div className="cq-amt-big">{rupee(qr.amount)}</div>
           <div className="cq-status">
-            <span className="cq-dot" /> Waiting for payment · closes in {mmss(left)}
+            <span className="cq-dot" /> Waiting for payment…
           </div>
           <p className="cq-hint">Ask the customer to scan with Google Pay, PhonePe, Paytm or any UPI app.</p>
-          <button className="an-btn ghost" onClick={reset}>Cancel</button>
+          <button className="an-btn ghost" onClick={cancel}>Cancel</button>
         </div>
       )}
 
@@ -120,15 +116,6 @@ export default function CollectQR() {
             {payment.createdAt && <Row k="Time" v={whenText(payment.createdAt)} />}
             {payment.paymentId && <Row k="Ref" v={payment.paymentId} />}
           </div>
-          <button className="an-btn cq-go" onClick={reset}>New payment</button>
-        </div>
-      )}
-
-      {stage === "expired" && (
-        <div className="cq-done">
-          <div className="cq-expired"><Ic name="reset" size={30} /></div>
-          <div className="cq-paid-amt" style={{ color: "#6b7482" }}>QR expired</div>
-          <p className="cq-hint">No payment was received in time. Create a fresh QR to try again.</p>
           <button className="an-btn cq-go" onClick={reset}>New payment</button>
         </div>
       )}
