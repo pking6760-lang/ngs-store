@@ -1,5 +1,6 @@
 import { themePalette } from "../lib/theme.js";
 import IndependenceDayBanner from "./festive-banners/IndependenceDayBanner.jsx";
+import FestiveBannerFrame from "./FestiveBannerFrame.jsx";
 
 // Bespoke, hand-crafted banner scenes — each a genuinely different design, not a
 // recoloured template. Matched by a keyword in the festival name; festivals
@@ -106,9 +107,13 @@ function dividerFor(theme) {
 // genuinely different, designed poster rather than a colour swap.
 export function FestiveMasthead({ theme }) {
   if (!theme?.id) return null;
-  // A bespoke scene wins over the generic poster when this festival has one.
+  // 1) Over-the-air banner: a self-contained animation authored in Admin and
+  //    delivered in the theme. This is the path new festivals use — no app update.
+  if (theme.bannerHtml) return <FestiveBannerFrame html={theme.bannerHtml} />;
+  // 2) A bundled bespoke scene, if this festival has one.
   const Bespoke = bespokeBanner(theme);
   if (Bespoke) return <Bespoke theme={{ ...theme, palette: themePalette(theme.colors || {}) }} />;
+  // 3) The generic composed poster.
   const b = theme.banner || {};
   const c = theme.colors || {};
   const greeting = theme.greeting || b.kicker;

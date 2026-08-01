@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useThemes } from "../lib/hooks.js";
-import { importThemes, setThemeActive, updateThemeSchedule, deleteTheme } from "../lib/api.js";
+import { importThemes, setThemeActive, updateThemeSchedule, deleteTheme, setThemeBanner } from "../lib/api.js";
 import { Ic } from "./AdminIcons.jsx";
 
 // The exact prompt the shopkeeper copies into ChatGPT/Gemini. A full design
@@ -73,6 +73,41 @@ Schedule the NEXT upcoming occurrence. Fixed each year: Independence Day 15 Aug,
 Design the complete theme now, choosing all colours yourself, for this festival or occasion:
 `;
 
+// ── The banner-animation prompt ─────────────────────────────────────────────
+// This is the owner's over-the-air workflow: paste this into ChatGPT/Gemini,
+// name the festival, and it returns ONE self-contained HTML page — a bespoke
+// animated scene. Paste that into a theme's "Banner animation" box below and it
+// goes live on every customer's home with NO app update (it renders inside a
+// sealed sandbox iframe, so the code is isolated from the app and the network).
+const BANNER_PROMPT = `ROLE
+You are a motion designer + creative coder building a premium, animated festival banner for the home screen of "NGS - Nisha General Store", a neighbourhood grocery-delivery app in Sultanpur, New Delhi. Aim for the craft of a Blinkit / Zepto festival takeover: a real illustrated SCENE that moves, not a flat card with an emoji. Every festival must look genuinely different.
+
+I will name a festival or occasion. Return ONE complete, self-contained HTML document that draws an animated scene for it.
+
+OUTPUT — return ONLY the HTML (no markdown, no code fence, no commentary). It MUST be a single file that runs on its own:
+- One <canvas> that fills the banner; do ALL the artwork on the canvas with hand-written JavaScript (gradients, shapes, particles). NO external images, fonts, scripts, stylesheets, network requests, <img>, fetch, or CDN links — nothing loads from outside the file. It runs in a sealed sandbox with no internet, so anything external will simply fail to appear.
+- Inline <style> and inline <script> only. Plain JavaScript (no imports, no frameworks).
+- The banner area is about 360-420px wide and EXACTLY 190px tall. Size the canvas to its container (read clientWidth/clientHeight, honour devicePixelRatio up to 2) and redraw on resize. Do not assume a fixed width.
+
+THE SCENE (design for the festival's real imagery, not a generic template)
+- Build an actual scene from the festival: e.g. Diwali → a row of diyas with live flickering flames and a warm glow, rangoli, drifting sparks; Holi → arcs of colour powder bursting; Eid → a crescent moon, a lantern swinging, a mosque silhouette, stars; Raksha Bandhan → a rakhi thread; Christmas → snow settling on a tree; Independence Day → the tricolour flag rippling on a pole with the turning Ashoka Chakra. Choose imagery that is unmistakably THIS festival.
+- Real motion: things drift, flicker, sway, unfurl, twinkle, fall or rise — a continuous, smooth requestAnimationFrame loop. Tasteful and calm, never a flashing strobe.
+- A short text overlay on one side (positioned with CSS over the canvas): a small spaced uppercase kicker (the festival name), a large serif greeting line, and one short line of goodwill. Let the words fade/slide in once over the first ~1 second. Keep the text clear of the busiest part of the scene.
+- Use the festival's authentic signature colours, baked into the code as hex constants. White or light text with a soft shadow so it reads over the art.
+
+QUALITY BAR
+- Looks hand-crafted and premium; nothing clip-arty; NO emoji anywhere in the artwork.
+- Runs smoothly on a mid-range Android phone (keep particle counts sensible, a few dozen, not thousands).
+- Accessibility: if window.matchMedia('(prefers-reduced-motion: reduce)') matches, render ONE calm static frame (no looping animation).
+- Degrade safely: wrap the script so a stray error can't blank the banner.
+- Self-contained and idempotent: it may be injected more than once on a page, so don't rely on globals leaking; keep everything inside one IIFE.
+
+WORKED REFERENCE (Independence Day — match this level of finish, but design a completely fresh scene for whatever festival I name):
+A dawn-sky gradient; a steel flagpole in the left third; a tricolour flag (saffron #E57A1F / white / green #0B6B3A) drawn as vertical strips each riding a travelling sine wave so the cloth ripples and unfurls, with light/shadow shading on the crests; a navy #0A2E6E Ashoka Chakra with 24 spokes slowly turning on the middle band; warm light motes drifting upward; the words "Independence Day" (kicker), "Jai Hind" (serif greeting) and "Wishing you a proud and happy Independence Day" sliding in on the right.
+
+Design and CODE the complete animated banner now, for this festival or occasion:
+`;
+
 const DECOR_LABEL = {
   diyas: "🪔 Diyas", lanterns: "🏮 Lanterns", flags: "🇮🇳 Flags", tricolor: "🇮🇳 Tricolour",
   confetti: "🎉 Confetti", crackers: "🎆 Crackers", fireworks: "🎆 Fireworks", petals: "🌸 Petals",
@@ -118,7 +153,11 @@ export default function ThemesAdmin() {
   }, [themes]);
 
   function copyPrompt() {
-    try { navigator.clipboard.writeText(THEME_PROMPT); setMsg("AI prompt copied — paste it into ChatGPT/Gemini, add the festival name, then paste the JSON back below."); }
+    try { navigator.clipboard.writeText(THEME_PROMPT); setMsg("Theme prompt copied — paste it into ChatGPT/Gemini, add the festival name, then paste the JSON back below."); }
+    catch { setMsg("Couldn't copy — long-press to select the prompt."); }
+  }
+  function copyBannerPrompt() {
+    try { navigator.clipboard.writeText(BANNER_PROMPT); setMsg("Banner prompt copied — paste it into ChatGPT/Gemini, name the festival, then paste the HTML it returns into a theme's “Banner animation” box below. It goes live with no app update."); }
     catch { setMsg("Couldn't copy — long-press to select the prompt."); }
   }
 
@@ -131,6 +170,7 @@ export default function ThemesAdmin() {
     } catch (e) { setMsg(e.message?.includes("JSON") ? "That doesn't look like valid JSON — paste exactly what the AI returned." : (e.message || "Import failed.")); }
     finally { setBusy(false); }
   }
+  async function saveBanner(t, html) { const r = await setThemeBanner(t.id, html); setMsg(r.hasBanner ? `Banner animation saved for ${t.name}. It's live now on the customer app — no app update needed.` : `Banner animation cleared for ${t.name}.`); return r; }
   async function toggle(t) { try { await setThemeActive(t.id, !t.active); } catch (e) { setMsg(e.message); } }
   async function schedule(t, patch) { try { await updateThemeSchedule(t.id, { startsOn: t.startsOn, endsOn: t.endsOn, ...patch }); } catch (e) { setMsg(e.message); } }
   async function del(t) { try { await deleteTheme(t.id); } catch (e) { setMsg(e.message); } }
@@ -146,7 +186,8 @@ export default function ThemesAdmin() {
 
       <div className="an-add">
         <div className="an-actions">
-          <button className="an-btn ghost" onClick={copyPrompt}>Copy AI prompt</button>
+          <button className="an-btn ghost" onClick={copyPrompt}>Copy theme prompt</button>
+          <button className="an-btn ghost" onClick={copyBannerPrompt}>Copy banner prompt</button>
         </div>
         <textarea
           className="an-textarea" rows={5}
@@ -187,10 +228,65 @@ export default function ThemesAdmin() {
               <label className="an-switch"><input type="checkbox" checked={t.active} onChange={() => toggle(t)} /><span /></label>
               <button className="an-del" onClick={() => del(t)} aria-label="Delete"><Ic name="trash" size={15} /></button>
             </div>
+            <BannerEditor theme={t} onSave={(html) => saveBanner(t, html)} />
           </div>
         ))}
       </div>
     </section>
+  );
+}
+
+// Per-theme over-the-air banner animation. Paste the HTML the banner prompt
+// produced, preview it live in a sealed iframe (exactly how the customer app
+// renders it), then save — it goes live instantly, no app update. Clearing it
+// falls back to the bundled scene / composed poster.
+function BannerEditor({ theme, onSave }) {
+  const saved = theme.theme?.bannerHtml || "";
+  const [open, setOpen] = useState(false);
+  const [html, setHtml] = useState(saved);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const dirty = html.trim() !== saved.trim();
+  const preview = html.trim();
+
+  async function save(next) {
+    setBusy(true); setErr("");
+    try { await onSave(next); if (next === "") setHtml(""); }
+    catch (e) { setErr(e.message || "Couldn't save."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="theme-banner">
+      <button className="theme-banner-toggle" onClick={() => setOpen((v) => !v)}>
+        <Ic name="broadcast" size={13} />
+        {saved ? "Banner animation ✓ — edit" : "Add banner animation"}
+        <span className="theme-banner-caret">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="theme-banner-body">
+          <p className="theme-banner-hint">
+            Paste the HTML from <strong>“Copy banner prompt”</strong>. Preview shows exactly what customers see. Save and it’s live — no app update.
+          </p>
+          <textarea
+            className="an-textarea" rows={4} spellCheck={false}
+            placeholder="Paste the banner HTML here (starts with <!doctype html> …)"
+            value={html} onChange={(e) => setHtml(e.target.value)}
+          />
+          {err && <p className="an-warn" style={{ margin: "4px 2px" }}>⚠ {err}</p>}
+          {preview && (
+            <div className="theme-banner-prev">
+              <div className="theme-banner-prev-note">Live preview</div>
+              <iframe title="Banner preview" srcDoc={preview} sandbox="allow-scripts" scrolling="no" />
+            </div>
+          )}
+          <div className="an-actions">
+            <button className="an-btn" disabled={busy || !dirty || !preview} onClick={() => save(html)}>{busy ? "Saving…" : "Save & go live"}</button>
+            {saved && <button className="an-btn ghost" disabled={busy} onClick={() => save("")}>Remove banner</button>}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

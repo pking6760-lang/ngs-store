@@ -2112,6 +2112,23 @@ export async function deleteTheme(id) {
   pingLocal("customer_themes");
   return { ok: true };
 }
+// Attach (or clear) an over-the-air banner animation on a theme. The self-
+// contained HTML is stored inside the theme jsonb as `bannerHtml`; the customer
+// app renders it in a sealed iframe. Passing "" clears it (falls back to the
+// bundled scene / composed poster). Read-modify-write so the rest of the theme
+// jsonb is preserved.
+export async function setThemeBanner(id, bannerHtml) {
+  const db = must();
+  const { data, error } = await db.from("customer_themes").select("theme").eq("id", id).single();
+  if (error) throw error;
+  const next = { ...(data?.theme || {}) };
+  const html = (bannerHtml || "").trim();
+  if (html) next.bannerHtml = html; else delete next.bannerHtml;
+  const { error: upErr } = await db.from("customer_themes").update({ theme: next }).eq("id", id);
+  if (upErr) throw upErr;
+  pingLocal("customer_themes");
+  return { ok: true, hasBanner: !!html };
+}
 // The one theme the customer app should paint right now (or null for default).
 export async function fetchActiveTheme() {
   const { data, error } = await must().rpc("get_active_theme");

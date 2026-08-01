@@ -5549,14 +5549,29 @@ body {
   .fest-poster-kicker, .fest-poster-title, .fest-poster-div, .fest-poster-sub { animation: none !important; }
 }
 
-/* A slim palette band under the header on EVERY screen — the seasonal signal. */
+/* OTA banner frame — a self-contained animation delivered in the theme. */
+.fest-frame {
+  margin: -6px -20px 12px; height: 190px; overflow: hidden;
+  border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.18);
+  background: var(--fest-ribbon, linear-gradient(130deg, var(--green), var(--green-dark)));
+  animation: festMastIn .5s ease both;
+}
+.fest-frame-if { width: 100%; height: 100%; border: 0; display: block; }
+
+/* A slim palette band under the header on EVERY screen — the seasonal signal,
+   now flowing so the festival feels alive even between banners. */
 :root[data-festival] .header { position: relative; }
 :root[data-festival] .header::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
   background: var(--fest-stripe, var(--fest-accent, var(--yellow, #f6c445)));
+  background-size: 200% 100%;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .12);   /* gives the band edge presence on white */
   pointer-events: none;
+  animation: festStripeFlow 3.6s linear infinite;
 }
+@keyframes festStripeFlow { from { background-position: 0 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { :root[data-festival] .header::after { animation: none; } }
 
 /* ════════════════════════════════════════════════════════════
    Festival design system — applied through SHARED classes so every
