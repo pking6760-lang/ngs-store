@@ -37,7 +37,7 @@ RETURN ONLY THIS JSON OBJECT — no markdown, no code fence, no commentary:
     "bg":          "#RRGGBB — a near-white page canvas carrying the faintest hint of the occasion",
     "headerFrom":  "#RRGGBB — the top of the header gradient (usually the primary)",
     "headerTo":    "#RRGGBB — the foot of the header gradient (the darker shade, or a second colour); the whole top of home flows in this colour",
-    "palette":     ["#RRGGBB", "#RRGGBB", "#RRGGBB — the three true signature colours of THIS occasion, in order"]
+    "palette":     ["#RRGGBB", "#RRGGBB", "... — the occasion's own signature colours, in order, with the primary first. You decide how many belong — use exactly as many as the occasion genuinely has, no more and no fewer. Never pad to a fixed count, and never add a colour that doesn't belong."]
   }
 }
 
