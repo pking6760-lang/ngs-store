@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useThemes, useSettings } from "../lib/hooks.js";
-import { importThemes, setThemeActive, updateThemeSchedule, deleteTheme, setThemeBanner } from "../lib/api.js";
+import { importThemes, setThemeActive, updateThemeSchedule, deleteTheme, setThemeBanner, setThemeBackground } from "../lib/api.js";
 import { Ic } from "./AdminIcons.jsx";
 
 // Built-in fallback for the festival-theme prompt. The live version is editable
@@ -92,6 +92,37 @@ QUALITY BAR
 Begin now by asking which festival or special day you're designing for.
 `;
 
+// Built-in fallback for the ambient-background prompt (settings.prompts.background
+// overrides it). Example-free: the AI decides the whole atmosphere itself.
+const BACKGROUND_PROMPT_FALLBACK = `ROLE
+You are a motion designer and creative coder making a subtle, ambient animated BACKGROUND for the whole customer app of "NGS — Nisha General Store", a neighbourhood grocery-delivery app in Sultanpur, New Delhi. This is not a banner — it is a gentle festive atmosphere that plays quietly behind the entire app while people shop. Every occasion must feel different; nothing may feel like a recoloured template.
+
+FIRST, ask me one question: which festival or special day is this background for? Then wait for my answer. Do not assume an occasion or produce any code until I tell you.
+
+WHAT TO RETURN
+Once I've named the occasion, return ONLY the HTML — no markdown, no code fence, no commentary. It must be a single file that runs entirely on its own:
+- Inline <style> and inline <script> only. Plain JavaScript, no imports, no frameworks.
+- One <canvas> that fills the whole screen. Do ALL the artwork on the canvas by hand in JavaScript. Nothing may load from outside the file: no external images, fonts, scripts, stylesheets, network requests, <img>, fetch or CDN links. It runs in a sealed sandbox with no internet, so anything external simply will not appear.
+- It fills the viewport and is responsive: read the canvas container's clientWidth and clientHeight, honour devicePixelRatio up to 2, and redraw on resize. Never assume a fixed size.
+
+IT MUST STAY IN THE BACKGROUND — this is the most important rule
+- The page background MUST be fully transparent. Set html and body to background: transparent, and never paint a filled backdrop over the whole canvas — the app's own screens show through, and you only add a light touch of motion on top. If you fill the screen with colour you will hide the entire app, which is a failure.
+- Keep it faint and sparse: only a gentle, low-opacity touch of movement, a modest number of elements (a couple of dozen at most), drifting slowly. It must never compete with the app's text, buttons or product cards, and a shopper should barely notice it while still feeling the occasion.
+- Calm and continuous on a smooth requestAnimationFrame loop; never a flashing strobe.
+
+CODE THAT WILL NOT BREAK — follow exactly
+- Never use backtick template literals, and never use the dollar-brace placeholder syntax anywhere. Build every string with single quotes and the + operator to join text and numbers together. Template literals get corrupted when this code is pasted and will silently break everything.
+- Put the whole script inside one immediately-invoked function wrapped in a try/catch, so a single error can never break the page and nothing leaks to the global scope.
+- Before you finish, read your own code back: confirm every bracket and parenthesis is matched, there are no backticks or dollar-brace placeholders left anywhere, nothing external is referenced, and the background is transparent.
+
+THE ATMOSPHERE — it is entirely yours to imagine
+- Decide what quietly drifts, floats, rises or twinkles for the occasion I name, and in which colours — its imagery, its colours, its motion and its mood are all your decision. I give you no direction. Make it unmistakably this one occasion, and unlike any other.
+- No emoji anywhere. It must run smoothly on a mid-range Android phone.
+- If the device requests reduced motion (matchMedia for prefers-reduced-motion: reduce), draw one calm static frame, or nothing at all.
+
+Begin now by asking which festival or special day you're designing for.
+`;
+
 const DECOR_LABEL = {
   diyas: "🪔 Diyas", lanterns: "🏮 Lanterns", flags: "🇮🇳 Flags", tricolor: "🇮🇳 Tricolour",
   confetti: "🎉 Confetti", crackers: "🎆 Crackers", fireworks: "🎆 Fireworks", petals: "🌸 Petals",
@@ -124,6 +155,7 @@ export default function ThemesAdmin() {
   // below are only the fallback if none is stored.
   const themePrompt = settings?.prompts?.theme || THEME_PROMPT_FALLBACK;
   const bannerPrompt = settings?.prompts?.banner || BANNER_PROMPT_FALLBACK;
+  const backgroundPrompt = settings?.prompts?.background || BACKGROUND_PROMPT_FALLBACK;
 
   // Live-parse the paste box so the admin sees the theme before importing.
   const preview = useMemo(() => {
@@ -151,6 +183,10 @@ export default function ThemesAdmin() {
     try { navigator.clipboard.writeText(bannerPrompt); setMsg("Banner prompt copied — paste it into Gemini/ChatGPT. It will ask which festival, then return the HTML to paste into a theme's “Banner animation” box below. It goes live with no app update."); }
     catch { setMsg("Couldn't copy — long-press to select the prompt."); }
   }
+  function copyBackgroundPrompt() {
+    try { navigator.clipboard.writeText(backgroundPrompt); setMsg("Background prompt copied — paste it into Gemini/ChatGPT. It will ask which festival, then return the HTML to paste into a theme’s “Background animation” box below. Subtle, and live with no app update."); }
+    catch { setMsg("Couldn’t copy — long-press to select the prompt."); }
+  }
 
   async function doImport() {
     setBusy(true); setMsg("");
@@ -162,6 +198,7 @@ export default function ThemesAdmin() {
     finally { setBusy(false); }
   }
   async function saveBanner(t, html) { const r = await setThemeBanner(t.id, html); setMsg(r.hasBanner ? `Banner animation saved for ${t.name}. It's live now on the customer app — no app update needed.` : `Banner animation cleared for ${t.name}.`); return r; }
+  async function saveBackground(t, html) { const r = await setThemeBackground(t.id, html); setMsg(r.hasBackground ? `Ambient background saved for ${t.name}. It’s live now — no app update.` : `Ambient background cleared for ${t.name}.`); return r; }
   async function toggle(t) { try { await setThemeActive(t.id, !t.active); } catch (e) { setMsg(e.message); } }
   async function schedule(t, patch) { try { await updateThemeSchedule(t.id, { startsOn: t.startsOn, endsOn: t.endsOn, ...patch }); } catch (e) { setMsg(e.message); } }
   async function del(t) { try { await deleteTheme(t.id); } catch (e) { setMsg(e.message); } }
@@ -179,6 +216,7 @@ export default function ThemesAdmin() {
         <div className="an-actions">
           <button className="an-btn ghost" onClick={copyPrompt}>Copy theme prompt</button>
           <button className="an-btn ghost" onClick={copyBannerPrompt}>Copy banner prompt</button>
+          <button className="an-btn ghost" onClick={copyBackgroundPrompt}>Copy background prompt</button>
         </div>
         <textarea
           className="an-textarea" rows={5}
@@ -220,6 +258,7 @@ export default function ThemesAdmin() {
               <button className="an-del" onClick={() => del(t)} aria-label="Delete"><Ic name="trash" size={15} /></button>
             </div>
             <BannerEditor theme={t} onSave={(html) => saveBanner(t, html)} />
+            <BackgroundEditor theme={t} onSave={(html) => saveBackground(t, html)} />
           </div>
         ))}
       </div>
@@ -274,6 +313,62 @@ function BannerEditor({ theme, onSave }) {
           <div className="an-actions">
             <button className="an-btn" disabled={busy || !dirty || !preview} onClick={() => save(html)}>{busy ? "Saving…" : "Save & go live"}</button>
             {saved && <button className="an-btn ghost" disabled={busy} onClick={() => save("")}>Remove banner</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Per-theme over-the-air ambient background. Paste the HTML the background
+// prompt produced; the preview shows it over a mock screen so you can confirm
+// it stays subtle and see-through. Save and it plays behind the whole app.
+function BackgroundEditor({ theme, onSave }) {
+  const saved = theme.theme?.backgroundHtml || "";
+  const [open, setOpen] = useState(false);
+  const [html, setHtml] = useState(saved);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const dirty = html.trim() !== saved.trim();
+  const preview = html.trim();
+
+  async function save(next) {
+    setBusy(true); setErr("");
+    try { await onSave(next); if (next === "") setHtml(""); }
+    catch (e) { setErr(e.message || "Couldn't save."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="theme-banner">
+      <button className="theme-banner-toggle" onClick={() => setOpen((v) => !v)}>
+        <Ic name="broadcast" size={13} />
+        {saved ? "Background animation ✓ — edit" : "Add background animation"}
+        <span className="theme-banner-caret">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="theme-banner-body">
+          <p className="theme-banner-hint">
+            Paste the HTML from <strong>“Copy background prompt”</strong>. It plays gently behind the whole app. The preview sits over a mock screen so you can check it stays subtle and see-through. Save and it’s live — no app update.
+          </p>
+          <textarea
+            className="an-textarea" rows={4} spellCheck={false}
+            placeholder="Paste the background HTML here (starts with <!doctype html> …)"
+            value={html} onChange={(e) => setHtml(e.target.value)}
+          />
+          {err && <p className="an-warn" style={{ margin: "4px 2px" }}>⚠ {err}</p>}
+          {preview && (
+            <div className="theme-bg-prev">
+              <div className="theme-bg-prev-mock">
+                <div className="theme-bg-prev-card">Amul Cow Milk · ₹31</div>
+                <div className="theme-bg-prev-card">Frequently bought together</div>
+              </div>
+              <iframe title="Background preview" srcDoc={preview} sandbox="allow-scripts" scrolling="no" />
+            </div>
+          )}
+          <div className="an-actions">
+            <button className="an-btn" disabled={busy || !dirty || !preview} onClick={() => save(html)}>{busy ? "Saving…" : "Save & go live"}</button>
+            {saved && <button className="an-btn ghost" disabled={busy} onClick={() => save("")}>Remove background</button>}
           </div>
         </div>
       )}

@@ -32,6 +32,7 @@ import CallAlertsPrompt from "./components/CallAlertsPrompt.jsx";
 import PromoCarousel from "./components/PromoCarousel.jsx";
 import { FestiveMasthead } from "./components/FestiveDecor.jsx";
 import FestiveCover from "./components/FestiveCover.jsx";
+import FestiveBackgroundFrame from "./components/FestiveBackgroundFrame.jsx";
 import { applyTheme } from "./lib/theme.js";
 import { loadStockAlerts, clearStockAlertsLocal } from "./lib/stockAlerts.js";
 import { shop } from "./data/shop.js";
@@ -372,6 +373,7 @@ export default function App() {
   return (
     <div className="app">
       <FestiveCover theme={activeTheme} />
+      {activeTheme?.backgroundHtml && <FestiveBackgroundFrame html={activeTheme.backgroundHtml} />}
       <OfflineBanner />
       <ApkPrompt />
       <CallAlertsPrompt show={isLoggedIn} />

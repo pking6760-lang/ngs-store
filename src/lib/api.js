@@ -2132,6 +2132,21 @@ export async function setThemeBanner(id, bannerHtml) {
   pingLocal("customer_themes");
   return { ok: true, hasBanner: !!html };
 }
+// Attach (or clear) an over-the-air ambient background animation on a theme.
+// Stored inside the theme jsonb as `backgroundHtml`; the customer app renders it
+// in a sealed, transparent, click-through iframe over the app. "" clears it.
+export async function setThemeBackground(id, backgroundHtml) {
+  const db = must();
+  const { data, error } = await db.from("customer_themes").select("theme").eq("id", id).single();
+  if (error) throw error;
+  const next = { ...(data?.theme || {}) };
+  const html = (backgroundHtml || "").trim();
+  if (html) next.backgroundHtml = html; else delete next.backgroundHtml;
+  const { error: upErr } = await db.from("customer_themes").update({ theme: next }).eq("id", id);
+  if (upErr) throw upErr;
+  pingLocal("customer_themes");
+  return { ok: true, hasBackground: !!html };
+}
 // The one theme the customer app should paint right now (or null for default).
 export async function fetchActiveTheme() {
   const { data, error } = await must().rpc("get_active_theme");
