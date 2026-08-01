@@ -46,13 +46,19 @@ async function isAdmin(uid: string): Promise<boolean> {
 }
 
 // Turn a Razorpay payment object into the small "who paid" summary we show.
+// Razorpay fills placeholder contact/email for QR payments when the payer didn't
+// share them — strip those so we only ever show a real number/email.
 function payerOf(p: Record<string, unknown>) {
+  const contact = String(p.contact || "");
+  const email = String(p.email || "");
+  const realPhone = contact && !/^\+?9{2}0{5,}/.test(contact.replace(/\D/g, "")) && contact !== "+919000090000";
+  const realEmail = email && email !== "void@razorpay.com";
   return {
     paymentId: p.id,
     amount: Number(p.amount) / 100,
     vpa: (p.vpa as string) || null,
-    contact: (p.contact as string) || null,
-    email: (p.email as string) || null,
+    contact: realPhone ? contact : null,
+    email: realEmail ? email : null,
     method: (p.method as string) || null,
     createdAt: p.created_at ? Number(p.created_at) * 1000 : null,
   };
@@ -75,6 +81,7 @@ Deno.serve(async (req) => {
       if (!(rupees > 0)) return json({ error: "Enter a valid amount." }, 400);
       if (rupees > 200000) return json({ error: "Amount is too large." }, 400);
       const amountPaise = Math.round(rupees * 100);
+      const label = String(body?.label || "").slice(0, 120);
 
       // No expiry: the QR stays payable until the customer pays (single-use, so
       // it closes itself on payment) or the admin cancels it.
@@ -86,8 +93,8 @@ Deno.serve(async (req) => {
           usage: "single_use",
           fixed_amount: true,
           payment_amount: amountPaise,
-          description: "NGS counter collection",
-          notes: { kind: "counter_collect" },
+          description: label ? `NGS · ${label}` : "NGS counter collection",
+          notes: label ? { kind: "counter_collect", label } : { kind: "counter_collect" },
         }),
       });
       const qr = await rzpRes.json();

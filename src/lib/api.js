@@ -596,8 +596,8 @@ export async function createOrderQr(orderDbId) {
 
 // POS "collect payment" — make a UPI QR for any amount (not tied to an order),
 // then poll it until the customer pays. Admin only (enforced server-side).
-export async function collectQrCreate(amount) {
-  return invokeFn("razorpay-collect-qr", { action: "create", amount });
+export async function collectQrCreate(amount, label) {
+  return invokeFn("razorpay-collect-qr", { action: "create", amount, label });
 }
 export async function collectQrStatus(qrId) {
   return invokeFn("razorpay-collect-qr", { action: "status", qrId });

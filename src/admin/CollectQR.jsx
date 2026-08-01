@@ -7,8 +7,9 @@ import { Ic } from "./AdminIcons.jsx";
 // the moment they pay, the QR closes itself and the payer's details appear.
 export default function CollectQR() {
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");         // optional: who it's for (your own record)
   const [stage, setStage] = useState("entry"); // entry · waiting · paid
-  const [qr, setQr] = useState(null);           // { qrId, imageDataUrl, imageUrl, cleanQr, amount }
+  const [qr, setQr] = useState(null);           // { qrId, imageDataUrl, imageUrl, cleanQr, amount, note }
   const [payment, setPayment] = useState(null);  // { amount, vpa, contact, method, createdAt }
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -24,12 +25,12 @@ export default function CollectQR() {
     if (!(rupees > 0)) { setErr("Enter an amount first."); return; }
     setBusy(true); setErr("");
     try {
-      const q = await collectQrCreate(rupees);
+      const q = await collectQrCreate(rupees, note.trim());
       if (q?.error) throw new Error(q.error);
       // Redraw a clean, plain QR from the UPI code inside Razorpay's branded
       // image — same as the order-collection flow, so no Razorpay artwork shows.
       const cleanQr = await cleanUpiQrFromImage(q.imageDataUrl);
-      setQr({ ...q, cleanQr }); setStage("waiting"); setPayment(null);
+      setQr({ ...q, cleanQr, note: note.trim() }); setStage("waiting"); setPayment(null);
       startWaiting(q.qrId);
     } catch (e) { setErr(e.message || "Couldn't create the QR."); }
     finally { setBusy(false); }
@@ -54,7 +55,7 @@ export default function CollectQR() {
   }
   function reset() {
     stopPoll();
-    setStage("entry"); setQr(null); setPayment(null); setErr(""); setAmount("");
+    setStage("entry"); setQr(null); setPayment(null); setErr(""); setAmount(""); setNote("");
   }
 
   const rupee = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -85,6 +86,11 @@ export default function CollectQR() {
               <button key={v} className="cq-chip" onClick={() => setAmount(String(v))}>₹{v}</button>
             ))}
           </div>
+          <input
+            className="an-input cq-note" type="text" maxLength={120}
+            placeholder="Name or note (optional) — for your record"
+            value={note} onChange={(e) => setNote(e.target.value)}
+          />
           <button className="an-btn cq-go" disabled={busy || !(Number(amount) > 0)} onClick={createQr}>
             {busy ? "Creating…" : "Create QR"}
           </button>
@@ -97,6 +103,7 @@ export default function CollectQR() {
             <img className="cq-qr" src={qr.cleanQr || qr.imageDataUrl || qr.imageUrl} alt="Scan to pay" />
           </div>
           <div className="cq-amt-big">{rupee(qr.amount)}</div>
+          {qr.note && <div className="cq-for">for {qr.note}</div>}
           <div className="cq-status">
             <span className="cq-dot" /> Waiting for payment…
           </div>
@@ -110,8 +117,10 @@ export default function CollectQR() {
           <div className="cq-tick"><Ic name="check" size={34} /></div>
           <div className="cq-paid-amt">{rupee(payment.amount)} received</div>
           <div className="cq-receipt">
+            {qr?.note && <Row k="For" v={qr.note} />}
             {payment.vpa && <Row k="Paid by" v={payment.vpa} />}
             {payment.contact && <Row k="Phone" v={payment.contact} />}
+            {payment.email && <Row k="Email" v={payment.email} />}
             {payment.method && <Row k="Method" v={String(payment.method).toUpperCase()} />}
             {payment.createdAt && <Row k="Time" v={whenText(payment.createdAt)} />}
             {payment.paymentId && <Row k="Ref" v={payment.paymentId} />}
