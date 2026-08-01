@@ -1,4 +1,17 @@
 import { themePalette } from "../lib/theme.js";
+import IndependenceDayBanner from "./festive-banners/IndependenceDayBanner.jsx";
+
+// Bespoke, hand-crafted banner scenes — each a genuinely different design, not a
+// recoloured template. Matched by a keyword in the festival name; festivals
+// without a bespoke scene fall back to the composed poster below.
+const BANNERS = [
+  { key: "independence", Comp: IndependenceDayBanner },
+];
+function bespokeBanner(theme) {
+  const name = String(theme?.name || "").toLowerCase();
+  const hit = BANNERS.find((b) => name.includes(b.key));
+  return hit ? hit.Comp : null;
+}
 
 // ── Decorative garland (toran / bunting) ───────────────────────────────────
 function garlandUri(palette, kind) {
@@ -93,6 +106,9 @@ function dividerFor(theme) {
 // genuinely different, designed poster rather than a colour swap.
 export function FestiveMasthead({ theme }) {
   if (!theme?.id) return null;
+  // A bespoke scene wins over the generic poster when this festival has one.
+  const Bespoke = bespokeBanner(theme);
+  if (Bespoke) return <Bespoke theme={{ ...theme, palette: themePalette(theme.colors || {}) }} />;
   const b = theme.banner || {};
   const c = theme.colors || {};
   const greeting = theme.greeting || b.kicker;
