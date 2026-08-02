@@ -5615,9 +5615,11 @@ body {
       var(--bg) 366px) no-repeat,
     var(--bg);
 }
-:root[data-festival] .cat-chips {                  /* ride the wash — no frosted bar breaking the flow */
-  background: color-mix(in srgb, var(--fest-header-to, var(--green-dark)) 26%, var(--bg));
-  backdrop-filter: none; border-bottom: none;
+:root[data-festival] .cat-chips {                  /* no box — the chips float on the themed wash */
+  background: transparent; backdrop-filter: none; border-bottom: none;
+}
+:root[data-festival] .cat-chips.stuck {            /* once pinned under the search, give it a solid backing */
+  background: var(--bg); box-shadow: 0 6px 14px rgba(0, 0, 0, .08);
 }
 
 /* ════════════════════════════════════════════════════════════

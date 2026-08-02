@@ -717,7 +717,21 @@ function MomentChips({ categories, onCategoryClick }) {
 // are. Tapping smooth-scrolls to that aisle's rail.
 function CategoryChips({ categories }) {
   const [active, setActive] = useState("all");
+  const [stuck, setStuck] = useState(false);
   const barRef = useRef(null);
+
+  // In festival mode the chip strip is transparent so the themed background
+  // flows through it — but once it pins under the search on scroll, it needs a
+  // solid backing so content doesn't show through. Track when it's pinned.
+  useEffect(() => {
+    const onScroll = () => {
+      const el = barRef.current; if (!el) return;
+      setStuck(el.getBoundingClientRect().top <= 60);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Scroll-spy: highlight the aisle currently under the top of the viewport.
   useEffect(() => {
@@ -750,7 +764,7 @@ function CategoryChips({ categories }) {
   };
 
   return (
-    <div className="cat-chips" ref={barRef}>
+    <div className={`cat-chips ${stuck ? "stuck" : ""}`} ref={barRef}>
       <button className={`cat-chip ${active === "all" ? "on" : ""}`} data-chip="all" onClick={() => go("all")}>
         All
       </button>
