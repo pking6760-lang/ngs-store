@@ -20,7 +20,9 @@ Deno.serve(async (req) => {
   } else {
     const amt = Math.round(Number(url.searchParams.get("amt") || "0"));
     if (!(amt >= 0)) return new Response("bad amount", { status: 400 });
-    text = lang === "hi" ? `पेमेंट प्राप्त हुआ, ${amt} रुपये` : `Payment received, ${amt} rupees`;
+    // Correct singular/plural: 1 rupee / 250 rupees · 1 रुपया / 250 रुपये.
+    const unit = lang === "hi" ? (amt === 1 ? "रुपया" : "रुपये") : (amt === 1 ? "rupee" : "rupees");
+    text = lang === "hi" ? `पेमेंट प्राप्त हुआ, ${amt} ${unit}` : `Payment received, ${amt} ${unit}`;
   }
 
   const g = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=${encodeURIComponent(text)}`;
