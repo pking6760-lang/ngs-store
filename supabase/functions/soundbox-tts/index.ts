@@ -73,10 +73,10 @@ Deno.serve(async (req) => {
     if (lang === "hi") {
       const unit = amt === 1 ? "रुपया" : "रुपये";
       const verb = amt === 1 ? "प्राप्त हुआ" : "प्राप्त हुए";
-      text = `${amt} ${unit} ${verb}। धन्यवाद।`;
+      text = `${amt} ${unit} ${verb}।`;
     } else {
       const unit = amt === 1 ? "rupee" : "rupees";
-      text = `${amt} ${unit} received. Thank you!`;
+      text = `${amt} ${unit} received.`;
     }
   }
 
