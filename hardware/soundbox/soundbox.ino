@@ -63,6 +63,7 @@ Audio audio;
 String lastId = "";
 bool   primed = false;          // ignore the payment that existed before power-on
 unsigned long lastPoll = 0;
+String pendingVoice = "";       // played right after the chime finishes
 
 void connectWifi() {
   WiFi.mode(WIFI_STA);
@@ -79,11 +80,26 @@ void play(const String& url) {
   audio.connecttohost(url.c_str());
 }
 
-void announceAmount(long amount) {
-  play(String(SERVER) + "/soundbox-tts?key=" + KEY + "&lang=" + LANG + "&amt=" + String(amount));
+String ttsUrl(const String& q) {
+  return String(SERVER) + "/soundbox-tts?key=" + KEY + "&lang=" + LANG + "&" + q;
 }
-void announceReady() {
-  play(String(SERVER) + "/soundbox-tts?key=" + KEY + "&lang=" + LANG + "&say=ready");
+// Play the chime first, then the voice line once the chime stream ends.
+void chimeThen(const String& voiceUrl) {
+  pendingVoice = voiceUrl;
+  play(ttsUrl("say=chime"));
+}
+void announceAmount(long amount) { chimeThen(ttsUrl("amt=" + String(amount))); }
+void announceReady()            { chimeThen(ttsUrl("say=ready")); }
+
+// The audio library calls this when a stream finishes — chain the voice after
+// the chime.
+void audio_eof_stream(const char* info) {
+  (void)info;
+  if (pendingVoice.length() > 0) {
+    String u = pendingVoice;
+    pendingVoice = "";
+    play(u);
+  }
 }
 
 // Ask the server for the latest paid collection. Returns its id ("" on error),
