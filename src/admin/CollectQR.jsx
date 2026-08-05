@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { collectQrCreate, collectQrStatus, collectQrClose, collectQrHistory } from "../lib/api.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
+import { unlockAudio, announcePayment } from "../lib/sound.js";
 import { Ic } from "./AdminIcons.jsx";
 
 // POS "collect payment": type an amount → show a UPI QR the customer scans →
@@ -14,7 +15,12 @@ export default function CollectQR() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("collect");   // collect · history
+  const [sbOn, setSbOn] = useState(() => localStorage.getItem("ngs_sb_on") !== "0");
+  const [sbLang, setSbLang] = useState(() => localStorage.getItem("ngs_sb_lang") || "en-IN");
   const poll = useRef(null);
+
+  useEffect(() => { localStorage.setItem("ngs_sb_on", sbOn ? "1" : "0"); }, [sbOn]);
+  useEffect(() => { localStorage.setItem("ngs_sb_lang", sbLang); }, [sbLang]);
 
   function stopPoll() {
     if (poll.current) { clearInterval(poll.current); poll.current = null; }
@@ -24,6 +30,7 @@ export default function CollectQR() {
   async function createQr() {
     const rupees = Number(amount);
     if (!(rupees > 0)) { setErr("Enter an amount first."); return; }
+    unlockAudio(); // this tap primes the soundbox so it can speak on payment
     setBusy(true); setErr("");
     try {
       const q = await collectQrCreate(rupees, note.trim());
@@ -44,7 +51,14 @@ export default function CollectQR() {
     poll.current = setInterval(async () => {
       try {
         const r = await collectQrStatus(qrId);
-        if (r?.paid) { stopPoll(); setPayment(r.payment); setStage("paid"); }
+        if (r?.paid) {
+          stopPoll(); setPayment(r.payment); setStage("paid");
+          // Soundbox: announce the amount out loud (read live settings so a
+          // mid-wait toggle is respected).
+          if (localStorage.getItem("ngs_sb_on") !== "0") {
+            announcePayment(r.payment.amount, localStorage.getItem("ngs_sb_lang") || "en-IN");
+          }
+        }
       } catch { /* keep polling */ }
     }, 1500);
   }
@@ -58,6 +72,7 @@ export default function CollectQR() {
     stopPoll();
     setStage("entry"); setQr(null); setPayment(null); setErr(""); setAmount(""); setNote("");
   }
+  function testVoice() { unlockAudio(); announcePayment(199, sbLang); }
 
   const rupee = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const whenText = (ms) => ms ? new Date(ms).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }) : "";
@@ -143,6 +158,22 @@ export default function CollectQR() {
           <button className="an-btn cq-go" onClick={reset}>New payment</button>
         </div>
       )}
+
+      <div className="cq-soundbox">
+        <span className="cq-sb-ico"><Ic name="broadcast" size={16} /></span>
+        <div className="cq-sb-text">
+          <span className="cq-sb-title">Soundbox</span>
+          <span className="cq-sb-sub">Announce payments aloud</span>
+        </div>
+        {sbOn && (
+          <div className="cq-sb-lang">
+            <button className={sbLang === "en-IN" ? "on" : ""} onClick={() => setSbLang("en-IN")}>EN</button>
+            <button className={sbLang === "hi-IN" ? "on" : ""} onClick={() => setSbLang("hi-IN")}>हिं</button>
+          </div>
+        )}
+        <button className="cq-sb-test" onClick={testVoice} title="Test the voice">Test</button>
+        <label className="an-switch"><input type="checkbox" checked={sbOn} onChange={(e) => setSbOn(e.target.checked)} /><span /></label>
+      </div>
       </>
       )}
     </section>

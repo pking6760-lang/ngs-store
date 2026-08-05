@@ -92,3 +92,59 @@ export function stopAlarm() {
   }
   if (navigator.vibrate) navigator.vibrate(0);
 }
+
+// ── Payment soundbox ────────────────────────────────────────────────────────
+// A pleasant rising "cash received" chime, then a spoken announcement of the
+// amount — the shop's own version of a Paytm/PhonePe soundbox.
+export function successChime() {
+  unlockAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  [[659, 0], [988, 0.14], [1319, 0.28]].forEach(([freq, dt]) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = freq;
+    const t = now + dt;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.45, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start(t);
+    o.stop(t + 0.36);
+  });
+  if (navigator.vibrate) navigator.vibrate(90);
+}
+
+// Speak a line via the device's own text-to-speech (no bundled audio, so any
+// amount can be read). Falls back silently if TTS isn't available.
+export function speak(text, lang = "en-IN") {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel(); // don't queue behind a previous announcement
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    u.rate = 0.95;
+    u.pitch = 1;
+    u.volume = 1;
+    const voices = synth.getVoices() || [];
+    const v = voices.find((x) => x.lang === lang)
+      || voices.find((x) => (x.lang || "").toLowerCase().startsWith(lang.slice(0, 2)));
+    if (v) u.voice = v;
+    synth.speak(u);
+  } catch { /* no TTS on this device */ }
+}
+
+// Chime, then announce "Payment received, <amount> rupees" (the TTS voice reads
+// the numeral in its own language, so no manual number-words are needed).
+export function announcePayment(amount, lang = "en-IN") {
+  successChime();
+  const amt = Math.round(Number(amount) || 0);
+  const text = String(lang).startsWith("hi")
+    ? `पेमेंट प्राप्त हुआ, ${amt} रुपये`
+    : `Payment received, ${amt} rupees`;
+  // Let the chime ring first so it doesn't collide with the voice.
+  setTimeout(() => speak(text, lang), 480);
+}
