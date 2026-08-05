@@ -64,6 +64,21 @@ function payerOf(p: Record<string, unknown>) {
   };
 }
 
+// Mark our collection row paid from a Razorpay payment object (idempotent-ish:
+// only updates a still-pending row).
+async function settleRow(qrId: string, p: Record<string, unknown>) {
+  const pay = payerOf(p);
+  await fetch(`${SUPABASE_URL}/rest/v1/counter_collections?qr_id=eq.${qrId}&status=eq.pending`, {
+    method: "PATCH",
+    headers: { ...sbHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({
+      status: "paid", payment_id: pay.paymentId, vpa: pay.vpa, contact: pay.contact,
+      email: pay.email, method: pay.method,
+      paid_at: pay.createdAt ? new Date(pay.createdAt).toISOString() : new Date().toISOString(),
+    }),
+  }).catch(() => {});
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -115,6 +130,14 @@ Deno.serve(async (req) => {
         }
       } catch { /* client falls back to imageUrl */ }
 
+      // Record the collection (pending) so it shows in history, and so the
+      // webhook can flip it to paid the instant Razorpay confirms.
+      await fetch(`${SUPABASE_URL}/rest/v1/counter_collections`, {
+        method: "POST",
+        headers: { ...sbHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ qr_id: qr.id, amount: rupees, label: label || null, created_by: uid }),
+      }).catch(() => {});
+
       return json({ qrId: qr.id, imageUrl: qr.image_url, imageDataUrl, amount: rupees });
     }
 
@@ -131,21 +154,53 @@ Deno.serve(async (req) => {
     if (action === "status") {
       const qrId = String(body?.qrId || "");
       if (!qrId) return json({ error: "Missing QR." }, 400);
+
+      // 1) Fastest path: our own row, which the webhook flips to paid the instant
+      //    Razorpay confirms — no waiting on Razorpay's slower payments list.
+      const rowRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/counter_collections?qr_id=eq.${qrId}&select=*`,
+        { headers: sbHeaders },
+      );
+      const rows = await rowRes.json().catch(() => []);
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (row?.status === "paid") {
+        return json({ paid: true, payment: {
+          paymentId: row.payment_id, amount: Number(row.amount),
+          vpa: row.vpa || null, contact: row.contact || null, email: row.email || null,
+          method: row.method || null, createdAt: row.paid_at ? Date.parse(row.paid_at) : null,
+        } });
+      }
+
+      // 2) Fallback: ask Razorpay directly (covers the case where the webhook
+      //    isn't set up yet), and settle our row if it shows paid.
       const payRes = await fetch(`https://api.razorpay.com/v1/payments/qr_codes/${qrId}/payments?count=10`, {
         headers: { Authorization: rzpAuth },
       });
       const data = await payRes.json();
-      if (!payRes.ok) return json({ error: data?.error?.description || "Couldn't check status." }, 502);
-      const items: Record<string, unknown>[] = Array.isArray(data?.items) ? data.items : [];
-      const paid = items.find((p) => p.status === "captured") || items.find((p) => p.status === "authorized");
-      if (paid) return json({ paid: true, payment: payerOf(paid) });
+      if (payRes.ok) {
+        const items: Record<string, unknown>[] = Array.isArray(data?.items) ? data.items : [];
+        const paid = items.find((p) => p.status === "captured") || items.find((p) => p.status === "authorized");
+        if (paid) {
+          const pay = payerOf(paid);
+          await settleRow(qrId, paid);
+          return json({ paid: true, payment: pay });
+        }
+      }
+      return json({ paid: false });
+    }
 
-      // Not paid yet — also report whether the QR has lapsed.
-      const qrRes = await fetch(`https://api.razorpay.com/v1/payments/qr_codes/${qrId}`, {
-        headers: { Authorization: rzpAuth },
-      });
-      const qr = await qrRes.json().catch(() => ({}));
-      return json({ paid: false, closed: qr?.status === "closed" });
+    if (action === "history") {
+      const hRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/counter_collections?status=eq.paid&select=*&order=paid_at.desc&limit=50`,
+        { headers: sbHeaders },
+      );
+      const rows = await hRes.json().catch(() => []);
+      const items = (Array.isArray(rows) ? rows : []).map((r) => ({
+        id: r.id, amount: Number(r.amount), label: r.label || null,
+        vpa: r.vpa || null, contact: r.contact || null, method: r.method || null,
+        paymentId: r.payment_id, paidAt: r.paid_at ? Date.parse(r.paid_at) : null,
+      }));
+      return json({ items });
     }
 
     return json({ error: "Unknown action." }, 400);

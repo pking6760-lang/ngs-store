@@ -86,6 +86,30 @@ Deno.serve(async (req) => {
       return new Response("token event handled", { status: 200 });
     }
 
+    // A counter (POS) collection QR being paid — settle our own record instantly
+    // so the shop's Collect-payment screen confirms the moment Razorpay does,
+    // instead of waiting on a poll. These carry notes.kind = 'counter_collect'
+    // and have no order attached.
+    const qrEntity = event?.payload?.qr_code?.entity;
+    if (type === "qr_code.credited" && qrEntity?.notes?.kind === "counter_collect") {
+      const p = event?.payload?.payment?.entity ?? {};
+      const contact = String(p.contact || "");
+      const email = String(p.email || "");
+      const realPhone = contact && contact !== "+919000090000" && !/^\+?9{2}0{5,}/.test(contact.replace(/\D/g, ""));
+      const realEmail = email && email !== "void@razorpay.com";
+      await fetch(`${SUPABASE_URL}/rest/v1/counter_collections?qr_id=eq.${qrEntity.id}&status=eq.pending`, {
+        method: "PATCH",
+        headers: { ...sbHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({
+          status: "paid", payment_id: p.id || null,
+          vpa: p.vpa || null, contact: realPhone ? contact : null, email: realEmail ? email : null,
+          method: p.method || null,
+          paid_at: p.created_at ? new Date(Number(p.created_at) * 1000).toISOString() : new Date().toISOString(),
+        }),
+      });
+      return new Response("counter collection settled", { status: 200 });
+    }
+
     // UPI Autopay daily debit (Phase 3): these settle against subscription_charges,
     // NOT the orders table — the delivery order doesn't exist until the debit is
     // confirmed here. Matched by the recurring order id we stored when charging.

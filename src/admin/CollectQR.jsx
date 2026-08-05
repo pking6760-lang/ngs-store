@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { collectQrCreate, collectQrStatus, collectQrClose } from "../lib/api.js";
+import { collectQrCreate, collectQrStatus, collectQrClose, collectQrHistory } from "../lib/api.js";
 import { cleanUpiQrFromImage } from "../lib/payments.js";
 import { Ic } from "./AdminIcons.jsx";
 
@@ -13,6 +13,7 @@ export default function CollectQR() {
   const [payment, setPayment] = useState(null);  // { amount, vpa, contact, method, createdAt }
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [tab, setTab] = useState("collect");   // collect · history
   const poll = useRef(null);
 
   function stopPoll() {
@@ -45,7 +46,7 @@ export default function CollectQR() {
         const r = await collectQrStatus(qrId);
         if (r?.paid) { stopPoll(); setPayment(r.payment); setStage("paid"); }
       } catch { /* keep polling */ }
-    }, 3500);
+    }, 1500);
   }
 
   function cancel() {
@@ -64,9 +65,23 @@ export default function CollectQR() {
   return (
     <section className="panel">
       <h3>Collect payment</h3>
-      <p className="panel-sub">
-        Type an amount and show the QR. The customer scans it with any UPI app; the moment they pay, it closes by itself and you see who paid.
-      </p>
+
+      <div className="cq-tabs">
+        <button className={`cq-tab ${tab === "collect" ? "on" : ""}`}
+          onClick={() => { setTab("collect"); if (stage !== "waiting") reset(); }}>New payment</button>
+        <button className={`cq-tab ${tab === "history" ? "on" : ""}`}
+          onClick={() => setTab("history")}>History</button>
+      </div>
+
+      {tab === "history" ? (
+        <CollectHistory />
+      ) : (
+      <>
+      {stage === "entry" && (
+        <p className="panel-sub">
+          Type an amount and show the QR. The customer scans it with any UPI app; the moment they pay, it closes by itself and you see who paid.
+        </p>
+      )}
 
       {err && <p className="an-warn" style={{ margin: "4px 2px 10px" }}>⚠ {err}</p>}
 
@@ -128,6 +143,8 @@ export default function CollectQR() {
           <button className="an-btn cq-go" onClick={reset}>New payment</button>
         </div>
       )}
+      </>
+      )}
     </section>
   );
 }
@@ -137,6 +154,42 @@ function Row({ k, v }) {
     <div className="cq-row">
       <span className="cq-row-k">{k}</span>
       <span className="cq-row-v">{v}</span>
+    </div>
+  );
+}
+
+// Past counter collections — who paid, how much, when.
+function CollectHistory() {
+  const [items, setItems] = useState(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    let live = true;
+    collectQrHistory()
+      .then((r) => { if (live) setItems(r?.items || []); })
+      .catch((e) => { if (live) setErr(e.message || "Couldn't load history."); });
+    return () => { live = false; };
+  }, []);
+
+  const rupee = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const when = (ms) => ms ? new Date(ms).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+
+  if (err) return <p className="an-warn" style={{ margin: "10px 2px" }}>⚠ {err}</p>;
+  if (items === null) return <p className="panel-sub">Loading…</p>;
+  if (!items.length) return <p className="panel-sub">No payments collected yet. They’ll appear here the moment a customer pays.</p>;
+
+  return (
+    <div className="cq-hist">
+      {items.map((it) => (
+        <div className="cq-hist-row" key={it.id}>
+          <div className="cq-hist-main">
+            <div className="cq-hist-top">
+              <span className="cq-hist-amt">{rupee(it.amount)}</span>
+              {it.label && <span className="cq-hist-label">{it.label}</span>}
+            </div>
+            <div className="cq-hist-sub">{it.vpa || it.contact || "UPI"} · {when(it.paidAt)}</div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
