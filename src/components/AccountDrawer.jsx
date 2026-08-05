@@ -508,7 +508,11 @@ function Subscriptions({ onShop }) {
       {subs.map((s) => {
         const st = SUB_STATUS[s.status] || SUB_STATUS.pending;
         const next = subNextDelivery(s);
-        const done = Math.min(s.daysDone, s.daysTotal);
+        // Count deliveries actually DONE — not the one that's prepared a day ahead
+        // and still on its way. While there's a pending "next", the latest prepared
+        // day (days_done-th) hasn't arrived yet, so it isn't counted.
+        const prepared = Math.min(s.daysDone, s.daysTotal);
+        const done = Math.max(0, prepared - (next ? 1 : 0));
         const pct = s.daysTotal > 0 ? Math.min(100, Math.round((done / s.daysTotal) * 100)) : 0;
         const lead = s.items[0];
         const leadP = lead ? prodOf(lead.id) : null;
@@ -548,7 +552,7 @@ function Subscriptions({ onShop }) {
 
             <div className="sub-progress">
               <div className="sub-progress-track"><span style={{ width: `${pct}%` }} /></div>
-              <span className="sub-progress-lbl">{tr("Day")} {done} {tr("of")} {s.daysTotal}</span>
+              <span className="sub-progress-lbl">{done} {tr("of")} {s.daysTotal} {tr("delivered")}</span>
             </div>
 
             {(() => {

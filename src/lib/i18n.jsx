@@ -44,6 +44,7 @@ const HI = {
   "day plan": "दिन की योजना",
   "Day": "दिन",
   "of": "/",
+  "delivered": "डिलीवर हुए",
   "Every day": "हर दिन",
   "Next delivery": "अगली डिलीवरी",
   "Prepaid via NGS Wallet": "NGS वॉलेट से प्रीपेड",
