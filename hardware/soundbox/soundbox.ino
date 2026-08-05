@@ -9,17 +9,24 @@
  * speaker (any amount, English or Hindi — the voice is generated on the
  * server, so nothing is stored on the device).
  *
- * HARDWARE
+ * HARDWARE (the 2.1 music-grade build)
  *   - ESP32 dev board (ESP32-WROOM-32)
- *   - MAX98357A I2S amplifier module
- *   - 3W 4ohm speaker
- *   - 5V USB power
+ *   - PCM5102A I2S DAC  (clean line-level audio out)
+ *   - TPA3116D2 2.1 amplifier  (2x satellites + 1 subwoofer)
+ *   - 2x 3" + 1x 4" 4ohm speakers
+ *   - 3S 18650 battery + BMS + USB-C boost charger + fixed-5V USB buck
  *
- * WIRING (MAX98357A -> ESP32)
+ * WIRING (ESP32 -> PCM5102A DAC)
  *   VIN  -> 5V (VIN)          GND  -> GND
- *   LRC  -> GPIO 25           BCLK -> GPIO 26
- *   DIN  -> GPIO 22           GAIN -> (leave open = 9dB)  SD -> (leave open = on)
- *   Speaker + / -            -> the amp's + / - screw terminals
+ *   LCK  -> GPIO 25           BCK  -> GPIO 26
+ *   DIN  -> GPIO 22
+ *   SCK  -> GND   <-- IMPORTANT: tie the DAC's SCK pin to GND (internal PLL)
+ *   XSMT -> 3.3V  <-- IMPORTANT: hold high or the DAC stays muted (no sound)
+ *   FLT / DEMP / FMT -> GND
+ *   DAC  LOUT/ROUT/AGND  -> TPA3116 audio-in  L / R / GND
+ *   TPA3116 speaker outs -> L 3", R 3", SUB 4"  (keep +/- polarity)
+ *
+ * Same GPIO 25/26/22 pins as a MAX98357A, so this firmware drives either.
  *
  * ARDUINO IDE SETUP
  *   1. Boards Manager -> install "esp32 by Espressif".  Board: "ESP32 Dev Module".
