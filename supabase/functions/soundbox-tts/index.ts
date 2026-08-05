@@ -70,8 +70,14 @@ Deno.serve(async (req) => {
   } else {
     const amt = Math.round(Number(url.searchParams.get("amt") || "0"));
     if (!(amt >= 0)) return new Response("bad amount", { status: 400 });
-    const unit = lang === "hi" ? (amt === 1 ? "रुपया" : "रुपये") : (amt === 1 ? "rupee" : "rupees");
-    text = lang === "hi" ? `पेमेंट प्राप्त हुआ, ${amt} ${unit}` : `Payment received, ${amt} ${unit}`;
+    if (lang === "hi") {
+      const unit = amt === 1 ? "रुपया" : "रुपये";
+      const verb = amt === 1 ? "प्राप्त हुआ" : "प्राप्त हुए";
+      text = `${amt} ${unit} ${verb}। धन्यवाद।`;
+    } else {
+      const unit = amt === 1 ? "rupee" : "rupees";
+      text = `${amt} ${unit} received. Thank you!`;
+    }
   }
 
   const voice = url.searchParams.get("voice") || AZ_VOICE[lang];
