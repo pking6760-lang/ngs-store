@@ -1,16 +1,19 @@
 /*
- * NGS Store — Soundbox with Bluetooth MUSIC + payment announcements
- * =================================================================
- * This is the "full" firmware. The box becomes a Bluetooth speaker named
- * "NGS Soundbox" — pair your phone and play music with real bass through the
- * TPA3116 2.1 amp. In the background it keeps checking the store server, and
- * the moment a Collect-payment QR is paid it lowers the music, speaks the
- * amount out loud, then the music continues.
+ * NGS Store — Soundbox: Bluetooth MUSIC + payment announcements (ALL-IN-ONE)
+ * =========================================================================
+ * ★ THIS IS THE ONLY FILE YOU NEED TO FLASH. ★  One flash = everything:
+ *     • Bluetooth speaker (music with real bass through the TPA3116 2.1 amp)
+ *     • Automatic payment announcements (speaks the amount on every Collect QR)
+ *     • A spoken self-test on power-up — it says "ready" the moment it boots,
+ *       so you instantly know the wiring is correct. No second file, no
+ *       two-step flashing.
  *
- * FLASH THIS ONLY AFTER the simple `soundbox.ino` has already worked on the
- * assembled box — that proves the wiring is perfect, so anything here is
- * software-only. If this build ever reboots or stutters, re-flash the simple
- * one and send me the Serial Monitor output.
+ * The box appears in your phone's Bluetooth list as "NGS Soundbox". Pair it and
+ * play music; when a payment lands it ducks the music, speaks the amount, then
+ * the music resumes on its own.
+ *
+ * If it ever reboots or stutters, open Serial Monitor (115200) and send me the
+ * output — everything below is software-only, so the fix is in here.
  *
  * HARDWARE (same as the guide)
  *   ESP32-WROOM-32  →  PCM5102A I2S DAC  →  TPA3116D2 2.1 amp  →  speakers
@@ -151,11 +154,23 @@ String pollLatest(long& outAmount) {
   return id;
 }
 
+// Spoken self-test, played BEFORE Bluetooth grabs I2S. If you hear "ready" on
+// power-up, the DAC + amp + speaker wiring is all correct.
+void announceReadyBoot() {
+  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+  audio.setVolume(VOICE_VOL);
+  playBlocking(ttsUrl("say=chime"));
+  playBlocking(ttsUrl("say=ready"));
+  i2s_driver_uninstall(I2S_NUM_0);   // release I2S so Bluetooth can take it
+  delay(80);
+}
+
 // ---- setup / loop --------------------------------------------------------
 void setup() {
   Serial.begin(115200);
   delay(300);
   connectWifi();       // Wi-Fi first, then Bluetooth (they coexist on the ESP32)
+  announceReadyBoot(); // spoken "ready" self-test — proves the wiring works
   startBluetooth();
 }
 
