@@ -2,76 +2,126 @@ import { useEffect, useRef, useState } from "react";
 import {
   storeQrGet, storeQrList, storeQrCreateFixed, storeQrHistory, storeQrSync, storeQrRemove,
 } from "../lib/api.js";
+import qrcode from "qrcode-generator";
 import { decodeUpiFromQr, qrDataUri } from "../lib/payments.js";
 import { unlockAudio, announcePayment } from "../lib/sound.js";
 import { shop } from "../data/shop.js";
 import { toast } from "../lib/toast.js";
 import { Ic } from "./AdminIcons.jsx";
+import gpayLogo from "../assets/upi/gpay.png";
+import phonepeLogo from "../assets/upi/phonepe.png";
+import paytmLogo from "../assets/upi/paytm.png";
+import bhimLogo from "../assets/upi/bhim.png";
 
 const STORE_NAME = (shop && shop.name) || "NGS Store";
+const BRAND = "#d81f26";
+const INK = "#141b24";
 const rupee = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const whenText = (ms) => ms ? new Date(ms).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
 
-// Draw a clean, printable poster: store name, big QR, and the amount line.
-// Returns { dataUrl, blob }. Prefers redrawing the QR crisp from the decoded UPI
-// string; falls back to Razorpay's PNG if we couldn't decode it.
+// ── small canvas helpers ────────────────────────────────────────────────────
+const FONT = "-apple-system, Segoe UI, Roboto, sans-serif";
+function loadImg(src) {
+  return new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+}
+// High error-correction QR so a small centre logo stays scannable.
+function qrHigh(text, cell = 14, margin = 1) {
+  const q = qrcode(0, "H"); q.addData(text); q.make();
+  return q.createDataURL(cell, margin);
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Draw a premium, printable payment standee. Returns { dataUrl, blob }.
+// Prefers redrawing the QR crisp from the decoded UPI string; falls back to the
+// original PNG if we couldn't decode it.
 async function makePoster({ upi, imageFallback, amount, label }) {
-  const W = 880, H = 1180;
+  const W = 900, H = 1260, cx = W / 2;
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d");
+  const mono = (STORE_NAME.trim()[0] || "N").toUpperCase();
 
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
-  // Header band
-  ctx.fillStyle = "#c92a2a"; ctx.fillRect(0, 0, W, 150);
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.font = "700 46px -apple-system, Segoe UI, Roboto, sans-serif";
-  ctx.fillText(STORE_NAME, W / 2, 78);
-  ctx.font = "500 26px -apple-system, Segoe UI, Roboto, sans-serif";
-  ctx.fillText("Scan & Pay with any UPI app", W / 2, 118);
+  // Backdrop + white card
+  ctx.fillStyle = "#eef0f3"; ctx.fillRect(0, 0, W, H);
+  const cardX = 44, cardY = 44, cardW = W - 88, cardH = H - 88;
+  ctx.save();
+  ctx.shadowColor = "rgba(20,27,36,.14)"; ctx.shadowBlur = 46; ctx.shadowOffsetY = 18;
+  ctx.fillStyle = "#ffffff"; roundRect(ctx, cardX, cardY, cardW, cardH, 44); ctx.fill();
+  ctx.restore();
 
-  // QR image
-  const src = upi ? qrDataUri(upi, 14, 2) : imageFallback;
-  if (src) {
-    const img = await new Promise((res, rej) => {
-      const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src;
-    }).catch(() => null);
-    if (img) {
-      const box = 560, x = (W - box) / 2, y = 220;
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "#eaeaea"; ctx.lineWidth = 2;
-      ctx.fillRect(x - 24, y - 24, box + 48, box + 48);
-      ctx.strokeRect(x - 24, y - 24, box + 48, box + 48);
-      ctx.drawImage(img, x, y, box, box);
-    }
-  }
+  // Monogram badge
+  const badgeY = 150, badgeR = 48;
+  ctx.fillStyle = BRAND; ctx.beginPath(); ctx.arc(cx, badgeY, badgeR, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = `800 46px ${FONT}`; ctx.fillText(mono, cx, badgeY + 3);
+  ctx.textBaseline = "alphabetic";
 
-  // Amount line
-  ctx.fillStyle = "#111111";
-  ctx.textAlign = "center";
+  // Store name + caption
+  ctx.fillStyle = INK; ctx.font = `800 48px ${FONT}`;
+  ctx.fillText(STORE_NAME, cx, badgeY + 112);
+  ctx.fillStyle = "#8a94a1"; ctx.font = `600 25px ${FONT}`;
+  ctx.fillText("Scan with any UPI app", cx, badgeY + 152);
+
+  // QR frame
+  const qs = 480;
+  const frameX = cx - qs / 2 - 34, frameY = badgeY + 196;
+  const frameW = qs + 68, frameH = qs + 68;
+  ctx.fillStyle = "#fff"; ctx.strokeStyle = "#edeff2"; ctx.lineWidth = 2;
+  roundRect(ctx, frameX, frameY, frameW, frameH, 30); ctx.fill(); ctx.stroke();
+
+  // Corner brackets (brand accent)
+  ctx.strokeStyle = BRAND; ctx.lineWidth = 8; ctx.lineCap = "round";
+  const bl = 48, off = 20;
+  [[frameX + off, frameY + off, 1, 1], [frameX + frameW - off, frameY + off, -1, 1],
+   [frameX + off, frameY + frameH - off, 1, -1], [frameX + frameW - off, frameY + frameH - off, -1, -1]]
+    .forEach(([x, y, sx, sy]) => {
+      ctx.beginPath(); ctx.moveTo(x, y + sy * bl); ctx.lineTo(x, y); ctx.lineTo(x + sx * bl, y); ctx.stroke();
+    });
+
+  // QR (high error-correction) + centre monogram
+  const qrSrc = upi ? qrHigh(upi, 16, 1) : imageFallback;
+  const qimg = qrSrc ? await loadImg(qrSrc) : null;
+  const qx = cx - qs / 2, qy = frameY + 34, qcy = qy + qs / 2;
+  if (qimg) ctx.drawImage(qimg, qx, qy, qs, qs);
+  const midR = 46;
+  ctx.fillStyle = "#fff"; roundRect(ctx, cx - midR, qcy - midR, midR * 2, midR * 2, 18); ctx.fill();
+  ctx.fillStyle = BRAND; ctx.beginPath(); ctx.arc(cx, qcy, midR - 12, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = `800 30px ${FONT}`; ctx.fillText(mono, cx, qcy + 1);
+  ctx.textBaseline = "alphabetic";
+
+  // Optional amount pill (fixed QRs only)
+  let y = frameY + frameH + 72;
   if (amount != null) {
-    ctx.font = "800 78px -apple-system, Segoe UI, Roboto, sans-serif";
-    ctx.fillText(rupee(amount), W / 2, 900);
-    if (label) {
-      ctx.fillStyle = "#666"; ctx.font = "500 30px -apple-system, Segoe UI, Roboto, sans-serif";
-      ctx.fillText(label, W / 2, 946);
-    }
-  } else {
-    ctx.font = "800 52px -apple-system, Segoe UI, Roboto, sans-serif";
-    ctx.fillText("Enter any amount", W / 2, 892);
-    ctx.fillStyle = "#666"; ctx.font = "500 30px -apple-system, Segoe UI, Roboto, sans-serif";
-    ctx.fillText("The customer types the amount and pays", W / 2, 940);
+    const amt = rupee(amount);
+    ctx.font = `800 42px ${FONT}`;
+    const pillW = ctx.measureText(amt).width + 72, pillH = 72, pillX = cx - pillW / 2, pillY = y - 52;
+    ctx.fillStyle = BRAND; roundRect(ctx, pillX, pillY, pillW, pillH, 36); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText(amt, cx, pillY + 50);
+    y = pillY + pillH + 44;
+    if (label) { ctx.fillStyle = "#8a94a1"; ctx.font = `500 27px ${FONT}`; ctx.fillText(label, cx, y); y += 40; }
   }
 
-  // UPI app icons row (text badges — keeps the poster self-contained)
-  ctx.fillStyle = "#8a8a8a"; ctx.font = "600 26px -apple-system, Segoe UI, Roboto, sans-serif";
-  ctx.fillText("GPay   ·   PhonePe   ·   Paytm   ·   BHIM", W / 2, 1030);
+  // Real UPI app logos, centered
+  const logos = (await Promise.all([gpayLogo, phonepeLogo, paytmLogo, bhimLogo].map(loadImg))).filter(Boolean);
+  const LH = 44, gap = 44;
+  const ws = logos.map((im) => LH * (im.naturalWidth / im.naturalHeight));
+  const totalW = ws.reduce((a, b) => a + b, 0) + gap * Math.max(0, logos.length - 1);
+  let lx = cx - totalW / 2;
+  const ly = (amount != null ? y + 4 : frameY + frameH + 64);
+  logos.forEach((im, i) => { ctx.drawImage(im, lx, ly, ws[i], LH); lx += ws[i] + gap; });
 
-  // Footer
-  ctx.fillStyle = "#c92a2a"; ctx.fillRect(0, H - 70, W, 70);
-  ctx.fillStyle = "#ffffff"; ctx.font = "600 26px -apple-system, Segoe UI, Roboto, sans-serif";
-  ctx.fillText("Powered by " + STORE_NAME, W / 2, H - 27);
+  // Subtle footer
+  ctx.fillStyle = "#aeb6c0"; ctx.textAlign = "center"; ctx.font = `600 22px ${FONT}`;
+  ctx.fillText("Secured by UPI", cx, cardY + cardH - 42);
 
   const dataUrl = c.toDataURL("image/png");
   const blob = await new Promise((res) => c.toBlob(res, "image/png"));
@@ -249,7 +299,7 @@ function OpenQr({ sbOn, sbLang }) {
         <img className="cq-qr" src={shownQr} alt="Scan to pay" />
       </div>
       <div className="sq-store">{STORE_NAME}</div>
-      <div className="sq-any">Scan &amp; enter any amount</div>
+      <div className="sq-any">Scan with any UPI app</div>
       <div className="sq-actions">
         <button className="an-btn" disabled={busy} onClick={async () => {
           setBusy(true);
