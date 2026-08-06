@@ -3739,3 +3739,12 @@ html, body { touch-action: manipulation; }
 .sq-card-actions { display: flex; gap: 6px; margin-top: 8px; }
 .an-btn.tiny { font-size: 11.5px; padding: 6px 10px; border-radius: 8px; }
 .sq-hist-total { font-size: 12.5px; font-weight: 700; color: #16202c; margin: 2px 2px 8px; }
+
+/* Name book */
+.sq-name { border: none; background: none; padding: 0; font: inherit; cursor: pointer; text-align: left; color: #6b7482; }
+.sq-name .sq-name-vpa { word-break: break-all; }
+.sq-name .sq-name-add { color: #c92a2a; font-weight: 700; white-space: nowrap; }
+.sq-name.named { color: #16202c; font-weight: 700; }
+.sq-name .sq-name-pen { color: #aab2bd; font-weight: 400; font-size: 11px; }
+.sq-name-edit { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sq-name-input { width: 150px; font-size: 13px; padding: 5px 8px; }

@@ -176,11 +176,25 @@ async function historyFor(qrId: string | null) {
     { headers: sbHeaders },
   );
   const rows = await res.json().catch(() => []);
-  return (Array.isArray(rows) ? rows : []).map((r) => ({
+  const list = (Array.isArray(rows) ? rows : []).map((r) => ({
     id: r.id, qrId: r.qr_id, amount: Number(r.amount), label: r.label || null,
     vpa: r.vpa || null, contact: r.contact || null, method: r.method || null,
     paymentId: r.payment_id, paidAt: r.paid_at ? Date.parse(r.paid_at) : null,
+    name: null as string | null,
   }));
+  // Enrich with saved payer names (the "name book"), matched by VPA.
+  const vpas = [...new Set(list.map((x) => x.vpa).filter(Boolean))] as string[];
+  if (vpas.length) {
+    const inList = vpas.map((v) => `"${v}"`).join(",");
+    const nRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/payer_names?vpa=in.(${inList})&select=vpa,name`,
+      { headers: sbHeaders },
+    );
+    const names = await nRes.json().catch(() => []);
+    const map = new Map((Array.isArray(names) ? names : []).map((n: Record<string, unknown>) => [n.vpa, n.name]));
+    for (const x of list) if (x.vpa && map.has(x.vpa)) x.name = String(map.get(x.vpa));
+  }
+  return list;
 }
 
 Deno.serve(async (req) => {
@@ -271,6 +285,28 @@ Deno.serve(async (req) => {
     if (action === "history") {
       const qrId = body?.qrId ? String(body.qrId) : null;
       return json({ items: await historyFor(qrId) });
+    }
+
+    // Name book: save (or clear) the name for a payer's UPI ID. Once set, every
+    // past and future payment from that VPA shows the name and the soundbox
+    // announces it.
+    if (action === "setName") {
+      const vpa = String(body?.vpa || "").trim();
+      const name = String(body?.name || "").trim().slice(0, 60);
+      if (!vpa) return json({ error: "Missing UPI ID." }, 400);
+      if (!name) {
+        await fetch(`${SUPABASE_URL}/rest/v1/payer_names?vpa=eq.${encodeURIComponent(vpa)}`, {
+          method: "DELETE", headers: { ...sbHeaders, Prefer: "return=minimal" },
+        });
+        return json({ ok: true, name: null });
+      }
+      // Upsert on the vpa primary key.
+      await fetch(`${SUPABASE_URL}/rest/v1/payer_names`, {
+        method: "POST",
+        headers: { ...sbHeaders, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ vpa, name, created_by: uid, updated_at: new Date().toISOString() }),
+      });
+      return json({ ok: true, name });
     }
 
     if (action === "sync") {

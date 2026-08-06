@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  storeQrGet, storeQrList, storeQrCreateFixed, storeQrHistory, storeQrSync, storeQrRemove,
+  storeQrGet, storeQrList, storeQrCreateFixed, storeQrHistory, storeQrSync, storeQrRemove, storeQrSetName,
 } from "../lib/api.js";
 import qrcode from "qrcode-generator";
 import { decodeUpiFromQr, qrDataUri } from "../lib/payments.js";
@@ -285,7 +285,7 @@ function OpenQr({ sbOn, sbLang }) {
         fresh.reverse().forEach((it) => {
           seen.current.add(it.paymentId);
           if (localStorage.getItem("ngs_sb_on") !== "0") {
-            announcePayment(it.amount, localStorage.getItem("ngs_sb_lang") || "en-IN");
+            announcePayment(it.amount, localStorage.getItem("ngs_sb_lang") || "en-IN", it.name || "");
           }
         });
         setRecent(items.slice(0, 6));
@@ -334,7 +334,11 @@ function OpenQr({ sbOn, sbLang }) {
             <div className="cq-hist-row" key={it.id}>
               <div className="cq-hist-main">
                 <div className="cq-hist-top"><span className="cq-hist-amt">{rupee(it.amount)}</span></div>
-                <div className="cq-hist-sub">{it.vpa || it.contact || "UPI"} · {whenText(it.paidAt)}</div>
+                <div className="cq-hist-sub">
+                  <PayerName vpa={it.vpa} name={it.name}
+                    onSaved={(vpa, name) => setRecent((rs) => rs.map((r) => r.vpa === vpa ? { ...r, name } : r))} />
+                  {" · "}{whenText(it.paidAt)}
+                </div>
               </div>
             </div>
           ))}
@@ -465,6 +469,7 @@ function StoreHistory({ qrId }) {
   if (!items.length) return <p className="panel-sub">No payments yet. They’ll appear here — and the soundbox will announce them — the moment a customer pays.</p>;
 
   const total = items.reduce((s, it) => s + Number(it.amount || 0), 0);
+  const onSaved = (vpa, name) => setItems((xs) => xs.map((r) => r.vpa === vpa ? { ...r, name } : r));
   return (
     <div className="cq-hist">
       <div className="sq-hist-total">{items.length} payments · {rupee(total)}</div>
@@ -475,10 +480,47 @@ function StoreHistory({ qrId }) {
               <span className="cq-hist-amt">{rupee(it.amount)}</span>
               {it.label && it.label !== "Store QR" && <span className="cq-hist-label">{it.label}</span>}
             </div>
-            <div className="cq-hist-sub">{it.vpa || it.contact || "UPI"} · {whenText(it.paidAt)}</div>
+            <div className="cq-hist-sub">
+              <PayerName vpa={it.vpa} name={it.name} onSaved={onSaved} />{" · "}{whenText(it.paidAt)}
+            </div>
           </div>
         </div>
       ))}
     </div>
   );
+}
+
+// A payer identity in a row: shows the saved name, or the UPI ID with a "+ Name"
+// button. Tapping lets you name (or rename) that customer — saved against their
+// UPI ID, so all their past and future payments show the name.
+function PayerName({ vpa, name, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(name || "");
+  const [busy, setBusy] = useState(false);
+  if (!vpa) return <span>UPI</span>;
+
+  async function save() {
+    setBusy(true);
+    try {
+      const r = await storeQrSetName(vpa, val.trim());
+      onSaved?.(vpa, r?.name ?? (val.trim() || null));
+      setEditing(false);
+    } catch (e) { toast(e.message || "Couldn’t save the name."); }
+    finally { setBusy(false); }
+  }
+
+  if (editing) {
+    return (
+      <span className="sq-name-edit">
+        <input className="an-input sq-name-input" autoFocus value={val} maxLength={60}
+          placeholder="Customer name" onChange={(e) => setVal(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); }} />
+        <button className="an-btn tiny" disabled={busy} onClick={save}>{busy ? "…" : "Save"}</button>
+        <button className="an-btn ghost tiny" onClick={() => { setEditing(false); setVal(name || ""); }}>✕</button>
+      </span>
+    );
+  }
+  return name
+    ? <button className="sq-name named" onClick={() => setEditing(true)}>{name} <span className="sq-name-pen">✎</span></button>
+    : <button className="sq-name" onClick={() => setEditing(true)}><span className="sq-name-vpa">{vpa}</span> <span className="sq-name-add">+ Name</span></button>;
 }

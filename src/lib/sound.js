@@ -139,12 +139,14 @@ export function speak(text, lang = "en-IN") {
 
 // Chime, then announce "Payment received, <amount> rupees" (the TTS voice reads
 // the numeral in its own language, so no manual number-words are needed).
-export function announcePayment(amount, lang = "en-IN") {
+// If a payer name is known (from the name book), it's added: "…from <name>".
+export function announcePayment(amount, lang = "en-IN", name = "") {
   successChime();
   const amt = Math.round(Number(amount) || 0);
+  const who = String(name || "").trim();
   const text = String(lang).startsWith("hi")
-    ? `पेमेंट प्राप्त हुआ, ${amt} रुपये`
-    : `Payment received, ${amt} rupees`;
+    ? `पेमेंट प्राप्त हुआ, ${amt} रुपये${who ? `, ${who} से` : ""}`
+    : `Payment received, ${amt} rupees${who ? ` from ${who}` : ""}`;
   // Let the chime ring first so it doesn't collide with the voice.
   setTimeout(() => speak(text, lang), 480);
 }

@@ -632,6 +632,10 @@ export async function storeQrSync(qrId = null) {
 export async function storeQrRemove(id) {
   return invokeFn("store-qr", { action: "remove", id });
 }
+// Name book: save (name) or clear (empty name) the payer name for a UPI ID.
+export async function storeQrSetName(vpa, name) {
+  return invokeFn("store-qr", { action: "setName", vpa, name });
+}
 
 // Product details lookup (name / brand / weight) for auto-filling a product.
 // Server-side: Open Food Facts, then Gemini web search for Indian brands.
