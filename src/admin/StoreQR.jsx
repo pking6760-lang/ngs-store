@@ -78,17 +78,61 @@ async function makePoster({ upi, imageFallback, amount, label }) {
   return { dataUrl, blob };
 }
 
+// Running inside the packaged Android app (Capacitor WebView)? The browser's
+// <a download> and navigator.share(files) don't work there, so we use the native
+// Filesystem / Share / FileOpener plugins instead — same approach as UpdateGate.
+const IS_NATIVE = typeof window !== "undefined" && !!window.Capacitor?.isNativePlatform?.();
+
 function downloadDataUrl(dataUrl, filename) {
   const a = document.createElement("a");
   a.href = dataUrl; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
 }
 
-// Download or share a QR poster. Share uses the native sheet when available.
+// Download or share a QR poster. Uses native plugins inside the app, and the
+// browser APIs on the web.
 async function exportPoster({ upi, imageFallback, amount, label }, mode) {
   const { dataUrl, blob } = await makePoster({ upi, imageFallback, amount, label });
   const namePart = amount != null ? `${amount}` : "open";
   const filename = `${STORE_NAME.replace(/\s+/g, "-")}-QR-${namePart}.png`;
+
+  // ── Inside the Android app ────────────────────────────────────────────────
+  if (IS_NATIVE) {
+    const base64 = String(dataUrl).split(",")[1] || "";
+    try {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      if (mode === "share") {
+        // Write to the app cache, then hand the file to the native share sheet
+        // (WhatsApp, Gmail, save to Files, …).
+        const w = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
+        const { Share } = await import("@capacitor/share");
+        try {
+          await Share.share({ title: `${STORE_NAME} — Pay by UPI`, text: "Scan this to pay", files: [w.uri] });
+        } catch (e) {
+          if (!/cancel/i.test(e?.message || "")) throw e;   // ignore user-cancelled
+        }
+      } else {
+        // Save it and open it in the phone's gallery/viewer, from where it can be
+        // kept or shared. Prefer the visible Documents folder; fall back to cache.
+        let uri;
+        try {
+          const w = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Documents });
+          uri = w.uri;
+        } catch {
+          const w = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
+          uri = w.uri;
+        }
+        const { FileOpener } = await import("@capacitor-community/file-opener");
+        await FileOpener.open({ filePath: uri, contentType: "image/png" });
+        toast("QR saved — save it to your gallery or share it from here.");
+      }
+    } catch (e) {
+      toast(e?.message || "Couldn’t complete that — please try again.");
+    }
+    return;
+  }
+
+  // ── On the web ────────────────────────────────────────────────────────────
   if (mode === "share") {
     const file = blob ? new File([blob], filename, { type: "image/png" }) : null;
     if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
