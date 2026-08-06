@@ -74,8 +74,9 @@ const char* KEY       = "42954b016bb1f98a18710d406de4c6b8";
 const char* LANG      = "en";
 // Voice loudness 0..21
 const int   VOICE_VOL = 21;
-// How often to check for a new payment (ms)
-const unsigned long POLL_MS = 4000;
+// How often to check for a new payment (ms). Lower = the box speaks sooner
+// after a payment; 2s keeps it snappy without hammering the server.
+const unsigned long POLL_MS = 2000;
 // ──────────────────────────────────────────────────────
 
 // I2S pins to the PCM5102A DAC

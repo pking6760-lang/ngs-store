@@ -246,7 +246,8 @@ function OpenQr({ sbOn, sbLang }) {
   const [busy, setBusy] = useState(false);
   const [recent, setRecent] = useState([]); // last few payments (live)
   const seen = useRef(new Set());
-  const poll = useRef(null);
+  const poll = useRef(null);       // fast DB poll (feed + announce)
+  const syncPoll = useRef(null);   // slow Razorpay safety-sync
 
   useEffect(() => {
     let live = true;
@@ -268,14 +269,18 @@ function OpenQr({ sbOn, sbLang }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function stopPolling() { if (poll.current) { clearInterval(poll.current); poll.current = null; } }
+  function stopPolling() {
+    if (poll.current) { clearInterval(poll.current); poll.current = null; }
+    if (syncPoll.current) { clearInterval(syncPoll.current); syncPoll.current = null; }
+  }
   function startPolling(qrId) {
     stopPolling();
-    poll.current = setInterval(async () => {
+    // FAST path: read the DB every 2s. When the Razorpay webhook records a
+    // payment (instant), this announces it within ~2s — no waiting on Razorpay.
+    const pull = async () => {
       try {
-        const r = await storeQrSync(qrId);
+        const r = await storeQrHistory(qrId);
         const items = r?.items || [];
-        // Announce any payment we haven't seen since this screen opened.
         const fresh = items.filter((it) => it.paymentId && !seen.current.has(it.paymentId));
         fresh.reverse().forEach((it) => {
           seen.current.add(it.paymentId);
@@ -285,7 +290,12 @@ function OpenQr({ sbOn, sbLang }) {
         });
         setRecent(items.slice(0, 6));
       } catch { /* keep polling */ }
-    }, 4000);
+    };
+    poll.current = setInterval(pull, 2000);
+    // SAFETY NET: if the webhook isn't set up, pull new payments in from Razorpay
+    // every few seconds so rows still appear (and the soundbox announces). Kept
+    // separate + slower so it never blocks the fast DB poll above.
+    syncPoll.current = setInterval(() => { storeQrSync(qrId).catch(() => {}); }, 7000);
   }
 
   const shownQr = qr && (qr.upi ? qrDataUri(qr.upi, 8, 4) : qr.imageDataUrl);
@@ -439,11 +449,14 @@ function StoreHistory({ qrId }) {
   const [err, setErr] = useState("");
   useEffect(() => {
     let live = true;
-    storeQrSync(qrId)                                  // sync first so it's fresh
+    // Show the DB history INSTANTLY (no waiting on Razorpay)…
+    storeQrHistory(qrId)
       .then((r) => { if (live) setItems(r?.items || []); })
-      .catch(() => storeQrHistory(qrId)
-        .then((r) => { if (live) setItems(r?.items || []); })
-        .catch((e) => { if (live) setErr(e.message || "Couldn’t load history."); }));
+      .catch((e) => { if (live) setErr(e.message || "Couldn’t load history."); });
+    // …then refresh from Razorpay in the background and update if anything's new.
+    storeQrSync(qrId)
+      .then((r) => { if (live && Array.isArray(r?.items)) setItems(r.items); })
+      .catch(() => { /* the DB view above already loaded */ });
     return () => { live = false; };
   }, [qrId]);
 
