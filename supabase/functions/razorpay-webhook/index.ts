@@ -86,11 +86,46 @@ Deno.serve(async (req) => {
       return new Response("token event handled", { status: 200 });
     }
 
+    // The shop's STANDING "Store QR" being paid (permanent Paytm-style QR, any
+    // amount or a fixed one). Unlike the single-use collect QR, the same QR is
+    // paid many times, so we INSERT a fresh paid row per payment — that feeds the
+    // soundbox poll (it announces) and the Store QR history. These carry
+    // notes.kind = 'store_qr'.
+    const qrEntity = event?.payload?.qr_code?.entity;
+    if (type === "qr_code.credited" && qrEntity?.notes?.kind === "store_qr") {
+      const p = event?.payload?.payment?.entity ?? {};
+      const contact = String(p.contact || "");
+      const email = String(p.email || "");
+      const realPhone = contact && contact !== "+919000090000" && !/^\+?9{2}0{5,}/.test(contact.replace(/\D/g, ""));
+      const realEmail = email && email !== "void@razorpay.com";
+      // Guard against a duplicate delivery of the same payment.
+      const dupRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/counter_collections?payment_id=eq.${p.id}&select=id&limit=1`,
+        { headers: sbHeaders },
+      );
+      const dup = await dupRes.json().catch(() => []);
+      if (!Array.isArray(dup) || dup.length === 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/counter_collections`, {
+          method: "POST",
+          headers: { ...sbHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
+          body: JSON.stringify({
+            qr_id: qrEntity.id, amount: Number(p.amount || 0) / 100,
+            label: qrEntity?.notes?.label || "Store QR",
+            created_by: qrEntity?.notes?.created_by || null,
+            status: "paid", payment_id: p.id || null,
+            vpa: p.vpa || null, contact: realPhone ? contact : null, email: realEmail ? email : null,
+            method: p.method || null,
+            paid_at: p.created_at ? new Date(Number(p.created_at) * 1000).toISOString() : new Date().toISOString(),
+          }),
+        });
+      }
+      return new Response("store qr payment recorded", { status: 200 });
+    }
+
     // A counter (POS) collection QR being paid — settle our own record instantly
     // so the shop's Collect-payment screen confirms the moment Razorpay does,
     // instead of waiting on a poll. These carry notes.kind = 'counter_collect'
     // and have no order attached.
-    const qrEntity = event?.payload?.qr_code?.entity;
     if (type === "qr_code.credited" && qrEntity?.notes?.kind === "counter_collect") {
       const p = event?.payload?.payment?.entity ?? {};
       const contact = String(p.contact || "");

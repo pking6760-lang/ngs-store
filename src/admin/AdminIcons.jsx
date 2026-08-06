@@ -29,6 +29,8 @@ const PATHS = {
   offers: <><path d="M4 5h16a1 1 0 0 1 1 1v3a2 2 0 0 0 0 4v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3a2 2 0 0 0 0-4V6a1 1 0 0 1 1-1z" /><path d="M14 5v14" strokeDasharray="1.5 2.5" /></>,
   notify: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>,
   settings: <><circle cx="12" cy="12" r="3.2" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" /></>,
+  download: <><path d="M12 3v12" /><path d="M7 11l5 5 5-5" /><path d="M4 20h16" /></>,
+  share: <><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="M8.2 10.8 15.8 6.5M8.2 13.2l7.6 4.3" /></>,
 
   // Stats
   revenue: <><circle cx="12" cy="12" r="9" /><path d="M9 8h6M9 11h6M13 8c1.6 0 2.5 1.2 2.5 2.6 0 1.5-1 2.4-2.7 2.4H10l4 3.5" /></>,

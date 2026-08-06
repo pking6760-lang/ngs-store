@@ -609,6 +609,30 @@ export async function collectQrHistory() {
   return invokeFn("razorpay-collect-qr", { action: "history" });
 }
 
+// Standing "Store QR" — the shop's permanent Paytm-style soundbox QR. Admin only.
+// The OPEN QR (any amount) is created once and reused; fixed-amount QRs can be
+// added. Every payment is recorded server-side and announced by the soundbox.
+export async function storeQrGet() {
+  return invokeFn("store-qr", { action: "get" });
+}
+export async function storeQrList() {
+  return invokeFn("store-qr", { action: "list" });
+}
+export async function storeQrCreateFixed(amount, label) {
+  return invokeFn("store-qr", { action: "createFixed", amount, label });
+}
+export async function storeQrHistory(qrId = null) {
+  return invokeFn("store-qr", { action: "history", qrId });
+}
+// Pulls any new payments from Razorpay (safety net if the webhook isn't set up)
+// and returns fresh history — the Store QR screen polls this for the live feed.
+export async function storeQrSync(qrId = null) {
+  return invokeFn("store-qr", { action: "sync", qrId });
+}
+export async function storeQrRemove(id) {
+  return invokeFn("store-qr", { action: "remove", id });
+}
+
 // Product details lookup (name / brand / weight) for auto-filling a product.
 // Server-side: Open Food Facts, then Gemini web search for Indian brands.
 export async function lookupProductDetails(barcode, name, categories) {

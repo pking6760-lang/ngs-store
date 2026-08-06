@@ -6,6 +6,7 @@ import ProductsAdmin from "./ProductsAdmin.jsx";
 import SmartPricing from "./SmartPricing.jsx";
 import OrdersAdmin from "./OrdersAdmin.jsx";
 import CollectQR from "./CollectQR.jsx";
+import StoreQR from "./StoreQR.jsx";
 import CouponsAdmin from "./CouponsAdmin.jsx";
 import CustomersAdmin from "./CustomersAdmin.jsx";
 import NotifyAdmin from "./NotifyAdmin.jsx";
@@ -51,6 +52,7 @@ const TILES = [
   { id: "dashboard", label: "Overview", icon: "dashboard", tint: "#4C6EF5" },
   { id: "orders", label: "Orders", icon: "orders", tint: "#1C7ED6" },
   { id: "collect", label: "Collect payment", icon: "qr", tint: "#0B6B3A" },
+  { id: "storeqr", label: "Store QR", icon: "qr", tint: "#C92A2A" },
   { id: "products", label: "Products", icon: "products", tint: "#F08C00" },
   { id: "pricing", label: "Smart Pricing", icon: "pricing", tint: "#12B886" },
   { id: "customers", label: "Customers", icon: "customers", tint: "#7048E8" },
@@ -232,6 +234,7 @@ function AdminSection({ view, navArg, onOpen }) {
             {view === "pricing" && <SmartPricing />}
             {view === "orders" && <OrdersAdmin onOpen={onOpen} />}
             {view === "collect" && <CollectQR />}
+            {view === "storeqr" && <StoreQR />}
             {view === "customers" && <CustomersAdmin initialCustomerId={navArg} />}
             {view === "feedback" && <FeedbackAdmin />}
             {view === "partners" && <PartnersAdmin />}
