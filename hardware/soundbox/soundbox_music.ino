@@ -12,6 +12,19 @@
  * play music; when a payment lands it ducks the music, speaks the amount, then
  * the music resumes on its own.
  *
+ * ─── SETTING / CHANGING WI-FI (from your phone — no computer, no re-flashing) ──
+ *   • First time: the box makes its OWN Wi-Fi hotspot called "NGS Soundbox
+ *     Setup". On your phone, connect to it (password 12345678). A page opens by
+ *     itself — pick your Wi-Fi (or hotspot) and type its password. Done. It's
+ *     saved permanently, even after power-off.
+ *   • Using a phone hotspot? Just make sure your hotspot's name & password stay
+ *     the same each time — the box reconnects on its own, nothing to redo.
+ *   • Moving to a NEW network later? Two easy ways, both WITHOUT opening the box:
+ *       (a) turn off the old network, power-cycle the box → the setup hotspot
+ *           re-opens by itself, pick the new Wi-Fi; or
+ *       (b) hold the BOOT button while switching the box on → setup re-opens.
+ *   You never edit code or re-flash to change Wi-Fi again.
+ *
  * If it ever reboots or stutters, open Serial Monitor (115200) and send me the
  * output — everything below is software-only, so the fix is in here.
  *
@@ -26,6 +39,7 @@
  *     - "ESP32-A2DP"      by pschatzmann     (Bluetooth audio)
  *     - "ESP32-audioI2S"  by schreibfaul1    (streams the voice line)
  *     - "ArduinoJson"     by Benoit Blanchon
+ *     - "WiFiManager"     by tzapu           (set Wi-Fi from your phone)
  *
  * How music + voice share one DAC:
  *   The ESP32 has one I2S output. Bluetooth music owns it by default. When a
@@ -38,16 +52,20 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <WiFiManager.h>          // phone-based Wi-Fi setup (no re-flashing)
 #include "BluetoothA2DPSink.h"
 #include "Audio.h"
 #include "driver/i2s.h"
 
-// ─────────────── CONFIG — fill these in ───────────────
-const char* WIFI_SSID = "YOUR_WIFI_NAME";
-const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
+// ─────────────── CONFIG ───────────────
+// Wi-Fi is NOT typed here — you set it from your phone (see SETUP notes at the
+// top), so you never open the box or re-flash to change networks.
 
-// Name your phone will see in its Bluetooth list:
-const char* BT_NAME   = "NGS Soundbox";
+// Name your phone will see in its Bluetooth list (for playing music):
+const char* BT_NAME       = "NGS Soundbox";
+// The Wi-Fi SETUP hotspot: connect your phone to this to choose your Wi-Fi.
+const char* SETUP_AP_NAME = "NGS Soundbox Setup";
+const char* SETUP_AP_PASS = "12345678";   // password to open the setup page
 // The store server (leave as-is):
 const char* SERVER    = "https://wvlkhvqohkkxlatwotvy.supabase.co/functions/v1";
 // Your device secret (already set for your shop):
@@ -124,14 +142,25 @@ void startBluetooth() {
   Serial.println("Bluetooth ready: " + String(BT_NAME));
 }
 
-// ---- Wi-Fi + poll --------------------------------------------------------
-void connectWifi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  Serial.print("Wi-Fi connecting");
-  unsigned long t0 = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) { delay(400); Serial.print("."); }
-  Serial.println(WiFi.status() == WL_CONNECTED ? (" ok " + WiFi.localIP().toString()) : " (will retry)");
+// ---- Wi-Fi (set from your phone, never re-flashed) + poll ----------------
+// First boot, or whenever it can't find a saved network, the box makes its own
+// hotspot "NGS Soundbox Setup". Connect your phone to it, a page opens, pick
+// your Wi-Fi and type the password — saved forever. Hold BOOT at power-on to
+// re-open setup and switch to a different network.
+void setupWifi() {
+  pinMode(0, INPUT_PULLUP);            // BOOT button on the ESP32 board
+  WiFiManager wm;
+  wm.setConfigPortalTimeout(180);      // give up after 3 min so music still works
+  bool held = (digitalRead(0) == LOW); // BOOT held at power-on = "change my Wi-Fi"
+  if (held) {
+    Serial.println("BOOT held — opening Wi-Fi setup hotspot");
+    wm.startConfigPortal(SETUP_AP_NAME, SETUP_AP_PASS);
+  } else {
+    wm.autoConnect(SETUP_AP_NAME, SETUP_AP_PASS);
+  }
+  Serial.println(WiFi.status() == WL_CONNECTED
+                 ? ("Wi-Fi ok " + WiFi.localIP().toString())
+                 : "Wi-Fi not set yet (music still works)");
 }
 
 // Latest paid collection id ("" on error); amount written to outAmount.
@@ -169,13 +198,13 @@ void announceReadyBoot() {
 void setup() {
   Serial.begin(115200);
   delay(300);
-  connectWifi();       // Wi-Fi first, then Bluetooth (they coexist on the ESP32)
+  setupWifi();         // set Wi-Fi from your phone (no re-flashing, ever)
   announceReadyBoot(); // spoken "ready" self-test — proves the wiring works
   startBluetooth();
 }
 
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) connectWifi();
+  if (WiFi.status() != WL_CONNECTED) WiFi.reconnect();  // quiet retry; won't stop music
 
   if (millis() - lastPoll > POLL_MS) {
     lastPoll = millis();
