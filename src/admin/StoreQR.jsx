@@ -112,18 +112,12 @@ async function exportPoster({ upi, imageFallback, amount, label }, mode) {
           if (!/cancel/i.test(e?.message || "")) throw e;   // ignore user-cancelled
         }
       } else {
-        // Save it and open it in the phone's gallery/viewer, from where it can be
-        // kept or shared. Prefer the visible Documents folder; fall back to cache.
-        let uri;
-        try {
-          const w = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Documents });
-          uri = w.uri;
-        } catch {
-          const w = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
-          uri = w.uri;
-        }
+        // Save to the app cache, then open it in the phone's gallery/viewer,
+        // from where it can be kept or shared. (Cache is what FileOpener's own
+        // FileProvider is configured to serve — same as the in-app updater.)
+        const w = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
         const { FileOpener } = await import("@capacitor-community/file-opener");
-        await FileOpener.open({ filePath: uri, contentType: "image/png" });
+        await FileOpener.open({ filePath: w.uri, contentType: "image/png" });
         toast("QR saved — save it to your gallery or share it from here.");
       }
     } catch (e) {
