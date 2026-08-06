@@ -37,6 +37,8 @@ const json = (body: unknown, status = 200) =>
 
 const sbHeaders = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` };
 const rzpAuth = "Basic " + btoa(`${KEY_ID}:${KEY_SECRET}`);
+// Shared secret for the scheduled reconciliation cron (no user JWT).
+const CRON_SECRET = Deno.env.get("STORE_QR_CRON_SECRET") ?? "";
 
 async function verifiedUid(authHeader: string | null): Promise<string | null> {
   if (!authHeader) return null;
@@ -145,20 +147,26 @@ async function syncQr(qr: Record<string, unknown>) {
   const data = await payRes.json().catch(() => ({}));
   const items: Record<string, unknown>[] = payRes.ok && Array.isArray(data?.items) ? data.items : [];
   const fresh = items.filter((p) => p.status === "captured" && !seen.has(p.id));
+  let added = 0;
+  const errors: string[] = [];
   for (const p of fresh) {
     const pay = payerOf(p);
-    await fetch(`${SUPABASE_URL}/rest/v1/counter_collections`, {
-      method: "POST",
-      headers: { ...sbHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({
-        qr_id: qrId, amount: pay.amount, label: (qr.label as string) || "Store QR",
-        created_by: qr.created_by || null, status: "paid", payment_id: pay.paymentId,
-        vpa: pay.vpa, contact: pay.contact, email: pay.email, method: pay.method,
-        paid_at: new Date(pay.createdAt).toISOString(),
-      }),
-    }).catch(() => {});
+    try {
+      const ins = await fetch(`${SUPABASE_URL}/rest/v1/counter_collections`, {
+        method: "POST",
+        headers: { ...sbHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({
+          qr_id: qrId, amount: pay.amount, label: (qr.label as string) || "Store QR",
+          created_by: qr.created_by || null, status: "paid", payment_id: pay.paymentId,
+          vpa: pay.vpa, contact: pay.contact, email: pay.email, method: pay.method,
+          paid_at: new Date(pay.createdAt).toISOString(),
+        }),
+      });
+      if (ins.ok) added++;
+      else errors.push(`${ins.status}: ${(await ins.text()).slice(0, 200)}`);
+    } catch (e) { errors.push(String((e as Error).message).slice(0, 200)); }
   }
-  return fresh.length;
+  return { added, errors };
 }
 
 async function historyFor(qrId: string | null) {
@@ -182,6 +190,24 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
+
+    // Scheduled reconciliation: a server-side cron calls this every minute with
+    // a shared secret (no user JWT). It pulls any payments the webhook missed
+    // into the DB, so history + soundbox never depend on a flaky webhook. This
+    // is the reliability backstop for Razorpay not always delivering
+    // qr_code.credited.
+    if (action === "sync" && CRON_SECRET && req.headers.get("x-store-cron") === CRON_SECRET) {
+      const qRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/store_qrs?select=rzp_qr_id,label,created_by`,
+        { headers: sbHeaders },
+      );
+      const qrs = await qRes.json().catch(() => []);
+      let added = 0; const errors: string[] = [];
+      for (const q of (Array.isArray(qrs) ? qrs : [])) {
+        const r = await syncQr(q); added += r.added; errors.push(...r.errors);
+      }
+      return json({ added, errors });
+    }
 
     const uid = await verifiedUid(req.headers.get("Authorization"));
     if (!uid) return json({ error: "Please sign in again." }, 401);
@@ -256,7 +282,7 @@ Deno.serve(async (req) => {
       );
       const qrs = await qRes.json().catch(() => []);
       let added = 0;
-      for (const q of (Array.isArray(qrs) ? qrs : [])) added += await syncQr(q);
+      for (const q of (Array.isArray(qrs) ? qrs : [])) added += (await syncQr(q)).added;
       return json({ added, items: await historyFor(qrId) });
     }
 

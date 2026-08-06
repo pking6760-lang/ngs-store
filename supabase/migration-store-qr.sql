@@ -44,7 +44,13 @@ begin
 exception when others then null;
 end $$;
 
--- Fast "history for this QR".
+-- The original single-use "Collect payment" design made qr_id UNIQUE (one
+-- payment per QR). The Store QR is multiple-use, so many payments share the same
+-- qr_id — drop that unique constraint or every payment after the first is
+-- silently rejected with a duplicate-key error (both in the webhook and sync).
+alter table public.counter_collections drop constraint if exists counter_collections_qr_id_key;
+
+-- Fast "history for this QR" (non-unique).
 create index if not exists counter_collections_qr_id on public.counter_collections (qr_id);
 
 -- One row per real payment: stops the webhook and the sync safety-net from ever
