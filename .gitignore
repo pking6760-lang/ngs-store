@@ -55,7 +55,7 @@ android-customer/build/
 android-customer/app/build/
 android-customer/.gradle/
 
-# Release signing (kept out of git — delivered separately)
-signing/
+# Release signing keystore is committed so builds are reproducible
+# across fresh containers (private repo; sideloaded app).
 
 # The customer APK we host for download on the website
