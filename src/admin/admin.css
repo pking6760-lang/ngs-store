@@ -3880,3 +3880,11 @@ html, body { touch-action: manipulation; }
 .sqx-sb-lang button.on { background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(16,24,40,.12); }
 .sqx-sb-test { border:1.5px solid #d0d5dd; background:#fff; color:var(--ink); font-weight:700; font-size:12px; padding:6px 12px; border-radius:9px; cursor:pointer; }
 .sqx-sb-test:active { transform:scale(.95); }
+
+/* Store QR — settlements + daily stat sub-line */
+.sqx-stat .s { font-size:11px; color:var(--faint); font-weight:600; margin-top:3px; }
+.sqx-note { background:#eef0fb; border:1px solid #dfe2fb; color:#3b3f77; border-radius:12px; padding:11px 14px; font-size:12.5px; line-height:1.5; margin-bottom:14px; }
+.sqx-badge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.02em; padding:2px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; }
+.sqx-badge.ok { background:#e7f6ef; color:#047a55; }
+.sqx-badge.wait { background:#fff4e5; color:#b54708; }
+.sqx-badge.bad { background:#fee4e2; color:#b42318; }

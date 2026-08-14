@@ -636,6 +636,10 @@ export async function storeQrRemove(id) {
 export async function storeQrSetName(vpa, name) {
   return invokeFn("store-qr", { action: "setName", vpa, name });
 }
+// Bank settlements from Razorpay (how much settled to the bank, and when).
+export async function storeQrSettlements() {
+  return invokeFn("store-qr", { action: "settlements" });
+}
 
 // Product details lookup (name / brand / weight) for auto-filling a product.
 // Server-side: Open Food Facts, then Gemini web search for Indian brands.

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  storeQrGet, storeQrList, storeQrCreateFixed, storeQrHistory, storeQrSync, storeQrRemove, storeQrSetName,
+  storeQrGet, storeQrList, storeQrCreateFixed, storeQrHistory, storeQrSync, storeQrRemove, storeQrSetName, storeQrSettlements,
 } from "../lib/api.js";
 import qrcode from "qrcode-generator";
 import { decodeUpiFromQr, qrDataUri } from "../lib/payments.js";
@@ -200,9 +200,10 @@ export default function StoreQR() {
   function testVoice() { unlockAudio(); announcePayment(199, sbLang, "Ramesh"); }
 
   const TABS = [
-    { id: "open", label: "Scan & Pay" },
+    { id: "open", label: "Scan" },
     { id: "fixed", label: "Fixed" },
     { id: "history", label: "History" },
+    { id: "settle", label: "Settle" },
   ];
 
   return (
@@ -225,6 +226,7 @@ export default function StoreQR() {
       {tab === "open" && <OpenQr sbOn={sbOn} />}
       {tab === "fixed" && <FixedQrs />}
       {tab === "history" && <StoreHistory />}
+      {tab === "settle" && <Settlements />}
 
       <div className="sqx-sb">
         <div className="sqx-sb-ico"><Ic name="broadcast" size={18} /></div>
@@ -460,7 +462,7 @@ function StoreHistory() {
 
   const onSaved = (vpa, name) => setItems((xs) => (xs || []).map((r) => r.vpa === vpa ? { ...r, name } : r));
 
-  const { groups, count, total } = useMemo(() => {
+  const { groups, primaryTotal, primaryCount, allTotal, allCount } = useMemo(() => {
     const list = items || [];
     const ql = q.trim().toLowerCase();
     const filtered = list.filter((it) => {
@@ -476,12 +478,18 @@ function StoreHistory() {
       if (!gmap.has(k)) gmap.set(k, { key: k, rows: [], total: 0 });
       const g = gmap.get(k); g.rows.push(it); g.total += Number(it.amount || 0);
     }
+    // Primary figure resets daily: today's total (or the picked day's total).
+    const pKey = day || dayKeyOf(Date.now());
+    const pRows = list.filter((it) => dayKeyOf(it.paidAt) === pKey);
     return {
       groups: [...gmap.values()],
-      count: filtered.length,
-      total: filtered.reduce((s, it) => s + Number(it.amount || 0), 0),
+      primaryTotal: pRows.reduce((s, it) => s + Number(it.amount || 0), 0),
+      primaryCount: pRows.length,
+      allTotal: list.reduce((s, it) => s + Number(it.amount || 0), 0),
+      allCount: list.length,
     };
   }, [items, q, day]);
+  const filteredCount = groups.reduce((s, g) => s + g.rows.length, 0);
 
   if (err) return <div className="sqx-err">⚠ {err}</div>;
   if (items === null) return <div className="sqx-loading">Loading…</div>;
@@ -490,12 +498,14 @@ function StoreHistory() {
     <div className="sqx-hist">
       <div className="sqx-summary">
         <div className="sqx-stat">
-          <div className="k">{day ? dayLabel(day) : "Total received"}</div>
-          <div className="v green">{rupee(total)}</div>
+          <div className="k">{day ? dayLabel(day) : "Received today"}</div>
+          <div className="v green">{rupee(primaryTotal)}</div>
+          <div className="s">{primaryCount} payment{primaryCount === 1 ? "" : "s"}</div>
         </div>
         <div className="sqx-stat">
-          <div className="k">Payments</div>
-          <div className="v">{count}</div>
+          <div className="k">All-time</div>
+          <div className="v">{rupee(allTotal)}</div>
+          <div className="s">{allCount} payment{allCount === 1 ? "" : "s"}</div>
         </div>
       </div>
 
@@ -519,7 +529,7 @@ function StoreHistory() {
         </button>
       )}
 
-      {count === 0 ? (
+      {filteredCount === 0 ? (
         <div className="sqx-empty">
           {items.length === 0
             ? "No payments yet. They’ll appear here — and the soundbox will announce them — the moment a customer pays."
@@ -591,6 +601,72 @@ function PayRow({ it, onSaved }) {
         <div className="sqx-pay-amt">{rupee(it.amount)}</div>
         <div className="sqx-pay-time">{timeOf(it.paidAt)}</div>
       </div>
+    </div>
+  );
+}
+
+// ── Bank settlements (how much settled to the bank, and when) ────────────────
+function Settlements() {
+  const [items, setItems] = useState(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    let live = true;
+    storeQrSettlements()
+      .then((r) => { if (live) { setItems(r?.items || []); if (r?.error) setErr(r.error); } })
+      .catch((e) => { if (live) setErr(e.message || "Couldn’t load settlements."); });
+    return () => { live = false; };
+  }, []);
+
+  const whenFull = (ms) => ms ? new Date(ms).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+  const done = (items || []).filter((s) => s.status !== "failed");
+  const settledTotal = done.reduce((s, x) => s + Number(x.amount || 0), 0);
+  const last = done[0];
+
+  return (
+    <div className="sqx-settle">
+      <div className="sqx-note">
+        Razorpay settles your UPI collections to your bank account — usually within <b>1–2 working days</b>. Here's what has reached your bank.
+      </div>
+
+      <div className="sqx-summary">
+        <div className="sqx-stat">
+          <div className="k">Settled to bank</div>
+          <div className="v green">{rupee(settledTotal)}</div>
+          <div className="s">{done.length} settlement{done.length === 1 ? "" : "s"}</div>
+        </div>
+        <div className="sqx-stat">
+          <div className="k">Last settled</div>
+          <div className="v" style={{ fontSize: "15px" }}>{last ? whenFull(last.createdAt) : "—"}</div>
+          <div className="s">{last ? rupee(last.amount) : ""}</div>
+        </div>
+      </div>
+
+      {err && <div className="sqx-err">⚠ {err}</div>}
+      {items === null ? (
+        <div className="sqx-loading">Loading…</div>
+      ) : done.length === 0 ? (
+        <div className="sqx-empty">No settlements yet. Once Razorpay transfers your collected payments to your bank, they'll show here.</div>
+      ) : (
+        <div className="sqx-daygroup">
+          <div className="sqx-dayhead"><span className="d">Recent settlements</span></div>
+          {items.map((s) => (
+            <div className="sqx-pay" key={s.id}>
+              <div className="sqx-ava" style={{ background: "#e7f6ef", color: "#059669" }}>🏦</div>
+              <div className="sqx-pay-mid">
+                <div className="sqx-pay-name">{rupee(s.amount)} to bank
+                  <span className={`sqx-badge ${s.status === "processed" ? "ok" : s.status === "failed" ? "bad" : "wait"}`}>
+                    {s.status === "processed" ? "Paid" : s.status === "failed" ? "Failed" : "Pending"}
+                  </span>
+                </div>
+                <div className="sqx-pay-sub">{s.utr ? `UTR ${s.utr}` : "processing"}{s.fees ? ` · fee ${rupee(s.fees + s.tax)}` : ""}</div>
+              </div>
+              <div className="sqx-pay-right">
+                <div className="sqx-pay-time">{whenFull(s.createdAt)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -299,6 +299,24 @@ Deno.serve(async (req) => {
       return json({ items: await historyFor(qrId) });
     }
 
+    // Bank settlements from Razorpay — how much was settled to the shop's bank
+    // account and when (net amount after fees, with the bank UTR reference).
+    if (action === "settlements") {
+      const res = await fetch("https://api.razorpay.com/v1/settlements?count=25", { headers: { Authorization: rzpAuth } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return json({ error: data?.error?.description || "Couldn’t load settlements.", items: [] });
+      const items = (Array.isArray(data?.items) ? data.items : []).map((s: Record<string, unknown>) => ({
+        id: s.id,
+        amount: Number(s.amount || 0) / 100,   // net amount credited to the bank
+        fees: Number(s.fees || 0) / 100,
+        tax: Number(s.tax || 0) / 100,
+        status: s.status || "created",          // created | processed | failed
+        utr: s.utr || null,                      // bank reference number
+        createdAt: s.created_at ? Number(s.created_at) * 1000 : null,
+      }));
+      return json({ items });
+    }
+
     // Name book: save (or clear) the name for a payer's UPI ID. Once set, every
     // past and future payment from that VPA shows the name and the soundbox
     // announces it.
