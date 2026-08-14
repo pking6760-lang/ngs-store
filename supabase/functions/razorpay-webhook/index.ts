@@ -118,6 +118,12 @@ Deno.serve(async (req) => {
             paid_at: p.created_at ? new Date(Number(p.created_at) * 1000).toISOString() : new Date().toISOString(),
           }),
         });
+        // Closed-app push to the shop (shown even when the app is killed).
+        fetch(`${SUPABASE_URL}/functions/v1/notify-payment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE}`, "x-webhook-secret": NOTIFY_SECRET },
+          body: JSON.stringify({ amount: Number(p.amount || 0) / 100, vpa: p.vpa || "" }),
+        }).catch(() => {});
       }
       return new Response("store qr payment recorded", { status: 200 });
     }

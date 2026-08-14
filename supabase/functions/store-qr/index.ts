@@ -39,6 +39,18 @@ const sbHeaders = { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}
 const rzpAuth = "Basic " + btoa(`${KEY_ID}:${KEY_SECRET}`);
 // Shared secret for the scheduled reconciliation cron (no user JWT).
 const CRON_SECRET = Deno.env.get("STORE_QR_CRON_SECRET") ?? "";
+const NOTIFY_SECRET = Deno.env.get("WEBHOOK_SECRET") ?? "";
+
+// Fire-and-forget closed-app push when THIS path is the first to record a
+// payment (e.g. the webhook dropped the event). Deduped by the insert succeeding.
+function notifyPayment(amount: number, vpa: string | null) {
+  if (!NOTIFY_SECRET) return;
+  fetch(`${SUPABASE_URL}/functions/v1/notify-payment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE}`, "x-webhook-secret": NOTIFY_SECRET },
+    body: JSON.stringify({ amount, vpa: vpa || "" }),
+  }).catch(() => {});
+}
 
 async function verifiedUid(authHeader: string | null): Promise<string | null> {
   if (!authHeader) return null;
@@ -162,7 +174,7 @@ async function syncQr(qr: Record<string, unknown>) {
           paid_at: new Date(pay.createdAt).toISOString(),
         }),
       });
-      if (ins.ok) added++;
+      if (ins.ok) { added++; notifyPayment(pay.amount, pay.vpa); }
       else errors.push(`${ins.status}: ${(await ins.text()).slice(0, 200)}`);
     } catch (e) { errors.push(String((e as Error).message).slice(0, 200)); }
   }
